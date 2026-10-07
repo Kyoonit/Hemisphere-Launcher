@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, RotateCcw, ShieldAlert, TriangleAlert, Wrench } from 'lucide-react'
-import DiscordIcon from './DiscordIcon'
+import { Check, RotateCcw, TriangleAlert, Wrench } from 'lucide-react'
 import type { GameState } from '@shared/game'
 import type { ClientSummary } from '@shared/client'
 import { useAccounts } from '../accounts'
@@ -39,8 +38,6 @@ export default function PlayZone({ client, onRepair }: { client: ClientSummary |
       </div>
     )
   }
-
-  if (game.error?.code === 'notWhitelisted') return <NotWhitelisted />
 
   const update = client?.update
   if (update?.kind === 'major') {
@@ -100,31 +97,6 @@ function ErrorLine({ code, onRepair }: { code: string; onRepair(): void }) {
           </button>
         )}
       </span>
-    </div>
-  )
-}
-
-/** Shown when the Hemisphere API says the account isn't whitelisted yet. */
-function NotWhitelisted() {
-  const { t } = useTranslation()
-  return (
-    <div className="glass animate-fade w-[440px] px-5 py-4 text-left">
-      <div className="flex items-center gap-2.5">
-        <ShieldAlert size={20} className="text-amber-400" />
-        <b className="text-white">{t('whitelist.title')}</b>
-      </div>
-      <p className="mt-1.5 text-[13px] text-gray-300">{t('whitelist.body')}</p>
-      <div className="mt-3.5 flex flex-wrap items-center gap-2">
-        <button onClick={() => window.hemisphere.openLink('discord')} className="flex items-center gap-2 rounded-lg bg-discord px-3.5 py-2 text-sm font-semibold text-white hover:bg-discord-hover">
-          <DiscordIcon size={16} /> {t('whitelist.join')}
-        </button>
-        <button onClick={() => window.hemisphere.game.play()} className="flex items-center gap-1.5 rounded-lg bg-gray-700/85 px-3.5 py-2 text-sm font-semibold text-white hover:bg-gray-600">
-          <RotateCcw size={14} /> {t('whitelist.checkAgain')}
-        </button>
-        <button onClick={() => window.hemisphere.game.play({ target: 'latest', skipWhitelist: true })} className="ml-auto text-xs text-gray-400 underline-offset-2 hover:text-white hover:underline">
-          {t('whitelist.playAnyway')}
-        </button>
-      </div>
     </div>
   )
 }

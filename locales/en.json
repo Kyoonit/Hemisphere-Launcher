@@ -280,12 +280,5 @@
     "button": "Update to {{version}}",
     "playPrevious": "Play on {{version}}",
     "previousHint": "Older version · won't connect to Hemisphere"
-  },
-  "whitelist": {
-    "title": "You're not whitelisted yet",
-    "body": "Hemisphere is a whitelisted community. Join our Discord and apply — it usually only takes a few minutes.",
-    "join": "Join Discord",
-    "checkAgain": "Check again",
-    "playAnyway": "Play without joining"
   }
 }

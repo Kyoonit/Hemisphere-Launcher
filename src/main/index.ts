@@ -103,8 +103,8 @@ function registerIpc(): void {
   ipcMain.handle(IPC.gameState, () => getGameState())
   ipcMain.on(IPC.gamePlay, (_e, opts: unknown) => {
     const active = getAccountsState().activeId
-    const o = (opts ?? {}) as { target?: unknown; skipWhitelist?: unknown }
-    if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest', skipWhitelist: o.skipWhitelist === true })
+    const o = (opts ?? {}) as { target?: unknown }
+    if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest' })
   })
   ipcMain.handle(IPC.settingsGet, () => getSettings())
   ipcMain.handle(IPC.settingsSet, (_e, patch: unknown) => updateSettings(typeof patch === 'object' && patch ? (patch as object) : {}))

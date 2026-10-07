@@ -17,7 +17,6 @@ export type GameErrorCode =
   | 'notSignedIn'
   | 'sessionExpired'
   | 'alreadyRunning'
-  | 'notWhitelisted' // Hemisphere API says this account isn't whitelisted yet
   | 'busy' // files in use: Minecraft is open, so mods can't be changed
   | 'content' // client definition could not be downloaded or verified
   | 'crashed' // game exited with an error
@@ -39,8 +38,6 @@ export type PlayTarget = 'latest' | 'previous'
 
 export interface PlayOptions {
   target: PlayTarget
-  /** launch even though the whitelist check said no (singleplayer, other servers) */
-  skipWhitelist?: boolean
 }
 
 export type RepairMode = 'quick' | 'full'

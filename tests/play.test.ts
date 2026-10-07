@@ -1,7 +1,6 @@
-// Phase 11: update decision, playtime recording, whitelist API (server + launcher client).
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
-import { spawn, type ChildProcess } from 'node:child_process'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+// Phase 11: update decision and playtime recording.
+import { describe, expect, test, vi } from 'vitest'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { decideUpdate } from '../src/shared/update'
@@ -9,7 +8,6 @@ import { decideUpdate } from '../src/shared/update'
 const dataDir = mkdtempSync(join(tmpdir(), 'hemi-playtime-'))
 vi.mock('electron', () => ({ app: { getPath: () => dataDir, isPackaged: true } }))
 const { recordSession, getPlaytime, splitByDay, localDateKey } = await import('../src/main/core/playtime/playtimeStore')
-const { checkWhitelist } = await import('../src/main/core/hemisphere-api/whitelist')
 
 describe('decideUpdate', () => {
   const index = { latest: { clientVersion: '2.0.0', minecraft: '26.4' }, previous: { clientVersion: '1.0.1', minecraft: '26.3' } }
@@ -57,49 +55,5 @@ describe('playtime', () => {
     expect(p.lastSessionMs).toBe(30 * 60_000)
     expect(p.weekMs).toBe(1.5 * H)
     expect((await getPlaytime('someone-else')).sessions).toBe(0) // per account
-  })
-})
-
-describe('whitelist API', () => {
-  let server: ChildProcess
-  const port = 18787
-  const base = `http://127.0.0.1:${port}`
-  const whitelisted = '358be223-3a14-4f16-a3c0-3afa849d9a70'
-
-  beforeAll(async () => {
-    const file = join(mkdtempSync(join(tmpdir(), 'hemi-wl-')), 'whitelist.json')
-    writeFileSync(file, JSON.stringify([{ uuid: whitelisted, name: 'nic5999' }]))
-    server = spawn(process.execPath, [join(__dirname, '..', 'server', 'whitelist-api', 'server.mjs')], {
-      env: { ...process.env, WHITELIST_PATH: file, PORT: String(port) },
-      stdio: 'ignore',
-    })
-    for (let i = 0; i < 50; i++) {
-      if (await fetch(`${base}/health`).then((r) => r.ok).catch(() => false)) return
-      await new Promise((r) => setTimeout(r, 100))
-    }
-    throw new Error('whitelist server did not start')
-  })
-  afterAll(() => {
-    server.kill()
-  })
-
-  test('answers yes / no, with or without dashes', async () => {
-    expect(await (await fetch(`${base}/v1/whitelist/${whitelisted}`)).json()).toEqual({ whitelisted: true })
-    expect(await (await fetch(`${base}/v1/whitelist/${whitelisted.replace(/-/g, '').toUpperCase()}`)).json()).toEqual({ whitelisted: true })
-    expect(await (await fetch(`${base}/v1/whitelist/00000000000000000000000000000001`)).json()).toEqual({ whitelisted: false })
-  })
-  test('rejects anything else', async () => {
-    expect((await fetch(`${base}/v1/whitelist/not-a-uuid`)).status).toBe(404)
-    expect((await fetch(`${base}/v1/whitelist/${whitelisted}`, { method: 'POST' })).status).toBe(405)
-    expect((await fetch(`${base}/../../etc/passwd`)).status).toBe(404)
-  })
-  test('launcher client: yes, no, and "unknown" when the service is down', async () => {
-    expect(await checkWhitelist(whitelisted.replace(/-/g, ''), base)).toBe(true)
-    expect(await checkWhitelist('00000000000000000000000000000002', base)).toBe(false)
-    expect(await checkWhitelist('00000000000000000000000000000003', 'http://127.0.0.1:1')).toBe(null)
-  })
-  test('rate limit: 60 requests per minute per client', async () => {
-    const results = await Promise.all(Array.from({ length: 70 }, () => fetch(`${base}/health`, { headers: { 'cf-connecting-ip': '203.0.113.9' } }).then((r) => r.status)))
-    expect(results.filter((s) => s === 429).length).toBeGreaterThan(0)
   })
 })

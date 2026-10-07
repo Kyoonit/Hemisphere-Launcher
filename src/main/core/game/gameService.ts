@@ -12,7 +12,6 @@ import { AuthError } from '../auth/errors'
 import { ensureGameInstalled, instanceLogPath, type GameRepairInfo } from './install'
 import { gamePaths } from './target'
 import { getContent, getPreviousManifest } from '../remote/content'
-import { checkWhitelist } from '../hemisphere-api/whitelist'
 import { getSettings } from '../settings/settings'
 import { endSession, startSession } from '../playtime/playtimeStore'
 import { cleanStore, syncClient } from '../sync/sync'
@@ -58,7 +57,7 @@ export function recommendedMemoryMb(): number {
 }
 
 /**
- * The PLAY flow:  account (session + whitelist) → client definition → Minecraft/Java/Fabric → Hemisphere mods →
+ * The PLAY flow:  account (fresh session) → client definition → Minecraft/Java/Fabric → Hemisphere mods →
  * launch → (auto-join Hemisphere if enabled and on the latest client).
  */
 export async function play(accountId: string, opts: PlayOptions = { target: 'latest' }): Promise<void> {
@@ -72,13 +71,11 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
   try {
     const report = progressReporter()
 
-    // 1. Account: fresh Minecraft session, then the whitelist (unknown = don't block).
+    // 1. Account: fresh Minecraft session.
     report('account')(null)
     const creds = await getLaunchCredentials(accountId).catch((err) => {
       throw new GameError(err instanceof AuthError && err.code === 'microsoftDenied' ? 'sessionExpired' : 'notSignedIn', String(err))
     })
-    if (creds.userType === 'msa' && !opts.skipWhitelist && (await checkWhitelist(creds.uuid)) === false)
-      throw new GameError('notWhitelisted')
 
     // 2. Client definition: latest, or the previous one for "Play on <old version>".
     const content = await getContent(true).catch((err) => {
