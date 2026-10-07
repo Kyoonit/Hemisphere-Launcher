@@ -24,11 +24,31 @@ export type GameErrorCode =
 
 export interface GameState {
   phase: 'idle' | 'preparing' | 'running'
+  /** what 'preparing' is doing */
+  activity: 'play' | 'repair' | null
   progress: GameProgress | null
   /** Accounts with a running game (one game per account) */
   runningAccounts: string[]
   /** Last problem, cleared on next PLAY */
   error: { code: GameErrorCode; detail?: string } | null
+}
+
+export type RepairMode = 'quick' | 'full'
+
+export interface RepairReport {
+  mode: RepairMode
+  /** Hemisphere files checked by hash */
+  verifiedFiles: number
+  /** Hemisphere files fixed */
+  repaired: { label: string; reason: 'missing' | 'damaged' }[]
+  /** Minecraft / Fabric files that were missing or damaged (fixed) */
+  minecraftRepaired: number
+  downloadedBytes: number
+  /** old files removed from the store */
+  freedBytes: number
+  /** Full reset: the player's previous config folder */
+  configBackup?: string
+  durationMs: number
 }
 
 export interface JavaRuntimeInfo {

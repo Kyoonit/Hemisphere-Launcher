@@ -224,5 +224,47 @@
     "alsoOff": "{{names}} aussi désactivé — a besoin de {{mod}}.",
     "alsoOn": "{{names}} aussi activé — {{mod}} en a besoin.",
     "warnFeature": "Recommandé par Hemisphere — tu perdras cette fonction en jeu."
+  },
+  "repair": {
+    "title": "Réparer l’installation",
+    "titleA": "Réparer",
+    "short": "Réparer",
+    "settingsHint": "Vérifie chaque fichier et corrige ce qui manque ou est endommagé",
+    "safeNote": "Tes mondes, captures d’écran, touches et liste de serveurs ne sont jamais touchés.",
+    "start": "Lancer la réparation",
+    "backToPlay": "Terminé · retour à Jouer",
+    "hint": "Vérification de chaque fichier — seuls les fichiers abîmés sont retéléchargés.",
+    "quick": {
+      "title": "Réparation rapide",
+      "text": "Vérifie chaque fichier et retélécharge uniquement ce qui manque ou est endommagé. Moins d’une minute en général."
+    },
+    "full": {
+      "title": "Réinitialisation complète",
+      "text": "Restaure aussi tous les réglages des mods par défaut. Tes réglages actuels sont gardés dans un dossier de sauvegarde."
+    },
+    "stages": {
+      "minecraft": "Vérification de Minecraft",
+      "java": "Vérification de Java",
+      "fabric": "Vérification de Fabric",
+      "mods": "Vérification des mods Hemisphere"
+    },
+    "result": {
+      "minecraftOk": "Minecraft, Java et Fabric vérifiés",
+      "missing": "{{name}} manquait · restauré",
+      "damaged": "{{name}} était endommagé · retéléchargé",
+      "freed": "{{mb}} Mo d’anciens fichiers nettoyés",
+      "backup": "Anciens réglages des mods sauvegardés dans {{folder}}",
+      "nothing": "Tout était déjà en ordre.",
+      "took": "({{s}} s)",
+      "verified_one": "{{count}} fichier Hemisphere vérifié",
+      "verified_other": "{{count}} fichiers Hemisphere vérifiés",
+      "verified_many": "{{count}} fichiers Hemisphere vérifiés",
+      "minecraftFixed_one": "{{count}} fichier Minecraft réparé",
+      "minecraftFixed_other": "{{count}} fichiers Minecraft réparés",
+      "minecraftFixed_many": "{{count}} fichiers Minecraft réparés",
+      "allFixed_one": "Tout est réparé — {{count}} problème corrigé.",
+      "allFixed_other": "Tout est réparé — {{count}} problèmes corrigés.",
+      "allFixed_many": "Tout est réparé — {{count}} problèmes corrigés."
+    }
   }
 }

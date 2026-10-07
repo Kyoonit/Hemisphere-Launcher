@@ -128,13 +128,32 @@ export default function Mods() {
   )
 }
 
+/** Modrinth icon; falls back to a letter tile when offline or the mod has no icon. */
+function ModIcon({ mod }: { mod: ModSummary }) {
+  const [failed, setFailed] = useState(false)
+  if (mod.icon && !failed)
+    return (
+      <img
+        src={mod.icon}
+        alt=""
+        loading="lazy"
+        draggable={false}
+        onError={() => setFailed(true)}
+        className="h-[34px] w-[34px] flex-none rounded-lg bg-gray-800 object-cover"
+      />
+    )
+  return (
+    <span className="grid h-[34px] w-[34px] flex-none place-items-center rounded-lg text-sm font-extrabold text-white" style={{ background: tileColor(mod.id) }}>
+      {(mod.name.match(/[A-Za-z0-9]/) ?? ['?'])[0].toUpperCase()}
+    </span>
+  )
+}
+
 function ModRow({ mod, lang, on, onToggle }: { mod: ModSummary; lang: string; on: boolean; onToggle(on: boolean): void }) {
   const { t } = useTranslation()
   return (
     <div className="flex items-center gap-3.5 border-t border-white/5 px-3.5 py-2.5 first:border-t-0 hover:bg-gray-700/35">
-      <span className="grid h-[34px] w-[34px] flex-none place-items-center rounded-lg text-sm font-extrabold text-white" style={{ background: tileColor(mod.id) }}>
-        {(mod.name.match(/[A-Za-z0-9]/) ?? ['?'])[0].toUpperCase()}
-      </span>
+      <ModIcon mod={mod} />
       <div className="min-w-0 flex-1">
         <b className="font-semibold text-white">{mod.name}</b>
         <span className="ml-1.5 text-xs text-gray-400">{mod.version}</span>

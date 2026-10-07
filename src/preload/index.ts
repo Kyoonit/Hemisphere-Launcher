@@ -50,6 +50,7 @@ const api: HemisphereApi = {
     },
     play: () => ipcRenderer.send(IPC.gamePlay),
     javaInfo: () => ipcRenderer.invoke(IPC.gameJava),
+    repair: (mode) => ipcRenderer.invoke(IPC.gameRepair, mode),
   },
   client: {
     get: () => ipcRenderer.invoke(IPC.clientGet),

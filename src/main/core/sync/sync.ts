@@ -1,4 +1,4 @@
-import { copyFile, link, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { copyFile, link, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { ClientManifest } from '@shared/manifest'
 import { applyToggle, resolveEnabled } from '@shared/modSelection'
@@ -75,10 +75,38 @@ export interface SyncResult {
   downloadedBytes: number
   placed: number
   removed: number
+  /** files checked by hash */
+  verified: number
+  /** files that were missing or damaged and got fixed (only files Hemisphere had placed before) */
+  repaired: { label: string; path: string; reason: 'missing' | 'damaged' }[]
+  /** Full reset: where the player's previous config folder was moved */
+  configBackup?: string
 }
 
-export async function syncClient(manifest: ClientManifest, onProgress: ProgressFn): Promise<SyncResult> {
+export interface SyncOptions {
+  /** Repair: hash every managed file instead of trusting size + date */
+  verifyAll?: boolean
+  /** Repair: put back Hemisphere "default" configs the player deleted */
+  restoreMissingDefaults?: boolean
+  /** Full reset: move config/ aside (backup) and install all Hemisphere configs fresh */
+  resetConfigs?: boolean
+}
+
+export async function syncClient(manifest: ClientManifest, onProgress: ProgressFn, opts: SyncOptions = {}): Promise<SyncResult> {
   const state = await readInstanceState()
+  let configBackup: string | undefined
+  if (opts.resetConfigs) {
+    const config = instancePath('config')
+    if ((await localDir(config))) {
+      const d = new Date() // player's local time, e.g. config.backup-2026-10-08_00-29
+      const p = (n: number) => String(n).padStart(2, '0')
+      const stamp = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}`
+      configBackup = instancePath(`config.backup-${stamp}`)
+      await rename(config, configBackup)
+    }
+    state.seeded = {}
+    for (const rel of Object.keys(state.owned)) if (rel.startsWith('config/')) delete state.owned[rel]
+  }
   const desired = desiredFiles(manifest, state.choices)
 
   const local = new Map<string, LocalInfo>()
@@ -87,13 +115,33 @@ export async function syncClient(manifest: ClientManifest, onProgress: ProgressF
     if (info) local.set(rel.toLowerCase(), info)
   }
   const plan = planSync(desired, state, local)
+  const repaired: SyncResult['repaired'] = []
+
+  if (opts.verifyAll) {
+    plan.check.push(...plan.keep)
+    plan.keep = []
+  }
+  if (opts.restoreMissingDefaults) {
+    for (const f of desired)
+      if (f.policy === 'default' && state.seeded[f.path] !== undefined && !local.has(f.path.toLowerCase())) {
+        plan.place.push(f)
+        repaired.push({ label: f.label, path: f.path, reason: 'missing' })
+      }
+  }
+  // Hemisphere had placed it before and it's gone now = it went missing.
+  for (const f of plan.place)
+    if (state.owned[f.path] && !local.has(f.path.toLowerCase())) repaired.push({ label: f.label, path: f.path, reason: 'missing' })
 
   // Present but unknown/changed: keep it if the content is already right (e.g. after a crash mid-sync).
-  for (const f of plan.check) {
+  for (const [i, f] of plan.check.entries()) {
+    if (opts.verifyAll) onProgress(i / plan.check.length, f.label)
     if ((await sha512OfFile(instancePath(f.path))) === f.sha512) {
       const info = local.get(f.path.toLowerCase())!
       state.owned[f.path] = { sha512: f.sha512, size: info.size, mtimeMs: info.mtimeMs }
-    } else plan.place.push(f)
+    } else {
+      plan.place.push(f)
+      if (state.owned[f.path]) repaired.push({ label: f.label, path: f.path, reason: 'damaged' })
+    }
   }
 
   // Download what the store doesn't have yet.
@@ -147,7 +195,49 @@ export async function syncClient(manifest: ClientManifest, onProgress: ProgressF
 
   state.clientVersion = manifest.clientVersion
   await writeInstanceState(state)
-  return { downloaded: missing.length, downloadedBytes: totalBytes, placed: plan.place.length, removed: plan.remove.length }
+  return {
+    downloaded: missing.length,
+    downloadedBytes: totalBytes,
+    placed: plan.place.length,
+    removed: plan.remove.length,
+    verified: plan.keep.length + plan.check.length,
+    repaired,
+    configBackup,
+  }
+}
+
+async function localDir(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isDirectory()
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Deletes store files no client needs anymore: anything not in the current manifest (all mods, on or off, so
+ * toggling stays instant) and not currently placed, plus leftover partial downloads. Returns freed bytes.
+ */
+export async function cleanStore(manifest: ClientManifest): Promise<number> {
+  const state = await readInstanceState()
+  const keep = new Set([
+    ...manifest.mods.map((m) => m.file.sha512),
+    ...manifest.files.map((f) => f.sha512),
+    ...Object.values(state.owned).map((o) => o.sha512),
+  ])
+  let freed = 0
+  const root = storeDir()
+  for (const dir of await readdir(root).catch(() => [] as string[])) {
+    const full = join(root, dir)
+    for (const name of await readdir(full).catch(() => [] as string[])) {
+      if (dir !== '.partial' && keep.has(name)) continue
+      const path = join(full, name)
+      const size = (await stat(path).catch(() => null))?.size ?? 0
+      await rm(path, { force: true })
+      freed += size
+    }
+  }
+  return freed
 }
 
 /** Enabled mod ids for the current choices. */

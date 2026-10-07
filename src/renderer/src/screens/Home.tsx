@@ -18,7 +18,7 @@ const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
   { key: 'rules', icon: <BookOpen size={18} /> },
 ]
 
-export default function Home({ onOpenNews }: { onOpenNews(): void }) {
+export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onRepair(): void }) {
   const { t } = useTranslation()
   const status = useServerStatus()
   const { active } = useAccounts()
@@ -38,7 +38,7 @@ export default function Home({ onOpenNews }: { onOpenNews(): void }) {
         </h1>
 
         <div className="animate-rise mt-8 flex flex-col items-center [animation-delay:250ms]">
-          <PlayZone client={client ?? null} />
+          <PlayZone client={client ?? null} onRepair={onRepair} />
           <div className="mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400">
             <ServerNotice offline={status?.online === false} />
           </div>

@@ -15,7 +15,7 @@ const SECTIONS: { id: Section; icon: LucideIcon }[] = [
   { id: 'advanced', icon: Wrench },
 ]
 
-export default function Settings({ initialSection, onAddAccount }: { initialSection: Section; onAddAccount(): void }) {
+export default function Settings({ initialSection, onAddAccount, onRepair }: { initialSection: Section; onAddAccount(): void; onRepair(): void }) {
   const { t } = useTranslation()
   const [section, setSection] = useState<Section>(initialSection)
 
@@ -44,6 +44,12 @@ export default function Settings({ initialSection, onAddAccount }: { initialSect
           <LauncherSettings />
         ) : section === 'account' ? (
           <AccountSettings onAddAccount={onAddAccount} />
+        ) : section === 'installation' ? (
+          <Row title={t('repair.title')} hint={t('repair.settingsHint')}>
+            <button onClick={onRepair} className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-green-500">
+              <Wrench size={16} /> {t('repair.short')}
+            </button>
+          </Row>
         ) : section === 'advanced' ? (
           <JavaSettings />
         ) : (

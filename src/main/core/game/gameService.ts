@@ -2,16 +2,16 @@ import { totalmem } from 'node:os'
 import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import { app } from 'electron'
 import { createMinecraftProcessWatcher, launch } from '@xmcl/core'
-import type { GameProgress, GameStage, GameState } from '@shared/game'
+import type { GameProgress, GameStage, GameState, RepairMode, RepairReport } from '@shared/game'
 import { getLaunchCredentials } from '../auth/accounts'
 import { AuthError } from '../auth/errors'
-import { ensureGameInstalled, instanceLogPath } from './install'
+import { ensureGameInstalled, instanceLogPath, type GameRepairInfo } from './install'
 import { gamePaths } from './target'
 import { getContent } from '../remote/content'
-import { syncClient } from '../sync/sync'
+import { cleanStore, syncClient } from '../sync/sync'
 import { GameError, toGameError } from './util'
 
-let state: GameState = { phase: 'idle', progress: null, runningAccounts: [], error: null }
+let state: GameState = { phase: 'idle', activity: null, progress: null, runningAccounts: [], error: null }
 let onState: (s: GameState) => void = () => {}
 
 export const getGameState = () => state
@@ -50,7 +50,7 @@ export async function play(accountId: string): Promise<void> {
     set({ error: { code: 'alreadyRunning' } })
     return
   }
-  set({ phase: 'preparing', progress: null, error: null })
+  set({ phase: 'preparing', activity: 'play', progress: null, error: null })
 
   try {
     const report = progressReporter()
@@ -88,11 +88,54 @@ export async function play(accountId: string): Promise<void> {
     })
     proc.unref()
     watch(proc, accountId)
-    set({ phase: 'running', progress: null, runningAccounts: [...state.runningAccounts, accountId] })
+    set({ phase: 'running', activity: null, progress: null, runningAccounts: [...state.runningAccounts, accountId] })
   } catch (err) {
     const e = toGameError(err)
     console.error('[game] play failed:', e.message)
-    set({ phase: state.runningAccounts.length ? 'running' : 'idle', progress: null, error: { code: e.code, detail: e.message } })
+    set({ phase: state.runningAccounts.length ? 'running' : 'idle', activity: null, progress: null, error: { code: e.code, detail: e.message } })
+  }
+}
+
+/**
+ * Repair: re-checks every file by hash (Minecraft, Java, Fabric, Hemisphere mods and configs) and fixes only what's
+ * wrong. "full" also moves config/ aside (backup) and restores Hemisphere's configs. Worlds, screenshots, keybinds
+ * (options.txt) and the server list are never touched.
+ */
+export async function repair(mode: RepairMode): Promise<RepairReport | { error: GameState['error'] }> {
+  if (state.phase === 'preparing') return { error: { code: 'unknown', detail: 'already busy' } }
+  if (state.runningAccounts.length) return { error: { code: 'busy' } }
+  const started = Date.now()
+  set({ phase: 'preparing', activity: 'repair', progress: null, error: null })
+  try {
+    const report = progressReporter()
+    const { manifest } = await getContent(true).catch((err) => {
+      throw new GameError('content', String(err))
+    })
+    const info: GameRepairInfo = { minecraftIssues: [] }
+    await ensureGameInstalled({ minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }, report, true, info)
+    const synced = await syncClient(manifest, report('mods'), {
+      verifyAll: true,
+      restoreMissingDefaults: true,
+      resetConfigs: mode === 'full',
+    })
+    const freedBytes = await cleanStore(manifest)
+    set({ phase: 'idle', activity: null, progress: null })
+    return {
+      mode,
+      verifiedFiles: synced.verified,
+      repaired: synced.repaired.map(({ label, reason }) => ({ label, reason })),
+      minecraftRepaired: info.minecraftIssues.length,
+      downloadedBytes: synced.downloadedBytes,
+      freedBytes,
+      configBackup: synced.configBackup,
+      durationMs: Date.now() - started,
+    }
+  } catch (err) {
+    const e = toGameError(err)
+    console.error('[game] repair failed:', e.message)
+    const error = { code: e.code, detail: e.message }
+    set({ phase: 'idle', activity: null, progress: null, error })
+    return { error }
   }
 }
 

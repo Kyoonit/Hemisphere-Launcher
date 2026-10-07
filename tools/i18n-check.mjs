@@ -8,7 +8,9 @@ const flatten = (obj, prefix = '') =>
   Object.entries(obj).flatMap(([k, v]) =>
     v && typeof v === 'object' ? flatten(v, `${prefix}${k}.`) : [`${prefix}${k}`],
   )
-const load = (file) => new Set(flatten(JSON.parse(readFileSync(join(dir, file), 'utf8'))))
+// Plural forms (key_one, key_other, key_many…) differ per language: compare them by their base key.
+const PLURAL = /_(zero|one|two|few|many|other)$/
+const load = (file) => new Set(flatten(JSON.parse(readFileSync(join(dir, file), 'utf8'))).map((k) => k.replace(PLURAL, '')))
 
 const source = load('en.json')
 let problems = 0

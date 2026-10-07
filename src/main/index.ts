@@ -15,11 +15,12 @@ import {
   switchAccount,
 } from './core/auth/accounts'
 import { cancelSignIn } from './core/auth/oauth'
-import { getGameState, onGameState, play } from './core/game/gameService'
+import { getGameState, onGameState, play, repair } from './core/game/gameService'
 import { detectSystemJava, inspectJava } from './core/game/java'
 import { installedJavaPath } from './core/game/install'
 import { getContent } from './core/remote/content'
 import { getEnabledMods, setModEnabled } from './core/sync/sync'
+import { getModIcons } from './core/remote/modIcons'
 import type { ClientSummary } from '@shared/client'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
@@ -99,6 +100,7 @@ function registerIpc(): void {
     const active = getAccountsState().activeId
     if (active) void play(active)
   })
+  ipcMain.handle(IPC.gameRepair, (_e, mode: unknown) => repair(mode === 'full' ? 'full' : 'quick'))
   ipcMain.handle(IPC.gameJava, async () => {
     const path = await installedJavaPath()
     const managed = path ? await inspectJava(path, true) : null
@@ -108,6 +110,7 @@ function registerIpc(): void {
   ipcMain.handle(IPC.clientGet, async (): Promise<ClientSummary | null> => {
     try {
       const { manifest, source } = await getContent()
+      const icons = await getModIcons(manifest.mods.flatMap((m) => (m.source ? [m.source.modrinth.projectId] : [])))
       return {
         clientVersion: manifest.clientVersion,
         minecraft: manifest.minecraft,
@@ -123,6 +126,7 @@ function registerIpc(): void {
           version: m.version,
           size: m.file.size,
           requires: m.requires,
+          icon: (m.source && icons[m.source.modrinth.projectId]) || '',
         })),
       }
     } catch {

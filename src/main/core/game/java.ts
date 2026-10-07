@@ -31,10 +31,11 @@ export async function inspectJava(path: string, managed: boolean): Promise<JavaR
 }
 
 /** Ensures Mojang's runtime for `component` is installed and working. Returns javaw.exe. */
-export async function ensureJava(component: string, requiredMajor: number, onProgress: ProgressFn): Promise<string> {
+export async function ensureJava(component: string, requiredMajor: number, onProgress: ProgressFn, verifyFiles = false): Promise<string> {
   const path = managedJavaPath(component)
   const existing = await inspectJava(path, true)
-  if (existing && existing.majorVersion >= requiredMajor) return path
+  // verifyFiles (Repair): run the install anyway; it re-checks every runtime file's checksum and fixes bad ones.
+  if (!verifyFiles && existing && existing.majorVersion >= requiredMajor) return path
 
   // xmcl's own manifest fetch is broken with undici 7 (see docs/ARCHITECTURE.md), so we fetch the index ourselves.
   const index = await fetchJson<Record<string, Record<string, RuntimeIndexEntry[]>>>(MOJANG_RUNTIMES)

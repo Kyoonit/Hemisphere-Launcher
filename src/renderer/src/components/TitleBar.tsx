@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Copy, Minus, Newspaper, Package, Play, Settings, Square, X, type LucideIcon } from 'lucide-react'
 import logo from '../assets/logo.png'
 
-export type Screen = 'home' | 'news' | 'mods' | 'settings'
+export type Screen = 'home' | 'news' | 'mods' | 'settings' | 'repair'
 
 const TABS: { id: Screen; icon: LucideIcon; label: string }[] = [
   { id: 'home', icon: Play, label: 'nav.play' },
@@ -38,7 +38,7 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
             key={id}
             onClick={() => onNavigate(id)}
             className={`flex items-center gap-2 rounded-lg px-3.5 py-[7px] text-sm font-medium transition-all duration-300 ${
-              screen === id ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              screen === id || (screen === 'repair' && id === 'settings') ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
           >
             <Icon size={16} strokeWidth={2} />

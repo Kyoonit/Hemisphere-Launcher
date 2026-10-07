@@ -1,6 +1,6 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
-import type { GameState, JavaRuntimeInfo } from './game'
+import type { GameState, JavaRuntimeInfo, RepairMode, RepairReport } from './game'
 import type { ClientSummary } from './client'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
@@ -26,6 +26,7 @@ export const IPC = {
   gameStateChanged: 'game:state-changed',
   gamePlay: 'game:play',
   gameJava: 'game:java',
+  gameRepair: 'game:repair',
   clientGet: 'client:get',
   modsEnabled: 'mods:enabled',
   modsSet: 'mods:set',
@@ -84,6 +85,8 @@ export interface HemisphereApi {
     play(): void
     /** Managed runtime (if installed) + Java found on this PC */
     javaInfo(): Promise<JavaRuntimeInfo[]>
+    /** Verify and fix the installation (progress arrives through onState) */
+    repair(mode: RepairMode): Promise<RepairReport | { error: GameState['error'] }>
   }
   client: {
     /** Verified Hemisphere client definition, or null if never downloaded and offline */

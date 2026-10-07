@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, RotateCcw, TriangleAlert } from 'lucide-react'
+import { Check, RotateCcw, TriangleAlert, Wrench } from 'lucide-react'
 import type { GameState } from '@shared/game'
 import type { ClientSummary } from '@shared/client'
 import { useAccounts } from '../accounts'
 
 const STAGES = ['minecraft', 'java', 'fabric', 'mods', 'launching'] as const
+const REPAIR_STAGES = ['minecraft', 'java', 'fabric', 'mods'] as const
 
 export function useGameState(): GameState | null {
   const [state, setState] = useState<GameState | null>(null)
@@ -17,7 +18,7 @@ export function useGameState(): GameState | null {
 }
 
 /** PLAY button and everything that replaces it: install progress, "playing", errors. */
-export default function PlayZone({ client }: { client: ClientSummary | null }) {
+export default function PlayZone({ client, onRepair }: { client: ClientSummary | null; onRepair(): void }) {
   const { t } = useTranslation()
   const { active } = useAccounts()
   const game = useGameState()
@@ -51,6 +52,11 @@ export default function PlayZone({ client }: { client: ClientSummary | null }) {
             <button onClick={() => window.hemisphere.game.play()} className="inline-flex items-center gap-1 font-semibold text-green-400 hover:text-green-300">
               <RotateCcw size={12} /> {t('game.retry')}
             </button>
+            {['crashed', 'unknown', 'java', 'disk'].includes(game.error.code) && (
+              <button onClick={onRepair} className="ml-2 inline-flex items-center gap-1 font-semibold text-green-400 hover:text-green-300">
+                <Wrench size={12} /> {t('repair.short')}
+              </button>
+            )}
           </span>
         </div>
       ) : (
@@ -65,18 +71,20 @@ export default function PlayZone({ client }: { client: ClientSummary | null }) {
   )
 }
 
-function Preparing({ game }: { game: GameState }) {
+export function Preparing({ game }: { game: GameState }) {
   const { t } = useTranslation()
+  const repairing = game.activity === 'repair'
+  const stages: readonly string[] = repairing ? REPAIR_STAGES : STAGES
   const stage = game.progress?.stage ?? 'minecraft'
   const ratio = game.progress?.ratio ?? null
-  const index = STAGES.indexOf(stage)
+  const index = stages.indexOf(stage)
 
   return (
     <div className="glass animate-fade w-[360px] px-[18px] py-4 text-left">
       <div className="mb-2 flex items-center justify-between">
-        <b className="text-white">{t(`game.stages.${stage}`)}</b>
+        <b className="text-white">{t(repairing ? `repair.stages.${stage}` : `game.stages.${stage}`)}</b>
         <span className="text-xs text-gray-400 tabular-nums">
-          {ratio !== null ? `${Math.round(ratio * 100)}%` : t('game.step', { n: index + 1, total: STAGES.length })}
+          {ratio !== null ? `${Math.round(ratio * 100)}%` : t('game.step', { n: index + 1, total: stages.length })}
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-gray-700/90">
@@ -87,11 +95,11 @@ function Preparing({ game }: { game: GameState }) {
         )}
       </div>
       <div className="mt-2.5 flex gap-1.5">
-        {STAGES.map((s, i) => (
+        {stages.map((s, i) => (
           <span key={s} className={`h-1 flex-1 rounded-full ${i < index ? 'bg-green-500' : i === index ? 'bg-green-500/50' : 'bg-gray-700'}`} />
         ))}
       </div>
-      <p className="mt-2 truncate text-xs text-gray-400">{stage === 'mods' && game.progress?.detail ? game.progress.detail : t('game.firstTimeHint')}</p>
+      <p className="mt-2 truncate text-xs text-gray-400">{stage === 'mods' && game.progress?.detail ? game.progress.detail : repairing ? t('repair.hint') : t('game.firstTimeHint')}</p>
     </div>
   )
 }

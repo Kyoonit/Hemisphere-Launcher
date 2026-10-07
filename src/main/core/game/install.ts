@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { MinecraftFolder, Version } from '@xmcl/core'
+import { MinecraftFolder, Version, diagnose } from '@xmcl/core'
 import { getVersionList, installDependenciesTask, installFabric, installTask } from '@xmcl/installer'
 import type { GameStage } from '@shared/game'
 import { ensureJava, managedJavaPath } from './java'
@@ -39,13 +39,29 @@ async function readState(): Promise<InstallState | null> {
  * Fast path: if the last successful install matches and its key files exist, nothing is downloaded.
  * (A full file-by-file verification is the job of Repair, Phase 10.)
  */
-export async function ensureGameInstalled(TARGET: GameTarget, progress: StageProgress): Promise<InstalledGame> {
+export interface GameRepairInfo {
+  /** Minecraft/Fabric files that were missing or damaged before the repair */
+  minecraftIssues: { file: string; type: 'missing' | 'corrupted' }[]
+}
+
+export async function ensureGameInstalled(
+  TARGET: GameTarget,
+  progress: StageProgress,
+  verify = false,
+  repairInfo?: GameRepairInfo,
+): Promise<InstalledGame> {
   const paths = gamePaths()
   const mc = MinecraftFolder.from(paths.minecraft)
   await mkdir(paths.instance, { recursive: true })
 
   const state = await readState()
+  if (verify && state && repairInfo) {
+    // Remember what was wrong so Repair can report it (the install below fixes it).
+    const report = await diagnose(state.versionId, mc).catch(() => null)
+    repairInfo.minecraftIssues = report ? report.issues.map((i) => ({ file: i.file, type: i.type })) : [{ file: state.versionId, type: 'missing' }]
+  }
   if (
+    !verify &&
     state &&
     state.minecraft === TARGET.minecraft &&
     state.fabricLoader === TARGET.fabricLoader &&
@@ -69,7 +85,7 @@ export async function ensureGameInstalled(TARGET: GameTarget, progress: StagePro
 
   // 2. Java: the runtime Mojang specifies for this version
   const component = vanilla.javaVersion.component
-  const javaPath = await withRetries(() => ensureJava(component, vanilla.javaVersion.majorVersion, progress('java')))
+  const javaPath = await withRetries(() => ensureJava(component, vanilla.javaVersion.majorVersion, progress('java'), verify))
 
   // 3. Fabric loader profile + its libraries
   const onFabric = progress('fabric')

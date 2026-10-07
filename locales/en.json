@@ -224,5 +224,44 @@
     "alsoOff": "{{names}} also turned off — needs {{mod}}.",
     "alsoOn": "{{names}} also turned on — {{mod}} needs it.",
     "warnFeature": "Recommended by Hemisphere — you’ll lose this feature in game."
+  },
+  "repair": {
+    "title": "Repair installation",
+    "titleA": "Repair",
+    "short": "Repair",
+    "settingsHint": "Check every file and fix anything missing or damaged",
+    "safeNote": "Your worlds, screenshots, keybinds and server list are never touched.",
+    "start": "Start repair",
+    "backToPlay": "Done · back to Play",
+    "hint": "Checking every file — only broken ones are downloaded again.",
+    "quick": {
+      "title": "Quick repair",
+      "text": "Check every file and re-download only what is missing or damaged. Usually under a minute."
+    },
+    "full": {
+      "title": "Full reset",
+      "text": "Also restore all mod settings to Hemisphere defaults. Your current settings are kept in a backup folder."
+    },
+    "stages": {
+      "minecraft": "Checking Minecraft",
+      "java": "Checking Java",
+      "fabric": "Checking Fabric",
+      "mods": "Checking Hemisphere mods"
+    },
+    "result": {
+      "minecraftOk": "Minecraft, Java and Fabric verified",
+      "missing": "{{name}} was missing · restored",
+      "damaged": "{{name}} was damaged · re-downloaded",
+      "freed": "{{mb}} MB of old files cleaned up",
+      "backup": "Previous mod settings saved in {{folder}}",
+      "nothing": "Everything was already fine.",
+      "took": "({{s}} s)",
+      "verified_one": "{{count}} Hemisphere file verified",
+      "verified_other": "{{count}} Hemisphere files verified",
+      "minecraftFixed_one": "{{count}} Minecraft file repaired",
+      "minecraftFixed_other": "{{count}} Minecraft files repaired",
+      "allFixed_one": "All fixed — {{count}} problem repaired.",
+      "allFixed_other": "All fixed — {{count}} problems repaired."
+    }
   }
 }

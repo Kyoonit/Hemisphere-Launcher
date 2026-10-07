@@ -11,6 +11,8 @@ export interface ModSummary {
   version: string
   size: number
   requires: string[]
+  /** Modrinth icon (cdn.modrinth.com), empty when unknown/offline */
+  icon: string
 }
 
 export interface ClientSummary {
