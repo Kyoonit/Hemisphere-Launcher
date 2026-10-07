@@ -4,6 +4,8 @@ import { Coffee, FolderOpen, Gamepad2, Plus, Rocket, User, Wrench, type LucideIc
 import type { JavaRuntimeInfo } from '@shared/game'
 import { LANGUAGES, systemLanguage } from '../i18n'
 import { headUrl, useAccounts } from '../accounts'
+import Toggle from '../components/Toggle'
+import type { Settings } from '@shared/settings'
 
 export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'advanced'
 
@@ -42,6 +44,8 @@ export default function Settings({ initialSection, onAddAccount, onRepair }: { i
         <h2 className="text-[26px] font-bold text-white">{t(`settings.sections.${section}`)}</h2>
         {section === 'launcher' ? (
           <LauncherSettings />
+        ) : section === 'game' ? (
+          <GameSettings />
         ) : section === 'account' ? (
           <AccountSettings onAddAccount={onAddAccount} />
         ) : section === 'installation' ? (
@@ -60,27 +64,55 @@ export default function Settings({ initialSection, onAddAccount, onRepair }: { i
   )
 }
 
+function useSettings(): [Settings | null, (patch: Partial<Settings>) => void] {
+  const [settings, setSettings] = useState<Settings | null>(null)
+  useEffect(() => {
+    window.hemisphere.settings.get().then(setSettings)
+    return window.hemisphere.settings.onChange(setSettings)
+  }, [])
+  return [settings, (patch) => void window.hemisphere.settings.set(patch).then(setSettings)]
+}
+
+const selectClass = 'rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-white'
+
+function GameSettings() {
+  const { t } = useTranslation()
+  const [settings, update] = useSettings()
+  if (!settings) return null
+  return (
+    <div className="mt-2">
+      <Row title={t('settings.autoJoin')} hint={t('settings.autoJoinHint')}>
+        <Toggle on={settings.autoJoin} onChange={(autoJoin) => update({ autoJoin })} label={t('settings.autoJoin')} />
+      </Row>
+    </div>
+  )
+}
+
 function LauncherSettings() {
   const { t, i18n } = useTranslation()
+  const [settings, update] = useSettings()
   const [version, setVersion] = useState('')
-  const [choice, setChoice] = useState('auto')
   useEffect(() => {
     window.hemisphere.appInfo().then((info) => setVersion(info.version))
   }, [])
+  if (!settings) return null
 
-  const changeLanguage = (value: string) => {
-    setChoice(value)
-    i18n.changeLanguage(value === 'auto' ? systemLanguage() : value)
+  const changeLanguage = (language: string) => {
+    update({ language })
+    i18n.changeLanguage(language === 'auto' ? systemLanguage() : language)
   }
 
   return (
     <div className="mt-2">
+      <Row title={t('settings.onGameStart')} hint={t('settings.onGameStartHint')}>
+        <select value={settings.onGameStart} onChange={(e) => update({ onGameStart: e.target.value as Settings['onGameStart'] })} className={selectClass}>
+          <option value="hide">{t('settings.onGameStartOptions.hide')}</option>
+          <option value="keep">{t('settings.onGameStartOptions.keep')}</option>
+          <option value="close">{t('settings.onGameStartOptions.close')}</option>
+        </select>
+      </Row>
       <Row title={t('settings.language')} hint={t('settings.languageHint')}>
-        <select
-          value={choice}
-          onChange={(e) => changeLanguage(e.target.value)}
-          className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-white"
-        >
+        <select value={settings.language} onChange={(e) => changeLanguage(e.target.value)} className={selectClass}>
           <option value="auto">{t('settings.languageAuto')}</option>
           {LANGUAGES.map((l) => (
             <option key={l.code} value={l.code}>

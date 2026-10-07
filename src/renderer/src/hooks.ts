@@ -29,7 +29,9 @@ export function useServerStatus(): ServerStatus | null {
 export function usePlaytime(): PlaytimeSummary | null {
   const [playtime, setPlaytime] = useState<PlaytimeSummary | null>(null)
   useEffect(() => {
-    window.hemisphere.playtime.get().then(setPlaytime)
+    const load = () => void window.hemisphere.playtime.get().then(setPlaytime)
+    load()
+    return window.hemisphere.playtime.onChange(load)
   }, [])
   return playtime
 }

@@ -12,11 +12,12 @@ type Filter = 'all' | (typeof GROUPS)[number]
 const TILE = ['#2563eb', '#0d9488', '#b45309', '#7c3aed', '#16a34a', '#db2777', '#0891b2', '#ca8a04', '#dc2626', '#4f46e5']
 const tileColor = (id: string) => TILE[[...id].reduce((h, c) => h + c.charCodeAt(0), 0) % TILE.length]
 
-export function useClient(): ClientSummary | null | undefined {
+/** Client info; pass a changing `refreshKey` to reload it (e.g. after an update finished). */
+export function useClient(refreshKey: unknown = null): ClientSummary | null | undefined {
   const [client, setClient] = useState<ClientSummary | null | undefined>(undefined)
   useEffect(() => {
     window.hemisphere.client.get().then(setClient)
-  }, [])
+  }, [refreshKey])
   return client
 }
 

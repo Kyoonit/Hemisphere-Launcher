@@ -15,7 +15,12 @@ import {
   switchAccount,
 } from './core/auth/accounts'
 import { cancelSignIn } from './core/auth/oauth'
-import { getGameState, onGameState, play, repair } from './core/game/gameService'
+import { gameEvents, getGameState, onGameState, play, repair } from './core/game/gameService'
+import { getSettings, onSettingsChanged, updateSettings } from './core/settings/settings'
+import { recoverSessions } from './core/playtime/playtimeStore'
+import { instanceLogPath } from './core/game/install'
+import { readInstanceState } from './core/sync/sync'
+import { decideUpdate } from '@shared/update'
 import { detectSystemJava, inspectJava } from './core/game/java'
 import { installedJavaPath } from './core/game/install'
 import { getContent } from './core/remote/content'
@@ -96,10 +101,13 @@ function registerIpc(): void {
   )
 
   ipcMain.handle(IPC.gameState, () => getGameState())
-  ipcMain.on(IPC.gamePlay, () => {
+  ipcMain.on(IPC.gamePlay, (_e, opts: unknown) => {
     const active = getAccountsState().activeId
-    if (active) void play(active)
+    const o = (opts ?? {}) as { target?: unknown; skipWhitelist?: unknown }
+    if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest', skipWhitelist: o.skipWhitelist === true })
   })
+  ipcMain.handle(IPC.settingsGet, () => getSettings())
+  ipcMain.handle(IPC.settingsSet, (_e, patch: unknown) => updateSettings(typeof patch === 'object' && patch ? (patch as object) : {}))
   ipcMain.handle(IPC.gameRepair, (_e, mode: unknown) => repair(mode === 'full' ? 'full' : 'quick'))
   ipcMain.handle(IPC.gameJava, async () => {
     const path = await installedJavaPath()
@@ -109,13 +117,16 @@ function registerIpc(): void {
 
   ipcMain.handle(IPC.clientGet, async (): Promise<ClientSummary | null> => {
     try {
-      const { manifest, source } = await getContent()
+      const { manifest, index, source } = await getContent()
+      const installed = await readInstanceState()
+      const update = decideUpdate(index, installed.clientVersion && installed.minecraft ? { clientVersion: installed.clientVersion, minecraft: installed.minecraft } : null)
       const icons = await getModIcons(manifest.mods.flatMap((m) => (m.source ? [m.source.modrinth.projectId] : [])))
       return {
         clientVersion: manifest.clientVersion,
         minecraft: manifest.minecraft,
         loader: manifest.loader.version,
         source,
+        update,
         mods: manifest.mods.map((m) => ({
           id: m.id,
           name: m.name,
@@ -159,6 +170,19 @@ if (!app.requestSingleInstanceLock()) {
     await loadAccounts()
     onAccountsChanged(() => win?.webContents.send(IPC.authChanged, getAccountsState()))
     onGameState((s) => win?.webContents.send(IPC.gameStateChanged, s))
+    onSettingsChanged((s) => win?.webContents.send(IPC.settingsChanged, s))
+    // Launcher window while playing: hide (default), keep, or close. It comes back when the game exits.
+    gameEvents.onLaunched = () => {
+      const mode = getSettings().onGameStart
+      if (mode === 'hide') win?.hide()
+      else if (mode === 'close') setTimeout(() => app.quit(), 1500)
+    }
+    gameEvents.onExited = ({ crashed, anyRunning }) => {
+      if (win && (crashed || !anyRunning) && !win.isVisible()) win.show()
+      if (crashed) win?.focus()
+    }
+    gameEvents.onPlaytimeChanged = () => win?.webContents.send(IPC.playtimeChanged)
+    void recoverSessions(instanceLogPath(), () => win?.webContents.send(IPC.playtimeChanged))
     registerIpc()
     createWindow()
     startStatusPolling((status) => {

@@ -7,7 +7,7 @@ export default function PlaytimeCard() {
   if (!playtime) return null
 
   const total = splitDuration(playtime.totalMs)
-  const fmt = (ms: number | null) => (ms === null ? '—' : t('time.hm', splitDuration(ms)))
+  const fmt = (ms: number | null) => (ms === null ? '—' : ms < 60_000 ? t('time.lessThanMinute') : t('time.hm', splitDuration(ms)))
 
   return (
     <aside

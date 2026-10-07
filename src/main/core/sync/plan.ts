@@ -16,6 +16,8 @@ export interface DesiredFile {
 export interface InstanceState {
   version: 1
   clientVersion: string | null
+  /** Minecraft version of the installed client */
+  minecraft: string | null
   /** player's mod choices, by mod id */
   choices: Choices
   /** files Hemisphere placed and still manages, with the metadata seen right after placing them */
@@ -24,7 +26,7 @@ export interface InstanceState {
   seeded: Record<string, string>
 }
 
-export const emptyState = (): InstanceState => ({ version: 1, clientVersion: null, choices: {}, owned: {}, seeded: {} })
+export const emptyState = (): InstanceState => ({ version: 1, clientVersion: null, minecraft: null, choices: {}, owned: {}, seeded: {} })
 
 export interface LocalInfo {
   size: number

@@ -194,6 +194,7 @@ export async function syncClient(manifest: ClientManifest, onProgress: ProgressF
   }
 
   state.clientVersion = manifest.clientVersion
+  state.minecraft = manifest.minecraft
   await writeInstanceState(state)
   return {
     downloaded: missing.length,

@@ -62,6 +62,15 @@
       "none": "Java n’est pas encore installé — il le sera au premier clic sur Jouer.",
       "managed": "Utilisé par Hemisphere",
       "system": "Trouvé sur ce PC"
+    },
+    "autoJoin": "Rejoindre Hemisphere automatiquement",
+    "autoJoinHint": "Passe l’écran titre et connecte-toi directement au serveur (dernière version uniquement)",
+    "onGameStart": "Au lancement de Minecraft",
+    "onGameStartHint": "Le launcher revient quand tu quittes le jeu",
+    "onGameStartOptions": {
+      "hide": "Masquer le launcher",
+      "keep": "Le garder ouvert",
+      "close": "Le fermer"
     }
   },
   "server": {
@@ -81,7 +90,8 @@
   },
   "time": {
     "hm": "{{h}} h {{m}} min",
-    "m": "{{m}} min"
+    "m": "{{m}} min",
+    "lessThanMinute": "< 1 min"
   },
   "playtime": {
     "title": "Ton temps de jeu",
@@ -187,7 +197,8 @@
       "java": "Installation de Java",
       "fabric": "Installation de Fabric",
       "launching": "Démarrage de Minecraft…",
-      "mods": "Mise à jour des mods Hemisphere"
+      "mods": "Mise à jour des mods Hemisphere",
+      "account": "Vérification de ton compte"
     },
     "errors": {
       "network": "Échec du téléchargement — vérifie ta connexion internet.",
@@ -246,7 +257,8 @@
       "minecraft": "Vérification de Minecraft",
       "java": "Vérification de Java",
       "fabric": "Vérification de Fabric",
-      "mods": "Vérification des mods Hemisphere"
+      "mods": "Vérification des mods Hemisphere",
+      "account": "Vérification de ton compte"
     },
     "result": {
       "minecraftOk": "Minecraft, Java et Fabric vérifiés",
@@ -266,5 +278,17 @@
       "allFixed_other": "Tout est réparé — {{count}} problèmes corrigés.",
       "allFixed_many": "Tout est réparé — {{count}} problèmes corrigés."
     }
+  },
+  "update": {
+    "button": "Mettre à jour vers {{version}}",
+    "playPrevious": "Jouer en {{version}}",
+    "previousHint": "Ancienne version · ne se connecte pas à Hemisphere"
+  },
+  "whitelist": {
+    "title": "Tu n’es pas encore sur la whitelist",
+    "body": "Hemisphere est une communauté sur whitelist. Rejoins notre Discord et fais ta demande — ça ne prend en général que quelques minutes.",
+    "join": "Rejoindre Discord",
+    "checkAgain": "Vérifier à nouveau",
+    "playAnyway": "Jouer sans rejoindre"
   }
 }

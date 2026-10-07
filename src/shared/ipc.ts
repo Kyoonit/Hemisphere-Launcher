@@ -1,6 +1,7 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
-import type { GameState, JavaRuntimeInfo, RepairMode, RepairReport } from './game'
+import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport } from './game'
+import type { Settings } from './settings'
 import type { ClientSummary } from './client'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
@@ -30,6 +31,10 @@ export const IPC = {
   clientGet: 'client:get',
   modsEnabled: 'mods:enabled',
   modsSet: 'mods:set',
+  settingsGet: 'settings:get',
+  settingsSet: 'settings:set',
+  settingsChanged: 'settings:changed',
+  playtimeChanged: 'playtime:changed',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -67,6 +72,13 @@ export interface HemisphereApi {
   playtime: {
     /** Playtime of the active account */
     get(): Promise<PlaytimeSummary>
+    /** Fires when a session was recorded */
+    onChange(cb: () => void): () => void
+  }
+  settings: {
+    get(): Promise<Settings>
+    set(patch: Partial<Settings>): Promise<Settings>
+    onChange(cb: (s: Settings) => void): () => void
   }
   auth: {
     getState(): Promise<AccountsState>
@@ -82,7 +94,7 @@ export interface HemisphereApi {
     getState(): Promise<GameState>
     onState(cb: (state: GameState) => void): () => void
     /** Install if needed and launch with the active account */
-    play(): void
+    play(opts?: PlayOptions): void
     /** Managed runtime (if installed) + Java found on this PC */
     javaInfo(): Promise<JavaRuntimeInfo[]>
     /** Verify and fix the installation (progress arrives through onState) */

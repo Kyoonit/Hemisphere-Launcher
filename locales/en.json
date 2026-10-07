@@ -62,6 +62,15 @@
       "none": "No Java installed yet — it will be installed the first time you press Play.",
       "managed": "Used by Hemisphere",
       "system": "Found on this PC"
+    },
+    "autoJoin": "Join Hemisphere automatically",
+    "autoJoinHint": "Skip the title screen and connect straight to the server (latest version only)",
+    "onGameStart": "When Minecraft starts",
+    "onGameStartHint": "The launcher comes back when you quit the game",
+    "onGameStartOptions": {
+      "hide": "Hide the launcher",
+      "keep": "Keep it open",
+      "close": "Close it"
     }
   },
   "server": {
@@ -81,7 +90,8 @@
   },
   "time": {
     "hm": "{{h}}h {{m}}m",
-    "m": "{{m}}m"
+    "m": "{{m}}m",
+    "lessThanMinute": "< 1m"
   },
   "playtime": {
     "title": "Your playtime",
@@ -187,7 +197,8 @@
       "java": "Installing Java",
       "fabric": "Installing Fabric",
       "launching": "Starting Minecraft…",
-      "mods": "Updating Hemisphere mods"
+      "mods": "Updating Hemisphere mods",
+      "account": "Checking your account"
     },
     "errors": {
       "network": "Download failed — check your internet connection.",
@@ -246,7 +257,8 @@
       "minecraft": "Checking Minecraft",
       "java": "Checking Java",
       "fabric": "Checking Fabric",
-      "mods": "Checking Hemisphere mods"
+      "mods": "Checking Hemisphere mods",
+      "account": "Checking your account"
     },
     "result": {
       "minecraftOk": "Minecraft, Java and Fabric verified",
@@ -263,5 +275,17 @@
       "allFixed_one": "All fixed — {{count}} problem repaired.",
       "allFixed_other": "All fixed — {{count}} problems repaired."
     }
+  },
+  "update": {
+    "button": "Update to {{version}}",
+    "playPrevious": "Play on {{version}}",
+    "previousHint": "Older version · won't connect to Hemisphere"
+  },
+  "whitelist": {
+    "title": "You're not whitelisted yet",
+    "body": "Hemisphere is a whitelisted community. Join our Discord and apply — it usually only takes a few minutes.",
+    "join": "Join Discord",
+    "checkAgain": "Check again",
+    "playAnyway": "Play without joining"
   }
 }

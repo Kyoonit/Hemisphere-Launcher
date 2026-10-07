@@ -3,6 +3,7 @@ import { IPC, type HemisphereApi } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
 import type { AccountsState } from '@shared/auth'
 import type { GameState } from '@shared/game'
+import type { Settings } from '@shared/settings'
 
 const api: HemisphereApi = {
   window: {
@@ -27,6 +28,20 @@ const api: HemisphereApi = {
   },
   playtime: {
     get: () => ipcRenderer.invoke(IPC.playtimeGet),
+    onChange: (cb) => {
+      const listener = (): void => cb()
+      ipcRenderer.on(IPC.playtimeChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.playtimeChanged, listener)
+    },
+  },
+  settings: {
+    get: () => ipcRenderer.invoke(IPC.settingsGet),
+    set: (patch) => ipcRenderer.invoke(IPC.settingsSet, patch),
+    onChange: (cb) => {
+      const listener = (_e: unknown, s: Settings): void => cb(s)
+      ipcRenderer.on(IPC.settingsChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.settingsChanged, listener)
+    },
   },
   auth: {
     getState: () => ipcRenderer.invoke(IPC.authState),
@@ -48,7 +63,7 @@ const api: HemisphereApi = {
       ipcRenderer.on(IPC.gameStateChanged, listener)
       return () => ipcRenderer.removeListener(IPC.gameStateChanged, listener)
     },
-    play: () => ipcRenderer.send(IPC.gamePlay),
+    play: (opts) => ipcRenderer.send(IPC.gamePlay, opts),
     javaInfo: () => ipcRenderer.invoke(IPC.gameJava),
     repair: (mode) => ipcRenderer.invoke(IPC.gameRepair, mode),
   },

@@ -80,6 +80,30 @@ async function writeCache(indexBytes: Buffer, sig: string, manifestBytes: Buffer
   }
 }
 
+/**
+ * The previous client's manifest (for "Play on <previous Minecraft>"), verified against the hash recorded in the
+ * signed index. Cached on disk so it also works offline.
+ */
+export async function getPreviousManifest(): Promise<ClientManifest | null> {
+  const { index } = await getContent()
+  const ref = index.previous
+  if (!ref) return null
+  const check = (bytes: Buffer) => {
+    if (bytes.length !== ref.size || createHash('sha512').update(bytes).digest('hex') !== ref.sha512) throw new ContentError('previous manifest hash mismatch')
+    return ClientManifestSchema.parse(JSON.parse(bytes.toString('utf8')))
+  }
+  const cached = join(cacheDir(), 'previous-manifest.json')
+  try {
+    return check(await readFile(cached))
+  } catch {
+    const bytes = await download(`${contentBase()}${ref.manifest}`, ref.size)
+    const manifest = check(bytes)
+    await mkdir(cacheDir(), { recursive: true })
+    await writeFile(cached, bytes)
+    return manifest
+  }
+}
+
 let current: Promise<LoadedContent> | null = null
 
 /** Latest verified content. Cached in memory; `refresh` forces a new download attempt. */

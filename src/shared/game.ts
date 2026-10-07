@@ -1,6 +1,6 @@
 /** Game install / launch state shared by main and renderer. */
 
-export type GameStage = 'java' | 'minecraft' | 'fabric' | 'mods' | 'launching'
+export type GameStage = 'account' | 'java' | 'minecraft' | 'fabric' | 'mods' | 'launching'
 
 export interface GameProgress {
   stage: GameStage
@@ -17,6 +17,7 @@ export type GameErrorCode =
   | 'notSignedIn'
   | 'sessionExpired'
   | 'alreadyRunning'
+  | 'notWhitelisted' // Hemisphere API says this account isn't whitelisted yet
   | 'busy' // files in use: Minecraft is open, so mods can't be changed
   | 'content' // client definition could not be downloaded or verified
   | 'crashed' // game exited with an error
@@ -31,6 +32,15 @@ export interface GameState {
   runningAccounts: string[]
   /** Last problem, cleared on next PLAY */
   error: { code: GameErrorCode; detail?: string } | null
+}
+
+/** latest = current client (auto-joins if enabled); previous = "Play on <old Minecraft>" (never auto-joins) */
+export type PlayTarget = 'latest' | 'previous'
+
+export interface PlayOptions {
+  target: PlayTarget
+  /** launch even though the whitelist check said no (singleplayer, other servers) */
+  skipWhitelist?: boolean
 }
 
 export type RepairMode = 'quick' | 'full'

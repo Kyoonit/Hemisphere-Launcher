@@ -166,6 +166,13 @@ place / remove. `download.ts` fetches only missing files into the content store 
 Range resume, retries and SHA-512 verification before a file is accepted; jars are hard-linked into `mods/`
 (configs are copied). Files the player added are never touched; "default" configs are only copied once.
 
+**PLAY flow (Phase 11)** — account (fresh session + whitelist API; unknown answer never blocks) → signed content
+→ Minecraft/Java/Fabric → mod sync → launch (`--quickPlayMultiplayer` when auto-join is on and on the latest client)
+→ playtime session file. The game is spawned **detached with `stdio: 'ignore'`**: with piped output, closing the
+launcher while playing left Minecraft frozen on a full pipe. Crashes are detected from the exit code + a new file in
+`crash-reports/`. Update offer: `src/shared/update.ts` (same Minecraft → silent; new Minecraft → "Update to…" +
+"Play on <previous>", which uses the previous signed manifest and never auto-joins).
+
 ## 7. Hemisphere API (Option A) — `server/`
 
 One **dependency-free Node file** run on the Minecraft host (pm2 or a Windows/Linux service), published through a

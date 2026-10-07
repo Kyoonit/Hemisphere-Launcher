@@ -7,7 +7,7 @@ import DiscordIcon from '../components/DiscordIcon'
 import ServerPanel from '../components/ServerPanel'
 import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
-import PlayZone from '../components/PlayZone'
+import PlayZone, { useGameState } from '../components/PlayZone'
 import { useClient } from './Mods'
 import { useNow, useServerStatus } from '../hooks'
 import { useAccounts } from '../accounts'
@@ -22,7 +22,9 @@ export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onR
   const { t } = useTranslation()
   const status = useServerStatus()
   const { active } = useAccounts()
-  const client = useClient()
+  const game = useGameState()
+  // Reload client info whenever a launch/repair finishes (an update may have just been installed).
+  const client = useClient(game?.phase === 'preparing' ? 'busy' : game?.phase)
 
   return (
     <div className="relative flex h-full flex-col items-center px-7 pb-6">

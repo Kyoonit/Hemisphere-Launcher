@@ -1,4 +1,5 @@
 import type { Localized } from './manifest'
+import type { UpdateDecision } from './update'
 
 /** What the interface needs to know about the Hemisphere client (no URLs or hashes). */
 export interface ModSummary {
@@ -22,4 +23,6 @@ export interface ClientSummary {
   /** network = freshly verified; cache = last verified copy (offline or server problem) */
   source: 'network' | 'cache'
   mods: ModSummary[]
+  /** What PLAY should offer (update / play previous) */
+  update: UpdateDecision
 }
