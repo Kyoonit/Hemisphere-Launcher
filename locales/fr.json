@@ -1,0 +1,59 @@
+{
+  "app": {
+    "name": "Hemisphere SMP"
+  },
+  "nav": {
+    "play": "Jouer",
+    "news": "Actus",
+    "mods": "Mods",
+    "settings": "Paramètres"
+  },
+  "window": {
+    "minimize": "Réduire",
+    "maximize": "Agrandir",
+    "restore": "Restaurer",
+    "close": "Fermer"
+  },
+  "home": {
+    "welcomeTo": "Bienvenue sur",
+    "welcomeBack": "Bon retour",
+    "play": "Jouer",
+    "ready": "Prêt",
+    "clientVersion": "Client Hemisphere {{version}}",
+    "notConnected": "Le lancement arrive dans une prochaine phase",
+    "location": "Lieu : {{name}}"
+  },
+  "links": {
+    "discord": "Discord",
+    "website": "Site web",
+    "map": "Carte",
+    "rules": "Règles"
+  },
+  "backgrounds": {
+    "kingdom": "Le Royaume",
+    "hempshire": "Hempshire",
+    "playerBases": "Bases des joueurs",
+    "community": "Projets communautaires"
+  },
+  "placeholder": {
+    "comingSoon": "Bientôt disponible",
+    "news": "Les actualités et annonces du serveur apparaîtront ici.",
+    "mods": "Choisis les mods à utiliser dans ton client Hemisphere.",
+    "settings": "Paramètres du jeu, du launcher et du compte."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "sections": {
+      "game": "Jeu",
+      "launcher": "Launcher",
+      "account": "Compte",
+      "installation": "Installation",
+      "advanced": "Avancé"
+    },
+    "language": "Langue",
+    "languageHint": "Suit la langue de Windows par défaut",
+    "languageAuto": "Automatique",
+    "version": "Version du launcher",
+    "sectionPlaceholder": "Ces paramètres seront disponibles dans une prochaine mise à jour."
+  }
+}

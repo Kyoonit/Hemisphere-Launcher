@@ -1,0 +1,117 @@
+@import 'tailwindcss';
+
+/* Hemisphere design tokens (Phase 1). The website is built on Tailwind's default gray/green
+   palette, so standard classes like bg-gray-900 or text-green-400 match it exactly. */
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans',
+    'Droid Sans', 'Helvetica Neue', sans-serif;
+  /* Exact website colours (Tailwind v3 hex values — v4's defaults are more saturated) */
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-green-300: #86efac;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-green-600: #16a34a;
+  --color-amber-400: #fbbf24;
+  --color-red-400: #f87171;
+  --color-red-600: #dc2626;
+  --color-discord: #4f46e5;
+  --color-discord-hover: #4338ca;
+  --ease-hemi: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --animate-rise: rise 0.6s var(--ease-hemi) both;
+  --animate-fade: fade 0.35s var(--ease-hemi) both;
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-gray-900 font-sans text-gray-200 antialiased select-none;
+    overflow: hidden;
+  }
+  button {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-gray-900), 0 0 0 4px var(--color-green-500);
+  }
+}
+
+@layer components {
+  /* Glass card used across the launcher (website: bg-gray-800/50 + backdrop-blur-sm) */
+  .glass {
+    @apply rounded-lg bg-gray-800/55 shadow-lg backdrop-blur-sm;
+  }
+
+  /* The hero PLAY button: website green with a soft glow */
+  .play-button {
+    @apply w-[300px] rounded-lg py-[18px] text-[30px] font-extrabold tracking-[0.14em] text-white;
+    background: linear-gradient(180deg, var(--color-green-500), var(--color-green-600));
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 0.25),
+      inset 0 0 0 1px rgb(134 239 172 / 0.3),
+      0 0 36px rgb(34 197 94 / 0.3);
+    transition: all 300ms var(--ease-hemi);
+  }
+  .play-button:hover {
+    transform: scale(1.03);
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 0.25),
+      inset 0 0 0 1px rgb(134 239 172 / 0.45),
+      0 0 52px rgb(34 197 94 / 0.45);
+  }
+  .play-button:active {
+    transform: scale(0.99);
+  }
+
+  .drag {
+    -webkit-app-region: drag;
+  }
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+}
+
+/* Background slideshow: slow cross-fade + gentle zoom */
+.bg-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 1.6s var(--ease-hemi);
+}
+.bg-slide.is-active {
+  opacity: 1;
+  animation: kenburns 70s linear forwards;
+}
+@keyframes kenburns {
+  to {
+    transform: scale(1.14);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  .bg-slide.is-active {
+    animation: none !important;
+    transition: none !important;
+  }
+}

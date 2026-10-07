@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hemisphere Design System</title>
+<style>
+/* ===== Hemisphere tokens (extracted from hemispheresurvival.club, Tailwind palette) ===== */
+:root{
+  /* surfaces */
+  --bg-900:#111827; --bg-800:#1f2937; --bg-700:#374151; --bg-600:#4b5563;
+  --glass:rgba(31,41,55,.5); --glass-strong:rgba(31,41,55,.9);
+  /* text */
+  --text:#ffffff; --text-body:#e5e7eb; --text-muted:#d1d5db; --text-dim:#9ca3af;
+  /* brand */
+  --green-300:#86efac; --green-400:#4ade80; --green-500:#22c55e; --green-600:#16a34a; --green-700:#15803d;
+  --green-line:rgba(34,197,94,.2);
+  --discord:#4f46e5; --discord-hover:#4338ca;
+  /* launcher-only semantic additions (Tailwind-consistent) */
+  --danger:#f87171; --danger-bg:rgba(127,29,29,.35);
+  --warn:#fbbf24;  --warn-bg:rgba(120,53,15,.35);
+  --info:#60a5fa;
+  /* shape & depth */
+  --r-sm:4px; --r:8px; --r-full:9999px;
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);
+  --drop:drop-shadow(0 10px 8px rgba(0,0,0,.04)) drop-shadow(0 4px 3px rgba(0,0,0,.1));
+  /* motion */
+  --ease:cubic-bezier(.4,0,.2,1); --t-fast:150ms; --t:300ms;
+  /* type */
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Fira Sans","Droid Sans","Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg-900);color:var(--text-body);font-family:var(--font);line-height:1.5;padding:40px 16px 80px}
+.wrap{max-width:1100px;margin:0 auto}
+h1.page{font-size:40px;font-weight:700;color:var(--text);margin-bottom:4px}
+h1.page span{color:var(--green-400)}
+.lead{color:var(--text-dim);margin-bottom:40px}
+section{margin-bottom:48px}
+.sec-title{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green-400);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--green-line)}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.note{font-size:13px;color:var(--text-dim);margin-top:10px}
+
+/* swatches */
+.sw{width:150px;border-radius:var(--r);overflow:hidden;background:var(--bg-800);box-shadow:var(--shadow-md)}
+.sw i{display:block;height:64px}
+.sw div{padding:8px 10px;font-size:12px}
+.sw b{display:block;color:var(--text);font-weight:600}
+.sw code{font-family:var(--mono);color:var(--text-dim)}
+
+/* type scale */
+.type-row{display:flex;gap:24px;align-items:baseline;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.type-row small{width:140px;flex:none;color:var(--text-dim);font-family:var(--mono);font-size:12px}
+
+/* components */
+.card{background:var(--glass);backdrop-filter:blur(4px);border-radius:var(--r);padding:24px}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;font:inherit;font-size:14px;font-weight:500;padding:8px 16px;border-radius:var(--r);color:var(--text-muted);background:transparent;transition:all var(--t) var(--ease)}
+.btn:hover{background:var(--bg-700);color:var(--text);box-shadow:var(--shadow-md)}
+.btn.active,.btn.primary{background:var(--green-600);color:#fff;box-shadow:var(--shadow-md)}
+.btn.primary:hover{background:var(--green-500)}
+.btn.discord{background:var(--discord);color:#fff;font-weight:700;font-size:16px;padding:12px 24px;box-shadow:var(--shadow-lg)}
+.btn.discord:hover{background:var(--discord-hover);transform:scale(1.05)}
+.btn.ghost{background:var(--bg-700);color:var(--text)}
+.btn.ghost:hover{background:var(--bg-600)}
+.btn:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg-900),0 0 0 4px var(--green-500)}
+
+.play{font:inherit;cursor:pointer;border:0;border-radius:var(--r);background:linear-gradient(180deg,var(--green-500),var(--green-600));color:#fff;font-size:28px;font-weight:800;letter-spacing:.12em;padding:18px 72px;box-shadow:var(--shadow-lg),0 0 0 1px rgba(134,239,172,.25) inset,0 0 32px rgba(34,197,94,.25);transition:all var(--t) var(--ease)}
+.play:hover{transform:scale(1.03);box-shadow:var(--shadow-lg),0 0 0 1px rgba(134,239,172,.4) inset,0 0 48px rgba(34,197,94,.4)}
+.play:active{transform:scale(.99)}
+.play.busy{background:var(--bg-700);color:var(--text-muted);box-shadow:none;cursor:default;transform:none}
+.play.update{background:linear-gradient(180deg,#fbbf24,#d97706);box-shadow:var(--shadow-lg),0 0 32px rgba(251,191,36,.25)}
+
+.pill{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:var(--r-full);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--bg-800)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+.pill.on{color:var(--green-400)} .pill.off{color:var(--danger)} .pill.maint{color:var(--warn)}
+.pill.on .dot{animation:pulse 2s var(--ease) infinite}
+@keyframes pulse{50%{opacity:.4}}
+
+.ip{background:var(--glass-strong);border-radius:var(--r);padding:16px 24px;color:var(--green-400);font-weight:700;font-size:22px;display:inline-flex;gap:16px;align-items:center}
+.ip button{background:none;border:0;color:var(--green-400);cursor:pointer;padding:6px;border-radius:var(--r);transition:all var(--t-fast) var(--ease)}
+.ip button:hover{background:var(--bg-700);color:var(--green-300)}
+
+.progress{height:8px;border-radius:var(--r-full);background:var(--bg-700);overflow:hidden;width:100%}
+.progress i{display:block;height:100%;width:62%;border-radius:inherit;background:linear-gradient(90deg,var(--green-600),var(--green-400));transition:width var(--t) var(--ease)}
+
+.field{display:flex;flex-direction:column;gap:6px;min-width:260px}
+.field label{font-size:13px;font-weight:600;color:var(--text-muted)}
+.field input{font:inherit;background:var(--bg-900);border:1px solid var(--bg-700);border-radius:var(--r);padding:8px 12px;color:var(--text);transition:border-color var(--t-fast) var(--ease)}
+.field input:focus{outline:none;border-color:var(--green-500);box-shadow:0 0 0 3px rgba(34,197,94,.2)}
+
+.toggle{position:relative;width:40px;height:22px;border-radius:var(--r-full);background:var(--bg-600);cursor:pointer;transition:background var(--t-fast) var(--ease);border:0}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform var(--t-fast) var(--ease)}
+.toggle[aria-checked=true]{background:var(--green-600)}
+.toggle[aria-checked=true]::after{transform:translateX(18px)}
+
+.alert{display:flex;gap:12px;align-items:flex-start;border-radius:var(--r);padding:14px 16px;font-size:14px;max-width:520px}
+.alert b{color:var(--text);display:block}
+.alert.err{background:var(--danger-bg);border-left:3px solid var(--danger)}
+.alert.warn{background:var(--warn-bg);border-left:3px solid var(--warn)}
+.alert.ok{background:rgba(20,83,45,.35);border-left:3px solid var(--green-400)}
+
+.news{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;width:100%}
+.news .item{background:var(--bg-700);border-radius:var(--r);padding:16px;transition:transform var(--t-fast) var(--ease)}
+.news .item:hover{transform:scale(1.05)}
+.news .tag{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green-400)}
+.news h4{color:var(--text);margin:4px 0}
+.news p{font-size:13px;color:var(--text-dim)}
+
+/* mini launcher mood sample */
+.mood{position:relative;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-lg);aspect-ratio:16/9.5;background:var(--bg-900) url("https://hemispheresurvival.club/images/603aeb_f9e9899cb9934cbfb786e2a243716890~mv2.png") center/cover}
+.mood::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(17,24,39,.82),rgba(31,41,55,.78) 50%,rgba(17,24,39,.96))}
+.mood>*{position:relative}
+.bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:linear-gradient(90deg,var(--bg-900),var(--bg-800),var(--bg-900));border-bottom:1px solid var(--green-line);backdrop-filter:blur(12px)}
+.brand{display:flex;gap:8px;align-items:center;color:#fff;font-weight:700;font-size:18px}
+.brand img{width:28px;height:28px}
+.hero{text-align:center;padding:48px 16px 24px}
+.hero h2{font-size:clamp(28px,5vw,52px);line-height:1.05;font-weight:700;color:#fff;filter:var(--drop);animation:up .6s var(--ease) .2s both}
+.hero h2 span{color:var(--green-400)}
+.hero .meta{margin:18px 0 26px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap;animation:fade .6s var(--ease) .4s both}
+.hero .play{animation:fade .6s var(--ease) .6s both}
+.hero .sub{margin-top:12px;font-size:13px;color:var(--text-dim)}
+@keyframes up{from{opacity:0;transform:translateY(16px)}}
+@keyframes fade{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="page">Hemisphere <span>Design System</span></h1>
+  <p class="lead">Phase 1 · extracted from hemispheresurvival.club · reference only, not launcher code</p>
+
+  <section>
+    <div class="sec-title">Mood sample · how the website language translates to a launcher</div>
+    <div class="mood">
+      <div class="bar">
+        <div class="brand"><img src="https://hemispheresurvival.club/images/logo.png" alt="">Hemisphere SMP</div>
+        <div class="row" style="gap:4px"><button class="btn active">Play</button><button class="btn">News</button><button class="btn">Map</button><button class="btn">Settings</button></div>
+      </div>
+      <div class="hero">
+        <h2>WELCOME BACK<br><span>PLAYERNAME</span></h2>
+        <div class="meta"><span class="pill on"><i class="dot"></i>Online · 24 players</span><span class="pill" style="color:var(--text-muted)">MC 26.3 · Fabric</span></div>
+        <button class="play">PLAY</button>
+        <div class="sub">Hemisphere Client v1.0.0 · Ready</div>
+      </div>
+    </div>
+    <p class="note">Background: the site's world screenshot under a gray-900→800 gradient overlay, same as the website hero. Layout itself is decided in Phase 2.</p>
+  </section>
+
+  <section>
+    <div class="sec-title">Color · surfaces</div>
+    <div class="row">
+      <div class="sw"><i style="background:#111827"></i><div><b>bg-900</b><code>#111827</code><br>app base, title bar</div></div>
+      <div class="sw"><i style="background:#1f2937"></i><div><b>bg-800</b><code>#1f2937</code><br>panels, gradients</div></div>
+      <div class="sw"><i style="background:#374151"></i><div><b>bg-700</b><code>#374151</code><br>hover, inner cards</div></div>
+      <div class="sw"><i style="background:rgba(31,41,55,.5)"></i><div><b>glass</b><code>800 @ 50% + blur 4px</code><br>content cards</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title">Color · brand & semantic</div>
+    <div class="row">
+      <div class="sw"><i style="background:#4ade80"></i><div><b>green-400</b><code>#4ade80</code><br>accent text, IP, headings</div></div>
+      <div class="sw"><i style="background:#16a34a"></i><div><b>green-600</b><code>#16a34a</code><br>active / primary fill</div></div>
+      <div class="sw"><i style="background:#22c55e"></i><div><b>green-500</b><code>#22c55e</code><br>focus ring, lines @20%</div></div>
+      <div class="sw"><i style="background:#4f46e5"></i><div><b>discord</b><code>#4f46e5</code><br>Discord only</div></div>
+      <div class="sw"><i style="background:#f87171"></i><div><b>danger*</b><code>#f87171</code><br>offline, errors</div></div>
+      <div class="sw"><i style="background:#fbbf24"></i><div><b>warn*</b><code>#fbbf24</code><br>maintenance, update</div></div>
+    </div>
+    <p class="note">* Not on the website; added for launcher states, taken from the same Tailwind palette so they sit naturally.</p>
+  </section>
+
+  <section>
+    <div class="sec-title">Typography · system stack (Segoe UI on Windows)</div>
+    <div class="type-row"><small>display 52/700</small><span style="font-size:44px;font-weight:700;color:#fff;line-height:1.1">WELCOME TO <span style="color:var(--green-400)">HEMISPHERE</span></span></div>
+    <div class="type-row"><small>h2 30/700</small><span style="font-size:30px;font-weight:700;color:#fff">Latest News</span></div>
+    <div class="type-row"><small>label 13/700 caps</small><span style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green-400)">Server status</span></div>
+    <div class="type-row"><small>body 16/400</small><span>We're a community of Minecrafters with a mission to create the best survival world we can.</span></div>
+    <div class="type-row"><small>nav 14/500</small><span style="font-size:14px;font-weight:500;color:var(--text-muted)">Home · Rules · Map · Info</span></div>
+    <div class="type-row"><small>meta 13/400 dim</small><span style="font-size:13px;color:var(--text-dim)">Client v1.0.0 · Ready</span></div>
+  </section>
+
+  <section>
+    <div class="sec-title">Buttons</div>
+    <div class="row">
+      <button class="play">PLAY</button>
+      <button class="play update">UPDATE</button>
+      <button class="play busy">INSTALLING…</button>
+    </div>
+    <div class="row" style="margin-top:20px">
+      <button class="btn active">Active nav</button>
+      <button class="btn">Nav item</button>
+      <button class="btn primary">Primary</button>
+      <button class="btn ghost">Secondary</button>
+      <button class="btn discord">Join Discord</button>
+    </div>
+    <p class="note">PLAY is the one launcher-specific element: website green, plus a soft green glow so it reads as the hero action. Hover = scale (site uses 1.05).</p>
+  </section>
+
+  <section>
+    <div class="sec-title">Status, IP block, progress</div>
+    <div class="row">
+      <span class="pill on"><i class="dot"></i>Online · 24 players</span>
+      <span class="pill off"><i class="dot"></i>Offline</span>
+      <span class="pill maint"><i class="dot"></i>Maintenance</span>
+    </div>
+    <div class="row" style="margin-top:20px">
+      <div class="ip">IP: play.hemispheresurvival.club <button title="Copy">⧉</button></div>
+    </div>
+    <div style="margin-top:20px;max-width:520px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Downloading Sodium…</span><span style="color:var(--text-dim)">62% · 3 of 5 files</span></div>
+      <div class="progress"><i></i></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title">Cards, news, alerts</div>
+    <div class="news">
+      <div class="item"><div class="tag">Update</div><h4>Client v1.1 is out</h4><p>Voice Chat updated, new optional minimap.</p></div>
+      <div class="item"><div class="tag">Event</div><h4>Build contest</h4><p>Theme: floating islands. Ends Sunday.</p></div>
+      <div class="item"><div class="tag">Server</div><h4>Updated to 26.3</h4><p>All mods updated, enjoy!</p></div>
+    </div>
+    <div class="row" style="margin-top:20px;align-items:flex-start">
+      <div class="alert err"><span>✕</span><div><b>Not whitelisted</b>Link your Discord account and get approved to join.</div></div>
+      <div class="alert warn"><span>!</span><div><b>Update available</b>Client v1.1.0 — update now or keep playing on v1.0.</div></div>
+      <div class="alert ok"><span>✓</span><div><b>Client ready</b>All 32 files verified.</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-title">Inputs</div>
+    <div class="row" style="align-items:flex-end">
+      <div class="field"><label>Minecraft directory</label><input value="C:\Users\Player\AppData\Roaming\Hemisphere"></div>
+      <div class="row" style="gap:10px"><button class="toggle" aria-checked="true" onclick="this.ariaChecked=this.ariaChecked!=='true'"></button><span>Sodium</span></div>
+      <div class="row" style="gap:10px"><button class="toggle" aria-checked="false" onclick="this.ariaChecked=this.ariaChecked!=='true'"></button><span>Minimap</span></div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

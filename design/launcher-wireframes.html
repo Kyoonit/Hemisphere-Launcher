@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hemisphere Launcher Wireframes</title>
+<style>
+:root{
+  --bg-900:#111827;--bg-800:#1f2937;--bg-700:#374151;--bg-600:#4b5563;
+  --glass:rgba(31,41,55,.55);--glass-strong:rgba(31,41,55,.92);
+  --text:#fff;--text-body:#e5e7eb;--text-muted:#d1d5db;--text-dim:#9ca3af;
+  --green-300:#86efac;--green-400:#4ade80;--green-500:#22c55e;--green-600:#16a34a;
+  --green-line:rgba(34,197,94,.2);--discord:#4f46e5;--discord-hover:#4338ca;
+  --danger:#f87171;--warn:#fbbf24;
+  --r-sm:4px;--r:8px;--r-full:9999px;
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.25),0 4px 6px -4px rgba(0,0,0,.2);
+  --ease:cubic-bezier(.4,0,.2,1);--t-fast:150ms;--t:300ms;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Fira Sans","Droid Sans","Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0b0f19;color:var(--text-body);font-family:var(--font);font-size:14px;line-height:1.5;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- prototype navigator (not part of launcher) ---------- */
+#proto{position:fixed;left:0;top:0;bottom:0;width:210px;background:#0b0f19;border-right:1px solid #1f2937;padding:16px 12px;overflow:auto;z-index:10}
+#proto h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin:14px 6px 6px}
+#proto h2{font-size:14px;color:#fff;margin:0 6px 2px}#proto p{font-size:11px;color:var(--text-dim);margin:0 6px}
+#proto button{display:block;width:100%;text-align:left;padding:6px 10px;border-radius:6px;color:var(--text-muted);font-size:13px}
+#proto button:hover{background:var(--bg-800);color:#fff}
+#proto button.on{background:var(--green-600);color:#fff}
+#proto .sub{padding-left:22px;font-size:12px}
+#stage{position:fixed;left:210px;right:0;top:0;bottom:0;display:grid;place-items:center}
+
+/* ---------- launcher window ---------- */
+#win{width:1120px;height:700px;flex:none;border-radius:10px;overflow:hidden;position:relative;background:var(--bg-900);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);transform-origin:center}
+.titlebar{position:absolute;inset:0 0 auto 0;height:52px;z-index:5;display:flex;align-items:center;gap:16px;padding:0 0 0 16px;background:linear-gradient(90deg,rgba(17,24,39,.97),rgba(31,41,55,.94),rgba(17,24,39,.97));border-bottom:1px solid var(--green-line);backdrop-filter:blur(12px);box-shadow:var(--shadow-lg)}
+.brand{display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:17px;white-space:nowrap}
+.brand img{width:28px;height:28px}
+.tabs{display:flex;gap:4px;margin-left:12px}
+.tab{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r);font-size:14px;font-weight:500;color:var(--text-muted);transition:all var(--t) var(--ease)}
+.tab svg.i{width:16px;height:16px}
+.tab:hover{background:var(--bg-700);color:#fff}
+.tab.on{background:var(--green-600);color:#fff;box-shadow:var(--shadow-md)}
+.tb-right{margin-left:auto;display:flex;align-items:center;height:100%}
+.account{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;border-radius:var(--r);margin-right:8px;transition:background var(--t-fast) var(--ease)}
+.account:hover{background:var(--bg-700)}
+.account img{width:26px;height:26px;border-radius:var(--r-sm);image-rendering:pixelated}
+.account b{color:#fff;font-weight:600;font-size:13px}
+.wc{width:46px;height:100%;display:grid;place-items:center;color:var(--text-dim)}
+.wc:hover{background:var(--bg-700);color:#fff}.wc.x:hover{background:#dc2626}
+.wc svg.i{width:15px;height:15px}
+body.preauth .tabs,body.preauth .account{visibility:hidden}
+
+/* ---------- background slideshow ---------- */
+.bgs{position:absolute;inset:0;z-index:0}
+.bgs div{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 1.6s var(--ease);transform:scale(1.04)}
+.bgs div.on{opacity:1;animation:kb 20s linear forwards}
+@keyframes kb{from{transform:scale(1.04)}to{transform:scale(1.12)}}
+.bgs::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(17,24,39,.72),rgba(31,41,55,.62) 45%,rgba(17,24,39,.95))}
+#win[data-dim] .bgs::after{background:linear-gradient(180deg,rgba(17,24,39,.93),rgba(17,24,39,.97))}
+.caption{position:absolute;left:20px;top:66px;z-index:2;font-size:12px;color:rgba(255,255,255,.55);display:flex;align-items:center;gap:6px;transition:opacity .6s}
+.caption svg.i{width:13px;height:13px}
+
+/* ---------- screens ---------- */
+.screen{position:absolute;inset:52px 0 0 0;z-index:1;display:none}
+.screen.on{display:block;animation:fade .35s var(--ease)}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{opacity:0;transform:translateY(14px)}}
+.center{height:100%;display:grid;place-items:center;padding:24px}
+.glass{background:var(--glass);backdrop-filter:blur(6px);border-radius:var(--r);box-shadow:var(--shadow-lg)}
+.solid{background:var(--glass-strong);border-radius:var(--r);box-shadow:var(--shadow-lg)}
+.display{font-size:44px;line-height:1.05;font-weight:700;color:#fff;letter-spacing:.01em;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35))}
+.display span{color:var(--green-400)}
+.h2{font-size:26px;font-weight:700;color:#fff;line-height:1.15}.h2 span{color:var(--green-400)}
+.label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green-400)}
+.dim{color:var(--text-dim)}.small{font-size:12px}
+.row{display:flex;align-items:center;gap:10px}
+.stack{display:flex;flex-direction:column}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 16px;border-radius:var(--r);font-size:14px;font-weight:600;color:var(--text-muted);transition:all var(--t) var(--ease);white-space:nowrap}
+.btn:hover{background:var(--bg-700);color:#fff}
+.btn.primary{background:var(--green-600);color:#fff;box-shadow:var(--shadow-md)}.btn.primary:hover{background:var(--green-500)}
+.btn.ghost{background:rgba(55,65,81,.85);color:#fff}.btn.ghost:hover{background:var(--bg-600)}
+.btn.discord{background:var(--discord);color:#fff;box-shadow:var(--shadow-md)}.btn.discord:hover{background:var(--discord-hover);transform:scale(1.04)}
+.btn.danger{background:rgba(220,38,38,.85);color:#fff}
+.btn.lg{padding:12px 22px;font-size:15px}
+.btn:focus-visible,.play:focus-visible,.tab:focus-visible{outline:none;box-shadow:0 0 0 2px var(--bg-900),0 0 0 4px var(--green-500)}
+
+.play{border-radius:var(--r);background:linear-gradient(180deg,var(--green-500),var(--green-600));color:#fff;font-size:30px;font-weight:800;letter-spacing:.14em;padding:18px 0;width:300px;box-shadow:var(--shadow-lg),inset 0 0 0 1px rgba(134,239,172,.3),0 0 36px rgba(34,197,94,.3);transition:all var(--t) var(--ease)}
+.play:hover{transform:scale(1.03);box-shadow:var(--shadow-lg),inset 0 0 0 1px rgba(134,239,172,.45),0 0 52px rgba(34,197,94,.45)}
+.play:active{transform:scale(.99)}
+.play.update{background:linear-gradient(180deg,#fbbf24,#d97706);font-size:22px;letter-spacing:.08em;box-shadow:var(--shadow-lg),inset 0 0 0 1px rgba(253,230,138,.35),0 0 36px rgba(251,191,36,.28)}
+.play.update:hover{box-shadow:var(--shadow-lg),0 0 52px rgba(251,191,36,.45)}
+.old{margin-top:10px;padding:6px 14px;border-radius:var(--r);font-size:13px;font-weight:500;color:var(--text-dim);background:rgba(55,65,81,.6);transition:all var(--t-fast) var(--ease)}
+.old:hover{color:#fff;background:var(--bg-700)}
+
+.pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:var(--r-full);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(17,24,39,.75);color:var(--text-muted);backdrop-filter:blur(4px)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+.pill.on{color:var(--green-400)}.pill.on .dot{animation:pulse 2s var(--ease) infinite}
+.pill.off{color:var(--danger)}.pill.maint{color:var(--warn)}
+@keyframes pulse{50%{opacity:.35}}
+.progress{height:8px;border-radius:var(--r-full);background:rgba(55,65,81,.9);overflow:hidden}
+.progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--green-600),var(--green-400));position:relative;overflow:hidden}
+.progress i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:shine 1.6s linear infinite}
+@keyframes shine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.toggle{position:relative;width:40px;height:22px;border-radius:var(--r-full);background:var(--bg-600);transition:background var(--t-fast) var(--ease);flex:none}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform var(--t-fast) var(--ease)}
+.toggle[aria-checked=true]{background:var(--green-600)}.toggle[aria-checked=true]::after{transform:translateX(18px)}
+.toggle[disabled]{opacity:.45;cursor:not-allowed}
+.check{width:18px;height:18px;border-radius:5px;border:2px solid var(--bg-600);display:grid;place-items:center;flex:none;transition:all var(--t-fast)}
+.check.on{background:var(--green-600);border-color:var(--green-600)}
+.check svg.i{width:12px;height:12px;stroke-width:3;opacity:0}.check.on svg.i{opacity:1;color:#fff}
+.input{background:var(--bg-900);border:1px solid var(--bg-700);border-radius:var(--r);padding:8px 12px;color:#fff;font:inherit;width:100%}
+.select{appearance:none;background:var(--bg-900) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E") right 10px center no-repeat;border:1px solid var(--bg-700);border-radius:var(--r);padding:8px 32px 8px 12px;color:#fff;font:inherit}
+input[type=range]{accent-color:var(--green-500);width:100%}
+.tag{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green-400)}
+.tag.warn{color:var(--warn)}.tag.red{color:var(--danger)}
+.badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:var(--r-full);background:var(--bg-700);color:var(--text-muted)}
+.badge.g{background:rgba(22,163,74,.2);color:var(--green-400)}.badge.r{background:rgba(220,38,38,.2);color:var(--danger)}.badge.y{background:rgba(217,119,6,.2);color:var(--warn)}
+
+/* ---------- HOME ---------- */
+.home{height:100%;display:flex;flex-direction:column;align-items:center;padding:0 28px 24px}
+.hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-top:10px}
+.hero .display{animation:up .6s var(--ease) .1s both}
+.meta{display:flex;gap:10px;margin:18px 0 26px;animation:up .6s var(--ease) .25s both}
+.playzone{margin-top:30px;display:flex;flex-direction:column;align-items:center;min-height:126px;animation:up .6s var(--ease) .4s both}
+.status-line{margin-top:12px;font-size:13px;color:var(--text-dim);display:flex;align-items:center;gap:6px}
+.status-line b{color:var(--green-400);font-weight:600}
+.updating{width:360px;padding:16px 18px}
+.maint-banner{display:none;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:rgba(120,53,15,.55);border-left:3px solid var(--warn);color:#fde68a;font-size:13px;margin-bottom:16px;backdrop-filter:blur(4px)}
+.bottom{width:100%;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;animation:up .6s var(--ease) .55s both}
+.links{display:flex;gap:8px}
+.links .btn{background:rgba(31,41,55,.75);backdrop-filter:blur(6px);color:var(--text-muted)}
+.links .btn:hover{background:var(--bg-700);color:#fff;transform:translateY(-2px)}
+.links .btn.discord{background:var(--discord);color:#fff}
+.home{position:relative}
+.hero{padding-right:0}
+.srv{position:absolute;top:20px;right:24px;width:268px;padding:16px;animation:up .6s var(--ease) .3s both}
+.stat{position:absolute;top:44px;left:24px;width:210px;padding:14px 16px;animation:up .6s var(--ease) .3s both}
+.stat-big{font-size:30px;font-weight:800;color:#fff;line-height:1.1;margin:6px 0 10px;font-variant-numeric:tabular-nums}
+.stat-big small{font-size:16px;font-weight:700;color:var(--green-400);margin-left:1px}
+.stat-rows{display:flex;flex-direction:column;gap:4px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
+.stat-rows div{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-dim)}
+.stat-rows b{color:var(--text-body);font-weight:600}
+.restart{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:10px 12px;border-radius:var(--r);background:rgba(17,24,39,.6);font-size:13px;color:var(--text-muted)}
+.restart svg.i{width:16px;height:16px;margin-top:2px;color:var(--text-dim)}
+.restart #rs-main{color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+.restart.soon{background:rgba(120,53,15,.5);box-shadow:inset 3px 0 0 var(--warn)}.restart.soon svg.i,.restart.soon #rs-main{color:var(--warn)}
+.restart.now{background:rgba(127,29,29,.45);box-shadow:inset 3px 0 0 var(--danger)}.restart.now svg.i,.restart.now #rs-main{color:var(--danger)}
+.plist{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}
+.pl{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;font-size:13px;color:var(--text-body);min-width:0}
+.pl:hover{background:rgba(55,65,81,.6)}
+.pl img{width:20px;height:20px;border-radius:3px;image-rendering:pixelated;flex:none;background:var(--bg-700)}
+.pl span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl.more{color:var(--text-dim);font-weight:600;justify-content:center;grid-column:1/-1;background:rgba(17,24,39,.5);margin-top:4px}
+.oldhint{font-size:11.5px;color:var(--text-dim);margin-top:4px}
+/* account switcher */
+.acct-wrap{position:relative}
+.acct-menu{position:absolute;right:8px;top:46px;width:260px;padding:8px;display:none;z-index:9;animation:up .2s var(--ease)}
+.acct-menu.on{display:block}
+.acct-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border-radius:var(--r);text-align:left}
+.acct-item:hover{background:var(--bg-700)}
+.acct-item img{width:30px;height:30px;border-radius:4px;image-rendering:pixelated}
+.acct-item .t{flex:1}.acct-item b{color:#fff;font-weight:600;display:block;font-size:13.5px}.acct-item span{font-size:12px;color:var(--text-dim)}
+.acct-sep{height:1px;background:rgba(255,255,255,.08);margin:6px 0}
+.toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:8;padding:10px 16px;border-radius:var(--r);background:var(--glass-strong);box-shadow:var(--shadow-lg);color:#fff;font-size:13px;display:none;align-items:center;gap:8px}
+.toast.on{display:flex;animation:up .25s var(--ease)}
+/* mods list */
+.mtool{display:flex;gap:10px;align-items:center;margin-bottom:16px}
+.search{position:relative;flex:0 0 260px}.search svg.i{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text-dim)}
+.search input{padding-left:32px}
+.mgroup{margin-bottom:18px}
+.mgh{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.mgh .label{color:var(--text-dim)}
+.mtable{border-radius:var(--r);overflow:hidden;background:rgba(17,24,39,.55)}
+.mrow{display:flex;align-items:center;gap:14px;padding:11px 14px;border-top:1px solid rgba(255,255,255,.05);transition:background var(--t-fast)}
+.mrow:first-child{border-top:0}.mrow:hover{background:rgba(55,65,81,.35)}
+.mrow .mi{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;flex:none}
+.mrow .t{flex:1;min-width:0}.mrow .t b{color:#fff;font-weight:600}.mrow .t .v{font-size:12px;color:var(--text-dim);margin-left:6px}
+.mrow .t p{font-size:12.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow .warnline{font-size:12px;color:var(--warn);display:none;margin-top:2px}
+.mrow.off-rec .warnline{display:block}
+.mrow.blocked{opacity:.6}
+.peek{width:330px;display:flex;gap:12px;padding:10px;transition:transform var(--t-fast) var(--ease);cursor:pointer;text-align:left}
+.peek:hover{transform:scale(1.03)}
+.peek .thumb{width:86px;height:64px;border-radius:var(--r-sm);background-size:cover;background-position:center;flex:none}
+.peek h4{color:#fff;font-size:14px;line-height:1.25;margin:2px 0}
+
+/* modal */
+.modal-back{position:absolute;inset:0;z-index:4;background:rgba(3,7,18,.65);backdrop-filter:blur(3px);display:none;place-items:center}
+.modal-back.on{display:grid;animation:fade .25s}
+.modal{width:500px;padding:26px;animation:up .3s var(--ease)}
+.modlist{margin:16px 0 20px;display:flex;flex-direction:column;gap:6px}
+.modrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);background:rgba(17,24,39,.7)}
+.modrow .name{flex:1;color:#fff;font-weight:500}
+.modrow .ico{width:30px;height:30px;border-radius:6px;display:grid;place-items:center;background:var(--bg-700);color:var(--text-muted);flex:none}
+
+/* ---------- LOGIN / WHITELIST ---------- */
+.card-login{width:420px;padding:36px 36px 28px;text-align:center}
+.card-login img.logo{width:64px;height:64px;margin-bottom:14px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5))}
+.ms{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:13px;border-radius:var(--r);background:#fff;color:#1f2937;font-weight:600;font-size:15px;margin-top:24px;transition:all var(--t) var(--ease)}
+.ms:hover{background:#f3f4f6;transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+.ms .msl{display:grid;grid-template-columns:9px 9px;gap:2px}.ms .msl i{width:9px;height:9px}
+.spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);border-top-color:var(--green-400);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.steps{display:flex;flex-direction:column;gap:10px;margin:22px 0;text-align:left}
+.step{display:flex;gap:14px;align-items:center;padding:12px 14px;border-radius:var(--r);background:rgba(17,24,39,.6)}
+.step .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--bg-700);color:#fff;font-weight:700;font-size:13px;flex:none}
+.step.done .n{background:var(--green-600)}
+.step .t{flex:1}.step .t b{color:#fff;display:block;font-weight:600}
+
+/* ---------- WIZARD ---------- */
+.wizard{width:780px;height:600px;display:flex;flex-direction:column;overflow:hidden}
+.wz-head{display:flex;gap:6px;padding:18px 26px;border-bottom:1px solid rgba(255,255,255,.06)}
+.wz-step{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);font-weight:500;flex:1}
+.wz-step .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--bg-700);font-size:12px;font-weight:700;color:var(--text-muted)}
+.wz-step.on{color:#fff}.wz-step.on .n{background:var(--green-600);color:#fff}
+.wz-step.done .n{background:rgba(22,163,74,.25);color:var(--green-400)}
+.wz-body{flex:1;padding:24px 26px;overflow:auto}
+.wz-pane{display:none}.wz-pane.on{display:block;animation:fade .3s}
+.wz-foot{display:flex;justify-content:space-between;align-items:center;padding:14px 26px;border-top:1px solid rgba(255,255,255,.06);background:rgba(17,24,39,.4)}
+.field{margin-top:18px}.field>label{display:block;font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:6px}
+.src{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r);background:rgba(17,24,39,.6);border:1px solid transparent;cursor:pointer;transition:all var(--t-fast)}
+.src:hover{border-color:var(--bg-600)}.src.on{border-color:var(--green-500);background:rgba(22,163,74,.08)}
+.src .radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--bg-600);flex:none}
+.src.on .radio{border:5px solid var(--green-500)}
+.src .ico{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;background:var(--bg-700);flex:none;font-weight:800;color:#fff;font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.optrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r);background:rgba(17,24,39,.6)}
+.optrow .t{flex:1;min-width:0}.optrow .t b{color:#fff;font-weight:600;display:block;font-size:13.5px}.optrow .t span{font-size:12px;color:var(--text-dim)}
+
+/* ---------- INSTALL ---------- */
+.install{width:560px;padding:30px 32px}
+.checklist{margin:20px 0;display:flex;flex-direction:column;gap:2px}
+.ci{display:flex;align-items:center;gap:12px;padding:8px 4px;color:var(--text-dim)}
+.ci .st{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--bg-700)}
+.ci .st svg.i{width:13px;height:13px;stroke-width:3}
+.ci.done{color:var(--text-body)}.ci.done .st{background:rgba(22,163,74,.25);color:var(--green-400)}
+.ci.active{color:#fff;font-weight:600}.ci.active .st{background:transparent}
+.ci .r{margin-left:auto;font-size:12px;font-weight:400;color:var(--text-dim)}
+
+/* ---------- PAGES (news / mods / settings) ---------- */
+.page{height:100%;padding:26px 32px;overflow:auto}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+.chips{display:flex;gap:6px}
+.chip{padding:6px 14px;border-radius:var(--r);font-size:13px;font-weight:500;color:var(--text-muted);background:rgba(31,41,55,.7)}
+.chip:hover{background:var(--bg-700);color:#fff}.chip.on{background:var(--green-600);color:#fff}
+.feature{display:grid;grid-template-columns:1.25fr 1fr;overflow:hidden;margin-bottom:16px;cursor:pointer;transition:transform var(--t-fast) var(--ease)}
+.feature:hover{transform:scale(1.01)}
+.feature .img{min-height:220px;background-size:cover;background-position:center}
+.feature .body{padding:24px}
+.ngrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.ncard{background:rgba(55,65,81,.75);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:transform var(--t-fast) var(--ease)}
+.ncard:hover{transform:scale(1.04)}
+.ncard .img{height:110px;background-size:cover;background-position:center}
+.ncard .body{padding:12px 14px 14px}.ncard h4{color:#fff;font-size:15px;margin:3px 0}
+.ncard p{font-size:12.5px;color:var(--text-dim)}
+
+.seg{display:flex;gap:4px;padding:4px;background:rgba(17,24,39,.8);border-radius:10px;width:max-content;margin-bottom:18px}
+.seg button{padding:7px 16px;border-radius:7px;font-weight:500;color:var(--text-muted)}
+.seg button.on{background:var(--bg-700);color:#fff;box-shadow:var(--shadow-md)}
+.mods-pane{display:none}.mods-pane.on{display:block;animation:fade .3s}
+.sect{margin:18px 0 8px;display:flex;align-items:center;gap:10px}
+.drop{border:2px dashed var(--bg-600);border-radius:var(--r);padding:18px;display:flex;align-items:center;justify-content:center;gap:14px;color:var(--text-dim);margin-bottom:14px}
+
+.settings{display:grid;grid-template-columns:200px 1fr;height:100%}
+.snav{padding:24px 12px;border-right:1px solid rgba(255,255,255,.06);background:rgba(17,24,39,.5);display:flex;flex-direction:column;gap:2px}
+.snav button{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);color:var(--text-muted);font-weight:500;text-align:left}
+.snav button:hover{background:var(--bg-700);color:#fff}.snav button.on{background:var(--bg-700);color:#fff;box-shadow:inset 3px 0 0 var(--green-500)}
+.spane{display:none;padding:26px 32px;overflow:auto}.spane.on{display:block;animation:fade .3s}
+.setrow{display:flex;align-items:center;gap:20px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.setrow .t{flex:1}.setrow .t b{color:#fff;font-weight:600;display:block}.setrow .t span{font-size:12.5px;color:var(--text-dim)}
+.ram{display:flex;align-items:center;gap:14px;width:320px}
+.ram output{color:#fff;font-weight:700;width:52px;text-align:right}
+
+/* repair / error */
+.panel{width:640px;padding:30px 32px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.opt{padding:18px;border-radius:var(--r);background:rgba(17,24,39,.6);border:1px solid transparent;text-align:left;transition:all var(--t-fast)}
+.opt:hover{border-color:var(--bg-600)}.opt.on{border-color:var(--green-500);background:rgba(22,163,74,.08)}
+.opt b{color:#fff;display:block;margin:10px 0 4px;font-size:15px}.opt span{font-size:12.5px;color:var(--text-dim)}
+.opt .ic{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;background:var(--bg-700);color:var(--green-400)}
+.opt.red .ic{color:var(--danger)}
+.result{display:none;margin:18px 0}.result.on{display:block;animation:fade .3s}
+.err-ic{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:rgba(220,38,38,.18);color:var(--danger);margin-bottom:16px}
+.err-ic svg.i{width:28px;height:28px}
+.cause{margin:18px 0;padding:14px 16px;border-radius:var(--r);background:rgba(17,24,39,.65);border-left:3px solid var(--warn)}
+.code{font-family:var(--mono);font-size:12px;color:var(--text-dim);background:rgba(17,24,39,.8);padding:3px 8px;border-radius:var(--r-sm)}
+.linkbtn{color:var(--text-dim);font-size:13px;display:inline-flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px}
+.linkbtn:hover{color:#fff;background:var(--bg-700)}
+.linkbtn svg.i{width:14px;height:14px}
+.note-ux{position:absolute;right:14px;top:64px;z-index:6;max-width:300px;font-size:11.5px;color:#fde68a;background:rgba(120,53,15,.85);border-radius:6px;padding:8px 10px;pointer-events:none}
+.note-ux:empty{display:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="preauth">
+
+<!-- ============ PROTOTYPE NAVIGATOR (design tool only) ============ -->
+<nav id="proto">
+  <h2>Hemisphere Launcher</h2><p>Phase 2 wireframes · click through</p>
+  <h3>First launch</h3>
+  <button data-go="login">1 · Login</button>
+  <button data-go="whitelist">2 · Not whitelisted</button>
+  <button data-go="wizard">3 · Setup wizard</button>
+  <button data-go="install">4 · Installing</button>
+  <h3>Home</h3>
+  <button data-go="home" data-state="ready">Home · Ready</button>
+  <button class="sub" data-go="home" data-state="update">Update available</button>
+  <button class="sub" data-go="home" data-state="updating">Updating</button>
+  <button class="sub" data-go="home" data-state="incompat">Incompatible mods</button>
+  <button class="sub" data-go="home" data-state="soon">Restart soon</button>
+  <button class="sub" data-go="home" data-state="restarting">Restarting</button>
+  <button class="sub" data-go="home" data-state="offline">Server offline</button>
+  <button class="sub" data-go="home" data-state="maint">Maintenance</button>
+  <h3>Pages</h3>
+  <button data-go="news">News</button>
+  <button data-go="mods">Mods</button>
+  <button data-go="settings">Settings</button>
+  <h3>Recovery</h3>
+  <button data-go="repair">Repair</button>
+  <button data-go="error">Error</button>
+</nav>
+
+<div id="stage">
+<div id="win">
+  <div class="bgs" id="bgs"></div>
+  <div class="caption" id="caption"><svg class="i" data-i="pin"></svg><span></span></div>
+
+  <!-- ============ TITLE BAR ============ -->
+  <header class="titlebar">
+    <div class="brand"><img src="https://hemispheresurvival.club/images/logo.png" alt="">Hemisphere SMP</div>
+    <nav class="tabs">
+      <button class="tab" data-go="home"><svg class="i" data-i="play"></svg>Play</button>
+      <button class="tab" data-go="news"><svg class="i" data-i="news"></svg>News</button>
+      <button class="tab" data-go="mods"><svg class="i" data-i="box"></svg>Mods</button>
+      <button class="tab" data-go="settings"><svg class="i" data-i="gear"></svg>Settings</button>
+    </nav>
+    <div class="tb-right">
+      <div class="acct-wrap">
+        <button class="account" id="acctbtn"><img id="acctimg" src="https://mc-heads.net/avatar/MHF_Steve/26" alt=""><b class="pname-tb">Steve</b><svg class="i" data-i="chev" style="width:14px;height:14px;color:var(--text-dim)"></svg></button>
+        <div class="solid acct-menu" id="acctmenu">
+          <div class="label" style="color:var(--text-dim);padding:4px 8px 6px">Accounts</div>
+          <div id="acctlist"></div>
+          <div class="acct-sep"></div>
+          <button class="acct-item"><span style="width:30px;height:30px;border-radius:4px;display:grid;place-items:center;background:var(--bg-700)"><svg class="i" data-i="plus" style="width:16px;height:16px"></svg></span><div class="t"><b>Add account</b><span>Sign in with Microsoft</span></div></button>
+          <button class="acct-item" data-go="settings" data-spane="account"><span style="width:30px;height:30px;border-radius:4px;display:grid;place-items:center;background:var(--bg-700)"><svg class="i" data-i="gear" style="width:16px;height:16px"></svg></span><div class="t"><b>Manage accounts</b></div></button>
+        </div>
+      </div>
+      <button class="wc"><svg class="i" data-i="min"></svg></button>
+      <button class="wc"><svg class="i" data-i="max"></svg></button>
+      <button class="wc x"><svg class="i" data-i="x"></svg></button>
+    </div>
+  </header>
+
+  <!-- ============ LOGIN ============ -->
+  <section class="screen" id="s-login">
+    <div class="center">
+      <div class="glass card-login">
+        <img class="logo" src="https://hemispheresurvival.club/images/logo.png" alt="">
+        <div class="label" style="margin-bottom:6px">Welcome to</div>
+        <div class="display" style="font-size:38px"><span>HEMISPHERE SMP</span></div>
+        <p class="dim" style="margin-top:12px">Sign in with the Microsoft account that owns Minecraft: Java Edition.</p>
+        <button class="ms" id="msbtn"><span class="msl"><i style="background:#f25022"></i><i style="background:#7fba00"></i><i style="background:#00a4ef"></i><i style="background:#ffb900"></i></span><span>Sign in with Microsoft</span></button>
+        <div class="row" style="justify-content:center;margin-top:18px;gap:6px"><svg class="i" data-i="lock" style="width:14px;height:14px;color:var(--green-400)"></svg><span class="small dim">Your password goes to Microsoft only — Hemisphere never sees it.</span></div>
+        <div style="margin-top:22px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08)" class="small dim">Don't own Minecraft yet? <a href="#" style="color:var(--green-400)">Get Minecraft ↗</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NOT WHITELISTED ============ -->
+  <section class="screen" id="s-whitelist">
+    <div class="center">
+      <div class="glass card-login" style="width:520px;text-align:left">
+        <div class="label" style="color:var(--warn)">Almost there</div>
+        <div class="h2" style="margin-top:4px">You're not on the <span>whitelist</span> yet, Steve</div>
+        <p class="dim" style="margin-top:8px">Hemisphere is a whitelisted community. It only takes a minute:</p>
+        <div class="steps">
+          <div class="step done"><div class="n"><svg class="i" data-i="check" style="width:14px;height:14px;stroke-width:3"></svg></div><div class="t"><b>Signed in with Microsoft</b><span class="small dim">Minecraft account verified</span></div></div>
+          <div class="step"><div class="n">2</div><div class="t"><b>Join our Discord</b><span class="small dim">Apply in the #applications channel</span></div><button class="btn discord"><svg class="i" data-i="discord"></svg>Join Discord</button></div>
+          <div class="step"><div class="n">3</div><div class="t"><b>Wait for approval</b><span class="small dim">Usually minutes, sometimes a few hours</span></div><button class="btn ghost"><svg class="i" data-i="refresh"></svg>Check again</button></div>
+        </div>
+        <div class="row" style="justify-content:space-between">
+          <span class="small dim">Meanwhile, you can already install the client.</span>
+          <button class="btn primary" data-go="wizard">Set up while I wait <svg class="i" data-i="arrow"></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SETUP WIZARD ============ -->
+  <section class="screen" id="s-wizard">
+    <div class="center">
+      <div class="solid wizard">
+        <div class="wz-head" id="wzhead">
+          <div class="wz-step on"><span class="n">1</span>Setup</div>
+          <div class="wz-step"><span class="n">2</span>Import</div>
+          <div class="wz-step"><span class="n">3</span>Extras</div>
+          <div class="wz-step"><span class="n">4</span>Install</div>
+        </div>
+        <div class="wz-body">
+          <!-- step 1 -->
+          <div class="wz-pane on">
+            <div class="h2">Let's get you <span>ready</span></div>
+            <p class="dim" style="margin-top:6px">We picked sensible defaults for your PC. You can change these later in Settings.</p>
+            <div class="field"><label>Install location</label><div class="row"><input class="input" value="C:\Users\Steve\AppData\Roaming\Hemisphere"><button class="btn ghost"><svg class="i" data-i="folder"></svg>Change</button></div><span class="small dim">Needs about 1.2 GB. Separate from your normal Minecraft — nothing there is touched.</span></div>
+            <div class="field"><label>Memory for Minecraft</label>
+              <div class="row"><input type="range" min="2" max="16" value="6" step="1" oninput="this.nextElementSibling.textContent=this.value+' GB'"><output style="color:#fff;font-weight:700;width:52px">6 GB</output></div>
+              <span class="small dim"><b style="color:var(--green-400)">Recommended: 6 GB</b> · your PC has 16 GB</span></div>
+            <div class="field"><label>Language</label><select class="select"><option>English</option><option>Français</option></select></div>
+          </div>
+          <!-- step 2 -->
+          <div class="wz-pane">
+            <div class="h2">Bring your <span>setup</span> along?</div>
+            <p class="dim" style="margin-top:6px">We found Minecraft on this PC. Import your keybinds, settings and mods from any launcher — the originals are only copied, never changed.</p>
+            <div class="stack" style="gap:8px;margin-top:16px" id="srcs">
+              <div class="src on"><span class="radio"></span><span class="ico" style="background:#3c8527">MC</span><div style="flex:1"><b style="color:#fff">Official Minecraft Launcher</b><div class="small dim">.minecraft · 26.2 · 9 mods</div></div><span class="badge g">Found</span></div>
+              <div class="src"><span class="radio"></span><span class="ico" style="background:#1bd96a;color:#111">M</span><div style="flex:1"><b style="color:#fff">Modrinth App · Fabulously Optimized</b><div class="small dim">26.3 · 41 mods</div></div><span class="badge g">Found</span></div>
+              <div class="src"><span class="radio"></span><span class="ico" style="background:#f16436">CF</span><div style="flex:1"><b style="color:#fff">CurseForge · Cobblemon Official</b><div class="small dim">1.21.1 · 78 mods</div></div><span class="badge">Old version</span></div>
+              <div class="src"><span class="radio"></span><span class="ico"><svg class="i" data-i="folder"></svg></span><div style="flex:1"><b style="color:#fff">Choose a folder…</b><div class="small dim">Prism, MultiMC, ATLauncher, any instance folder</div></div></div>
+            </div>
+            <div class="grid2" style="margin-top:14px" id="imp">
+              <div class="optrow"><span class="check on"><svg class="i" data-i="check"></svg></span><div class="t"><b>Settings & keybinds</b></div></div>
+              <div class="optrow"><span class="check on"><svg class="i" data-i="check"></svg></span><div class="t"><b>Resource & shader packs</b></div></div>
+              <div class="optrow"><span class="check on"><svg class="i" data-i="check"></svg></span><div class="t"><b>Server list</b></div></div>
+              <div class="optrow"><span class="check on"><svg class="i" data-i="check"></svg></span><div class="t"><b>My mods</b><span>compatible ones only · 7 of 9</span></div></div>
+            </div>
+          </div>
+          <!-- step 3 -->
+          <div class="wz-pane">
+            <div class="h2">Pick your <span>extras</span></div>
+            <p class="dim" style="margin-top:6px">Performance and voice chat are always included. These are up to you — change them anytime in Mods.</p>
+            <div class="grid2" style="margin-top:16px">
+              <div class="optrow"><div class="t"><b>Locator Heads</b><span>Player heads on the locator bar</span></div><button class="toggle" aria-checked="true"></button></div>
+              <div class="optrow"><div class="t"><b>Zoomify</b><span>Zoom with a key</span></div><button class="toggle" aria-checked="true"></button></div>
+              <div class="optrow"><div class="t"><b>AppleSkin</b><span>Food & saturation preview</span></div><button class="toggle" aria-checked="false"></button></div>
+              <div class="optrow"><div class="t"><b>Chat Heads</b><span>Player heads in chat</span></div><button class="toggle" aria-checked="false"></button></div>
+              <div class="optrow"><div class="t"><b>Iris Shaders</b><span>Shader support · needs a good GPU</span></div><button class="toggle" aria-checked="false"></button></div>
+              <div class="optrow"><div class="t"><b>Continuity</b><span>Connected textures</span></div><button class="toggle" aria-checked="false"></button></div>
+              <div class="optrow"><div class="t"><b>Sodium Extra</b><span>More video settings</span></div><button class="toggle" aria-checked="false"></button></div>
+              <div class="optrow"><div class="t"><b>Entity Features</b><span>For fancy resource packs</span></div><button class="toggle" aria-checked="false"></button></div>
+            </div>
+          </div>
+        </div>
+        <div class="wz-foot">
+          <button class="btn" id="wzback">Back</button>
+          <div class="row"><button class="btn" id="wzskip" style="display:none">Start fresh</button><button class="btn primary lg" id="wznext">Next <svg class="i" data-i="arrow"></svg></button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INSTALLING ============ -->
+  <section class="screen" id="s-install">
+    <div class="center">
+      <div class="glass install">
+        <div class="label">First-time setup</div>
+        <div class="h2" style="margin-top:4px">Installing <span>Hemisphere</span></div>
+        <div class="checklist">
+          <div class="ci done"><span class="st"><svg class="i" data-i="check"></svg></span>Java runtime<span class="r">Java 25</span></div>
+          <div class="ci done"><span class="st"><svg class="i" data-i="check"></svg></span>Minecraft<span class="r">26.3</span></div>
+          <div class="ci done"><span class="st"><svg class="i" data-i="check"></svg></span>Fabric<span class="r">0.17.x</span></div>
+          <div class="ci active"><span class="st"><span class="spinner" style="width:16px;height:16px"></span></span>Hemisphere mods<span class="r">12 of 18 · Simple Voice Chat</span></div>
+          <div class="ci"><span class="st"></span>Configuration</div>
+          <div class="ci"><span class="st"></span>Your imported settings</div>
+        </div>
+        <div class="progress"><i style="width:64%"></i></div>
+        <div class="row small dim" style="justify-content:space-between;margin-top:8px"><span>142 MB of 221 MB · 8.4 MB/s</span><span>about 10 s left</span></div>
+        <div class="row small" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);gap:8px"><span class="tag">Tip</span><span class="dim">Press V in game to open voice chat settings.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOME ============ -->
+  <section class="screen" id="s-home">
+    <div class="home">
+      <div class="hero">
+        <div class="maint-banner" id="maint"><svg class="i" data-i="alert"></svg><span><b>Scheduled maintenance</b> · back around 18:00</span></div>
+        <div class="display">WELCOME BACK<br><span class="pname">STEVE</span></div>
+        <div class="playzone" id="playzone"></div>
+      </div>
+      <aside class="glass stat" title="Counted by the launcher each time you close the game">
+        <div class="label" style="color:var(--text-dim)">Your playtime</div>
+        <div class="stat-big">42<small>h</small> 17<small>m</small></div>
+        <div class="stat-rows">
+          <div><span>Last session</span><b>1h 05m</b></div>
+          <div><span>This week</span><b>6h 40m</b></div>
+          <div><span>Sessions</span><b>58</b></div>
+        </div>
+      </aside>
+      <aside class="glass srv" id="srv">
+        <div class="label" style="color:var(--text-dim)">Hemisphere Survival</div>
+        <div class="row" style="justify-content:space-between;margin-top:8px" id="srvstate"></div>
+        <div class="restart" id="restart"><svg class="i" data-i="clock"></svg><div><div id="rs-main"></div><div class="small dim" id="rs-sub"></div></div></div>
+        <div id="srvplayers">
+          <div class="row" style="justify-content:space-between;margin:14px 0 8px"><span class="label" style="color:var(--text-dim)">Online now</span><span class="small dim" id="pcount"></span></div>
+          <div class="plist" id="plist"></div>
+        </div>
+      </aside>
+      <div class="bottom">
+        <div class="stack" style="gap:10px">
+          <div class="links">
+            <button class="btn discord"><svg class="i" data-i="discord"></svg>Discord</button>
+            <button class="btn"><svg class="i" data-i="globe"></svg>Website</button>
+            <button class="btn"><svg class="i" data-i="map"></svg>Map</button>
+            <button class="btn"><svg class="i" data-i="book"></svg>Rules</button>
+          </div>
+        </div>
+        <button class="glass peek" data-go="news"><span class="thumb" data-bg="1"></span><span class="stack"><span class="tag">Update · 2 days ago</span><h4>Client 26.3 is here: Locator Heads & faster loading</h4><span class="small dim">All news →</span></span></button>
+      </div>
+    </div>
+    <div class="modal-back" id="incompat">
+      <div class="solid modal">
+        <div class="row" style="gap:12px"><span class="err-ic" style="width:40px;height:40px;margin:0;background:rgba(217,119,6,.2);color:var(--warn)"><svg class="i" data-i="alert" style="width:20px;height:20px"></svg></span><div class="h2" style="font-size:20px">2 of your mods aren't ready for 26.3</div></div>
+        <p class="dim" style="margin-top:10px">These are mods <b style="color:#fff">you added</b>. Hemisphere mods are all up to date.</p>
+        <div class="modlist">
+          <div class="modrow"><span class="ico"><svg class="i" data-i="box"></svg></span><span class="name">Xaero's Minimap</span><span class="badge g">Updated automatically</span></div>
+          <div class="modrow"><span class="ico"><svg class="i" data-i="box"></svg></span><span class="name">Better Clouds</span><span class="badge y">No 26.3 version yet</span></div>
+          <div class="modrow"><span class="ico"><svg class="i" data-i="box"></svg></span><span class="name">custom-hud-1.4.jar</span><span class="badge r">Unknown · can't check</span></div>
+        </div>
+        <p class="small dim" style="margin-bottom:18px">Launching without them disables them for now. We'll re-check for updates every time you play.</p>
+        <div class="row" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn primary lg" data-close>Launch without them</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NEWS ============ -->
+  <section class="screen" id="s-news">
+    <div class="page">
+      <div class="page-head">
+        <div><div class="label">From the team</div><div class="h2" style="font-size:30px">LATEST <span>NEWS</span></div></div>
+        <div class="chips"><button class="chip on">All</button><button class="chip">Updates</button><button class="chip">Events</button><button class="chip">Server</button></div>
+      </div>
+      <div class="glass feature">
+        <div class="img" data-bg="1"></div>
+        <div class="body"><span class="tag">Update · Oct 5</span><div class="h2" style="font-size:22px;margin:6px 0 10px">Client 26.3 is here</div><p class="dim">Minecraft 26.3 support, Locator Heads, faster loading thanks to ModernFix, and a refreshed voice chat. Update from the Play tab whenever you're ready.</p><button class="btn ghost" style="margin-top:16px">Read more <svg class="i" data-i="arrow"></svg></button></div>
+      </div>
+      <div class="ngrid">
+        <div class="ncard"><div class="img" data-bg="2"></div><div class="body"><span class="tag">Event</span><h4>Build contest: Floating Islands</h4><p>Submissions close Sunday. Winners featured in the gallery.</p></div></div>
+        <div class="ncard"><div class="img" data-bg="3"></div><div class="body"><span class="tag warn">Server</span><h4>Maintenance on Friday</h4><p>Backups and a Fabric update, about 1 hour.</p></div></div>
+        <div class="ncard"><div class="img" data-bg="4"></div><div class="body"><span class="tag">Community</span><h4>Hempshire railway finished</h4><p>The new line connects spawn to the northern villages.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MODS ============ -->
+  <section class="screen" id="s-mods">
+    <div class="page">
+      <div class="page-head">
+        <div><div class="label">Hemisphere Client · Minecraft 26.3</div><div class="h2" style="font-size:30px">MODS</div></div>
+        <span class="small dim" id="mcount"></span>
+      </div>
+      <div class="mtool">
+        <div class="search"><svg class="i" data-i="search"></svg><input class="input" id="msearch" placeholder="Search mods"></div>
+        <div class="chips" id="mchips"><button class="chip on" data-f="all">All</button><button class="chip" data-f="perf">Performance</button><button class="chip" data-f="voice">Voice &amp; audio</button><button class="chip" data-f="visual">Visual</button><button class="chip" data-f="comfort">Comfort</button><button class="chip" data-f="user">Added by you</button></div>
+        <button class="btn primary" style="margin-left:auto"><svg class="i" data-i="plus"></svg>Add mods</button>
+      </div>
+      <div id="mlist"></div>
+      <p class="small dim" style="margin-top:4px">Libraries (Fabric API, Cloth Config…) are managed automatically. Changes apply next time you press Play. Mods you add are your responsibility — follow the <a href="#" style="color:var(--green-400)">server rules</a>.</p>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="screen" id="s-settings">
+    <div class="settings">
+      <div class="snav" id="snav">
+        <button class="on" data-p="game"><svg class="i" data-i="play"></svg>Game</button>
+        <button data-p="launcher"><svg class="i" data-i="gear"></svg>Launcher</button>
+        <button data-p="account"><svg class="i" data-i="user"></svg>Account</button>
+        <button data-p="install"><svg class="i" data-i="folder"></svg>Installation</button>
+        <button data-p="adv"><svg class="i" data-i="wrench"></svg>Advanced</button>
+      </div>
+      <div style="overflow:auto">
+        <div class="spane on" id="p-game">
+          <div class="h2">Game</div>
+          <div class="setrow"><div class="t"><b>Memory</b><span>Recommended for your PC: 6 GB. More isn't always faster.</span></div><div class="ram"><input type="range" min="2" max="16" value="6" oninput="this.nextElementSibling.textContent=this.value+' GB'"><output>6 GB</output></div></div>
+          <div class="setrow"><div class="t"><b>Game window</b><span>Size when Minecraft starts</span></div><select class="select"><option>1280 × 720</option><option>1920 × 1080</option><option>Fullscreen</option></select></div>
+          <div class="setrow"><div class="t"><b>Join Hemisphere automatically</b><span>Skip the title screen and connect straight away (only on the latest version)</span></div><button class="toggle" aria-checked="false"></button></div>
+        </div>
+        <div class="spane" id="p-launcher">
+          <div class="h2">Launcher</div>
+          <div class="setrow"><div class="t"><b>When Minecraft starts</b></div><select class="select"><option>Hide the launcher</option><option>Keep it open</option><option>Close it</option></select></div>
+          <div class="setrow"><div class="t"><b>Language</b><span>Follows your Windows language by default</span></div><select class="select"><option>Automatic (English)</option><option>English</option><option>Français</option></select></div>
+          <div class="setrow"><div class="t"><b>Start with Windows</b></div><button class="toggle" aria-checked="false"></button></div>
+          <div class="setrow"><div class="t"><b>Launcher version</b><span>1.0.0 · up to date</span></div><button class="btn ghost"><svg class="i" data-i="refresh"></svg>Check for updates</button></div>
+        </div>
+        <div class="spane" id="p-account">
+          <div class="h2">Account</div>
+          <p class="dim small" style="margin-top:4px">Switch instantly from the account menu in the top bar. Each account keeps its own whitelist status.</p>
+          <div id="acctsettings" style="margin-top:12px"></div>
+          <button class="btn ghost" style="margin-top:14px"><svg class="i" data-i="plus"></svg>Add account</button>
+        </div>
+        <div class="spane" id="p-install">
+          <div class="h2">Installation</div>
+          <div class="setrow"><div class="t"><b>Location</b><span>C:\Users\Steve\AppData\Roaming\Hemisphere · 1.2 GB</span></div><button class="btn ghost"><svg class="i" data-i="folder"></svg>Open</button><button class="btn ghost">Move…</button></div>
+          <div class="setrow"><div class="t"><b>Import from another launcher</b><span>Copy settings, keybinds, packs and mods from any Minecraft setup</span></div><button class="btn ghost"><svg class="i" data-i="upload"></svg>Import…</button></div>
+          <div class="setrow"><div class="t"><b>Repair installation</b><span>Check every file and fix anything broken</span></div><button class="btn primary" data-go="repair"><svg class="i" data-i="wrench"></svg>Repair</button></div>
+        </div>
+        <div class="spane" id="p-adv">
+          <div class="h2">Advanced</div>
+          <div class="setrow"><div class="t"><b>Java</b><span>Managed by Hemisphere (Java 25) — recommended</span></div><select class="select"><option>Automatic</option><option>Custom path…</option></select></div>
+          <div class="setrow"><div class="t"><b>Extra JVM arguments</b><span>Only change if you know what you're doing</span></div><input class="input" style="width:260px" placeholder="-XX:+UseZGC"></div>
+          <div class="setrow"><div class="t"><b>Logs & diagnostics</b><span>For support requests on Discord</span></div><button class="btn ghost">Open logs</button><button class="btn ghost"><svg class="i" data-i="copy"></svg>Copy diagnostics</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REPAIR ============ -->
+  <section class="screen" id="s-repair">
+    <div class="center">
+      <div class="glass panel">
+        <div class="label">Installation</div>
+        <div class="h2" style="margin-top:4px">Repair <span>Hemisphere</span></div>
+        <p class="dim" style="margin-top:6px">Your worlds, screenshots, keybinds and settings are never touched.</p>
+        <div class="opts" id="ropts">
+          <button class="opt on"><span class="ic"><svg class="i" data-i="check"></svg></span><b>Quick repair</b><span>Check every file and re-download only what's missing or broken. Takes under a minute.</span></button>
+          <button class="opt red"><span class="ic"><svg class="i" data-i="refresh"></svg></span><b>Full reset</b><span>Also restore all mod configs to Hemisphere defaults. Use if the game still won't start.</span></button>
+        </div>
+        <div class="result" id="rres">
+          <div class="ci done"><span class="st"><svg class="i" data-i="check"></svg></span>246 files verified</div>
+          <div class="ci done"><span class="st" style="background:rgba(217,119,6,.25);color:var(--warn)"><svg class="i" data-i="refresh"></svg></span>sodium-0.7.2.jar was damaged · re-downloaded</div>
+          <div class="ci done"><span class="st" style="background:rgba(217,119,6,.25);color:var(--warn)"><svg class="i" data-i="refresh"></svg></span>voicechat-client.properties was missing · restored</div>
+          <div class="alert" style="margin-top:12px;padding:12px 14px;border-radius:8px;background:rgba(20,83,45,.4);border-left:3px solid var(--green-400);color:#fff"><b>All fixed.</b> <span class="dim">2 problems repaired.</span></div>
+        </div>
+        <div class="row" style="justify-content:flex-end"><button class="btn" data-go="settings">Cancel</button><button class="btn primary lg" id="rrun"><svg class="i" data-i="wrench"></svg>Start repair</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ERROR ============ -->
+  <section class="screen" id="s-error">
+    <div class="center">
+      <div class="glass panel">
+        <span class="err-ic"><svg class="i" data-i="x"></svg></span>
+        <div class="h2">Minecraft <span style="color:var(--danger)">couldn't start</span></div>
+        <p class="dim" style="margin-top:6px">The game closed while loading. Nothing is lost — let's fix it.</p>
+        <div class="cause"><b style="color:#fff">Likely cause:</b> <span class="dim">a mod you added, <b style="color:#fff">custom-hud-1.4.jar</b>, crashed the game.</span></div>
+        <div class="row" style="flex-wrap:wrap">
+          <button class="btn primary lg">Launch without my mods</button>
+          <button class="btn ghost lg" data-go="repair"><svg class="i" data-i="wrench"></svg>Repair</button>
+          <button class="btn ghost lg"><svg class="i" data-i="refresh"></svg>Try again</button>
+        </div>
+        <div class="row" style="margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);justify-content:space-between">
+          <span class="small dim">Error <span class="code">HEM-LAUNCH-012</span></span>
+          <div class="row" style="gap:2px"><button class="linkbtn"><svg class="i" data-i="copy"></svg>Copy diagnostics</button><button class="linkbtn"><svg class="i" data-i="news"></svg>Open log</button><button class="linkbtn"><svg class="i" data-i="discord"></svg>Get help</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"><svg class="i" data-i="check" style="color:var(--green-400)"></svg><span></span></div>
+  <div class="note-ux" id="note"></div>
+</div>
+</div>
+
+<script>
+/* ---------- icons (Lucide-style line icons) ---------- */
+const I={
+ play:'<polygon points="6 3 20 12 6 21 6 3"/>',
+ news:'<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8z"/>',
+ box:'<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+ min:'<path d="M5 12h14"/>', max:'<rect x="5" y="5" width="14" height="14" rx="1"/>', x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+ check:'<path d="M20 6 9 17l-5-5"/>', arrow:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+ lock:'<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+ refresh:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+ folder:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+ wrench:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+ user:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+ globe:'<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+ map:'<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>',
+ book:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+ alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+ copy:'<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+ upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+ clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+ search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+ plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+ chev:'<path d="m6 9 6 6 6-6"/>',
+ pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+ signal:'<path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/>',
+ discord:'<path d="M8 5.5c2.6-.7 5.4-.7 8 0l1.4 1c1.4 2.4 2.1 5 2.1 7.9-1.5 1.3-3.2 2.1-5 2.6l-.9-1.7c-1.7.4-3.5.4-5.2 0l-.9 1.7c-1.8-.5-3.5-1.3-5-2.6 0-2.9.7-5.5 2.1-7.9z"/><circle cx="9.5" cy="11.5" r="1" fill="currentColor"/><circle cx="14.5" cy="11.5" r="1" fill="currentColor"/>'
+};
+document.querySelectorAll('svg[data-i]').forEach(s=>{s.setAttribute('viewBox','0 0 24 24');s.innerHTML=I[s.dataset.i]||''});
+const ico=n=>`<svg class="i" viewBox="0 0 24 24">${I[n]}</svg>`;
+
+/* ---------- background rotation: random start, crossfade, build caption ---------- */
+const BG=[
+ ['https://hemispheresurvival.club/images/603aeb_f9e9899cb9934cbfb786e2a243716890~mv2.png','The Kingdom'],
+ ['https://hemispheresurvival.club/images/603aeb_168d4a74ad9b474eb5ea65e96590eaa3~mv2.avif','Hempshire'],
+ ['https://hemispheresurvival.club/images/603aeb_104221e283ec4e78bb302c0efe7b38d9~mv2.png','Player bases'],
+ ['https://hemispheresurvival.club/images/603aeb_07e6cb00ad0040eaa25b5b4ede69bf7e~mv2.avif','Community projects'],
+];
+const bgs=document.getElementById('bgs'),cap=document.querySelector('#caption span');
+BG.forEach(([u])=>{const d=document.createElement('div');d.style.backgroundImage=`url("${u}")`;bgs.appendChild(d)});
+document.querySelectorAll('[data-bg]').forEach(e=>e.style.backgroundImage=`url("${BG[e.dataset.bg%BG.length][0]}")`);
+let bi=Math.floor(Math.random()*BG.length);
+function showBg(){[...bgs.children].forEach((d,i)=>{d.classList.toggle('on',i===bi);if(i===bi){d.style.animation='none';d.offsetWidth;d.style.animation=''}});cap.textContent=BG[bi][1]}
+showBg();setInterval(()=>{bi=(bi+1)%BG.length;showBg()},12000);
+
+const note=document.getElementById('note');
+/* ---------- server restart schedule (daily 17:00 Europe/Paris -> player's local time) ---------- */
+const RESTART={hour:17,minute:0,timeZone:'Europe/Paris',durationMin:5};
+let clockShift=0;                       // prototype only: simulate "soon" / "restarting"
+const now=()=>Date.now()+clockShift;
+function tzOffsetMs(ts,tz){             // offset of tz at instant ts (DST-aware)
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',second:'numeric'}).formatToParts(ts).map(x=>[x.type,+x.value]));
+  return Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second)-Math.floor(ts/1000)*1000;
+}
+function lastAndNextRestart(t){         // instants of the previous and next restart
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:RESTART.timeZone,year:'numeric',month:'numeric',day:'numeric'}).formatToParts(t).map(x=>[x.type,+x.value]));
+  const at=d=>{const guess=Date.UTC(p.year,p.month-1,p.day+d,RESTART.hour,RESTART.minute);return guess-tzOffsetMs(guess,RESTART.timeZone)};
+  for(let d=-1;d<=1;d++){if(at(d)>t)return[at(d-1),at(d)]}
+  return[at(1),at(2)];
+}
+const fmtLocal=ts=>new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+function restartInfo(){
+  const t=now(),[prev,next]=lastAndNextRestart(t),left=next-t;
+  if(t-prev<RESTART.durationMin*60000)return{phase:'now',main:'Restarting…',sub:'Back in about '+Math.ceil((RESTART.durationMin*60000-(t-prev))/60000)+' min'};
+  const h=Math.floor(left/3600000),m=Math.floor(left/60000)%60,s=Math.floor(left/1000)%60;
+  if(left<=15*60000)return{phase:'soon',main:`Restart in ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`,sub:'Daily restart at '+fmtLocal(next)+' your time'};
+  return{phase:'',main:`Restart in ${h?h+'h ':''}${m}m`,sub:'Daily at '+fmtLocal(next)+' your time'};
+}
+
+/* ---------- server panel ---------- */
+const PLAYERS=['Notch','jeb_','Dinnerbone','Grumm','LadyAgnes','Marc','xlson','Jappa','Kingbdogz','Searge','slicedlime','Cojomax99','Mojang','Steve','Alex','Ninni','EvilSeph','TheMogMiner','Sachimi','Krapp','AlexDude','BuildGirl','RailFan','Shroomy'];
+const SHOW_MAX=10;
+const srvState=document.getElementById('srvstate'),plist=document.getElementById('plist'),rs=document.getElementById('restart');
+let serverMode='online';
+function renderServer(){
+  const r=restartInfo(),down=r.phase==='now'||serverMode==='offline';
+  srvState.innerHTML=down?`<span class="pill off"><i class="dot"></i>Server offline</span>`
+    :serverMode==='maint'?`<span class="pill maint"><i class="dot"></i>Maintenance</span>`
+    :`<span class="pill on"><i class="dot"></i>Online</span><span class="small dim row" style="gap:4px">${ico('signal').replace('class="i"','class="i" style="width:14px;height:14px"')}38 ms</span>`;
+  rs.className='restart '+r.phase;document.getElementById('rs-main').textContent=r.main;document.getElementById('rs-sub').textContent=r.sub;
+  const showList=!down&&serverMode!=='maint';
+  document.getElementById('srvplayers').style.display=showList?'':'none';
+  document.getElementById('pcount').textContent=PLAYERS.length+' / 100';
+  if(showList&&!plist.childElementCount){
+    plist.innerHTML=PLAYERS.slice(0,SHOW_MAX).map(n=>`<div class="pl" title="${n}"><img src="https://mc-heads.net/avatar/${n}/20" alt=""><span>${n}</span></div>`).join('')
+      +(PLAYERS.length>SHOW_MAX?`<div class="pl more">+ ${PLAYERS.length-SHOW_MAX} more…</div>`:'');
+  }
+  const sl=document.getElementById('restartline');
+  if(sl){sl.style.display=r.phase?'flex':'none';sl.textContent=r.phase==='now'?'Server is restarting — back in a few minutes':r.main}
+}
+setInterval(renderServer,1000);
+
+/* ---------- home states ---------- */
+const pz=document.getElementById('playzone');
+const ready=`<button class="play">PLAY</button><div class="status-line">${ico('check').replace('class="i"','class="i" style="width:14px;height:14px;color:var(--green-400)"')}<b>Ready</b> · Hemisphere Client 26.3</div><div class="status-line" id="restartline" style="color:var(--warn);display:none"></div>`;
+const HOME={
+ ready:{pz:ready},
+ update:{pz:`<button class="play update">UPDATE TO 26.3</button><button class="old">Play on 26.2</button><div class="oldhint">Older version · won't connect to Hemisphere</div><div class="status-line">48 MB · Minecraft 26.3 + 6 updated mods</div>`,
+   note:'"Play on 26.2" launches the previous version with its old mods, without auto-joining the server. Disappears once the player updates.'},
+ updating:{pz:`<div class="glass updating"><div class="row" style="justify-content:space-between;margin-bottom:8px"><b style="color:#fff">Updating to 26.3…</b><span class="small dim">62%</span></div><div class="progress"><i style="width:62%"></i></div><div class="row small dim" style="justify-content:space-between;margin-top:8px"><span>Downloading Sodium · 4 of 7</span><span>12 s left</span></div></div>`},
+ incompat:{pz:ready,modal:true,note:'Shown when pressing PLAY after a version update, only if mods the player added themselves are not compatible.'},
+ soon:{pz:ready,shift:'soon',note:'Prototype: clock shifted to ~10 min before 17:00 Paris time. Turns amber at 15 min, live seconds.'},
+ restarting:{pz:ready,shift:'now',note:'Prototype: clock shifted to 2 min after the daily restart. Status switches to SERVER OFFLINE automatically.'},
+ offline:{pz:ready,mode:'offline'},
+ maint:{pz:ready,mode:'maint',maint:true},
+};
+function setHome(st){const h=HOME[st]||HOME.ready;pz.innerHTML=h.pz;
+ serverMode=h.mode||'online';
+ clockShift=0;
+ if(h.shift){const [prev,next]=lastAndNextRestart(Date.now());clockShift=h.shift==='soon'?(next-Date.now())-(9*60+40)*1000:(prev-Date.now())+2*60000}
+ renderServer();
+ document.getElementById('maint').style.display=h.maint?'flex':'none';
+ document.getElementById('incompat').classList.toggle('on',!!h.modal);
+ note.textContent=h.note||'';
+ pz.querySelector('.play.update')?.addEventListener('click',()=>go('home','updating'));
+ pz.querySelector('.play:not(.update)')?.addEventListener('click',()=>{if(st!=='incompat')go('home','incompat')});}
+
+/* ---------- accounts ---------- */
+const ACCTS=[{n:'Steve',h:'MHF_Steve',wl:true},{n:'Alex',h:'MHF_Alex',wl:true},{n:'SteveAlt',h:'Notch',wl:false}];
+let active=0;
+function renderAccts(){
+  document.getElementById('acctlist').innerHTML=ACCTS.map((a,i)=>`<button class="acct-item" data-acct="${i}"><img src="https://mc-heads.net/avatar/${a.h}/30" alt=""><div class="t"><b>${a.n}</b><span>${a.wl?'Whitelisted':'Not whitelisted yet'}</span></div>${i===active?ico('check').replace('class="i"','class="i" style="color:var(--green-400)"'):''}</button>`).join('');
+  document.getElementById('acctsettings').innerHTML=ACCTS.map((a,i)=>`<div class="setrow"><img src="https://mc-heads.net/avatar/${a.h}/40" style="width:40px;height:40px;border-radius:5px;image-rendering:pixelated" alt=""><div class="t"><b>${a.n} ${i===active?'<span class="badge g">Active</span>':''}</b><span>Microsoft account · ${a.wl?'whitelisted':'not whitelisted yet'}</span></div>${i===active?'':`<button class="btn ghost" data-acct="${i}">Switch</button>`}<button class="btn">Sign out</button></div>`).join('');
+  const a=ACCTS[active];
+  document.querySelectorAll('.pname').forEach(e=>e.textContent=a.n.toUpperCase());
+  document.querySelector('.pname-tb').textContent=a.n;
+  document.getElementById('acctimg').src=`https://mc-heads.net/avatar/${a.h}/26`;
+}
+renderAccts();
+document.getElementById('acctbtn').onclick=e=>{e.stopPropagation();document.getElementById('acctmenu').classList.toggle('on')};
+function toast(t){const el=document.getElementById('toast');el.querySelector('span').textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2200)}
+document.addEventListener('click',e=>{
+  const ac=e.target.closest('[data-acct]');
+  if(ac){e.stopPropagation();active=+ac.dataset.acct;renderAccts();document.getElementById('acctmenu').classList.remove('on');toast('Switched to '+ACCTS[active].n+' — ready to play');return}
+  if(!e.target.closest('#acctmenu'))document.getElementById('acctmenu').classList.remove('on');
+},true);
+
+/* ---------- mods ---------- */
+const MODS=[
+ ['Sodium','0.7.2','Modern rendering engine — big FPS boost','perf',1,1,'#2563eb'],
+ ['Lithium','0.16','Faster game logic','perf',1,1,'#0d9488'],
+ ['FerriteCore','8.0','Lower memory usage','perf',1,1,'#b45309'],
+ ['ImmediatelyFast','1.6','Faster HUD and text rendering','perf',1,1,'#7c3aed'],
+ ['Entity Culling','1.8','Skips drawing hidden mobs and chests','perf',1,1,'#16a34a'],
+ ['More Culling','1.3','Skips drawing hidden block faces','perf',1,1,'#15803d'],
+ ['ModernFix','5.24','Faster loading, less memory','perf',1,1,'#4b5563'],
+ ['Dynamic FPS','3.9','Saves power when the game is in the background','perf',0,1,'#0891b2'],
+ ['Simple Voice Chat','2.6','Proximity voice chat on Hemisphere','voice',1,1,'#dc2626',"Voice chat won't work on Hemisphere without this."],
+ ['Audio Player','1.15','Custom music discs and goat horns','voice',1,1,'#db2777',"You won't hear custom music on Hemisphere."],
+ ['Iris Shaders','1.9','Shader pack support · needs a good GPU','visual',0,0,'#9333ea'],
+ ['Continuity','3.0','Connected textures','visual',0,0,'#0284c7'],
+ ['Entity Texture Features','6.2','Needed by some resource packs','visual',0,0,'#ca8a04'],
+ ['Sodium Extra','0.6','More video settings','visual',0,0,'#1d4ed8'],
+ ['Locator Heads','1.2','Player heads on the locator bar','comfort',0,1,'#16a34a'],
+ ['Zoomify','2.14','Zoom with a key','comfort',0,1,'#ea580c'],
+ ['AppleSkin','3.0','Food and saturation preview','comfort',0,0,'#dc2626'],
+ ['Chat Heads','0.13','Player heads next to chat messages','comfort',0,0,'#0f766e'],
+ ['Mod Menu','15.0','Settings screen for your mods','comfort',0,1,'#6d28d9'],
+ ["Xaero's Minimap",'25.2','Minimap with waypoints','user',0,1,'#475569',null,'g','Compatible'],
+ ['Better Clouds','1.6','Prettier volumetric clouds','user',0,0,'#475569',null,'y','Waiting for a 26.3 update'],
+ ['Xray Ultimate','—','Blocked by Hemisphere staff','user',0,0,'#7f1d1d',null,'r','Not allowed on Hemisphere'],
+];
+const GROUPS={perf:'Performance',voice:'Voice & audio',visual:'Visual',comfort:'Comfort',user:'Added by you'};
+let mfilter='all',mq='';
+function renderMods(){
+  const q=mq.toLowerCase();let html='';
+  for(const g in GROUPS){
+    if(mfilter!=='all'&&mfilter!==g)continue;
+    const rows=MODS.map((m,i)=>[m,i]).filter(([m])=>m[3]===g&&(!q||m[0].toLowerCase().includes(q)));
+    if(!rows.length)continue;
+    html+=`<div class="mgroup"><div class="mgh"><span class="label">${GROUPS[g]}</span><span class="badge">${rows.length}</span></div><div class="mtable">`+rows.map(([m,i])=>{
+      const locked=m[8]&&m[8]!=='g',blocked=m[8]==='r';
+      return `<div class="mrow ${blocked?'blocked':''} ${m[4]&&!m[5]?'off-rec':''}" data-mod="${i}"><span class="mi" style="background:${m[6]}">${m[0][0]}</span><div class="t"><div><b>${m[0]}</b><span class="v">${m[1]}</span></div><p>${m[2]}</p><div class="warnline">⚠ ${m[7]||'Recommended — turning this off may lower your FPS.'}</div></div>${m[4]?'<span class="badge g">Recommended</span>':''}${m[8]?`<span class="badge ${m[8]}">${m[9]}</span>`:''}<button class="toggle" aria-checked="${!!m[5]}" ${locked?'disabled':''}></button></div>`}).join('')+`</div></div>`;
+  }
+  document.getElementById('mlist').innerHTML=html||'<p class="dim">No mods match your search.</p>';
+  const on=MODS.filter(m=>m[5]).length;document.getElementById('mcount').textContent=`${on} of ${MODS.length} enabled · changes apply next launch`;
+}
+renderMods();
+document.getElementById('msearch').oninput=e=>{mq=e.target.value;renderMods()};
+document.querySelectorAll('#mchips .chip').forEach(c=>c.addEventListener('click',()=>{mfilter=c.dataset.f;renderMods()}));
+document.getElementById('mlist').addEventListener('click',e=>{const t=e.target.closest('.toggle:not([disabled])');if(!t)return;e.stopPropagation();const i=+t.closest('.mrow').dataset.mod;MODS[i][5]=MODS[i][5]?0:1;renderMods()});
+
+/* ---------- navigation ---------- */
+const PRE=['login','whitelist','wizard','install'];
+const DIM=['news','mods','settings'];
+function go(id,state,spane){
+ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id==='s-'+id));
+ document.body.classList.toggle('preauth',PRE.includes(id));
+ document.getElementById('win').toggleAttribute('data-dim',DIM.includes(id));
+ document.getElementById('caption').style.opacity=DIM.includes(id)?0:1;
+ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.go===id||(id==='repair'&&t.dataset.go==='settings')));
+ document.querySelectorAll('#proto button').forEach(b=>b.classList.toggle('on',b.dataset.go===id&&(id!=='home'||b.dataset.state===(state||'ready'))));
+ note.textContent='';
+ if(id==='home')setHome(state||'ready');
+ if(id==='settings')spaneGo(spane||'game');
+ if(id==='repair'){document.getElementById('rres').classList.remove('on');document.getElementById('ropts').style.display='';document.getElementById('rrun').innerHTML=ico('wrench')+'Start repair'}
+ if(id==='login'){const b=document.getElementById('msbtn');b.innerHTML='<span class="msl"><i style="background:#f25022"></i><i style="background:#7fba00"></i><i style="background:#00a4ef"></i><i style="background:#ffb900"></i></span><span>Sign in with Microsoft</span>'}
+ if(id==='wizard')wz(0);
+}
+document.addEventListener('click',e=>{
+ const g=e.target.closest('[data-go]');if(g){go(g.dataset.go,g.dataset.state,g.dataset.spane);return}
+ const t=e.target.closest('.toggle:not([disabled])');if(t){t.setAttribute('aria-checked',t.getAttribute('aria-checked')!=='true');return}
+ const c=e.target.closest('#imp .optrow');if(c){c.querySelector('.check').classList.toggle('on');return}
+ const s=e.target.closest('.src');if(s){s.parentNode.querySelectorAll('.src').forEach(x=>x.classList.toggle('on',x===s));return}
+ const o=e.target.closest('.opt');if(o){o.parentNode.querySelectorAll('.opt').forEach(x=>x.classList.toggle('on',x===o));return}
+ if(e.target.closest('[data-close]')){document.getElementById('incompat').classList.remove('on');note.textContent='';return}
+ const ch=e.target.closest('.chip');if(ch){ch.parentNode.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===ch));return}
+});
+/* login -> waiting -> whitelist */
+document.getElementById('msbtn').addEventListener('click',function(){this.innerHTML='<span class="spinner" style="border-color:rgba(0,0,0,.15);border-top-color:#16a34a"></span><span>Waiting for Microsoft…</span>';setTimeout(()=>{if(document.getElementById('s-login').classList.contains('on'))go('whitelist')},1600)});
+/* wizard */
+let ws=0;const panes=document.querySelectorAll('.wz-pane'),wsteps=document.querySelectorAll('.wz-step');
+function wz(n){ws=n;panes.forEach((p,i)=>p.classList.toggle('on',i===n));wsteps.forEach((s,i)=>{s.classList.toggle('on',i===n);s.classList.toggle('done',i<n);s.querySelector('.n').innerHTML=i<n?'✓':i+1});
+ document.getElementById('wzback').style.visibility=n?'visible':'hidden';
+ document.getElementById('wzskip').style.display=n===1?'':'none';
+ document.getElementById('wznext').innerHTML=n===2?ico('play')+'Install':n===1?'Import & continue '+ico('arrow'):'Next '+ico('arrow');}
+document.getElementById('wznext').onclick=()=>ws<2?wz(ws+1):go('install');
+document.getElementById('wzback').onclick=()=>wz(Math.max(0,ws-1));
+document.getElementById('wzskip').onclick=()=>wz(2);
+/* mods tabs */
+/* settings nav */
+function spaneGo(p){document.querySelectorAll('#snav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));document.querySelectorAll('.spane').forEach(s=>s.classList.toggle('on',s.id==='p-'+p))}
+document.querySelectorAll('#snav button').forEach(b=>b.onclick=()=>spaneGo(b.dataset.p));
+/* repair */
+document.getElementById('rrun').onclick=function(){const r=document.getElementById('rres');if(r.classList.contains('on')){go('home');return}
+ this.innerHTML='<span class="spinner"></span>Checking files…';setTimeout(()=>{document.getElementById('ropts').style.display='none';r.classList.add('on');this.innerHTML='Done · back to Play'},1400)};
+
+/* ---------- fit window to stage ---------- */
+const stage=document.getElementById('stage');
+function fit(){const k=Math.min(1,(stage.clientWidth-40)/1120,(stage.clientHeight-40)/700);if(k>0)document.getElementById('win').style.transform=`scale(${k})`}
+new ResizeObserver(fit).observe(stage);fit();
+go('login');
+</script>
+</body>
+</html>
