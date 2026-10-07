@@ -1,65 +1,89 @@
 {
   "$comment": "Hemisphere client definition. Edit, then run: npm run content:publish  (see docs/CONTENT.md)",
-  "clientVersion": "1.0.0",
+  "clientVersion": "1.0.1",
   "minecraft": "26.3",
   "fabricLoader": "0.19.5",
-  "previousCanJoin": false,
+  "previousCanJoin": true,
   "mods": [
     {
       "modrinth": "fabric-api",
       "category": "library",
       "recommended": true,
       "default": true,
-      "description": { "en": "Core library most Fabric mods need", "fr": "Bibliothèque requise par la plupart des mods Fabric" }
+      "description": {
+        "en": "Core library most Fabric mods need",
+        "fr": "Bibliothèque requise par la plupart des mods Fabric"
+      }
     },
     {
       "modrinth": "sodium",
       "category": "performance",
       "recommended": true,
       "default": true,
-      "description": { "en": "Modern rendering engine — big FPS boost", "fr": "Moteur de rendu moderne — gros gain de FPS" }
+      "description": {
+        "en": "Modern rendering engine — big FPS boost",
+        "fr": "Moteur de rendu moderne — gros gain de FPS"
+      }
     },
     {
       "modrinth": "lithium",
       "category": "performance",
       "recommended": true,
       "default": true,
-      "description": { "en": "Faster game logic", "fr": "Logique de jeu plus rapide" }
+      "description": {
+        "en": "Faster game logic",
+        "fr": "Logique de jeu plus rapide"
+      }
     },
     {
       "modrinth": "ferrite-core",
       "category": "performance",
       "recommended": true,
       "default": true,
-      "description": { "en": "Lower memory usage", "fr": "Moins de mémoire utilisée" }
+      "description": {
+        "en": "Lower memory usage",
+        "fr": "Moins de mémoire utilisée"
+      }
     },
     {
       "modrinth": "immediatelyfast",
       "category": "performance",
       "recommended": true,
       "default": true,
-      "description": { "en": "Faster HUD and text rendering", "fr": "Affichage plus rapide de l'interface et du texte" }
+      "description": {
+        "en": "Faster HUD and text rendering",
+        "fr": "Affichage plus rapide de l'interface et du texte"
+      }
     },
     {
       "modrinth": "entityculling",
       "category": "performance",
       "recommended": true,
       "default": true,
-      "description": { "en": "Skips drawing hidden mobs and chests", "fr": "N'affiche pas les mobs et coffres cachés" }
+      "description": {
+        "en": "Skips drawing hidden mobs and chests",
+        "fr": "N'affiche pas les mobs et coffres cachés"
+      }
     },
     {
       "modrinth": "moreculling",
       "category": "performance",
       "recommended": true,
       "default": true,
-      "description": { "en": "Skips drawing hidden block faces", "fr": "N'affiche pas les faces de blocs cachées" }
+      "description": {
+        "en": "Skips drawing hidden block faces",
+        "fr": "N'affiche pas les faces de blocs cachées"
+      }
     },
     {
       "modrinth": "dynamic-fps",
       "category": "performance",
       "recommended": false,
       "default": true,
-      "description": { "en": "Saves power when the game is in the background", "fr": "Économise l'énergie quand le jeu est en arrière-plan" }
+      "description": {
+        "en": "Saves power when the game is in the background",
+        "fr": "Économise l'énergie quand le jeu est en arrière-plan"
+      }
     },
     {
       "modrinth": "simple-voice-chat",
@@ -67,84 +91,120 @@
       "recommended": true,
       "default": true,
       "allowBeta": true,
-      "description": { "en": "Proximity voice chat on Hemisphere", "fr": "Chat vocal de proximité sur Hemisphere" }
+      "description": {
+        "en": "Proximity voice chat on Hemisphere",
+        "fr": "Chat vocal de proximité sur Hemisphere"
+      }
     },
     {
       "modrinth": "audioplayer",
       "category": "voice",
       "recommended": true,
       "default": true,
-      "description": { "en": "Custom music discs and goat horns", "fr": "Disques et cornes de chèvre personnalisés" }
+      "description": {
+        "en": "Custom music discs and goat horns",
+        "fr": "Disques et cornes de chèvre personnalisés"
+      }
     },
     {
       "modrinth": "iris",
       "category": "visual",
       "recommended": false,
       "default": false,
-      "description": { "en": "Shader pack support · needs a good GPU", "fr": "Prise en charge des shaders · demande une bonne carte graphique" }
+      "description": {
+        "en": "Shader pack support · needs a good GPU",
+        "fr": "Prise en charge des shaders · demande une bonne carte graphique"
+      }
     },
     {
       "modrinth": "continuity",
       "category": "visual",
       "recommended": false,
       "default": false,
-      "description": { "en": "Connected textures", "fr": "Textures connectées" }
+      "description": {
+        "en": "Connected textures",
+        "fr": "Textures connectées"
+      }
     },
     {
       "modrinth": "entitytexturefeatures",
       "category": "visual",
       "recommended": false,
       "default": false,
-      "description": { "en": "Needed by some resource packs", "fr": "Requis par certains packs de ressources" }
+      "description": {
+        "en": "Needed by some resource packs",
+        "fr": "Requis par certains packs de ressources"
+      }
     },
     {
       "modrinth": "sodium-extra",
       "category": "visual",
       "recommended": false,
       "default": false,
-      "description": { "en": "More video settings", "fr": "Plus de réglages vidéo" }
+      "description": {
+        "en": "More video settings",
+        "fr": "Plus de réglages vidéo"
+      }
     },
     {
       "modrinth": "reeses-sodium-options",
       "category": "visual",
       "recommended": false,
       "default": false,
-      "description": { "en": "Better video settings screen", "fr": "Meilleur écran de réglages vidéo" }
+      "description": {
+        "en": "Better video settings screen",
+        "fr": "Meilleur écran de réglages vidéo"
+      }
     },
     {
       "modrinth": "locator-heads",
       "category": "comfort",
       "recommended": false,
       "default": true,
-      "description": { "en": "Player heads on the locator bar", "fr": "Têtes des joueurs sur la barre de localisation" }
+      "description": {
+        "en": "Player heads on the locator bar",
+        "fr": "Têtes des joueurs sur la barre de localisation"
+      }
     },
     {
       "modrinth": "zoomify",
       "category": "comfort",
       "recommended": false,
       "default": true,
-      "description": { "en": "Zoom with a key", "fr": "Zoom avec une touche" }
+      "description": {
+        "en": "Zoom with a key",
+        "fr": "Zoom avec une touche"
+      }
     },
     {
       "modrinth": "modmenu",
       "category": "comfort",
-      "recommended": false,
+      "recommended": true,
       "default": true,
-      "description": { "en": "Settings screen for your mods", "fr": "Écran de réglages pour tes mods" }
+      "description": {
+        "en": "In-game list of your mods, with search and settings",
+        "fr": "Liste de tes mods en jeu, avec recherche et réglages"
+      }
     },
     {
       "modrinth": "appleskin",
       "category": "comfort",
       "recommended": false,
       "default": false,
-      "description": { "en": "Food and saturation preview", "fr": "Aperçu de la nourriture et de la saturation" }
+      "description": {
+        "en": "Food and saturation preview",
+        "fr": "Aperçu de la nourriture et de la saturation"
+      }
     },
     {
       "modrinth": "chat-heads",
       "category": "comfort",
       "recommended": false,
       "default": false,
-      "description": { "en": "Player heads next to chat messages", "fr": "Têtes des joueurs à côté des messages du chat" }
+      "description": {
+        "en": "Player heads next to chat messages",
+        "fr": "Têtes des joueurs à côté des messages du chat"
+      }
     }
   ],
   "files": []

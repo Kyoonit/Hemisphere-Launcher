@@ -49,16 +49,16 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
 
       <div className="no-drag ml-auto flex h-full items-center">
         {!minimal && account}
-        <WindowButton label={t('window.minimize')} onClick={window.hemisphere.window.minimize}>
+        <WindowButton label={t('window.minimize')} onClick={() => window.hemisphere.window.minimize()}>
           <Minus size={15} />
         </WindowButton>
         <WindowButton
           label={t(maximized ? 'window.restore' : 'window.maximize')}
-          onClick={window.hemisphere.window.toggleMaximize}
+          onClick={() => window.hemisphere.window.toggleMaximize()}
         >
           {maximized ? <Copy size={13} className="-scale-x-100" /> : <Square size={13} />}
         </WindowButton>
-        <WindowButton label={t('window.close')} onClick={window.hemisphere.window.close} danger>
+        <WindowButton label={t('window.close')} onClick={() => window.hemisphere.window.close()} danger>
           <X size={16} />
         </WindowButton>
       </div>
