@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { BookOpen, Clock, Globe, Map, TriangleAlert, WifiOff } from 'lucide-react'
 import type { LinkKey } from '@shared/ipc'
-import { RESTART_SCHEDULE } from '@shared/server'
 import { restartState } from '@shared/restart'
 import DiscordIcon from '../components/DiscordIcon'
 import ServerPanel from '../components/ServerPanel'
@@ -9,7 +8,9 @@ import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
 import PlayZone, { useGameState } from '../components/PlayZone'
 import { useClient } from './Mods'
-import { useNow, useServerStatus } from '../hooks'
+import { useFeed, useNow, useServerStatus } from '../hooks'
+import type { Feed } from '@shared/feed'
+import { localize } from '@shared/manifest'
 import { useAccounts } from '../accounts'
 
 const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
@@ -21,6 +22,7 @@ const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
 export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onRepair(): void }) {
   const { t } = useTranslation()
   const status = useServerStatus()
+  const feed = useFeed()
   const { active } = useAccounts()
   const game = useGameState()
   // Reload client info whenever a launch/repair finishes (an update may have just been installed).
@@ -29,10 +31,11 @@ export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onR
   return (
     <div className="relative flex h-full flex-col items-center px-7 pb-6">
       <PlaytimeCard key={active?.id} />
-      <ServerPanel status={status} />
+      <ServerPanel status={status} feed={feed} />
 
       <section className="flex flex-1 flex-col items-center justify-center text-center">
         {active?.status === 'expired' && <ExpiredBanner />}
+        {feed?.maintenance.active && <MaintenanceBanner feed={feed} />}
         <h1 className="animate-rise text-[44px] leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]">
           {active ? t('home.welcomeBack') : t('home.welcomeTo')}
           <br />
@@ -42,7 +45,7 @@ export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onR
         <div className="animate-rise mt-8 flex flex-col items-center [animation-delay:250ms]">
           <PlayZone client={client ?? null} onRepair={onRepair} />
           <div className="mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400">
-            <ServerNotice offline={status?.online === false} />
+            <ServerNotice offline={status?.online === false} feed={feed} />
           </div>
         </div>
       </section>
@@ -67,7 +70,7 @@ export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onR
             </button>
           ))}
         </div>
-        <NewsPeek onOpen={onOpenNews} />
+        <NewsPeek feed={feed} onOpen={onOpenNews} />
       </footer>
     </div>
   )
@@ -90,10 +93,29 @@ function ExpiredBanner() {
   )
 }
 
+/** Staff maintenance message (from the signed feed), with the end time in the player's own time zone. */
+function MaintenanceBanner({ feed }: { feed: Feed }) {
+  const { t, i18n } = useTranslation()
+  const until = feed.maintenance.until ? new Date(feed.maintenance.until) : null
+  return (
+    <div className="animate-fade mb-5 flex max-w-[560px] items-center gap-3 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/55 px-4 py-2.5 text-left text-[13px] text-amber-100 backdrop-blur-sm">
+      <TriangleAlert size={16} className="flex-none text-amber-400" />
+      <span>
+        <b className="text-white">{t('server.maintenance')}</b> · {localize(feed.maintenance.message, i18n.language)}
+        {until && until.getTime() > Date.now() && (
+          <> {t('home.maintenanceUntil', { time: until.toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) })}</>
+        )}
+      </span>
+    </div>
+  )
+}
+
 /** Restart / offline hint shown under the PLAY button. */
-function ServerNotice({ offline }: { offline: boolean }) {
+function ServerNotice({ offline, feed }: { offline: boolean; feed: Feed | null }) {
   const { t } = useTranslation()
-  const restart = restartState(useNow(), RESTART_SCHEDULE)
+  const now = useNow()
+  if (!feed?.restart || feed.maintenance.active) return offline ? <Line icon={<WifiOff size={14} />} className="text-red-400">{t('home.serverOffline')}</Line> : null
+  const restart = restartState(now, feed.restart)
 
   if (restart.phase === 'restarting')
     return <Line icon={<Clock size={14} />} className="text-red-400">{t('home.restartingNow')}</Line>

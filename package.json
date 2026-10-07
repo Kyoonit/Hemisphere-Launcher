@@ -14,7 +14,8 @@
     "postinstall": "node node_modules/electron/install.js",
     "test": "vitest run",
     "content:keygen": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/keygen.ts",
-    "content:publish": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/publish.ts"
+    "content:publish": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/publish.ts",
+    "content:feed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/feed.ts"
   },
   "dependencies": {
     "@xmcl/core": "2.15.1",

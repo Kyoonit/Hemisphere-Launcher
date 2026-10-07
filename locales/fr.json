@@ -22,7 +22,8 @@
     "clientVersion": "Client Hemisphere {{version}} · Minecraft {{minecraft}}",
     "restartingNow": "Le serveur redémarre — de retour dans quelques minutes",
     "serverOffline": "Hemisphere est hors ligne pour le moment",
-    "clientUnknown": "Client Hemisphere"
+    "clientUnknown": "Client Hemisphere",
+    "maintenanceUntil": "Retour vers {{time}}."
   },
   "links": {
     "discord": "Discord",
@@ -35,11 +36,6 @@
     "hempshire": "Hempshire",
     "playerBases": "Bases des joueurs",
     "community": "Projets communautaires"
-  },
-  "placeholder": {
-    "comingSoon": "Bientôt disponible",
-    "news": "Les actualités et annonces du serveur apparaîtront ici.",
-    "settings": "Paramètres du jeu, du launcher et du compte."
   },
   "settings": {
     "title": "Paramètres",
@@ -86,7 +82,8 @@
     "dailyAt": "Tous les jours à {{time}} (ton heure)",
     "onlineNow": "En ligne",
     "nobody": "Personne en ligne — sois le premier !",
-    "more": "+ {{count}} autres"
+    "more": "+ {{count}} autres",
+    "maintenance": "Maintenance"
   },
   "time": {
     "hm": "{{h}} h {{m}} min",
@@ -103,9 +100,17 @@
   },
   "news": {
     "allNews": "Toutes les actus",
-    "welcome": {
-      "tag": "Launcher",
-      "title": "Bienvenue dans le nouveau launcher Hemisphere"
+    "subtitle": "De la part de l’équipe",
+    "titleA": "Dernières",
+    "titleB": "actus",
+    "readMore": "Lire la suite",
+    "back": "Toutes les actus",
+    "empty": "Pas encore d’actus — reviens bientôt.",
+    "categories": {
+      "update": "Mise à jour",
+      "event": "Événement",
+      "server": "Serveur",
+      "community": "Communauté"
     }
   },
   "auth": {

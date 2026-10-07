@@ -1,0 +1,79 @@
+/**
+ * Hemisphere feed (schema 1): news, maintenance and restart schedule, edited by staff in content-src/feed.json and
+ * published signed (content/feed.json + feed.json.sig, same Ed25519 key as the client). Shared by launcher + tool.
+ */
+import { z } from 'zod'
+import { CONTENT_BASE, LocalizedSchema } from './manifest.ts'
+
+/** News images: our own content folder or the Hemisphere website. */
+export function isAllowedImageUrl(url: string, contentBase = CONTENT_BASE): boolean {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'https:' || u.username || u.password || u.port) return false
+    return url.startsWith(contentBase) || u.hostname === 'hemispheresurvival.club'
+  } catch {
+    return false
+  }
+}
+
+/** News buttons open the player's browser: https only. */
+const httpsUrl = z.string().refine((s) => {
+  try {
+    return new URL(s).protocol === 'https:'
+  } catch {
+    return false
+  }
+}, 'must be an https:// link')
+
+export const NEWS_CATEGORIES = ['update', 'event', 'server', 'community'] as const
+
+export const NewsItemSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]{1,64}$/),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  category: z.enum(NEWS_CATEGORIES),
+  title: LocalizedSchema,
+  /** Plain text; blank lines separate paragraphs */
+  body: LocalizedSchema,
+  image: z.string().refine((u) => isAllowedImageUrl(u), 'image host not allowed').optional(),
+  link: z.object({ label: LocalizedSchema, url: httpsUrl }).optional(),
+  /** Shown big at the top of the News page */
+  featured: z.boolean().optional(),
+})
+export type NewsItem = z.infer<typeof NewsItemSchema>
+
+export const FeedSchema = z
+  .object({
+    schema: z.literal(1),
+    /** Increases on every publish; older feeds are refused (replay protection) */
+    sequence: z.number().int().positive(),
+    updatedAt: z.string().datetime(),
+    maintenance: z.object({
+      active: z.boolean(),
+      message: LocalizedSchema,
+      /** optional end time shown to players (ISO with timezone) */
+      until: z.string().datetime({ offset: true }).optional(),
+    }),
+    restart: z
+      .object({
+        time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+        timeZone: z.string().min(1),
+        durationMin: z.number().int().min(1).max(120),
+      })
+      .nullable(),
+    news: z.array(NewsItemSchema).max(100),
+  })
+  .superRefine((f, ctx) => {
+    if (f.restart) {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: f.restart.timeZone })
+      } catch {
+        ctx.addIssue({ code: 'custom', message: `unknown time zone ${f.restart.timeZone}` })
+      }
+    }
+    const ids = new Set<string>()
+    for (const n of f.news) {
+      if (ids.has(n.id)) ctx.addIssue({ code: 'custom', message: `duplicate news id ${n.id}` })
+      ids.add(n.id)
+    }
+  })
+export type Feed = z.infer<typeof FeedSchema>

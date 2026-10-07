@@ -1,24 +1,28 @@
 import { useTranslation } from 'react-i18next'
-import { Clock, Signal } from 'lucide-react'
-import { RESTART_SCHEDULE, type ServerStatus } from '@shared/server'
-import { restartState, type RestartState } from '@shared/restart'
+import { Clock, Construction, Signal } from 'lucide-react'
+import type { ServerStatus } from '@shared/server'
+import type { Feed } from '@shared/feed'
+import { localize } from '@shared/manifest'
+import { restartState, type RestartSchedule, type RestartState } from '@shared/restart'
 import { splitDuration, useNow } from '../hooks'
 
 const MAX_HEADS = 10
 
-export default function ServerPanel({ status }: { status: ServerStatus | null }) {
-  const { t } = useTranslation()
+export default function ServerPanel({ status, feed }: { status: ServerStatus | null; feed: Feed | null }) {
+  const { t, i18n } = useTranslation()
   const now = useNow()
-  const restart = restartState(now, RESTART_SCHEDULE)
-  const restarting = restart.phase === 'restarting'
-  const online = status?.online === true && !restarting
+  const schedule: RestartSchedule | null = feed ? feed.restart : null
+  const restart = schedule ? restartState(now, schedule) : null
+  const restarting = restart?.phase === 'restarting'
+  const maintenance = feed?.maintenance.active === true
+  const online = status?.online === true && !restarting && !maintenance
 
   return (
     <aside className="glass animate-rise absolute top-5 right-6 w-[268px] p-4 [animation-delay:300ms]">
       <p className="text-xs font-bold tracking-[0.08em] text-gray-400 uppercase">{t('server.name')}</p>
 
       <div className="mt-2 flex items-center justify-between">
-        <StatusPill status={status} restarting={restarting} />
+        <StatusPill status={status} restarting={restarting} maintenance={maintenance} />
         {online && status.latencyMs !== null && (
           <span className="flex items-center gap-1 text-xs text-gray-400" title={t('server.latency')}>
             <Signal size={14} />
@@ -27,16 +31,25 @@ export default function ServerPanel({ status }: { status: ServerStatus | null })
         )}
       </div>
 
-      <RestartBox restart={restart} />
+      {maintenance && feed ? (
+        <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-amber-900/50 px-3 py-2.5 text-[13px] shadow-[inset_3px_0_0_var(--color-amber-400)]">
+          <Construction size={16} className="mt-0.5 flex-none text-amber-400" />
+          <span className="text-amber-100">{localize(feed.maintenance.message, i18n.language)}</span>
+        </div>
+      ) : (
+        restart && <RestartBox restart={restart} />
+      )}
 
       {online && <PlayerList status={status} />}
     </aside>
   )
 }
 
-function StatusPill({ status, restarting }: { status: ServerStatus | null; restarting: boolean }) {
+function StatusPill({ status, restarting, maintenance }: { status: ServerStatus | null; restarting: boolean; maintenance: boolean }) {
   const { t } = useTranslation()
-  const [tone, label] = restarting
+  const [tone, label] = maintenance
+    ? (['text-amber-400', t('server.maintenance')] as const)
+    : restarting
     ? (['text-red-400', t('server.offline')] as const)
     : status === null
       ? (['text-gray-400', t('server.checking')] as const)
@@ -45,7 +58,7 @@ function StatusPill({ status, restarting }: { status: ServerStatus | null; resta
         : status.online === false
           ? (['text-red-400', t('server.offline')] as const)
           : (['text-gray-400', t('server.unknown')] as const)
-  const pulse = status?.online === true && !restarting
+  const pulse = status?.online === true && !restarting && !maintenance
 
   return (
     <span className={`inline-flex items-center gap-2 rounded-full bg-gray-900/75 px-3 py-[5px] text-xs font-bold tracking-[0.06em] uppercase ${tone}`}>

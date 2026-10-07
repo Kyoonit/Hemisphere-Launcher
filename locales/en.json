@@ -22,7 +22,8 @@
     "clientVersion": "Hemisphere Client {{version}} · Minecraft {{minecraft}}",
     "restartingNow": "Server is restarting — back in a few minutes",
     "serverOffline": "Hemisphere is offline right now",
-    "clientUnknown": "Hemisphere Client"
+    "clientUnknown": "Hemisphere Client",
+    "maintenanceUntil": "Back around {{time}}."
   },
   "links": {
     "discord": "Discord",
@@ -35,11 +36,6 @@
     "hempshire": "Hempshire",
     "playerBases": "Player bases",
     "community": "Community projects"
-  },
-  "placeholder": {
-    "comingSoon": "Coming soon",
-    "news": "Server news and announcements will appear here.",
-    "settings": "Game, launcher and account settings."
   },
   "settings": {
     "title": "Settings",
@@ -86,7 +82,8 @@
     "dailyAt": "Daily at {{time}} your time",
     "onlineNow": "Online now",
     "nobody": "Nobody online right now — be the first!",
-    "more": "+ {{count}} more"
+    "more": "+ {{count}} more",
+    "maintenance": "Maintenance"
   },
   "time": {
     "hm": "{{h}}h {{m}}m",
@@ -103,9 +100,17 @@
   },
   "news": {
     "allNews": "All news",
-    "welcome": {
-      "tag": "Launcher",
-      "title": "Welcome to the new Hemisphere Launcher"
+    "subtitle": "From the team",
+    "titleA": "Latest",
+    "titleB": "news",
+    "readMore": "Read more",
+    "back": "All news",
+    "empty": "No news yet — check back soon.",
+    "categories": {
+      "update": "Update",
+      "event": "Event",
+      "server": "Server",
+      "community": "Community"
     }
   },
   "auth": {

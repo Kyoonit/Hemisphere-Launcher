@@ -2,6 +2,7 @@ import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport } from './game'
 import type { Settings } from './settings'
+import type { Feed } from './feed'
 import type { ClientSummary } from './client'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
@@ -35,6 +36,9 @@ export const IPC = {
   settingsSet: 'settings:set',
   settingsChanged: 'settings:changed',
   playtimeChanged: 'playtime:changed',
+  feedGet: 'feed:get',
+  feedChanged: 'feed:changed',
+  feedOpenLink: 'feed:open-link',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -74,6 +78,13 @@ export interface HemisphereApi {
     get(): Promise<PlaytimeSummary>
     /** Fires when a session was recorded */
     onChange(cb: () => void): () => void
+  }
+  /** News, maintenance and restart schedule (signed staff feed) */
+  feed: {
+    get(): Promise<Feed>
+    onChange(cb: (feed: Feed) => void): () => void
+    /** Opens a news item's button link (looked up by id in the verified feed, never a raw URL) */
+    openLink(newsId: string): void
   }
   settings: {
     get(): Promise<Settings>

@@ -4,6 +4,7 @@ import type { ServerStatus } from '@shared/server'
 import type { AccountsState } from '@shared/auth'
 import type { GameState } from '@shared/game'
 import type { Settings } from '@shared/settings'
+import type { Feed } from '@shared/feed'
 
 const api: HemisphereApi = {
   window: {
@@ -33,6 +34,15 @@ const api: HemisphereApi = {
       ipcRenderer.on(IPC.playtimeChanged, listener)
       return () => ipcRenderer.removeListener(IPC.playtimeChanged, listener)
     },
+  },
+  feed: {
+    get: () => ipcRenderer.invoke(IPC.feedGet),
+    onChange: (cb) => {
+      const listener = (_e: unknown, feed: Feed): void => cb(feed)
+      ipcRenderer.on(IPC.feedChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.feedChanged, listener)
+    },
+    openLink: (newsId) => ipcRenderer.send(IPC.feedOpenLink, newsId),
   },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet),

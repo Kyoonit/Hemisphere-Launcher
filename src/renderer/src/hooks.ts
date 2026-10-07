@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { PlaytimeSummary, ServerStatus } from '@shared/server'
+import type { Feed } from '@shared/feed'
 
 /** Current time, re-rendered every `intervalMs`. */
 export function useNow(intervalMs = 1000): number {
@@ -24,6 +25,16 @@ export function useServerStatus(): ServerStatus | null {
     }
   }, [])
   return status
+}
+
+/** Signed staff feed (news, maintenance, restart time); updates live. */
+export function useFeed(): Feed | null {
+  const [feed, setFeed] = useState<Feed | null>(null)
+  useEffect(() => {
+    window.hemisphere.feed.get().then(setFeed)
+    return window.hemisphere.feed.onChange(setFeed)
+  }, [])
+  return feed
 }
 
 export function usePlaytime(): PlaytimeSummary | null {

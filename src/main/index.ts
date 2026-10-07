@@ -26,6 +26,7 @@ import { installedJavaPath } from './core/game/install'
 import { getContent } from './core/remote/content'
 import { getEnabledMods, setModEnabled } from './core/sync/sync'
 import { getModIcons } from './core/remote/modIcons'
+import { getFeed, startFeedPolling } from './core/remote/feed'
 import type { ClientSummary } from '@shared/client'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
@@ -105,6 +106,11 @@ function registerIpc(): void {
     const active = getAccountsState().activeId
     const o = (opts ?? {}) as { target?: unknown }
     if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest' })
+  })
+  ipcMain.handle(IPC.feedGet, () => getFeed())
+  ipcMain.on(IPC.feedOpenLink, (_e, id: unknown) => {
+    const url = getFeed().news.find((n) => n.id === id)?.link?.url
+    if (url?.startsWith('https://')) void shell.openExternal(url)
   })
   ipcMain.handle(IPC.settingsGet, () => getSettings())
   ipcMain.handle(IPC.settingsSet, (_e, patch: unknown) => updateSettings(typeof patch === 'object' && patch ? (patch as object) : {}))
@@ -190,6 +196,7 @@ if (!app.requestSingleInstanceLock()) {
       win?.webContents.send(IPC.serverStatusUpdate, status)
     })
     void refreshAccount() // renew the active session silently in the background
+    startFeedPolling((feed) => win?.webContents.send(IPC.feedChanged, feed))
   })
 
   app.on('window-all-closed', () => app.quit())

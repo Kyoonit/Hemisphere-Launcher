@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "sequence": 1,
+  "updatedAt": "2026-10-07T23:40:53.811Z",
+  "maintenance": {
+    "active": false,
+    "message": {
+      "en": "Hemisphere is down for maintenance. We'll be back soon!",
+      "fr": "Hemisphere est en maintenance. On revient vite !"
+    }
+  },
+  "restart": {
+    "time": "17:00",
+    "timeZone": "Europe/Paris",
+    "durationMin": 5
+  },
+  "news": [
+    {
+      "id": "welcome-launcher",
+      "date": "2026-10-08",
+      "category": "update",
+      "title": {
+        "en": "Welcome to the new Hemisphere Launcher",
+        "fr": "Bienvenue dans le nouveau launcher Hemisphere"
+      },
+      "body": {
+        "en": "One click and you're on Hemisphere: Minecraft, Fabric, Java and our performance mods are installed and kept up to date for you.\n\nPick your optional mods in the Mods tab, and use Settings → Installation → Repair if anything ever goes wrong.",
+        "fr": "Un clic et tu es sur Hemisphere : Minecraft, Fabric, Java et nos mods de performance sont installés et tenus à jour pour toi.\n\nChoisis tes mods optionnels dans l'onglet Mods, et utilise Paramètres → Installation → Réparer en cas de souci."
+      },
+      "image": "https://hemispheresurvival.club/images/603aeb_168d4a74ad9b474eb5ea65e96590eaa3~mv2.avif",
+      "link": {
+        "label": {
+          "en": "Join the Discord",
+          "fr": "Rejoindre le Discord"
+        },
+        "url": "https://discord.gg/m3FGGUF"
+      },
+      "featured": true
+    },
+    {
+      "id": "client-1-0-1",
+      "date": "2026-10-08",
+      "category": "update",
+      "title": {
+        "en": "Client 1.0.1: Mod Menu recommended",
+        "fr": "Client 1.0.1 : Mod Menu recommandé"
+      },
+      "body": {
+        "en": "Mod Menu adds a Mods button in game with a searchable list of every installed mod and their settings.",
+        "fr": "Mod Menu ajoute un bouton Mods en jeu, avec la liste de tous les mods installés, une recherche et leurs réglages."
+      }
+    },
+    {
+      "id": "daily-restart",
+      "date": "2026-10-08",
+      "category": "server",
+      "title": {
+        "en": "Daily restart at 17:00 (Paris time)",
+        "fr": "Redémarrage quotidien à 17h00 (heure de Paris)"
+      },
+      "body": {
+        "en": "The server restarts every day for a few minutes. The launcher shows a countdown in your own time zone.",
+        "fr": "Le serveur redémarre chaque jour pendant quelques minutes. Le launcher affiche un compte à rebours dans ton fuseau horaire."
+      },
+      "image": "https://hemispheresurvival.club/images/603aeb_07e6cb00ad0040eaa25b5b4ede69bf7e~mv2.avif"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import Background from './components/Background'
 import AccountMenu from './components/AccountMenu'
 import Home from './screens/Home'
 import Login from './screens/Login'
-import Placeholder from './screens/Placeholder'
+import News from './screens/News'
 import Mods from './screens/Mods'
 import Repair from './screens/Repair'
 import Settings, { type Section } from './screens/Settings'
@@ -44,7 +44,7 @@ export default function App() {
           ) : (
             <>
               {screen === 'home' && <Home onOpenNews={() => setScreen('news')} onRepair={() => setScreen('repair')} />}
-              {screen === 'news' && <Placeholder kind="news" />}
+              {screen === 'news' && <News />}
               {screen === 'mods' && <Mods />}
               {screen === 'settings' && <Settings initialSection={settingsSection} onAddAccount={() => setAddingAccount(true)} onRepair={() => setScreen('repair')} />}
               {screen === 'repair' && <Repair onClose={() => openSettings('installation')} onDone={() => setScreen('home')} />}
