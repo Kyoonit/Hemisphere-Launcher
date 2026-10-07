@@ -21,7 +21,9 @@
     "ready": "Ready",
     "clientVersion": "Hemisphere Client {{version}}",
     "notConnected": "Launching arrives in a later phase",
-    "location": "Location: {{name}}"
+    "location": "Location: {{name}}",
+    "restartingNow": "Server is restarting — back in a few minutes",
+    "serverOffline": "Hemisphere is offline right now"
   },
   "links": {
     "discord": "Discord",
@@ -55,5 +57,39 @@
     "languageAuto": "Automatic",
     "version": "Launcher version",
     "sectionPlaceholder": "These settings will be available in a future update."
+  },
+  "server": {
+    "name": "Hemisphere Survival",
+    "online": "Online",
+    "offline": "Server offline",
+    "checking": "Checking…",
+    "unknown": "Status unknown",
+    "latency": "Latency from your PC",
+    "restartIn": "Restart in {{time}}",
+    "restarting": "Restarting…",
+    "backIn": "Back in about {{min}} min",
+    "dailyAt": "Daily at {{time}} your time",
+    "onlineNow": "Online now",
+    "nobody": "Nobody online right now — be the first!",
+    "more": "+ {{count}} more"
+  },
+  "time": {
+    "hm": "{{h}}h {{m}}m",
+    "m": "{{m}}m"
+  },
+  "playtime": {
+    "title": "Your playtime",
+    "lastSession": "Last session",
+    "thisWeek": "This week",
+    "sessions": "Sessions",
+    "empty": "Starts counting from your first game.",
+    "tooltip": "Counted by the launcher each time you close the game"
+  },
+  "news": {
+    "allNews": "All news",
+    "welcome": {
+      "tag": "Launcher",
+      "title": "Welcome to the new Hemisphere Launcher"
+    }
   }
 }

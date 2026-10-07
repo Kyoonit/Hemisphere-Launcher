@@ -14,7 +14,7 @@ export default function App() {
       <Background dimmed={dimmed} />
       <TitleBar screen={screen} onNavigate={setScreen} />
       <main key={screen} className="animate-fade absolute inset-x-0 top-[52px] bottom-0">
-        {screen === 'home' && <Home />}
+        {screen === 'home' && <Home onOpenNews={() => setScreen('news')} />}
         {screen === 'news' && <Placeholder kind="news" />}
         {screen === 'mods' && <Placeholder kind="mods" />}
         {screen === 'settings' && <Settings />}

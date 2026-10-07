@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC, type HemisphereApi } from '@shared/ipc'
+import type { ServerStatus } from '@shared/server'
 
 const api: HemisphereApi = {
   window: {
@@ -14,6 +15,17 @@ const api: HemisphereApi = {
   },
   openLink: (key) => ipcRenderer.send(IPC.openLink, key),
   appInfo: () => ipcRenderer.invoke(IPC.appInfo),
+  server: {
+    getStatus: () => ipcRenderer.invoke(IPC.serverStatusGet),
+    onStatus: (cb) => {
+      const listener = (_e: unknown, status: ServerStatus): void => cb(status)
+      ipcRenderer.on(IPC.serverStatusUpdate, listener)
+      return () => ipcRenderer.removeListener(IPC.serverStatusUpdate, listener)
+    },
+  },
+  playtime: {
+    get: () => ipcRenderer.invoke(IPC.playtimeGet),
+  },
 }
 
 contextBridge.exposeInMainWorld('hemisphere', api)

@@ -1,8 +1,12 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
+import type { ServerStatus } from '@shared/server'
+import { getServerStatus, startStatusPolling } from './core/status/serverStatus'
+import { getPlaytime } from './core/playtime/playtimeStore'
 
 let win: BrowserWindow | null = null
+let lastStatus: ServerStatus | null = null
 
 function createWindow(): void {
   win = new BrowserWindow({
@@ -52,6 +56,10 @@ function registerIpc(): void {
     }
   })
 
+  ipcMain.handle(IPC.serverStatusGet, async () => lastStatus ?? (lastStatus = await getServerStatus()))
+  // Until accounts exist (Phase 6), playtime is tracked under a single local profile.
+  ipcMain.handle(IPC.playtimeGet, () => getPlaytime('local'))
+
   ipcMain.handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))
 }
 
@@ -70,6 +78,10 @@ if (!app.requestSingleInstanceLock()) {
     app.setAppUserModelId('club.hemispheresurvival.launcher')
     registerIpc()
     createWindow()
+    startStatusPolling((status) => {
+      lastStatus = status
+      win?.webContents.send(IPC.serverStatusUpdate, status)
+    })
   })
 
   app.on('window-all-closed', () => app.quit())

@@ -1,8 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BookOpen, Check, Globe, Info, Map } from 'lucide-react'
+import { BookOpen, Check, Clock, Globe, Info, Map, WifiOff } from 'lucide-react'
 import type { LinkKey } from '@shared/ipc'
+import { RESTART_SCHEDULE } from '@shared/server'
+import { restartState } from '@shared/restart'
 import DiscordIcon from '../components/DiscordIcon'
+import ServerPanel from '../components/ServerPanel'
+import PlaytimeCard from '../components/PlaytimeCard'
+import NewsPeek from '../components/NewsPeek'
+import { useNow, useServerStatus } from '../hooks'
 
 const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
   { key: 'website', icon: <Globe size={18} /> },
@@ -10,12 +16,16 @@ const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
   { key: 'rules', icon: <BookOpen size={18} /> },
 ]
 
-export default function Home() {
+export default function Home({ onOpenNews }: { onOpenNews(): void }) {
   const { t } = useTranslation()
   const [notice, setNotice] = useState(false)
+  const status = useServerStatus()
 
   return (
-    <div className="flex h-full flex-col items-center px-7 pb-6">
+    <div className="relative flex h-full flex-col items-center px-7 pb-6">
+      <PlaytimeCard />
+      <ServerPanel status={status} />
+
       <section className="flex flex-1 flex-col items-center justify-center text-center">
         <h1 className="animate-rise text-[44px] leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]">
           {t('home.welcomeTo')}
@@ -27,43 +37,68 @@ export default function Home() {
           <button className="play-button uppercase" onClick={() => setNotice(true)}>
             {t('home.play')}
           </button>
-          <p className="mt-3 flex items-center gap-1.5 text-[13px] text-gray-400">
+          <div className="mt-3 flex min-h-10 flex-col items-center gap-1 text-[13px] text-gray-400">
             {notice ? (
-              <>
-                <Info size={14} className="text-amber-400" />
-                {t('home.notConnected')}
-              </>
+              <Line icon={<Info size={14} className="text-amber-400" />}>{t('home.notConnected')}</Line>
             ) : (
-              <>
-                <Check size={14} className="text-green-400" />
+              <Line icon={<Check size={14} className="text-green-400" />}>
                 <b className="font-semibold text-green-400">{t('home.ready')}</b>
                 {' · '}
-                {t('home.clientVersion', { version: '26.3' })}
-              </>
+                {t('home.clientVersion', { version: status?.version ?? '26.3' })}
+              </Line>
             )}
-          </p>
+            <ServerNotice offline={status?.online === false} />
+          </div>
         </div>
       </section>
 
-      <footer className="animate-rise flex w-full items-end justify-start gap-2 [animation-delay:400ms]">
-        <button
-          onClick={() => window.hemisphere.openLink('discord')}
-          className="flex items-center gap-2 rounded-lg bg-discord px-4 py-[9px] text-sm font-semibold text-white shadow-md transition-all duration-300 hover:scale-[1.04] hover:bg-discord-hover"
-        >
-          <DiscordIcon />
-          {t('links.discord')}
-        </button>
-        {LINK_BUTTONS.map(({ key, icon }) => (
+      <footer className="animate-rise flex w-full items-end justify-between gap-4 [animation-delay:400ms]">
+        <div className="flex gap-2">
           <button
-            key={key}
-            onClick={() => window.hemisphere.openLink(key)}
-            className="flex items-center gap-2 rounded-lg bg-gray-800/75 px-4 py-[9px] text-sm font-semibold text-gray-300 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-gray-700 hover:text-white"
+            onClick={() => window.hemisphere.openLink('discord')}
+            className="flex items-center gap-2 rounded-lg bg-discord px-4 py-[9px] text-sm font-semibold text-white shadow-md transition-all duration-300 hover:scale-[1.04] hover:bg-discord-hover"
           >
-            {icon}
-            {t(`links.${key}`)}
+            <DiscordIcon />
+            {t('links.discord')}
           </button>
-        ))}
+          {LINK_BUTTONS.map(({ key, icon }) => (
+            <button
+              key={key}
+              onClick={() => window.hemisphere.openLink(key)}
+              className="flex items-center gap-2 rounded-lg bg-gray-800/75 px-4 py-[9px] text-sm font-semibold text-gray-300 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-gray-700 hover:text-white"
+            >
+              {icon}
+              {t(`links.${key}`)}
+            </button>
+          ))}
+        </div>
+        <NewsPeek onOpen={onOpenNews} />
       </footer>
     </div>
+  )
+}
+
+/** Restart / offline hint shown under the PLAY button. */
+function ServerNotice({ offline }: { offline: boolean }) {
+  const { t } = useTranslation()
+  const restart = restartState(useNow(), RESTART_SCHEDULE)
+
+  if (restart.phase === 'restarting')
+    return <Line icon={<Clock size={14} />} className="text-red-400">{t('home.restartingNow')}</Line>
+  if (offline) return <Line icon={<WifiOff size={14} />} className="text-red-400">{t('home.serverOffline')}</Line>
+  if (restart.phase === 'soon') {
+    const s = Math.floor(restart.msLeft / 1000)
+    const time = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+    return <Line icon={<Clock size={14} />} className="text-amber-400 tabular-nums">{t('server.restartIn', { time })}</Line>
+  }
+  return null
+}
+
+function Line({ icon, className = '', children }: { icon: React.ReactNode; className?: string; children: React.ReactNode }) {
+  return (
+    <p className={`flex items-center gap-1.5 ${className}`}>
+      {icon}
+      {children}
+    </p>
   )
 }

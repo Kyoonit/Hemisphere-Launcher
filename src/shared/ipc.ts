@@ -1,3 +1,5 @@
+import type { PlaytimeSummary, ServerStatus } from './server'
+
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
 export const IPC = {
@@ -7,6 +9,9 @@ export const IPC = {
   windowMaximizedChanged: 'window:maximized-changed',
   openLink: 'link:open',
   appInfo: 'app:info',
+  serverStatusGet: 'server:status:get',
+  serverStatusUpdate: 'server:status:update',
+  playtimeGet: 'playtime:get',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -35,4 +40,11 @@ export interface HemisphereApi {
   }
   openLink(key: LinkKey): void
   appInfo(): Promise<AppInfo>
+  server: {
+    getStatus(): Promise<ServerStatus>
+    onStatus(cb: (status: ServerStatus) => void): () => void
+  }
+  playtime: {
+    get(): Promise<PlaytimeSummary>
+  }
 }

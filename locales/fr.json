@@ -21,7 +21,9 @@
     "ready": "Prêt",
     "clientVersion": "Client Hemisphere {{version}}",
     "notConnected": "Le lancement arrive dans une prochaine phase",
-    "location": "Lieu : {{name}}"
+    "location": "Lieu : {{name}}",
+    "restartingNow": "Le serveur redémarre — de retour dans quelques minutes",
+    "serverOffline": "Hemisphere est hors ligne pour le moment"
   },
   "links": {
     "discord": "Discord",
@@ -55,5 +57,39 @@
     "languageAuto": "Automatique",
     "version": "Version du launcher",
     "sectionPlaceholder": "Ces paramètres seront disponibles dans une prochaine mise à jour."
+  },
+  "server": {
+    "name": "Hemisphere Survival",
+    "online": "En ligne",
+    "offline": "Serveur hors ligne",
+    "checking": "Vérification…",
+    "unknown": "Statut inconnu",
+    "latency": "Latence depuis ton PC",
+    "restartIn": "Redémarrage dans {{time}}",
+    "restarting": "Redémarrage…",
+    "backIn": "De retour dans environ {{min}} min",
+    "dailyAt": "Tous les jours à {{time}} (ton heure)",
+    "onlineNow": "En ligne",
+    "nobody": "Personne en ligne — sois le premier !",
+    "more": "+ {{count}} autres"
+  },
+  "time": {
+    "hm": "{{h}} h {{m}} min",
+    "m": "{{m}} min"
+  },
+  "playtime": {
+    "title": "Ton temps de jeu",
+    "lastSession": "Dernière session",
+    "thisWeek": "Cette semaine",
+    "sessions": "Sessions",
+    "empty": "Le compteur démarre à ta première partie.",
+    "tooltip": "Compté par le launcher à chaque fermeture du jeu"
+  },
+  "news": {
+    "allNews": "Toutes les actus",
+    "welcome": {
+      "tag": "Launcher",
+      "title": "Bienvenue dans le nouveau launcher Hemisphere"
+    }
   }
 }
