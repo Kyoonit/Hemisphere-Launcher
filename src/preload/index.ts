@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC, type HemisphereApi } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
+import type { AccountsState } from '@shared/auth'
 
 const api: HemisphereApi = {
   window: {
@@ -25,6 +26,19 @@ const api: HemisphereApi = {
   },
   playtime: {
     get: () => ipcRenderer.invoke(IPC.playtimeGet),
+  },
+  auth: {
+    getState: () => ipcRenderer.invoke(IPC.authState),
+    onChange: (cb) => {
+      const listener = (_e: unknown, state: AccountsState): void => cb(state)
+      ipcRenderer.on(IPC.authChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.authChanged, listener)
+    },
+    signIn: (language) => ipcRenderer.invoke(IPC.authSignIn, language),
+    cancel: () => ipcRenderer.send(IPC.authCancel),
+    switchTo: (id) => ipcRenderer.invoke(IPC.authSwitch, id),
+    signOut: (id) => ipcRenderer.invoke(IPC.authSignOut, id),
+    addDevOffline: (name) => ipcRenderer.invoke(IPC.authDevOffline, name),
   },
 }
 

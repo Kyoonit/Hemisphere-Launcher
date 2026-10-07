@@ -15,9 +15,12 @@ const TABS: { id: Screen; icon: LucideIcon; label: string }[] = [
 interface Props {
   screen: Screen
   onNavigate(screen: Screen): void
+  /** Hide navigation (sign-in screen) */
+  minimal?: boolean
+  account?: React.ReactNode
 }
 
-export default function TitleBar({ screen, onNavigate }: Props) {
+export default function TitleBar({ screen, onNavigate, minimal, account }: Props) {
   const { t } = useTranslation()
   const [maximized, setMaximized] = useState(false)
   useEffect(() => window.hemisphere.window.onMaximizedChange(setMaximized), [])
@@ -29,7 +32,7 @@ export default function TitleBar({ screen, onNavigate }: Props) {
         {t('app.name')}
       </div>
 
-      <nav className="no-drag ml-3 flex gap-1">
+      <nav className={`no-drag ml-3 flex gap-1 ${minimal ? 'invisible' : ''}`}>
         {TABS.map(({ id, icon: Icon, label }) => (
           <button
             key={id}
@@ -44,7 +47,8 @@ export default function TitleBar({ screen, onNavigate }: Props) {
         ))}
       </nav>
 
-      <div className="no-drag ml-auto flex h-full">
+      <div className="no-drag ml-auto flex h-full items-center">
+        {!minimal && account}
         <WindowButton label={t('window.minimize')} onClick={window.hemisphere.window.minimize}>
           <Minus size={15} />
         </WindowButton>
@@ -68,7 +72,7 @@ function WindowButton(props: { label: string; onClick(): void; danger?: boolean;
       aria-label={props.label}
       title={props.label}
       onClick={props.onClick}
-      className={`grid w-[46px] place-items-center text-gray-400 transition-colors duration-150 hover:text-white ${
+      className={`grid h-full w-[46px] place-items-center text-gray-400 transition-colors duration-150 hover:text-white ${
         props.danger ? 'hover:bg-red-600' : 'hover:bg-gray-700'
       }`}
     >

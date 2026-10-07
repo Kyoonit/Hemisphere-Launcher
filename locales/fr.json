@@ -91,5 +91,83 @@
       "tag": "Launcher",
       "title": "Bienvenue dans le nouveau launcher Hemisphere"
     }
+  },
+  "auth": {
+    "intro": "Connecte-toi avec le compte Microsoft qui possède Minecraft : Java Edition.",
+    "signIn": "Se connecter avec Microsoft",
+    "waiting": "En attente de Microsoft…",
+    "waitingHint": "Termine la connexion dans la fenêtre du navigateur qui vient de s’ouvrir.",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "passwordNote": "Ton mot de passe va uniquement chez Microsoft — Hemisphere ne le voit jamais.",
+    "noMinecraft": "Tu n’as pas encore Minecraft ?",
+    "getMinecraft": "Obtenir Minecraft",
+    "notConfiguredHint": "Cette version n’a pas encore d’identifiant d’application Microsoft.",
+    "accounts": "Comptes",
+    "addAccount": "Ajouter un compte",
+    "manage": "Gérer les comptes",
+    "microsoftAccount": "Compte Microsoft",
+    "active": "Actif",
+    "expired": "Reconnexion requise",
+    "switch": "Utiliser",
+    "signOut": "Déconnexion",
+    "settingsHint": "Change de compte instantanément depuis le menu en haut. La déconnexion retire le compte de ce PC uniquement.",
+    "expiredBanner": "Ta session Microsoft a expiré.",
+    "signInAgain": "Se reconnecter",
+    "dev": {
+      "title": "Mode test développeur",
+      "placeholder": "Pseudo hors ligne",
+      "use": "Utiliser",
+      "badge": "Compte test hors ligne (dev uniquement)"
+    },
+    "errors": {
+      "timeout": {
+        "title": "Connexion expirée",
+        "body": "La fenêtre du navigateur est restée ouverte trop longtemps. Réessaie."
+      },
+      "network": {
+        "title": "Pas de connexion",
+        "body": "Vérifie ta connexion internet et réessaie."
+      },
+      "notConfigured": {
+        "title": "Connexion indisponible",
+        "body": "Cette version n’a pas encore d’identifiant d’application Microsoft."
+      },
+      "microsoftDenied": {
+        "title": "Microsoft a refusé la connexion",
+        "body": "Réessaie et accepte bien les autorisations."
+      },
+      "noXboxProfile": {
+        "title": "Pas encore de profil Xbox",
+        "body": "Ton compte Microsoft a besoin d’un profil Xbox gratuit pour jouer à Minecraft.",
+        "action": "Créer mon profil Xbox"
+      },
+      "childAccount": {
+        "title": "Autorisation parentale requise",
+        "body": "Un adulte doit ajouter ton compte à une famille Microsoft pour que tu puisses jouer.",
+        "action": "Ouvrir Microsoft Famille"
+      },
+      "xboxUnavailableRegion": {
+        "title": "Xbox Live indisponible",
+        "body": "Xbox Live n’est pas disponible dans ton pays ou ta région."
+      },
+      "appNotApproved": {
+        "title": "Launcher pas encore approuvé",
+        "body": "Microsoft n’a pas encore approuvé ce launcher pour la connexion Minecraft. L’équipe Hemisphere s’en occupe."
+      },
+      "notOwned": {
+        "title": "Ce compte ne possède pas Minecraft",
+        "body": "Minecraft : Java Edition est nécessaire pour jouer sur Hemisphere.",
+        "action": "Obtenir Minecraft"
+      },
+      "unknown": {
+        "title": "Un problème est survenu",
+        "body": "Réessaie. Si ça continue, demande de l’aide sur Discord."
+      },
+      "cancelled": {
+        "title": "Connexion annulée",
+        "body": "Tu peux réessayer quand tu veux."
+      }
+    }
   }
 }

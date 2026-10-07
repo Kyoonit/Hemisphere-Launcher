@@ -4,6 +4,19 @@ import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
 import { getServerStatus, startStatusPolling } from './core/status/serverStatus'
 import { getPlaytime } from './core/playtime/playtimeStore'
+import {
+  addDevOfflineAccount,
+  getAccountsState,
+  loadAccounts,
+  onAccountsChanged,
+  refreshAccount,
+  signIn,
+  signOut,
+  switchAccount,
+} from './core/auth/accounts'
+import { cancelSignIn } from './core/auth/oauth'
+
+const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
 let win: BrowserWindow | null = null
 let lastStatus: ServerStatus | null = null
@@ -57,8 +70,23 @@ function registerIpc(): void {
   })
 
   ipcMain.handle(IPC.serverStatusGet, async () => lastStatus ?? (lastStatus = await getServerStatus()))
-  // Until accounts exist (Phase 6), playtime is tracked under a single local profile.
-  ipcMain.handle(IPC.playtimeGet, () => getPlaytime('local'))
+  ipcMain.handle(IPC.playtimeGet, () => getPlaytime(getAccountsState().activeId ?? 'none'))
+
+  ipcMain.handle(IPC.authState, () => getAccountsState())
+  ipcMain.handle(IPC.authSignIn, async (_e, language: unknown) => {
+    const result = await signIn(typeof language === 'string' ? language : 'en')
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.focus() // bring the launcher back after the browser
+    }
+    return result
+  })
+  ipcMain.on(IPC.authCancel, () => cancelSignIn())
+  ipcMain.handle(IPC.authSwitch, (_e, id: unknown) => (isId(id) ? switchAccount(id) : undefined))
+  ipcMain.handle(IPC.authSignOut, (_e, id: unknown) => (isId(id) ? signOut(id) : undefined))
+  ipcMain.handle(IPC.authDevOffline, (_e, name: unknown) =>
+    addDevOfflineAccount(typeof name === 'string' ? name : ''),
+  )
 
   ipcMain.handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))
 }
@@ -74,14 +102,17 @@ if (!app.requestSingleInstanceLock()) {
     }
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     app.setAppUserModelId('club.hemispheresurvival.launcher')
+    await loadAccounts()
+    onAccountsChanged(() => win?.webContents.send(IPC.authChanged, getAccountsState()))
     registerIpc()
     createWindow()
     startStatusPolling((status) => {
       lastStatus = status
       win?.webContents.send(IPC.serverStatusUpdate, status)
     })
+    void refreshAccount() // renew the active session silently in the background
   })
 
   app.on('window-all-closed', () => app.quit())

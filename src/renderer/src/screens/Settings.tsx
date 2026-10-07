@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderOpen, Gamepad2, Rocket, User, Wrench, type LucideIcon } from 'lucide-react'
+import { FolderOpen, Gamepad2, Plus, Rocket, User, Wrench, type LucideIcon } from 'lucide-react'
 import { LANGUAGES, systemLanguage } from '../i18n'
+import { headUrl, useAccounts } from '../accounts'
 
-type Section = 'game' | 'launcher' | 'account' | 'installation' | 'advanced'
+export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'advanced'
 
 const SECTIONS: { id: Section; icon: LucideIcon }[] = [
   { id: 'game', icon: Gamepad2 },
@@ -13,9 +14,9 @@ const SECTIONS: { id: Section; icon: LucideIcon }[] = [
   { id: 'advanced', icon: Wrench },
 ]
 
-export default function Settings() {
+export default function Settings({ initialSection, onAddAccount }: { initialSection: Section; onAddAccount(): void }) {
   const { t } = useTranslation()
-  const [section, setSection] = useState<Section>('launcher')
+  const [section, setSection] = useState<Section>(initialSection)
 
   return (
     <div className="grid h-full grid-cols-[200px_1fr]">
@@ -38,7 +39,13 @@ export default function Settings() {
 
       <section key={section} className="animate-fade overflow-auto px-8 py-6">
         <h2 className="text-[26px] font-bold text-white">{t(`settings.sections.${section}`)}</h2>
-        {section === 'launcher' ? <LauncherSettings /> : <p className="mt-4 text-gray-400">{t('settings.sectionPlaceholder')}</p>}
+        {section === 'launcher' ? (
+          <LauncherSettings />
+        ) : section === 'account' ? (
+          <AccountSettings onAddAccount={onAddAccount} />
+        ) : (
+          <p className="mt-4 text-gray-400">{t('settings.sectionPlaceholder')}</p>
+        )}
       </section>
     </div>
   )
@@ -76,6 +83,47 @@ function LauncherSettings() {
       <Row title={t('settings.version')} hint={version}>
         <span />
       </Row>
+    </div>
+  )
+}
+
+function AccountSettings({ onAddAccount }: { onAddAccount(): void }) {
+  const { t } = useTranslation()
+  const { state } = useAccounts()
+  if (!state) return null
+
+  return (
+    <div className="mt-1">
+      <p className="text-[13px] text-gray-400">{t('auth.settingsHint')}</p>
+      <div className="mt-3">
+        {state.accounts.map((a) => {
+          const isActive = a.id === state.activeId
+          return (
+            <div key={a.id} className="flex items-center gap-4 border-b border-white/5 py-3.5">
+              <img src={headUrl(a.id, 80)} alt="" className="h-10 w-10 rounded-[5px] [image-rendering:pixelated]" />
+              <div className="flex-1">
+                <b className="flex items-center gap-2 font-semibold text-white">
+                  {a.name}
+                  {isActive && <span className="rounded-full bg-green-600/20 px-2 py-0.5 text-[11px] font-semibold text-green-400">{t('auth.active')}</span>}
+                  {a.status === 'expired' && <span className="rounded-full bg-amber-600/20 px-2 py-0.5 text-[11px] font-semibold text-amber-400">{t('auth.expired')}</span>}
+                </b>
+                <span className="text-[12.5px] text-gray-400">{a.kind === 'offline' ? t('auth.dev.badge') : t('auth.microsoftAccount')}</span>
+              </div>
+              {!isActive && (
+                <button onClick={() => window.hemisphere.auth.switchTo(a.id)} className="rounded-lg bg-gray-700/85 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600">
+                  {t('auth.switch')}
+                </button>
+              )}
+              <button onClick={() => window.hemisphere.auth.signOut(a.id)} className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-300 transition-colors hover:bg-gray-700 hover:text-white">
+                {t('auth.signOut')}
+              </button>
+            </div>
+          )
+        })}
+      </div>
+      <button onClick={onAddAccount} className="mt-4 flex items-center gap-2 rounded-lg bg-gray-700/85 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600">
+        <Plus size={16} /> {t('auth.addAccount')}
+      </button>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
+import type { AccountsState, AuthResult } from './auth'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -12,6 +13,13 @@ export const IPC = {
   serverStatusGet: 'server:status:get',
   serverStatusUpdate: 'server:status:update',
   playtimeGet: 'playtime:get',
+  authState: 'auth:state',
+  authChanged: 'auth:changed',
+  authSignIn: 'auth:sign-in',
+  authCancel: 'auth:cancel',
+  authSwitch: 'auth:switch',
+  authSignOut: 'auth:sign-out',
+  authDevOffline: 'auth:dev-offline',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -21,6 +29,8 @@ export const LINKS = {
   map: 'http://play.hemispheresurvival.club:9090/',
   rules: 'https://hemispheresurvival.club/rules',
   getMinecraft: 'https://www.minecraft.net/store/minecraft-java-bedrock-edition-pc',
+  xboxProfile: 'https://www.xbox.com/live',
+  microsoftFamily: 'https://account.microsoft.com/family',
 } as const
 
 export type LinkKey = keyof typeof LINKS
@@ -45,6 +55,17 @@ export interface HemisphereApi {
     onStatus(cb: (status: ServerStatus) => void): () => void
   }
   playtime: {
+    /** Playtime of the active account */
     get(): Promise<PlaytimeSummary>
+  }
+  auth: {
+    getState(): Promise<AccountsState>
+    onChange(cb: (state: AccountsState) => void): () => void
+    /** Opens the browser for Microsoft sign-in; resolves when finished, cancelled or failed */
+    signIn(language: string): Promise<AuthResult>
+    cancel(): void
+    switchTo(id: string): Promise<void>
+    signOut(id: string): Promise<void>
+    addDevOffline(name: string): Promise<AuthResult>
   }
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BookOpen, Check, Clock, Globe, Info, Map, WifiOff } from 'lucide-react'
+import { BookOpen, Check, Clock, Globe, Info, Map, TriangleAlert, WifiOff } from 'lucide-react'
 import type { LinkKey } from '@shared/ipc'
 import { RESTART_SCHEDULE } from '@shared/server'
 import { restartState } from '@shared/restart'
@@ -9,6 +9,7 @@ import ServerPanel from '../components/ServerPanel'
 import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
 import { useNow, useServerStatus } from '../hooks'
+import { useAccounts } from '../accounts'
 
 const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
   { key: 'website', icon: <Globe size={18} /> },
@@ -20,17 +21,19 @@ export default function Home({ onOpenNews }: { onOpenNews(): void }) {
   const { t } = useTranslation()
   const [notice, setNotice] = useState(false)
   const status = useServerStatus()
+  const { active } = useAccounts()
 
   return (
     <div className="relative flex h-full flex-col items-center px-7 pb-6">
-      <PlaytimeCard />
+      <PlaytimeCard key={active?.id} />
       <ServerPanel status={status} />
 
       <section className="flex flex-1 flex-col items-center justify-center text-center">
+        {active?.status === 'expired' && <ExpiredBanner />}
         <h1 className="animate-rise text-[44px] leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]">
-          {t('home.welcomeTo')}
+          {active ? t('home.welcomeBack') : t('home.welcomeTo')}
           <br />
-          <span className="text-green-400">{t('app.name')}</span>
+          <span className="text-green-400">{active ? active.name : t('app.name')}</span>
         </h1>
 
         <div className="animate-rise mt-8 flex flex-col items-center [animation-delay:250ms]">
@@ -74,6 +77,23 @@ export default function Home({ onOpenNews }: { onOpenNews(): void }) {
         </div>
         <NewsPeek onOpen={onOpenNews} />
       </footer>
+    </div>
+  )
+}
+
+/** The Microsoft session of the active account can no longer be renewed. */
+function ExpiredBanner() {
+  const { t, i18n } = useTranslation()
+  return (
+    <div className="animate-fade mb-5 flex items-center gap-3 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/55 px-4 py-2.5 text-[13px] text-amber-100 backdrop-blur-sm">
+      <TriangleAlert size={16} className="text-amber-400" />
+      {t('auth.expiredBanner')}
+      <button
+        onClick={() => window.hemisphere.auth.signIn(i18n.language)}
+        className="rounded-md bg-amber-400 px-3 py-1 text-xs font-bold text-gray-900 hover:bg-amber-300"
+      >
+        {t('auth.signInAgain')}
+      </button>
     </div>
   )
 }

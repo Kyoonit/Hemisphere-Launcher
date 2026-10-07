@@ -91,5 +91,83 @@
       "tag": "Launcher",
       "title": "Welcome to the new Hemisphere Launcher"
     }
+  },
+  "auth": {
+    "intro": "Sign in with the Microsoft account that owns Minecraft: Java Edition.",
+    "signIn": "Sign in with Microsoft",
+    "waiting": "Waiting for Microsoft…",
+    "waitingHint": "Finish signing in from the browser window that just opened.",
+    "cancel": "Cancel",
+    "back": "Back",
+    "passwordNote": "Your password goes to Microsoft only — Hemisphere never sees it.",
+    "noMinecraft": "Don't own Minecraft yet?",
+    "getMinecraft": "Get Minecraft",
+    "notConfiguredHint": "This build has no Microsoft app ID configured yet.",
+    "accounts": "Accounts",
+    "addAccount": "Add account",
+    "manage": "Manage accounts",
+    "microsoftAccount": "Microsoft account",
+    "active": "Active",
+    "expired": "Sign in again",
+    "switch": "Switch",
+    "signOut": "Sign out",
+    "settingsHint": "Switch instantly from the account menu in the top bar. Signing out removes the account from this PC only.",
+    "expiredBanner": "Your Microsoft session expired.",
+    "signInAgain": "Sign in again",
+    "dev": {
+      "title": "Developer test mode",
+      "placeholder": "Offline name",
+      "use": "Use",
+      "badge": "Offline test account (dev only)"
+    },
+    "errors": {
+      "timeout": {
+        "title": "Sign-in timed out",
+        "body": "The browser window was open for too long. Please try again."
+      },
+      "network": {
+        "title": "No connection",
+        "body": "Check your internet connection and try again."
+      },
+      "notConfigured": {
+        "title": "Sign-in not available",
+        "body": "This build has no Microsoft app ID configured yet."
+      },
+      "microsoftDenied": {
+        "title": "Microsoft refused the sign-in",
+        "body": "Try again, and make sure you accept the permissions."
+      },
+      "noXboxProfile": {
+        "title": "No Xbox profile yet",
+        "body": "Your Microsoft account needs a free Xbox profile before it can play Minecraft.",
+        "action": "Create my Xbox profile"
+      },
+      "childAccount": {
+        "title": "Parental approval needed",
+        "body": "An adult must add your account to a Microsoft family before you can play.",
+        "action": "Open Microsoft Family"
+      },
+      "xboxUnavailableRegion": {
+        "title": "Xbox Live unavailable",
+        "body": "Xbox Live is not available in your country or region."
+      },
+      "appNotApproved": {
+        "title": "Launcher not approved yet",
+        "body": "Microsoft has not approved this launcher for Minecraft sign-in yet. Hemisphere staff are working on it."
+      },
+      "notOwned": {
+        "title": "This account doesn't own Minecraft",
+        "body": "Minecraft: Java Edition is required to play on Hemisphere.",
+        "action": "Get Minecraft"
+      },
+      "unknown": {
+        "title": "Something went wrong",
+        "body": "Please try again. If it keeps happening, ask for help on Discord."
+      },
+      "cancelled": {
+        "title": "Sign-in cancelled",
+        "body": "You can try again anytime."
+      }
+    }
   }
 }
