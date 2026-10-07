@@ -119,7 +119,7 @@ function ModRow({ mod, lang }: { mod: ModSummary; lang: string }) {
         <p className="truncate text-[12.5px] text-gray-400">{localize(mod.description, lang)}</p>
       </div>
       {mod.recommended && <span className="rounded-full bg-green-600/20 px-2 py-0.5 text-[11px] font-semibold text-green-400">{t('mods.recommended')}</span>}
-      <span className="w-16 text-right text-xs text-gray-400">{mod.defaultEnabled ? t('mods.on') : t('mods.off')}</span>
+      <span className="w-28 text-right text-xs whitespace-nowrap text-gray-400">{mod.defaultEnabled ? t('mods.on') : t('mods.off')}</span>
     </div>
   )
 }

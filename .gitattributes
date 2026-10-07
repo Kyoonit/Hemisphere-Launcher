@@ -1,0 +1,2 @@
+# Signed content: bytes must never change (no line-ending conversion)
+content/** -text
