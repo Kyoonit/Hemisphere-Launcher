@@ -83,7 +83,8 @@
     "onlineNow": "En ligne",
     "nobody": "Personne en ligne — sois le premier !",
     "more": "+ {{count}} autres",
-    "maintenance": "Maintenance"
+    "maintenance": "Maintenance",
+    "maintenanceShort": "Serveur fermé pour maintenance"
   },
   "time": {
     "hm": "{{h}} h {{m}} min",

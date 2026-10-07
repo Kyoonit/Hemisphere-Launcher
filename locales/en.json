@@ -83,7 +83,8 @@
     "onlineNow": "Online now",
     "nobody": "Nobody online right now — be the first!",
     "more": "+ {{count}} more",
-    "maintenance": "Maintenance"
+    "maintenance": "Maintenance",
+    "maintenanceShort": "Server closed for maintenance"
   },
   "time": {
     "hm": "{{h}}h {{m}}m",

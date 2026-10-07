@@ -66,3 +66,28 @@ Allowed folders: `config/`, `resourcepacks/`, `shaderpacks/`.
   and is checked against its SHA-512 hash.
 - File paths can't leave the game folder (`..`, absolute paths, drive letters, reserved names are rejected).
 - An older index can't replace a newer one (replay protection), and the last verified copy is kept for offline use.
+
+## News, maintenance and restart time
+
+All in `content-src/feed.json`, published with one command:
+
+```bash
+npm run content:feed
+git add content content-src && git commit -m "News: <title>" && git push
+```
+
+Launchers check for a new feed every **10 minutes** (plus GitHub's ~5-minute cache).
+
+- **News** (`news`): newest first. Each item has an `id` (lowercase-dashes, unique), a `date` (`YYYY-MM-DD`),
+  a `category` (`update`, `event`, `server`, `community`), a `title` and `body` in `en` (+ `fr`).
+  Blank lines in `body` make paragraphs. Optional:
+  - `"featured": true` → shown big at the top of the News page
+  - `"image"`: a `https://hemispheresurvival.club/...` image, or a file you put in `content-src/news-images/`
+    written as `"news-images/my-picture.png"`
+  - `"link": { "label": { "en": "…", "fr": "…" }, "url": "https://…" }` → a button in the article
+- **Maintenance**: set `"active": true` (and optionally `"until": "2026-10-10T18:00:00+02:00"`). Players see an
+  amber banner with your message and the end time in their own time zone. Set it back to `false` when done.
+- **Restart** (`restart`): daily time + time zone, e.g. `{ "time": "17:00", "timeZone": "Europe/Paris",
+  "durationMin": 5 }`. Use `null` for no daily restart.
+
+The feed is signed like the client: a modified or older feed is refused, and the last good one is kept.

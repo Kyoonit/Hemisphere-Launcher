@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next'
 import { Clock, Construction, Signal } from 'lucide-react'
 import type { ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
-import { localize } from '@shared/manifest'
 import { restartState, type RestartSchedule, type RestartState } from '@shared/restart'
 import { splitDuration, useNow } from '../hooks'
 
@@ -34,7 +33,14 @@ export default function ServerPanel({ status, feed }: { status: ServerStatus | n
       {maintenance && feed ? (
         <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-amber-900/50 px-3 py-2.5 text-[13px] shadow-[inset_3px_0_0_var(--color-amber-400)]">
           <Construction size={16} className="mt-0.5 flex-none text-amber-400" />
-          <span className="text-amber-100">{localize(feed.maintenance.message, i18n.language)}</span>
+          <span className="text-amber-100">
+            {t('server.maintenanceShort')}
+            {feed.maintenance.until && new Date(feed.maintenance.until).getTime() > now && (
+              <span className="block text-xs text-amber-200/80">
+                {t('home.maintenanceUntil', { time: new Date(feed.maintenance.until).toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) })}
+              </span>
+            )}
+          </span>
         </div>
       ) : (
         restart && <RestartBox restart={restart} />
