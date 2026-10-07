@@ -35,7 +35,6 @@ export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onR
 
       <section className="flex flex-1 flex-col items-center justify-center text-center">
         {active?.status === 'expired' && <ExpiredBanner />}
-        {feed?.maintenance.active && <MaintenanceBanner feed={feed} />}
         <h1 className="animate-rise text-[44px] leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]">
           {active ? t('home.welcomeBack') : t('home.welcomeTo')}
           <br />
@@ -46,6 +45,7 @@ export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onR
           <PlayZone client={client ?? null} onRepair={onRepair} />
           <div className="mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400">
             <ServerNotice offline={status?.online === false} feed={feed} />
+            {feed?.maintenance.active && <MaintenanceBanner feed={feed} />}
           </div>
         </div>
       </section>
@@ -98,7 +98,7 @@ function MaintenanceBanner({ feed }: { feed: Feed }) {
   const { t, i18n } = useTranslation()
   const until = feed.maintenance.until ? new Date(feed.maintenance.until) : null
   return (
-    <div className="animate-fade mb-5 flex max-w-[560px] items-center gap-3 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/55 px-4 py-2.5 text-left text-[13px] text-amber-100 backdrop-blur-sm">
+    <div className="animate-fade mt-2 flex max-w-[400px] items-center gap-3 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/55 px-4 py-2.5 text-left text-[13px] text-amber-100 backdrop-blur-sm">
       <TriangleAlert size={16} className="flex-none text-amber-400" />
       <span>
         <b className="text-white">{t('server.maintenance')}</b> · {localize(feed.maintenance.message, i18n.language)}
