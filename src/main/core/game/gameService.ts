@@ -8,6 +8,7 @@ import { AuthError } from '../auth/errors'
 import { ensureGameInstalled, instanceLogPath } from './install'
 import { gamePaths } from './target'
 import { getContent } from '../remote/content'
+import { syncClient } from '../sync/sync'
 import { GameError, toGameError } from './util'
 
 let state: GameState = { phase: 'idle', progress: null, runningAccounts: [], error: null }
@@ -57,6 +58,8 @@ export async function play(accountId: string): Promise<void> {
       throw new GameError('content', String(err))
     })
     const { versionId, javaPath } = await ensureGameInstalled({ minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }, report)
+    const synced = await syncClient(manifest, report('mods'))
+    console.log(`[game] client ${manifest.clientVersion} in sync: ${synced.downloaded} downloaded, ${synced.placed} placed, ${synced.removed} removed`)
 
     report('launching')(null)
     const creds = await getLaunchCredentials(accountId).catch((err) => {

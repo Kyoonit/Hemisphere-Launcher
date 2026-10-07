@@ -1,6 +1,6 @@
 /** Game install / launch state shared by main and renderer. */
 
-export type GameStage = 'java' | 'minecraft' | 'fabric' | 'launching'
+export type GameStage = 'java' | 'minecraft' | 'fabric' | 'mods' | 'launching'
 
 export interface GameProgress {
   stage: GameStage
@@ -17,6 +17,7 @@ export type GameErrorCode =
   | 'notSignedIn'
   | 'sessionExpired'
   | 'alreadyRunning'
+  | 'busy' // files in use: Minecraft is open, so mods can't be changed
   | 'content' // client definition could not be downloaded or verified
   | 'crashed' // game exited with an error
   | 'unknown'

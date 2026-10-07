@@ -1,0 +1,174 @@
+import { copyFile, link, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import type { ClientManifest } from '@shared/manifest'
+import { applyToggle, resolveEnabled } from '@shared/modSelection'
+import { gamePaths } from '../game/target'
+import { GameError, type ProgressFn } from '../game/util'
+import { blobPath, DownloadError, downloadToStore, hasBlob, sha512OfFile, tempNameFor } from './download'
+import { desiredFiles, emptyState, planSync, type DesiredFile, type InstanceState, type LocalInfo } from './plan'
+
+/**
+ * Brings the Hemisphere instance in line with the client manifest + the player's choices.
+ * Only missing or changed files are downloaded; files the player added themselves are never touched.
+ */
+
+const CONCURRENCY = 4
+
+const storeDir = () => join(gamePaths().root, 'store')
+const statePath = () => join(gamePaths().instance, '.hemisphere', 'state.json')
+const instancePath = (rel: string) => join(gamePaths().instance, ...rel.split('/'))
+
+export async function readInstanceState(): Promise<InstanceState> {
+  try {
+    const s = JSON.parse(await readFile(statePath(), 'utf8')) as InstanceState
+    return s.version === 1 ? { ...emptyState(), ...s } : emptyState()
+  } catch {
+    return emptyState()
+  }
+}
+
+async function writeInstanceState(s: InstanceState): Promise<void> {
+  await mkdir(dirname(statePath()), { recursive: true })
+  const tmp = tempNameFor(statePath())
+  await writeFile(tmp, JSON.stringify(s, null, 2))
+  await rename(tmp, statePath())
+}
+
+async function localInfo(rel: string): Promise<LocalInfo | null> {
+  try {
+    const s = await stat(instancePath(rel))
+    return s.isFile() ? { size: s.size, mtimeMs: s.mtimeMs } : null
+  } catch {
+    return null
+  }
+}
+
+/** Places a verified store blob at its instance path, atomically. Jars are hard-linked (no extra disk space). */
+async function place(f: DesiredFile): Promise<LocalInfo> {
+  const dest = instancePath(f.path)
+  await mkdir(dirname(dest), { recursive: true })
+  const tmp = tempNameFor(dest)
+  const blob = blobPath(storeDir(), f.sha512)
+  try {
+    if (f.policy === 'managed') await link(blob, tmp).catch(() => copyFile(blob, tmp))
+    else await copyFile(blob, tmp) // configs get edited by the game: never share the store's copy
+    await rename(tmp, dest)
+  } catch (err) {
+    await rm(tmp, { force: true })
+    throw err
+  }
+  const s = await stat(dest)
+  return { size: s.size, mtimeMs: s.mtimeMs }
+}
+
+async function pool<T>(items: T[], worker: (item: T) => Promise<void>): Promise<void> {
+  let next = 0
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, items.length) }, async () => {
+      while (next < items.length) await worker(items[next++])
+    }),
+  )
+}
+
+export interface SyncResult {
+  downloaded: number
+  downloadedBytes: number
+  placed: number
+  removed: number
+}
+
+export async function syncClient(manifest: ClientManifest, onProgress: ProgressFn): Promise<SyncResult> {
+  const state = await readInstanceState()
+  const desired = desiredFiles(manifest, state.choices)
+
+  const local = new Map<string, LocalInfo>()
+  for (const rel of new Set([...desired.map((f) => f.path), ...Object.keys(state.owned)])) {
+    const info = await localInfo(rel)
+    if (info) local.set(rel.toLowerCase(), info)
+  }
+  const plan = planSync(desired, state, local)
+
+  // Present but unknown/changed: keep it if the content is already right (e.g. after a crash mid-sync).
+  for (const f of plan.check) {
+    if ((await sha512OfFile(instancePath(f.path))) === f.sha512) {
+      const info = local.get(f.path.toLowerCase())!
+      state.owned[f.path] = { sha512: f.sha512, size: info.size, mtimeMs: info.mtimeMs }
+    } else plan.place.push(f)
+  }
+
+  // Download what the store doesn't have yet.
+  const missing: DesiredFile[] = []
+  for (const f of plan.place) {
+    if (missing.some((m) => m.sha512 === f.sha512)) continue
+    // Jars are hard-linked: if a file in mods/ was edited in place, the store copy changed too.
+    // Placing is rare, so re-check the store copy's hash and re-download it if it's no longer intact.
+    if ((await hasBlob(storeDir(), f)) && (await sha512OfFile(blobPath(storeDir(), f.sha512))) === f.sha512) continue
+    await rm(blobPath(storeDir(), f.sha512), { force: true })
+    missing.push(f)
+  }
+  const totalBytes = missing.reduce((s, f) => s + f.size, 0)
+  let receivedBytes = 0
+  let done = 0
+  const report = (current?: DesiredFile) =>
+    onProgress(totalBytes ? Math.min(1, receivedBytes / totalBytes) : null, current ? `${current.label} · ${done + 1}/${missing.length}` : undefined)
+
+  if (missing.length) report(missing[0])
+  try {
+    await pool(missing, async (f) => {
+      await downloadToStore(storeDir(), f, (n) => {
+        receivedBytes += n
+        report(f)
+      })
+      done++
+    })
+  } catch (err) {
+    throw new GameError('network', err instanceof DownloadError ? err.message : String(err))
+  }
+
+  // Place files, then remove the ones no longer wanted.
+  try {
+    for (const f of plan.place) {
+      const info = await place(f)
+      if (f.policy === 'default') state.seeded[f.path] = f.sha512
+      else state.owned[f.path] = { sha512: f.sha512, size: info.size, mtimeMs: info.mtimeMs }
+    }
+    for (const f of plan.handOver) state.seeded[f.path] = 'player'
+    for (const rel of plan.remove) {
+      await rm(instancePath(rel), { force: true })
+      delete state.owned[rel]
+    }
+  } catch (err) {
+    const code = (err as { code?: string }).code
+    if (code === 'EBUSY' || code === 'EPERM') throw new GameError('busy', String(err))
+    throw new GameError('disk', String(err))
+  } finally {
+    await writeInstanceState(state) // keep what succeeded, even if something failed
+  }
+
+  state.clientVersion = manifest.clientVersion
+  await writeInstanceState(state)
+  return { downloaded: missing.length, downloadedBytes: totalBytes, placed: plan.place.length, removed: plan.remove.length }
+}
+
+/** Enabled mod ids for the current choices. */
+export async function getEnabledMods(manifest: ClientManifest): Promise<string[]> {
+  return [...resolveEnabled(manifest.mods, (await readInstanceState()).choices)]
+}
+
+/** Toggles are saved one at a time, so two quick clicks can't overwrite each other. */
+let toggleQueue: Promise<unknown> = Promise.resolve()
+
+/** Saves a player's toggle (applied to the game folder on the next PLAY). */
+export function setModEnabled(manifest: ClientManifest, id: string, on: boolean): Promise<{ enabled: string[]; alsoChanged: string[] }> {
+  const run = toggleQueue.then(() => saveToggle(manifest, id, on))
+  toggleQueue = run.catch(() => {})
+  return run
+}
+
+async function saveToggle(manifest: ClientManifest, id: string, on: boolean): Promise<{ enabled: string[]; alsoChanged: string[] }> {
+  const state = await readInstanceState()
+  const { choices, alsoChanged } = applyToggle(manifest.mods, state.choices, id, on)
+  state.choices = choices
+  await writeInstanceState(state)
+  return { enabled: [...resolveEnabled(manifest.mods, choices)], alsoChanged }
+}

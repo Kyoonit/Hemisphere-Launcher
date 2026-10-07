@@ -19,6 +19,7 @@ import { getGameState, onGameState, play } from './core/game/gameService'
 import { detectSystemJava, inspectJava } from './core/game/java'
 import { installedJavaPath } from './core/game/install'
 import { getContent } from './core/remote/content'
+import { getEnabledMods, setModEnabled } from './core/sync/sync'
 import type { ClientSummary } from '@shared/client'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
@@ -127,6 +128,12 @@ function registerIpc(): void {
     } catch {
       return null
     }
+  })
+
+  ipcMain.handle(IPC.modsEnabled, async () => getEnabledMods((await getContent()).manifest).catch(() => []))
+  ipcMain.handle(IPC.modsSet, async (_e, id: unknown, on: unknown) => {
+    if (typeof id !== 'string' || typeof on !== 'boolean') throw new Error('invalid arguments')
+    return setModEnabled((await getContent()).manifest, id, on)
   })
 
   ipcMain.handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))

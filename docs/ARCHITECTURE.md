@@ -160,6 +160,12 @@ crash detection via exit code + crash report). Game paths are passed to Java **f
 when Windows virtualises a folder (MSIX app containers, some sync/security tools), Java sees the real location and
 Fabric 0.19 would otherwise consider its own loader jar to be two different files and crash at startup.
 
+**Mod sync (Phase 9)** — `src/main/core/sync/`: on PLAY, `plan.ts` compares the manifest + the player's choices
+with `instance/.hemisphere/state.json` (what Hemisphere placed, with size/mtime) and decides keep / check (hash) /
+place / remove. `download.ts` fetches only missing files into the content store (`store/ab/<sha512>`) with HTTP
+Range resume, retries and SHA-512 verification before a file is accepted; jars are hard-linked into `mods/`
+(configs are copied). Files the player added are never touched; "default" configs are only copied once.
+
 ## 7. Hemisphere API (Option A) — `server/`
 
 One **dependency-free Node file** run on the Minecraft host (pm2 or a Windows/Linux service), published through a

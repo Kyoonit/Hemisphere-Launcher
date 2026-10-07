@@ -5,7 +5,7 @@ import type { GameState } from '@shared/game'
 import type { ClientSummary } from '@shared/client'
 import { useAccounts } from '../accounts'
 
-const STAGES = ['minecraft', 'java', 'fabric', 'launching'] as const
+const STAGES = ['minecraft', 'java', 'fabric', 'mods', 'launching'] as const
 
 export function useGameState(): GameState | null {
   const [state, setState] = useState<GameState | null>(null)
@@ -91,7 +91,7 @@ function Preparing({ game }: { game: GameState }) {
           <span key={s} className={`h-1 flex-1 rounded-full ${i < index ? 'bg-green-500' : i === index ? 'bg-green-500/50' : 'bg-gray-700'}`} />
         ))}
       </div>
-      <p className="mt-2 text-xs text-gray-400">{t('game.firstTimeHint')}</p>
+      <p className="mt-2 truncate text-xs text-gray-400">{stage === 'mods' && game.progress?.detail ? game.progress.detail : t('game.firstTimeHint')}</p>
     </div>
   )
 }

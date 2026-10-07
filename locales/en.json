@@ -186,7 +186,8 @@
       "minecraft": "Downloading Minecraft",
       "java": "Installing Java",
       "fabric": "Installing Fabric",
-      "launching": "Starting Minecraft…"
+      "launching": "Starting Minecraft…",
+      "mods": "Updating Hemisphere mods"
     },
     "errors": {
       "network": "Download failed — check your internet connection.",
@@ -197,16 +198,14 @@
       "alreadyRunning": "Minecraft is already running for this account.",
       "crashed": "Minecraft closed unexpectedly.",
       "unknown": "Something went wrong while starting the game.",
-      "content": "Couldn't load the Hemisphere client — check your internet connection."
+      "content": "Couldn't load the Hemisphere client — check your internet connection.",
+      "busy": "Close Minecraft before the mods can be updated."
     }
   },
   "mods": {
     "subtitle": "Hemisphere Client {{version}} · Minecraft {{minecraft}}",
-    "count": "{{count}} mods",
     "search": "Search mods",
     "recommended": "Recommended",
-    "on": "On by default",
-    "off": "Optional",
     "noMatch": "No mods match your search.",
     "libraries": "Libraries installed automatically: {{names}}.",
     "unavailable": "The mod list isn't available yet — connect to the internet once.",
@@ -217,6 +216,13 @@
       "voice": "Voice & audio",
       "visual": "Visual",
       "comfort": "Comfort"
-    }
+    },
+    "enabledCount": "{{on}} of {{total}} enabled",
+    "applyNext": "changes apply next time you press Play",
+    "warnRecommended": "Recommended — turning this off may lower your FPS.",
+    "warnVoice": "You won't hear voice chat or custom music on Hemisphere.",
+    "alsoOff": "{{names}} also turned off — needs {{mod}}.",
+    "alsoOn": "{{names}} also turned on — {{mod}} needs it.",
+    "warnFeature": "Recommended by Hemisphere — you’ll lose this feature in game."
   }
 }

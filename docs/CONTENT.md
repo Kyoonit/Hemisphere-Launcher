@@ -42,6 +42,8 @@ Creates the **private signing key** in `C:\Users\<you>\.hemisphere\content-signi
 3. Publish: `npm run content:publish`
 4. `git add content content-src && git commit -m "Client 1.0.1" && git push`
 
+GitHub caches these files for up to **~5 minutes**, so players see a new client within a few minutes of the push.
+
 Required libraries (Cloth Config, Fabric Language Kotlin, …) are added automatically.
 
 ## Config files, resource packs

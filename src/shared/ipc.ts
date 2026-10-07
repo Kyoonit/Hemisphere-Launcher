@@ -27,6 +27,8 @@ export const IPC = {
   gamePlay: 'game:play',
   gameJava: 'game:java',
   clientGet: 'client:get',
+  modsEnabled: 'mods:enabled',
+  modsSet: 'mods:set',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -86,5 +88,9 @@ export interface HemisphereApi {
   client: {
     /** Verified Hemisphere client definition, or null if never downloaded and offline */
     get(): Promise<ClientSummary | null>
+    /** ids of enabled mods (player choices + defaults + needed libraries) */
+    enabledMods(): Promise<string[]>
+    /** Toggle a mod; returns the new enabled set and other mods switched as a consequence */
+    setModEnabled(id: string, on: boolean): Promise<{ enabled: string[]; alsoChanged: string[] }>
   }
 }

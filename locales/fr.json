@@ -186,7 +186,8 @@
       "minecraft": "Téléchargement de Minecraft",
       "java": "Installation de Java",
       "fabric": "Installation de Fabric",
-      "launching": "Démarrage de Minecraft…"
+      "launching": "Démarrage de Minecraft…",
+      "mods": "Mise à jour des mods Hemisphere"
     },
     "errors": {
       "network": "Échec du téléchargement — vérifie ta connexion internet.",
@@ -197,16 +198,14 @@
       "alreadyRunning": "Minecraft est déjà lancé pour ce compte.",
       "crashed": "Minecraft s’est fermé de façon inattendue.",
       "unknown": "Un problème est survenu au démarrage du jeu.",
-      "content": "Impossible de charger le client Hemisphere — vérifie ta connexion internet."
+      "content": "Impossible de charger le client Hemisphere — vérifie ta connexion internet.",
+      "busy": "Ferme Minecraft pour pouvoir mettre à jour les mods."
     }
   },
   "mods": {
     "subtitle": "Client Hemisphere {{version}} · Minecraft {{minecraft}}",
-    "count": "{{count}} mods",
     "search": "Rechercher un mod",
     "recommended": "Recommandé",
-    "on": "Activé par défaut",
-    "off": "Optionnel",
     "noMatch": "Aucun mod ne correspond.",
     "libraries": "Bibliothèques installées automatiquement : {{names}}.",
     "unavailable": "La liste des mods n’est pas encore disponible — connecte-toi à internet une fois.",
@@ -217,6 +216,13 @@
       "voice": "Voix & audio",
       "visual": "Visuel",
       "comfort": "Confort"
-    }
+    },
+    "enabledCount": "{{on}} sur {{total}} activés",
+    "applyNext": "appliqué au prochain clic sur Jouer",
+    "warnRecommended": "Recommandé — le désactiver peut réduire tes FPS.",
+    "warnVoice": "Tu n’entendras plus le chat vocal ni la musique personnalisée sur Hemisphere.",
+    "alsoOff": "{{names}} aussi désactivé — a besoin de {{mod}}.",
+    "alsoOn": "{{names}} aussi activé — {{mod}} en a besoin.",
+    "warnFeature": "Recommandé par Hemisphere — tu perdras cette fonction en jeu."
   }
 }

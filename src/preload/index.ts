@@ -53,6 +53,8 @@ const api: HemisphereApi = {
   },
   client: {
     get: () => ipcRenderer.invoke(IPC.clientGet),
+    enabledMods: () => ipcRenderer.invoke(IPC.modsEnabled),
+    setModEnabled: (id, on) => ipcRenderer.invoke(IPC.modsSet, id, on),
   },
 }
 

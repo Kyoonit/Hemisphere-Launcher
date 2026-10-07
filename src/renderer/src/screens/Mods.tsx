@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CloudOff, Search } from 'lucide-react'
+import { CloudOff, Info, Search, TriangleAlert } from 'lucide-react'
+import Toggle from '../components/Toggle'
 import type { ClientSummary, ModSummary } from '@shared/client'
 import { localize } from '@shared/manifest'
 
@@ -24,6 +25,18 @@ export default function Mods() {
   const client = useClient()
   const [filter, setFilter] = useState<Filter>('all')
   const [query, setQuery] = useState('')
+  const [enabled, setEnabled] = useState<Set<string> | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  useEffect(() => {
+    window.hemisphere.client.enabledMods().then((ids) => setEnabled(new Set(ids)))
+  }, [])
+
+  const toggle = async (mod: ModSummary, on: boolean) => {
+    const res = await window.hemisphere.client.setModEnabled(mod.id, on)
+    setEnabled(new Set(res.enabled))
+    const names = res.alsoChanged.map((id) => client?.mods.find((m) => m.id === id)?.name ?? id).join(', ')
+    setNotice(names ? t(on ? 'mods.alsoOn' : 'mods.alsoOff', { names, mod: mod.name }) : null)
+  }
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -33,7 +46,7 @@ export default function Mods() {
   }, [client, filter, query])
   const libraries = client?.mods.filter((m) => m.category === 'library') ?? []
 
-  if (client === undefined) return null
+  if (client === undefined || enabled === null) return null
   if (client === null)
     return (
       <div className="grid h-full place-items-center text-gray-400">
@@ -54,9 +67,18 @@ export default function Mods() {
         </div>
         <span className="text-xs text-gray-400">
           {client.source === 'cache' && <span className="mr-2 text-amber-400">{t('mods.offlineCopy')}</span>}
-          {t('mods.count', { count: client.mods.length - libraries.length })}
+          {t('mods.enabledCount', { on: client.mods.filter((m) => m.category !== 'library' && enabled.has(m.id)).length, total: client.mods.length - libraries.length })}
+          {' · '}
+          {t('mods.applyNext')}
         </span>
       </div>
+
+      {notice && (
+        <div className="animate-fade mb-4 flex items-center gap-2 rounded-lg border-l-[3px] border-green-400 bg-gray-800/80 px-3.5 py-2 text-[13px] text-gray-200">
+          <Info size={15} className="text-green-400" />
+          {notice}
+        </div>
+      )}
 
       <div className="mb-4 flex items-center gap-2.5">
         <label className="relative w-[260px]">
@@ -91,7 +113,7 @@ export default function Mods() {
             </div>
             <div className="overflow-hidden rounded-lg bg-gray-900/55">
               {rows.map((m) => (
-                <ModRow key={m.id} mod={m} lang={i18n.language} />
+                <ModRow key={m.id} mod={m} lang={i18n.language} on={enabled.has(m.id)} onToggle={(on) => toggle(m, on)} />
               ))}
             </div>
           </section>
@@ -106,20 +128,25 @@ export default function Mods() {
   )
 }
 
-function ModRow({ mod, lang }: { mod: ModSummary; lang: string }) {
+function ModRow({ mod, lang, on, onToggle }: { mod: ModSummary; lang: string; on: boolean; onToggle(on: boolean): void }) {
   const { t } = useTranslation()
   return (
     <div className="flex items-center gap-3.5 border-t border-white/5 px-3.5 py-2.5 first:border-t-0 hover:bg-gray-700/35">
       <span className="grid h-[34px] w-[34px] flex-none place-items-center rounded-lg text-sm font-extrabold text-white" style={{ background: tileColor(mod.id) }}>
-        {mod.name[0]}
+        {(mod.name.match(/[A-Za-z0-9]/) ?? ['?'])[0].toUpperCase()}
       </span>
       <div className="min-w-0 flex-1">
         <b className="font-semibold text-white">{mod.name}</b>
         <span className="ml-1.5 text-xs text-gray-400">{mod.version}</span>
         <p className="truncate text-[12.5px] text-gray-400">{localize(mod.description, lang)}</p>
+        {mod.recommended && !on && (
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-amber-400">
+            <TriangleAlert size={12} /> {t(mod.category === 'voice' ? 'mods.warnVoice' : mod.category === 'performance' ? 'mods.warnRecommended' : 'mods.warnFeature')}
+          </p>
+        )}
       </div>
       {mod.recommended && <span className="rounded-full bg-green-600/20 px-2 py-0.5 text-[11px] font-semibold text-green-400">{t('mods.recommended')}</span>}
-      <span className="w-28 text-right text-xs whitespace-nowrap text-gray-400">{mod.defaultEnabled ? t('mods.on') : t('mods.off')}</span>
+      <Toggle on={on} onChange={onToggle} label={mod.name} />
     </div>
   )
 }
