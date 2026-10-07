@@ -15,6 +15,9 @@ import {
   switchAccount,
 } from './core/auth/accounts'
 import { cancelSignIn } from './core/auth/oauth'
+import { getGameState, onGameState, play } from './core/game/gameService'
+import { detectSystemJava, inspectJava } from './core/game/java'
+import { installedJavaPath } from './core/game/install'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
@@ -88,6 +91,17 @@ function registerIpc(): void {
     addDevOfflineAccount(typeof name === 'string' ? name : ''),
   )
 
+  ipcMain.handle(IPC.gameState, () => getGameState())
+  ipcMain.on(IPC.gamePlay, () => {
+    const active = getAccountsState().activeId
+    if (active) void play(active)
+  })
+  ipcMain.handle(IPC.gameJava, async () => {
+    const path = await installedJavaPath()
+    const managed = path ? await inspectJava(path, true) : null
+    return [...(managed ? [managed] : []), ...(await detectSystemJava())]
+  })
+
   ipcMain.handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))
 }
 
@@ -106,6 +120,7 @@ if (!app.requestSingleInstanceLock()) {
     app.setAppUserModelId('club.hemispheresurvival.launcher')
     await loadAccounts()
     onAccountsChanged(() => win?.webContents.send(IPC.authChanged, getAccountsState()))
+    onGameState((s) => win?.webContents.send(IPC.gameStateChanged, s))
     registerIpc()
     createWindow()
     startStatusPolling((status) => {

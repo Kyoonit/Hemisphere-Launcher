@@ -154,6 +154,12 @@ Inside the restart window the status shows **SERVER OFFLINE · Restarting**.
 
 Stored: total, last session, sessions count, daily buckets (for "this week"). Local only — never uploaded.
 
+**Launching (Phase 7)** — `src/main/core/game/`: `install.ts` (Minecraft → Mojang Java → Fabric, with retries and a
+fast path that skips everything when the last install matches), `gameService.ts` (launch, one game per account,
+crash detection via exit code + crash report). Game paths are passed to Java **fully resolved** (`realpath`):
+when Windows virtualises a folder (MSIX app containers, some sync/security tools), Java sees the real location and
+Fabric 0.19 would otherwise consider its own loader jar to be two different files and crash at startup.
+
 ## 7. Hemisphere API (Option A) — `server/`
 
 One **dependency-free Node file** run on the Minecraft host (pm2 or a Windows/Linux service), published through a

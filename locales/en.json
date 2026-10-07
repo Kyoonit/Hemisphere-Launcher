@@ -20,8 +20,6 @@
     "play": "Play",
     "ready": "Ready",
     "clientVersion": "Hemisphere Client {{version}}",
-    "notConnected": "Launching arrives in a later phase",
-    "location": "Location: {{name}}",
     "restartingNow": "Server is restarting — back in a few minutes",
     "serverOffline": "Hemisphere is offline right now"
   },
@@ -56,7 +54,15 @@
     "languageHint": "Follows your Windows language by default",
     "languageAuto": "Automatic",
     "version": "Launcher version",
-    "sectionPlaceholder": "These settings will be available in a future update."
+    "sectionPlaceholder": "These settings will be available in a future update.",
+    "java": {
+      "title": "Java",
+      "hint": "Hemisphere installs and manages the right Java automatically. Other Java installations found on this PC are listed for reference.",
+      "scanning": "Looking for Java…",
+      "none": "No Java installed yet — it will be installed the first time you press Play.",
+      "managed": "Used by Hemisphere",
+      "system": "Found on this PC"
+    }
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -168,6 +174,29 @@
         "title": "Sign-in cancelled",
         "body": "You can try again anytime."
       }
+    }
+  },
+  "game": {
+    "playing": "Playing",
+    "playingHint": "Minecraft is running",
+    "retry": "Try again",
+    "step": "Step {{n}} of {{total}}",
+    "firstTimeHint": "First launch downloads about 600 MB. Next launches are instant.",
+    "stages": {
+      "minecraft": "Downloading Minecraft",
+      "java": "Installing Java",
+      "fabric": "Installing Fabric",
+      "launching": "Starting Minecraft…"
+    },
+    "errors": {
+      "network": "Download failed — check your internet connection.",
+      "disk": "Could not write the game files — check free disk space.",
+      "java": "Java could not be installed.",
+      "notSignedIn": "Please sign in first.",
+      "sessionExpired": "Your Microsoft session expired — sign in again.",
+      "alreadyRunning": "Minecraft is already running for this account.",
+      "crashed": "Minecraft closed unexpectedly.",
+      "unknown": "Something went wrong while starting the game."
     }
   }
 }

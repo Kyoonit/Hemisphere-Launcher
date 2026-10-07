@@ -1,5 +1,6 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
+import type { GameState, JavaRuntimeInfo } from './game'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -20,6 +21,10 @@ export const IPC = {
   authSwitch: 'auth:switch',
   authSignOut: 'auth:sign-out',
   authDevOffline: 'auth:dev-offline',
+  gameState: 'game:state',
+  gameStateChanged: 'game:state-changed',
+  gamePlay: 'game:play',
+  gameJava: 'game:java',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -67,5 +72,13 @@ export interface HemisphereApi {
     switchTo(id: string): Promise<void>
     signOut(id: string): Promise<void>
     addDevOffline(name: string): Promise<AuthResult>
+  }
+  game: {
+    getState(): Promise<GameState>
+    onState(cb: (state: GameState) => void): () => void
+    /** Install if needed and launch with the active account */
+    play(): void
+    /** Managed runtime (if installed) + Java found on this PC */
+    javaInfo(): Promise<JavaRuntimeInfo[]>
   }
 }

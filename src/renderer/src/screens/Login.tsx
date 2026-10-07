@@ -123,7 +123,7 @@ function DevOffline({ onDone }: { onDone?: () => void }) {
           onChange={(e) => setName(e.target.value)}
           placeholder={t('auth.dev.placeholder')}
           maxLength={16}
-          className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-white focus:border-amber-400 focus:outline-none"
+          className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-white"
         />
         <button disabled={!valid} className="rounded-lg bg-gray-700 px-3 text-sm font-semibold text-white hover:bg-gray-600 disabled:opacity-40">
           {t('auth.dev.use')}

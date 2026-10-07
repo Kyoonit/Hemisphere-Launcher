@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC, type HemisphereApi } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
 import type { AccountsState } from '@shared/auth'
+import type { GameState } from '@shared/game'
 
 const api: HemisphereApi = {
   window: {
@@ -39,6 +40,16 @@ const api: HemisphereApi = {
     switchTo: (id) => ipcRenderer.invoke(IPC.authSwitch, id),
     signOut: (id) => ipcRenderer.invoke(IPC.authSignOut, id),
     addDevOffline: (name) => ipcRenderer.invoke(IPC.authDevOffline, name),
+  },
+  game: {
+    getState: () => ipcRenderer.invoke(IPC.gameState),
+    onState: (cb) => {
+      const listener = (_e: unknown, state: GameState): void => cb(state)
+      ipcRenderer.on(IPC.gameStateChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.gameStateChanged, listener)
+    },
+    play: () => ipcRenderer.send(IPC.gamePlay),
+    javaInfo: () => ipcRenderer.invoke(IPC.gameJava),
   },
 }
 

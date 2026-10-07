@@ -168,3 +168,24 @@ export async function refreshAccount(id: string | null = store.activeId): Promis
     onChange()
   }
 }
+
+export interface LaunchCredentials {
+  name: string
+  uuid: string
+  accessToken: string
+  userType: 'msa' | 'legacy'
+}
+
+/** Fresh credentials to start the game with. Throws AuthError('microsoftDenied') if the session can't be renewed. */
+export async function getLaunchCredentials(id: string): Promise<LaunchCredentials> {
+  const account = store.accounts.find((a) => a.id === id)
+  if (!account) throw new AuthError('unknown', 'no such account')
+  if (account.kind === 'offline') {
+    if (!devOfflineAllowed()) throw new AuthError('unknown', 'offline accounts are dev-only')
+    return { name: account.name, uuid: account.id, accessToken: '0', userType: 'legacy' }
+  }
+  await refreshAccount(id)
+  const session = sessions.get(id)
+  if (!session || expired.has(id)) throw new AuthError('microsoftDenied', 'session expired')
+  return { name: session.profile.name, uuid: session.profile.id, accessToken: session.accessToken, userType: 'msa' }
+}

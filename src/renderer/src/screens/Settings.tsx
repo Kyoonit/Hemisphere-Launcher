@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderOpen, Gamepad2, Plus, Rocket, User, Wrench, type LucideIcon } from 'lucide-react'
+import { Coffee, FolderOpen, Gamepad2, Plus, Rocket, User, Wrench, type LucideIcon } from 'lucide-react'
+import type { JavaRuntimeInfo } from '@shared/game'
 import { LANGUAGES, systemLanguage } from '../i18n'
 import { headUrl, useAccounts } from '../accounts'
 
@@ -43,6 +44,8 @@ export default function Settings({ initialSection, onAddAccount }: { initialSect
           <LauncherSettings />
         ) : section === 'account' ? (
           <AccountSettings onAddAccount={onAddAccount} />
+        ) : section === 'advanced' ? (
+          <JavaSettings />
         ) : (
           <p className="mt-4 text-gray-400">{t('settings.sectionPlaceholder')}</p>
         )}
@@ -70,7 +73,7 @@ function LauncherSettings() {
         <select
           value={choice}
           onChange={(e) => changeLanguage(e.target.value)}
-          className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+          className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-white"
         >
           <option value="auto">{t('settings.languageAuto')}</option>
           {LANGUAGES.map((l) => (
@@ -124,6 +127,42 @@ function AccountSettings({ onAddAccount }: { onAddAccount(): void }) {
       <button onClick={onAddAccount} className="mt-4 flex items-center gap-2 rounded-lg bg-gray-700/85 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600">
         <Plus size={16} /> {t('auth.addAccount')}
       </button>
+    </div>
+  )
+}
+
+function JavaSettings() {
+  const { t } = useTranslation()
+  const [java, setJava] = useState<JavaRuntimeInfo[] | null>(null)
+  useEffect(() => {
+    window.hemisphere.game.javaInfo().then(setJava)
+  }, [])
+
+  return (
+    <div className="mt-1">
+      <b className="mt-3 block font-semibold text-white">{t('settings.java.title')}</b>
+      <p className="text-[12.5px] text-gray-400">{t('settings.java.hint')}</p>
+      <div className="mt-3 overflow-hidden rounded-lg bg-gray-900/55">
+        {java === null ? (
+          <p className="px-4 py-3 text-sm text-gray-400">{t('settings.java.scanning')}</p>
+        ) : java.length === 0 ? (
+          <p className="px-4 py-3 text-sm text-gray-400">{t('settings.java.none')}</p>
+        ) : (
+          java.map((j) => (
+            <div key={j.path} className="flex items-center gap-3 border-t border-white/5 px-4 py-3 first:border-t-0">
+              <Coffee size={18} className={j.managed ? 'text-green-400' : 'text-gray-400'} />
+              <div className="min-w-0 flex-1">
+                <b className="font-semibold text-white">Java {j.majorVersion}</b>
+                <span className="ml-2 text-xs text-gray-400">{j.version}</span>
+                <p className="truncate text-xs text-gray-400" title={j.path}>{j.path}</p>
+              </div>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${j.managed ? 'bg-green-600/20 text-green-400' : 'bg-gray-700 text-gray-300'}`}>
+                {j.managed ? t('settings.java.managed') : t('settings.java.system')}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   )
 }

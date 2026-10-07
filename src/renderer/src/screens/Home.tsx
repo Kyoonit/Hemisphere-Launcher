@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BookOpen, Check, Clock, Globe, Info, Map, TriangleAlert, WifiOff } from 'lucide-react'
+import { BookOpen, Clock, Globe, Map, TriangleAlert, WifiOff } from 'lucide-react'
 import type { LinkKey } from '@shared/ipc'
 import { RESTART_SCHEDULE } from '@shared/server'
 import { restartState } from '@shared/restart'
@@ -8,6 +7,7 @@ import DiscordIcon from '../components/DiscordIcon'
 import ServerPanel from '../components/ServerPanel'
 import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
+import PlayZone from '../components/PlayZone'
 import { useNow, useServerStatus } from '../hooks'
 import { useAccounts } from '../accounts'
 
@@ -19,7 +19,6 @@ const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
 
 export default function Home({ onOpenNews }: { onOpenNews(): void }) {
   const { t } = useTranslation()
-  const [notice, setNotice] = useState(false)
   const status = useServerStatus()
   const { active } = useAccounts()
 
@@ -37,19 +36,8 @@ export default function Home({ onOpenNews }: { onOpenNews(): void }) {
         </h1>
 
         <div className="animate-rise mt-8 flex flex-col items-center [animation-delay:250ms]">
-          <button className="play-button uppercase" onClick={() => setNotice(true)}>
-            {t('home.play')}
-          </button>
-          <div className="mt-3 flex min-h-10 flex-col items-center gap-1 text-[13px] text-gray-400">
-            {notice ? (
-              <Line icon={<Info size={14} className="text-amber-400" />}>{t('home.notConnected')}</Line>
-            ) : (
-              <Line icon={<Check size={14} className="text-green-400" />}>
-                <b className="font-semibold text-green-400">{t('home.ready')}</b>
-                {' · '}
-                {t('home.clientVersion', { version: status?.version ?? '26.3' })}
-              </Line>
-            )}
+          <PlayZone version={status?.version ?? '26.3'} />
+          <div className="mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400">
             <ServerNotice offline={status?.online === false} />
           </div>
         </div>

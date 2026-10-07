@@ -9,6 +9,7 @@
   --color-gray-200: #e5e7eb;
   --color-gray-300: #d1d5db;
   --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
   --color-gray-600: #4b5563;
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
@@ -47,9 +48,22 @@
   button {
     cursor: pointer;
   }
-  :focus-visible {
+  :focus {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-gray-900), 0 0 0 4px var(--color-green-500);
+  }
+  /* Keyboard navigation only (Tab key): a discreet ring on buttons and links */
+  button:focus-visible,
+  a:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-gray-900), 0 0 0 3px var(--color-gray-400);
+  }
+  /* Text fields and dropdowns: just a slightly lighter border while active, no coloured outline */
+  input,
+  select {
+    transition: border-color 150ms var(--ease-hemi);
+  }
+  input:focus,
+  select:focus {
+    border-color: var(--color-gray-500);
   }
 }
 
@@ -113,5 +127,15 @@
   .bg-slide.is-active {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* Progress bar when the total size isn't known yet */
+@keyframes indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
   }
 }

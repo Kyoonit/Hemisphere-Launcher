@@ -20,8 +20,6 @@
     "play": "Jouer",
     "ready": "Prêt",
     "clientVersion": "Client Hemisphere {{version}}",
-    "notConnected": "Le lancement arrive dans une prochaine phase",
-    "location": "Lieu : {{name}}",
     "restartingNow": "Le serveur redémarre — de retour dans quelques minutes",
     "serverOffline": "Hemisphere est hors ligne pour le moment"
   },
@@ -56,7 +54,15 @@
     "languageHint": "Suit la langue de Windows par défaut",
     "languageAuto": "Automatique",
     "version": "Version du launcher",
-    "sectionPlaceholder": "Ces paramètres seront disponibles dans une prochaine mise à jour."
+    "sectionPlaceholder": "Ces paramètres seront disponibles dans une prochaine mise à jour.",
+    "java": {
+      "title": "Java",
+      "hint": "Hemisphere installe et gère automatiquement la bonne version de Java. Les autres installations trouvées sur ce PC sont listées pour information.",
+      "scanning": "Recherche de Java…",
+      "none": "Java n’est pas encore installé — il le sera au premier clic sur Jouer.",
+      "managed": "Utilisé par Hemisphere",
+      "system": "Trouvé sur ce PC"
+    }
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -168,6 +174,29 @@
         "title": "Connexion annulée",
         "body": "Tu peux réessayer quand tu veux."
       }
+    }
+  },
+  "game": {
+    "playing": "En jeu",
+    "playingHint": "Minecraft est lancé",
+    "retry": "Réessayer",
+    "step": "Étape {{n}} sur {{total}}",
+    "firstTimeHint": "Le premier lancement télécharge environ 600 Mo. Les suivants sont instantanés.",
+    "stages": {
+      "minecraft": "Téléchargement de Minecraft",
+      "java": "Installation de Java",
+      "fabric": "Installation de Fabric",
+      "launching": "Démarrage de Minecraft…"
+    },
+    "errors": {
+      "network": "Échec du téléchargement — vérifie ta connexion internet.",
+      "disk": "Impossible d’écrire les fichiers du jeu — vérifie l’espace disque.",
+      "java": "Java n’a pas pu être installé.",
+      "notSignedIn": "Connecte-toi d’abord.",
+      "sessionExpired": "Ta session Microsoft a expiré — reconnecte-toi.",
+      "alreadyRunning": "Minecraft est déjà lancé pour ce compte.",
+      "crashed": "Minecraft s’est fermé de façon inattendue.",
+      "unknown": "Un problème est survenu au démarrage du jeu."
     }
   }
 }
