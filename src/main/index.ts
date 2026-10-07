@@ -18,6 +18,8 @@ import { cancelSignIn } from './core/auth/oauth'
 import { getGameState, onGameState, play } from './core/game/gameService'
 import { detectSystemJava, inspectJava } from './core/game/java'
 import { installedJavaPath } from './core/game/install'
+import { getContent } from './core/remote/content'
+import type { ClientSummary } from '@shared/client'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
@@ -100,6 +102,31 @@ function registerIpc(): void {
     const path = await installedJavaPath()
     const managed = path ? await inspectJava(path, true) : null
     return [...(managed ? [managed] : []), ...(await detectSystemJava())]
+  })
+
+  ipcMain.handle(IPC.clientGet, async (): Promise<ClientSummary | null> => {
+    try {
+      const { manifest, source } = await getContent()
+      return {
+        clientVersion: manifest.clientVersion,
+        minecraft: manifest.minecraft,
+        loader: manifest.loader.version,
+        source,
+        mods: manifest.mods.map((m) => ({
+          id: m.id,
+          name: m.name,
+          description: m.description,
+          category: m.category,
+          recommended: m.recommended,
+          defaultEnabled: m.defaultEnabled,
+          version: m.version,
+          size: m.file.size,
+          requires: m.requires,
+        })),
+      }
+    } catch {
+      return null
+    }
   })
 
   ipcMain.handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))

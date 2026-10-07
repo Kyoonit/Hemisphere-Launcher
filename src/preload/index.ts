@@ -51,6 +51,9 @@ const api: HemisphereApi = {
     play: () => ipcRenderer.send(IPC.gamePlay),
     javaInfo: () => ipcRenderer.invoke(IPC.gameJava),
   },
+  client: {
+    get: () => ipcRenderer.invoke(IPC.clientGet),
+  },
 }
 
 contextBridge.exposeInMainWorld('hemisphere', api)

@@ -1,14 +1,11 @@
 import { join } from 'node:path'
 import { app } from 'electron'
 
-/**
- * What to install. Pinned and tested; moves to the remote client manifest in Phase 8.
- * Minecraft 26.3 + Fabric 0.19.5 + Mojang's Java (java-runtime-epsilon, Java 25) were verified in the Phase 3 spike.
- */
-export const TARGET = {
-  minecraft: '26.3',
-  fabricLoader: '0.19.5',
-} as const
+/** What to install. Comes from the signed client manifest (content/clients/<version>/manifest.json). */
+export interface GameTarget {
+  minecraft: string
+  fabricLoader: string
+}
 
 /** Folder layout under %APPDATA%/Hemisphere Launcher (location becomes configurable in Phase 13). */
 export function gamePaths() {

@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { Newspaper, Package } from 'lucide-react'
+import { Newspaper } from 'lucide-react'
 
-export default function Placeholder({ kind }: { kind: 'news' | 'mods' }) {
+export default function Placeholder({ kind }: { kind: 'news' }) {
   const { t } = useTranslation()
-  const Icon = kind === 'news' ? Newspaper : Package
+  const Icon = Newspaper
 
   return (
     <div className="grid h-full place-items-center p-8">

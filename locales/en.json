@@ -19,9 +19,10 @@
     "welcomeBack": "Welcome back",
     "play": "Play",
     "ready": "Ready",
-    "clientVersion": "Hemisphere Client {{version}}",
+    "clientVersion": "Hemisphere Client {{version}} · Minecraft {{minecraft}}",
     "restartingNow": "Server is restarting — back in a few minutes",
-    "serverOffline": "Hemisphere is offline right now"
+    "serverOffline": "Hemisphere is offline right now",
+    "clientUnknown": "Hemisphere Client"
   },
   "links": {
     "discord": "Discord",
@@ -38,7 +39,6 @@
   "placeholder": {
     "comingSoon": "Coming soon",
     "news": "Server news and announcements will appear here.",
-    "mods": "Choose which mods to use in your Hemisphere client.",
     "settings": "Game, launcher and account settings."
   },
   "settings": {
@@ -196,7 +196,27 @@
       "sessionExpired": "Your Microsoft session expired — sign in again.",
       "alreadyRunning": "Minecraft is already running for this account.",
       "crashed": "Minecraft closed unexpectedly.",
-      "unknown": "Something went wrong while starting the game."
+      "unknown": "Something went wrong while starting the game.",
+      "content": "Couldn't load the Hemisphere client — check your internet connection."
+    }
+  },
+  "mods": {
+    "subtitle": "Hemisphere Client {{version}} · Minecraft {{minecraft}}",
+    "count": "{{count}} mods",
+    "search": "Search mods",
+    "recommended": "Recommended",
+    "on": "On by default",
+    "off": "Optional",
+    "noMatch": "No mods match your search.",
+    "libraries": "Libraries installed automatically: {{names}}.",
+    "unavailable": "The mod list isn't available yet — connect to the internet once.",
+    "offlineCopy": "Offline copy",
+    "groups": {
+      "all": "All",
+      "performance": "Performance",
+      "voice": "Voice & audio",
+      "visual": "Visual",
+      "comfort": "Comfort"
     }
   }
 }

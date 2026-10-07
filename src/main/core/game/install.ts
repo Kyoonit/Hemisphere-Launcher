@@ -5,7 +5,7 @@ import { MinecraftFolder, Version } from '@xmcl/core'
 import { getVersionList, installDependenciesTask, installFabric, installTask } from '@xmcl/installer'
 import type { GameStage } from '@shared/game'
 import { ensureJava, managedJavaPath } from './java'
-import { gamePaths, TARGET } from './target'
+import { gamePaths, type GameTarget } from './target'
 import { GameError, withRetries, type ProgressFn } from './util'
 
 /** Windows limits open files; more parallel downloads than this cause EMFILE errors (seen in the spike). */
@@ -35,11 +35,11 @@ async function readState(): Promise<InstallState | null> {
 }
 
 /**
- * Makes sure Minecraft, Fabric and Java are installed for TARGET.
+ * Makes sure Minecraft, Fabric and Java are installed for the target from the client manifest.
  * Fast path: if the last successful install matches and its key files exist, nothing is downloaded.
  * (A full file-by-file verification is the job of Repair, Phase 10.)
  */
-export async function ensureGameInstalled(progress: StageProgress): Promise<InstalledGame> {
+export async function ensureGameInstalled(TARGET: GameTarget, progress: StageProgress): Promise<InstalledGame> {
   const paths = gamePaths()
   const mc = MinecraftFolder.from(paths.minecraft)
   await mkdir(paths.instance, { recursive: true })

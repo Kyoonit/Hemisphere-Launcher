@@ -7,6 +7,7 @@ import { getLaunchCredentials } from '../auth/accounts'
 import { AuthError } from '../auth/errors'
 import { ensureGameInstalled, instanceLogPath } from './install'
 import { gamePaths } from './target'
+import { getContent } from '../remote/content'
 import { GameError, toGameError } from './util'
 
 let state: GameState = { phase: 'idle', progress: null, runningAccounts: [], error: null }
@@ -52,7 +53,10 @@ export async function play(accountId: string): Promise<void> {
 
   try {
     const report = progressReporter()
-    const { versionId, javaPath } = await ensureGameInstalled(report)
+    const { manifest } = await getContent(true).catch((err) => {
+      throw new GameError('content', String(err))
+    })
+    const { versionId, javaPath } = await ensureGameInstalled({ minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }, report)
 
     report('launching')(null)
     const creds = await getLaunchCredentials(accountId).catch((err) => {

@@ -1,6 +1,7 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
 import type { GameState, JavaRuntimeInfo } from './game'
+import type { ClientSummary } from './client'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -25,6 +26,7 @@ export const IPC = {
   gameStateChanged: 'game:state-changed',
   gamePlay: 'game:play',
   gameJava: 'game:java',
+  clientGet: 'client:get',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -80,5 +82,9 @@ export interface HemisphereApi {
     play(): void
     /** Managed runtime (if installed) + Java found on this PC */
     javaInfo(): Promise<JavaRuntimeInfo[]>
+  }
+  client: {
+    /** Verified Hemisphere client definition, or null if never downloaded and offline */
+    get(): Promise<ClientSummary | null>
   }
 }

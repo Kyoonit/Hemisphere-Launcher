@@ -19,9 +19,10 @@
     "welcomeBack": "Bon retour",
     "play": "Jouer",
     "ready": "Prêt",
-    "clientVersion": "Client Hemisphere {{version}}",
+    "clientVersion": "Client Hemisphere {{version}} · Minecraft {{minecraft}}",
     "restartingNow": "Le serveur redémarre — de retour dans quelques minutes",
-    "serverOffline": "Hemisphere est hors ligne pour le moment"
+    "serverOffline": "Hemisphere est hors ligne pour le moment",
+    "clientUnknown": "Client Hemisphere"
   },
   "links": {
     "discord": "Discord",
@@ -38,7 +39,6 @@
   "placeholder": {
     "comingSoon": "Bientôt disponible",
     "news": "Les actualités et annonces du serveur apparaîtront ici.",
-    "mods": "Choisis les mods à utiliser dans ton client Hemisphere.",
     "settings": "Paramètres du jeu, du launcher et du compte."
   },
   "settings": {
@@ -196,7 +196,27 @@
       "sessionExpired": "Ta session Microsoft a expiré — reconnecte-toi.",
       "alreadyRunning": "Minecraft est déjà lancé pour ce compte.",
       "crashed": "Minecraft s’est fermé de façon inattendue.",
-      "unknown": "Un problème est survenu au démarrage du jeu."
+      "unknown": "Un problème est survenu au démarrage du jeu.",
+      "content": "Impossible de charger le client Hemisphere — vérifie ta connexion internet."
+    }
+  },
+  "mods": {
+    "subtitle": "Client Hemisphere {{version}} · Minecraft {{minecraft}}",
+    "count": "{{count}} mods",
+    "search": "Rechercher un mod",
+    "recommended": "Recommandé",
+    "on": "Activé par défaut",
+    "off": "Optionnel",
+    "noMatch": "Aucun mod ne correspond.",
+    "libraries": "Bibliothèques installées automatiquement : {{names}}.",
+    "unavailable": "La liste des mods n’est pas encore disponible — connecte-toi à internet une fois.",
+    "offlineCopy": "Copie hors ligne",
+    "groups": {
+      "all": "Tous",
+      "performance": "Performance",
+      "voice": "Voix & audio",
+      "visual": "Visuel",
+      "comfort": "Confort"
     }
   }
 }

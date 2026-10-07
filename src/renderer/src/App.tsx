@@ -5,6 +5,7 @@ import AccountMenu from './components/AccountMenu'
 import Home from './screens/Home'
 import Login from './screens/Login'
 import Placeholder from './screens/Placeholder'
+import Mods from './screens/Mods'
 import Settings, { type Section } from './screens/Settings'
 import { useAccounts } from './accounts'
 
@@ -43,7 +44,7 @@ export default function App() {
             <>
               {screen === 'home' && <Home onOpenNews={() => setScreen('news')} />}
               {screen === 'news' && <Placeholder kind="news" />}
-              {screen === 'mods' && <Placeholder kind="mods" />}
+              {screen === 'mods' && <Mods />}
               {screen === 'settings' && <Settings initialSection={settingsSection} onAddAccount={() => setAddingAccount(true)} />}
             </>
           )}

@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "i18n:check": "node tools/i18n-check.mjs",
     "postinstall": "node node_modules/electron/install.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "content:keygen": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/keygen.ts",
+    "content:publish": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/publish.ts"
   },
   "dependencies": {
     "@xmcl/core": "2.15.1",

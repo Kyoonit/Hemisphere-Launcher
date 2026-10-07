@@ -17,6 +17,7 @@ export type GameErrorCode =
   | 'notSignedIn'
   | 'sessionExpired'
   | 'alreadyRunning'
+  | 'content' // client definition could not be downloaded or verified
   | 'crashed' // game exited with an error
   | 'unknown'
 

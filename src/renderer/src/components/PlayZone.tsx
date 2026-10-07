@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, RotateCcw, TriangleAlert } from 'lucide-react'
 import type { GameState } from '@shared/game'
+import type { ClientSummary } from '@shared/client'
 import { useAccounts } from '../accounts'
 
 const STAGES = ['minecraft', 'java', 'fabric', 'launching'] as const
@@ -16,7 +17,7 @@ export function useGameState(): GameState | null {
 }
 
 /** PLAY button and everything that replaces it: install progress, "playing", errors. */
-export default function PlayZone({ version }: { version: string }) {
+export default function PlayZone({ client }: { client: ClientSummary | null }) {
   const { t } = useTranslation()
   const { active } = useAccounts()
   const game = useGameState()
@@ -57,7 +58,7 @@ export default function PlayZone({ version }: { version: string }) {
           <Check size={14} className="text-green-400" />
           <b className="font-semibold text-green-400">{t('home.ready')}</b>
           {' · '}
-          {t('home.clientVersion', { version })}
+          {client ? t('home.clientVersion', { version: client.clientVersion, minecraft: client.minecraft }) : t('home.clientUnknown')}
         </p>
       )}
     </div>

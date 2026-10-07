@@ -8,6 +8,7 @@ import ServerPanel from '../components/ServerPanel'
 import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
 import PlayZone from '../components/PlayZone'
+import { useClient } from './Mods'
 import { useNow, useServerStatus } from '../hooks'
 import { useAccounts } from '../accounts'
 
@@ -21,6 +22,7 @@ export default function Home({ onOpenNews }: { onOpenNews(): void }) {
   const { t } = useTranslation()
   const status = useServerStatus()
   const { active } = useAccounts()
+  const client = useClient()
 
   return (
     <div className="relative flex h-full flex-col items-center px-7 pb-6">
@@ -36,7 +38,7 @@ export default function Home({ onOpenNews }: { onOpenNews(): void }) {
         </h1>
 
         <div className="animate-rise mt-8 flex flex-col items-center [animation-delay:250ms]">
-          <PlayZone version={status?.version ?? '26.3'} />
+          <PlayZone client={client ?? null} />
           <div className="mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400">
             <ServerNotice offline={status?.online === false} />
           </div>

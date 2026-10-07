@@ -1,0 +1,638 @@
+{
+  "schema": 1,
+  "clientVersion": "1.0.0",
+  "createdAt": "2026-10-07T21:58:28.933Z",
+  "minecraft": "26.3",
+  "loader": {
+    "type": "fabric",
+    "version": "0.19.5"
+  },
+  "mods": [
+    {
+      "id": "fabric-api",
+      "name": "Fabric API",
+      "description": {
+        "en": "Core library most Fabric mods need",
+        "fr": "Bibliothèque requise par la plupart des mods Fabric"
+      },
+      "category": "library",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [],
+      "version": "0.162.0+26.3",
+      "file": {
+        "path": "mods/fabric-api-0.162.0+26.3.jar",
+        "url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/v2j28coa/fabric-api-0.162.0%2B26.3.jar",
+        "sha512": "5ab70908952f1d2346d16b122ca31327f4055db59c279a1bc3c3c581ce359bb541cba15730f55b0727be7c7c4debc4a4412a183c228e0d4dea81c734f7b412ce",
+        "size": 1772377
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "P7dR8mSH",
+          "versionId": "v2j28coa"
+        }
+      }
+    },
+    {
+      "id": "sodium",
+      "name": "Sodium",
+      "description": {
+        "en": "Modern rendering engine — big FPS boost",
+        "fr": "Moteur de rendu moderne — gros gain de FPS"
+      },
+      "category": "performance",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [],
+      "version": "mc26.3-0.9.2-fabric",
+      "file": {
+        "path": "mods/sodium-fabric-0.9.2+mc26.3.jar",
+        "url": "https://cdn.modrinth.com/data/AANobbMI/versions/bAZQdGpg/sodium-fabric-0.9.2%2Bmc26.3.jar",
+        "sha512": "f3f260f204b8ce5e8777c2c73f537956755ec61f3817b0b78b5e5568e8aa40f14891f146475075109747665c7c88a45ca0ca9a8df3c68d79c58ecdaa8d8c4b93",
+        "size": 1908068
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "AANobbMI",
+          "versionId": "bAZQdGpg"
+        }
+      }
+    },
+    {
+      "id": "lithium",
+      "name": "Lithium",
+      "description": {
+        "en": "Faster game logic",
+        "fr": "Logique de jeu plus rapide"
+      },
+      "category": "performance",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [],
+      "version": "mc26.3-0.26.2-fabric",
+      "file": {
+        "path": "mods/lithium-fabric-0.26.2+mc26.3.jar",
+        "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/xS0Q8LSi/lithium-fabric-0.26.2%2Bmc26.3.jar",
+        "sha512": "4d7fee66132eedc71feab9390b92c95d7058edbdad0fecfac1d836a2950b97a7ca463afbede61c7ef361ce65e1f927ab9e89dde5bf2e0e0ce486afb5c5dbee40",
+        "size": 914543
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "gvQqBUqZ",
+          "versionId": "xS0Q8LSi"
+        }
+      }
+    },
+    {
+      "id": "ferrite-core",
+      "name": "FerriteCore",
+      "description": {
+        "en": "Lower memory usage",
+        "fr": "Moins de mémoire utilisée"
+      },
+      "category": "performance",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [],
+      "version": "9.0.0-fabric",
+      "file": {
+        "path": "mods/ferritecore-9.0.0-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/uXXizFIs/versions/d5ddUdiB/ferritecore-9.0.0-fabric.jar",
+        "sha512": "d81fa97e11784c19d42f89c2f433831d007603dd7193cee45fa177e4a6a9c52b384b198586e04a0f7f63cd996fed713322578bde9a8db57e1188854ae5cbe584",
+        "size": 72677
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "uXXizFIs",
+          "versionId": "d5ddUdiB"
+        }
+      }
+    },
+    {
+      "id": "immediatelyfast",
+      "name": "ImmediatelyFast",
+      "description": {
+        "en": "Faster HUD and text rendering",
+        "fr": "Affichage plus rapide de l'interface et du texte"
+      },
+      "category": "performance",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [],
+      "version": "1.17.1+26.3-fabric",
+      "file": {
+        "path": "mods/ImmediatelyFast-Fabric-1.17.1+26.3.jar",
+        "url": "https://cdn.modrinth.com/data/5ZwdcRci/versions/3MP9UR23/ImmediatelyFast-Fabric-1.17.1%2B26.3.jar",
+        "sha512": "8e139589fd995bce3d485a34d92a07243964212f7ed2e4fc2f6de5b9a74d0f59b03252e7ce40c64e006cf3e21bed5de27b830d33ef048b286e041f6178ad8428",
+        "size": 99586
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "5ZwdcRci",
+          "versionId": "3MP9UR23"
+        }
+      }
+    },
+    {
+      "id": "entityculling",
+      "name": "Entity Culling",
+      "description": {
+        "en": "Skips drawing hidden mobs and chests",
+        "fr": "N'affiche pas les mobs et coffres cachés"
+      },
+      "category": "performance",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [
+        "fabric-api"
+      ],
+      "version": "1.11.2",
+      "file": {
+        "path": "mods/entityculling-fabric-1.11.2-mc26.3.jar",
+        "url": "https://cdn.modrinth.com/data/NNAgCjsB/versions/F4loCvYt/entityculling-fabric-1.11.2-mc26.3.jar",
+        "sha512": "c5d8947cb022f8baed4bf17e38ca598c56b8049871e7e47fb462bcecc9bc01e7eb75290494199fcb1aa73f5e37f93a296211ba78c9dd2a5bff30d5eed497ebcc",
+        "size": 1508273
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "NNAgCjsB",
+          "versionId": "F4loCvYt"
+        }
+      }
+    },
+    {
+      "id": "moreculling",
+      "name": "More Culling",
+      "description": {
+        "en": "Skips drawing hidden block faces",
+        "fr": "N'affiche pas les faces de blocs cachées"
+      },
+      "category": "performance",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [
+        "cloth-config"
+      ],
+      "version": "1.9.0",
+      "file": {
+        "path": "mods/moreculling-fabric-26.3-1.9.0.jar",
+        "url": "https://cdn.modrinth.com/data/51shyZVL/versions/t7vAlfgO/moreculling-fabric-26.3-1.9.0.jar",
+        "sha512": "b1975ef43606a3baa1c93a040fbef96abfbf46ae6a1e364c60effd03a42568f945ede0bde329241e87adc6a9c2769dd1d13ad286869c689018035eff677442b2",
+        "size": 294320
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "51shyZVL",
+          "versionId": "t7vAlfgO"
+        }
+      }
+    },
+    {
+      "id": "cloth-config",
+      "name": "Cloth Config API",
+      "description": {
+        "en": "Configuration Library for Minecraft Mods"
+      },
+      "category": "library",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [],
+      "version": "26.3.159+fabric",
+      "file": {
+        "path": "mods/cloth-config-fabric-26.3.159.jar",
+        "url": "https://cdn.modrinth.com/data/9s6osm5g/versions/fg2uyxOW/cloth-config-fabric-26.3.159.jar",
+        "sha512": "8924e19d41845096724fa10f3717bc51964a0edbbbcad0ff1e6c6187a398b08f356e49579a657c2dc44a7f92e3850771f3ca70bf8c1f654de60425163b91dbb1",
+        "size": 1135009
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "9s6osm5g",
+          "versionId": "fg2uyxOW"
+        }
+      }
+    },
+    {
+      "id": "dynamic-fps",
+      "name": "Dynamic FPS",
+      "description": {
+        "en": "Saves power when the game is in the background",
+        "fr": "Économise l'énergie quand le jeu est en arrière-plan"
+      },
+      "category": "performance",
+      "recommended": false,
+      "defaultEnabled": true,
+      "requires": [
+        "fabric-api"
+      ],
+      "version": "3.11.10",
+      "file": {
+        "path": "mods/dynamic-fps-3.11.10+minecraft-26.3.0-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/LQ3K71Q1/versions/Jwq069rR/dynamic-fps-3.11.10%2Bminecraft-26.3.0-fabric.jar",
+        "sha512": "7976d11411babfa3ac0c38898f26ee6192f22a4f595b637eeae3cc5185f326c0e4b9fd7d00b3d7e8d020dd861295f0df52f9a9d7c67e88946d0ba9fff4a9f894",
+        "size": 189474
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "LQ3K71Q1",
+          "versionId": "Jwq069rR"
+        }
+      }
+    },
+    {
+      "id": "simple-voice-chat",
+      "name": "Simple Voice Chat",
+      "description": {
+        "en": "Proximity voice chat on Hemisphere",
+        "fr": "Chat vocal de proximité sur Hemisphere"
+      },
+      "category": "voice",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [],
+      "version": "fabric-2.6.24+26.3",
+      "file": {
+        "path": "mods/voicechat-fabric-2.6.24+26.3.jar",
+        "url": "https://cdn.modrinth.com/data/9eGKb6K1/versions/OLnMVWXy/voicechat-fabric-2.6.24%2B26.3.jar",
+        "sha512": "414eb51967305fe7740d34016bc8e3e4e2fa1590e1278ad06bcdfa0687f65007b825d345dc09f79a992704a51ec93baf01fe727e0bbc32fdf506828b5a65d85a",
+        "size": 5612855
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "9eGKb6K1",
+          "versionId": "OLnMVWXy"
+        }
+      }
+    },
+    {
+      "id": "audioplayer",
+      "name": "AudioPlayer",
+      "description": {
+        "en": "Custom music discs and goat horns",
+        "fr": "Disques et cornes de chèvre personnalisés"
+      },
+      "category": "voice",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [
+        "simple-voice-chat"
+      ],
+      "version": "fabric-2.5.0+26.3",
+      "file": {
+        "path": "mods/audioplayer-fabric-2.5.0+26.3.jar",
+        "url": "https://cdn.modrinth.com/data/SRlzjEBS/versions/upaUhCkh/audioplayer-fabric-2.5.0%2B26.3.jar",
+        "sha512": "c952b36b08a7aaf088ffd6bcdc5f30b7a2922a62cb45e67736b86c928227ef069a89a987b1ee6aab0eb9cafb637f143e327a10cc7098d1f5d2500b2b21d7d44a",
+        "size": 1200434
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "SRlzjEBS",
+          "versionId": "upaUhCkh"
+        }
+      }
+    },
+    {
+      "id": "iris",
+      "name": "Iris Shaders",
+      "description": {
+        "en": "Shader pack support · needs a good GPU",
+        "fr": "Prise en charge des shaders · demande une bonne carte graphique"
+      },
+      "category": "visual",
+      "recommended": false,
+      "defaultEnabled": false,
+      "requires": [
+        "sodium"
+      ],
+      "version": "1.11.7+26.3-fabric",
+      "file": {
+        "path": "mods/iris-fabric-1.11.7+mc26.3.jar",
+        "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/vTN4NRGW/iris-fabric-1.11.7%2Bmc26.3.jar",
+        "sha512": "d8d3312f77fc52a48e4a6cd836fda33669bdebcb4de0b8c0d30adc808b287330a533e0baef355cc1ce6336a26851d9775369a802a4666b7b7a6266af20088f42",
+        "size": 2850938
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "YL57xq9U",
+          "versionId": "vTN4NRGW"
+        }
+      }
+    },
+    {
+      "id": "continuity",
+      "name": "Continuity",
+      "description": {
+        "en": "Connected textures",
+        "fr": "Textures connectées"
+      },
+      "category": "visual",
+      "recommended": false,
+      "defaultEnabled": false,
+      "requires": [
+        "fabric-api"
+      ],
+      "version": "3.0.1+26.3",
+      "file": {
+        "path": "mods/continuity-3.0.1+26.3.jar",
+        "url": "https://cdn.modrinth.com/data/1IjD5062/versions/Jt2sCWTQ/continuity-3.0.1%2B26.3.jar",
+        "sha512": "1ec1e3b2f73c26b19445d664822a8936e9076f4d8855a2ed5fac19786daa8da42da8fdc9526c4a53c227a82819a87ad8e73d5b4fc003f6519c50454c33014f04",
+        "size": 1002033
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "1IjD5062",
+          "versionId": "Jt2sCWTQ"
+        }
+      }
+    },
+    {
+      "id": "entitytexturefeatures",
+      "name": "[ETF] Entity Texture Features",
+      "description": {
+        "en": "Needed by some resource packs",
+        "fr": "Requis par certains packs de ressources"
+      },
+      "category": "visual",
+      "recommended": false,
+      "defaultEnabled": false,
+      "requires": [],
+      "version": "7.2.5-fabric-26.3",
+      "file": {
+        "path": "mods/entity_texture_features-7.2.5-26.3-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/BVzZfTc1/versions/O8J3sxxp/entity_texture_features-7.2.5-26.3-fabric.jar",
+        "sha512": "6b03e523f27f0f001de48eaf771f81fba18cd072f60c0f9530023a7fdbd22aafa0953f3d3f9704930a625c982831e28c228798b82579e79938bb22fb46e59761",
+        "size": 792734
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "BVzZfTc1",
+          "versionId": "O8J3sxxp"
+        }
+      }
+    },
+    {
+      "id": "sodium-extra",
+      "name": "Sodium Extra",
+      "description": {
+        "en": "More video settings",
+        "fr": "Plus de réglages vidéo"
+      },
+      "category": "visual",
+      "recommended": false,
+      "defaultEnabled": false,
+      "requires": [
+        "sodium"
+      ],
+      "version": "mc26.3-0.9.4+fabric",
+      "file": {
+        "path": "mods/sodium-extra-fabric-0.9.4+mc26.3.jar",
+        "url": "https://cdn.modrinth.com/data/PtjYWJkn/versions/te2y9qZn/sodium-extra-fabric-0.9.4%2Bmc26.3.jar",
+        "sha512": "a2e8d8416a556b7a351460a06407119eaba62f06636377001720bbda9b797dc881b2bb4528fb75a0459fee34475db529858633b6b86b545a72d0f13cf3c2b7bb",
+        "size": 465553
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "PtjYWJkn",
+          "versionId": "te2y9qZn"
+        }
+      }
+    },
+    {
+      "id": "reeses-sodium-options",
+      "name": "Reese's Sodium Options",
+      "description": {
+        "en": "Better video settings screen",
+        "fr": "Meilleur écran de réglages vidéo"
+      },
+      "category": "visual",
+      "recommended": false,
+      "defaultEnabled": false,
+      "requires": [
+        "sodium"
+      ],
+      "version": "mc26.3-2.2.5+fabric",
+      "file": {
+        "path": "mods/reeses-sodium-options-fabric-2.2.5+mc26.3.jar",
+        "url": "https://cdn.modrinth.com/data/Bh37bMuy/versions/EfchygKx/reeses-sodium-options-fabric-2.2.5%2Bmc26.3.jar",
+        "sha512": "9c6f335618c1ec03cf9030cd88cdc32be5457bf4fbabd49c76ed68df53530730cf4681ec3742f2c6efbd48cb2b784f24c636977a95d78df62af1214ec5488be0",
+        "size": 258082
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "Bh37bMuy",
+          "versionId": "EfchygKx"
+        }
+      }
+    },
+    {
+      "id": "locator-heads",
+      "name": "Locator Heads",
+      "description": {
+        "en": "Player heads on the locator bar",
+        "fr": "Têtes des joueurs sur la barre de localisation"
+      },
+      "category": "comfort",
+      "recommended": false,
+      "defaultEnabled": true,
+      "requires": [
+        "fabric-api"
+      ],
+      "version": "2.5.0",
+      "file": {
+        "path": "mods/locator-heads-2.5.0.jar",
+        "url": "https://cdn.modrinth.com/data/L4pt5egz/versions/RetMeX2l/locator-heads-2.5.0.jar",
+        "sha512": "a39ec72edc388c493987c9dd9e6c77e6796a7b8f24cdffbfd9bdac34c6c041d6ec7af8d07904f7d0a56329ddae7d9bb996743d3aaac42197aca8f2bc63562026",
+        "size": 37388
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "L4pt5egz",
+          "versionId": "RetMeX2l"
+        }
+      }
+    },
+    {
+      "id": "zoomify",
+      "name": "Zoomify (Zoom)",
+      "description": {
+        "en": "Zoom with a key",
+        "fr": "Zoom avec une touche"
+      },
+      "category": "comfort",
+      "recommended": false,
+      "defaultEnabled": true,
+      "requires": [
+        "fabric-language-kotlin",
+        "yacl",
+        "fabric-api"
+      ],
+      "version": "2.16.3+26.3",
+      "file": {
+        "path": "mods/zoomify-2.16.3+26.3.jar",
+        "url": "https://cdn.modrinth.com/data/w7ThoJFB/versions/bvz5KJLQ/zoomify-2.16.3%2B26.3.jar",
+        "sha512": "1151d48c718f616e0e960242a3916e668abe38651f3d6ee65875a33b97bd360b1e3796bb2a686d2a71ba971a86aeea53b03b5ae33b18f6e9b67a5116270cc82d",
+        "size": 563038
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "w7ThoJFB",
+          "versionId": "bvz5KJLQ"
+        }
+      }
+    },
+    {
+      "id": "fabric-language-kotlin",
+      "name": "Fabric Language Kotlin",
+      "description": {
+        "en": "This is a mod that enables usage of the Kotlin programming language for Fabric mods."
+      },
+      "category": "library",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [],
+      "version": "1.14.1+kotlin.2.4.20",
+      "file": {
+        "path": "mods/fabric-language-kotlin-1.14.1+kotlin.2.4.20.jar",
+        "url": "https://cdn.modrinth.com/data/Ha28R6CL/versions/eRRZzGMc/fabric-language-kotlin-1.14.1%2Bkotlin.2.4.20.jar",
+        "sha512": "91404f87774466ce8604aafea791d8cc97b603bc310dce17c8188f94f7783cca6dc14fc726ce871ca317bfe9033c199d8d858d51284106a00754e952147703b8",
+        "size": 8142858
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "Ha28R6CL",
+          "versionId": "eRRZzGMc"
+        }
+      }
+    },
+    {
+      "id": "yacl",
+      "name": "YetAnotherConfigLib (YACL)",
+      "description": {
+        "en": "A builder-based configuration library for Minecraft!"
+      },
+      "category": "library",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [
+        "fabric-api"
+      ],
+      "version": "3.9.7+26.3-fabric",
+      "file": {
+        "path": "mods/yet_another_config_lib_v3-3.9.7+26.3-fabric.jar",
+        "url": "https://cdn.modrinth.com/data/1eAoo2KR/versions/s9SjoFu1/yet_another_config_lib_v3-3.9.7%2B26.3-fabric.jar",
+        "sha512": "f3957028dd31cae78f08aee3e768f61bd12c4c8423257d357bc3c1a2172047c769d37901f99775c7ffff1e5ee794025dc72738b2869cab06f1c2811841d68b24",
+        "size": 1125377
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "1eAoo2KR",
+          "versionId": "s9SjoFu1"
+        }
+      }
+    },
+    {
+      "id": "modmenu",
+      "name": "Mod Menu",
+      "description": {
+        "en": "Settings screen for your mods",
+        "fr": "Écran de réglages pour tes mods"
+      },
+      "category": "comfort",
+      "recommended": false,
+      "defaultEnabled": true,
+      "requires": [
+        "fabric-api",
+        "placeholder-api"
+      ],
+      "version": "21.0.0",
+      "file": {
+        "path": "mods/modmenu-21.0.0.jar",
+        "url": "https://cdn.modrinth.com/data/mOgUt4GM/versions/kyy7dbrZ/modmenu-21.0.0.jar",
+        "sha512": "588c0c557963f4778572ee81bfafc190b332c26d5926c5fe7e3e1614dcf8e14f58e3bc80a97694521dd05907e9753a7c8575048ea769e4dbf40a3db74a4e2606",
+        "size": 856779
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "mOgUt4GM",
+          "versionId": "kyy7dbrZ"
+        }
+      }
+    },
+    {
+      "id": "placeholder-api",
+      "name": "Text Placeholder API",
+      "description": {
+        "en": "Placeholder and Text manipulation library for your Minecraft mods."
+      },
+      "category": "library",
+      "recommended": true,
+      "defaultEnabled": true,
+      "requires": [],
+      "version": "3.2.0+26.3",
+      "file": {
+        "path": "mods/placeholder-api-3.2.0+26.3.jar",
+        "url": "https://cdn.modrinth.com/data/eXts2L7r/versions/lXytLqWj/placeholder-api-3.2.0%2B26.3.jar",
+        "sha512": "eb2bb31e51068aad2581b7864ea7b11b1209ba1c2b27551cd5837d9b312b818b73bb47c06374b46b99b73401c62c6b6c115f702c55aed6afd467ad8ad6448de4",
+        "size": 254959
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "eXts2L7r",
+          "versionId": "lXytLqWj"
+        }
+      }
+    },
+    {
+      "id": "appleskin",
+      "name": "AppleSkin",
+      "description": {
+        "en": "Food and saturation preview",
+        "fr": "Aperçu de la nourriture et de la saturation"
+      },
+      "category": "comfort",
+      "recommended": false,
+      "defaultEnabled": false,
+      "requires": [
+        "fabric-api"
+      ],
+      "version": "3.0.10+mc26.3",
+      "file": {
+        "path": "mods/appleskin-fabric-mc26.3-3.0.10.jar",
+        "url": "https://cdn.modrinth.com/data/EsAfCjCV/versions/PHjDtQay/appleskin-fabric-mc26.3-3.0.10.jar",
+        "sha512": "17d257af419b7530aa8617c2e8c0e4bbfabcf888f26655790e0188e7957e0bcd931f85f9a4c69fd27e889dee5082cf7b2b8741a14a6ed4425e9ef4bfe13a8b8c",
+        "size": 180194
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "EsAfCjCV",
+          "versionId": "PHjDtQay"
+        }
+      }
+    },
+    {
+      "id": "chat-heads",
+      "name": "Chat Heads",
+      "description": {
+        "en": "Player heads next to chat messages",
+        "fr": "Têtes des joueurs à côté des messages du chat"
+      },
+      "category": "comfort",
+      "recommended": false,
+      "defaultEnabled": false,
+      "requires": [],
+      "version": "1.3.2",
+      "file": {
+        "path": "mods/chat_heads-1.3.2-fabric-26.3.jar",
+        "url": "https://cdn.modrinth.com/data/Wb5oqrBJ/versions/i3gcElvQ/chat_heads-1.3.2-fabric-26.3.jar",
+        "sha512": "2e18d30d38fde2417d9b18a6a7065333f80313e6b73430a82b657ecf4322127587dd0f63da90f93d718ffeef67f104c56c1ef169cf2cde362c11ab2cdfefcc47",
+        "size": 98686
+      },
+      "source": {
+        "modrinth": {
+          "projectId": "Wb5oqrBJ",
+          "versionId": "i3gcElvQ"
+        }
+      }
+    }
+  ],
+  "files": []
+}
