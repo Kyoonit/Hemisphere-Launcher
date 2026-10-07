@@ -13,7 +13,7 @@ import { useAccounts } from './accounts'
 export default function App() {
   const { state } = useAccounts()
   const [screen, setScreen] = useState<Screen>('home')
-  const [settingsSection, setSettingsSection] = useState<Section>('launcher')
+  const [settingsSection, setSettingsSection] = useState<Section>('game')
   const [addingAccount, setAddingAccount] = useState(false)
 
   const needsLogin = state !== null && state.accounts.length === 0
@@ -31,7 +31,7 @@ export default function App() {
       <TitleBar
         screen={screen}
         onNavigate={(s) => {
-          if (s === 'settings') setSettingsSection('launcher')
+          if (s === 'settings') setSettingsSection('game')
           setScreen(s)
         }}
         minimal={showLogin}

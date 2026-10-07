@@ -44,6 +44,13 @@ const api: HemisphereApi = {
     },
     openLink: (newsId) => ipcRenderer.send(IPC.feedOpenLink, newsId),
   },
+  system: {
+    info: () => ipcRenderer.invoke(IPC.systemInfo),
+    openFolder: (kind) => ipcRenderer.send(IPC.systemOpenFolder, kind),
+    copyDiagnostics: () => ipcRenderer.invoke(IPC.systemDiagnostics),
+    moveGameDir: (target) => ipcRenderer.invoke(IPC.systemMoveGameDir, target),
+    pickJava: () => ipcRenderer.invoke(IPC.systemPickJava),
+  },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
     set: (patch) => ipcRenderer.invoke(IPC.settingsSet, patch),

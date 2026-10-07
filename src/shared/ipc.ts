@@ -1,7 +1,7 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport } from './game'
-import type { Settings } from './settings'
+import type { Settings, SystemInfo } from './settings'
 import type { Feed } from './feed'
 import type { ClientSummary } from './client'
 
@@ -39,6 +39,11 @@ export const IPC = {
   feedGet: 'feed:get',
   feedChanged: 'feed:changed',
   feedOpenLink: 'feed:open-link',
+  systemInfo: 'system:info',
+  systemOpenFolder: 'system:open-folder',
+  systemDiagnostics: 'system:diagnostics',
+  systemMoveGameDir: 'system:move-game-dir',
+  systemPickJava: 'system:pick-java',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -85,6 +90,16 @@ export interface HemisphereApi {
     onChange(cb: (feed: Feed) => void): () => void
     /** Opens a news item's button link (looked up by id in the verified feed, never a raw URL) */
     openLink(newsId: string): void
+  }
+  system: {
+    info(): Promise<SystemInfo>
+    openFolder(kind: 'game' | 'mods' | 'screenshots' | 'gameLogs' | 'crashReports' | 'launcherLogs'): void
+    /** Builds the support report and copies it to the clipboard */
+    copyDiagnostics(): Promise<string>
+    /** Asks for a folder (Windows dialog) or uses 'default', then moves the game there */
+    moveGameDir(target: 'choose' | 'default'): Promise<{ ok: boolean; reason?: string; gameDir?: string; cancelled?: boolean }>
+    /** Asks for javaw.exe (Windows dialog) and saves it if it works */
+    pickJava(): Promise<{ ok: boolean; version?: string; majorVersion?: number; reason?: string; cancelled?: boolean }>
   }
   settings: {
     get(): Promise<Settings>

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
@@ -27,6 +27,8 @@ import { getContent } from './core/remote/content'
 import { getEnabledMods, setModEnabled } from './core/sync/sync'
 import { getModIcons } from './core/remote/modIcons'
 import { getFeed, startFeedPolling } from './core/remote/feed'
+import { installFileLogger } from './core/logging/logger'
+import { copyDiagnostics, moveGameFolder, openFolder, systemInfo, type FolderKind } from './core/system/system'
 import type { ClientSummary } from '@shared/client'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
@@ -107,13 +109,43 @@ function registerIpc(): void {
     const o = (opts ?? {}) as { target?: unknown }
     if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest' })
   })
+  ipcMain.handle(IPC.systemInfo, () => systemInfo())
+  ipcMain.on(IPC.systemOpenFolder, (_e, kind: unknown) => {
+    const kinds: FolderKind[] = ['game', 'mods', 'screenshots', 'gameLogs', 'crashReports', 'launcherLogs']
+    if (kinds.includes(kind as FolderKind)) void openFolder(kind as FolderKind)
+  })
+  ipcMain.handle(IPC.systemDiagnostics, () => copyDiagnostics())
+  ipcMain.handle(IPC.systemMoveGameDir, async (_e, target: unknown) => {
+    let dir = systemInfo().defaultGameDir
+    if (target === 'choose') {
+      const pick = await dialog.showOpenDialog(win!, { properties: ['openDirectory', 'createDirectory'], title: 'Hemisphere game folder' })
+      if (pick.canceled || !pick.filePaths[0]) return { ok: false, cancelled: true }
+      dir = pick.filePaths[0]
+    }
+    const g = getGameState()
+    return moveGameFolder(dir, g.phase === 'preparing' || g.runningAccounts.length > 0)
+  })
+  ipcMain.handle(IPC.systemPickJava, async () => {
+    const pick = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Java', extensions: ['exe'] }], title: 'javaw.exe' })
+    if (pick.canceled || !pick.filePaths[0]) return { ok: false, cancelled: true }
+    const path = pick.filePaths[0]
+    if (!/javaw?.exe$/i.test(path)) return { ok: false, reason: 'notJava' }
+    const info = await inspectJava(path, false)
+    if (!info) return { ok: false, reason: 'notJava' }
+    await updateSettings({ javaPath: path })
+    return { ok: true, version: info.version, majorVersion: info.majorVersion }
+  })
   ipcMain.handle(IPC.feedGet, () => getFeed())
   ipcMain.on(IPC.feedOpenLink, (_e, id: unknown) => {
     const url = getFeed().news.find((n) => n.id === id)?.link?.url
     if (url?.startsWith('https://')) void shell.openExternal(url)
   })
   ipcMain.handle(IPC.settingsGet, () => getSettings())
-  ipcMain.handle(IPC.settingsSet, (_e, patch: unknown) => updateSettings(typeof patch === 'object' && patch ? (patch as object) : {}))
+  ipcMain.handle(IPC.settingsSet, async (_e, patch: unknown) => {
+    // gameDir is only changed through the move (files must follow); javaPath only through the picker (validated).
+    const { gameDir: _g, javaPath, ...rest } = (typeof patch === 'object' && patch ? patch : {}) as Record<string, unknown>
+    return updateSettings({ ...rest, ...(javaPath === null ? { javaPath: null } : {}) })
+  })
   ipcMain.handle(IPC.gameRepair, (_e, mode: unknown) => repair(mode === 'full' ? 'full' : 'quick'))
   ipcMain.handle(IPC.gameJava, async () => {
     const path = await installedJavaPath()
@@ -172,6 +204,7 @@ if (!app.requestSingleInstanceLock()) {
   })
 
   app.whenReady().then(async () => {
+    installFileLogger()
     app.setAppUserModelId('club.hemispheresurvival.launcher')
     await loadAccounts()
     onAccountsChanged(() => win?.webContents.send(IPC.authChanged, getAccountsState()))

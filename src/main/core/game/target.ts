@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { app } from 'electron'
+import { getSettings } from '../settings/settings'
 
 /** What to install. Comes from the signed client manifest (content/clients/<version>/manifest.json). */
 export interface GameTarget {
@@ -7,9 +8,12 @@ export interface GameTarget {
   fabricLoader: string
 }
 
-/** Folder layout under %APPDATA%/Hemisphere Launcher (location becomes configurable in Phase 13). */
+/** Default game folder (inside the launcher's data folder). */
+export const defaultGameDir = () => app.getPath('userData')
+
+/** Folder layout: the default folder, or the one chosen in Settings > Installation. */
 export function gamePaths() {
-  const root = app.getPath('userData')
+  const root = getSettings().gameDir ?? defaultGameDir()
   return {
     root,
     /** Shared Minecraft files: versions/, libraries/, assets/ */

@@ -13,6 +13,8 @@ import { ensureGameInstalled, instanceLogPath, type GameRepairInfo } from './ins
 import { gamePaths } from './target'
 import { getContent, getPreviousManifest } from '../remote/content'
 import { getSettings } from '../settings/settings'
+import { parseJvmArgs } from '@shared/settings'
+import { inspectJava } from './java'
 import { endSession, startSession } from '../playtime/playtimeStore'
 import { cleanStore, syncClient } from '../sync/sync'
 import { GameError, toGameError } from './util'
@@ -50,7 +52,7 @@ function progressReporter() {
     }
 }
 
-/** Default memory from the PC's RAM (becomes a setting in Phase 13). */
+/** Recommended memory for this PC (used when the player hasn't chosen one). */
 export function recommendedMemoryMb(): number {
   const gb = totalmem() / 1024 ** 3
   return gb <= 6 ? 2048 : gb <= 8 ? 3072 : gb <= 16 ? 4096 : 6144
@@ -94,14 +96,22 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     const autoJoin = getSettings().autoJoin && opts.target === 'latest'
 
     const paths = gamePaths()
-    const memory = recommendedMemoryMb()
+    const settings = getSettings()
+    const memory = settings.memoryMb ?? recommendedMemoryMb()
+    const java = await chooseJava(javaPath)
+    const resolution =
+      settings.resolution === 'fullscreen'
+        ? { fullscreen: true }
+        : settings.resolution !== 'auto'
+          ? { width: Number(settings.resolution.split('x')[0]), height: Number(settings.resolution.split('x')[1]) }
+          : undefined
     // Pass fully resolved paths: if Windows redirects the folder (app containers, sync or security tools), Java sees
     // the real location and Fabric would otherwise treat its own loader as two different files and crash.
     const real = (p: string) => realpathSync.native(p)
     const proc = await launch({
       gamePath: real(paths.instance),
       resourcePath: real(paths.minecraft),
-      javaPath: real(javaPath),
+      javaPath: real(java),
       version: versionId,
       gameProfile: { name: creds.name, id: creds.uuid },
       accessToken: creds.accessToken,
@@ -110,6 +120,8 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
       launcherBrand: `Hemisphere Launcher ${app.getVersion()}`,
       minMemory: Math.min(1024, memory),
       maxMemory: memory,
+      ...(resolution ? { resolution } : {}),
+      extraJVMArgs: parseJvmArgs(settings.jvmArgs).args,
       // The game is fully independent of the launcher: its own process group, and no pipes. Minecraft writes its
       // own logs; if the launcher's end of a pipe closed (launcher closed while playing), the game would freeze.
       extraExecOption: { detached: true, windowsHide: true, stdio: 'ignore' },
@@ -168,6 +180,16 @@ export async function repair(mode: RepairMode): Promise<RepairReport | { error: 
     set({ phase: 'idle', activity: null, progress: null, error })
     return { error }
   }
+}
+
+/** The player's own Java if set and good enough for this Minecraft version, otherwise Hemisphere's. */
+async function chooseJava(managed: string): Promise<string> {
+  const custom = getSettings().javaPath
+  if (!custom) return managed
+  const [mine, required] = await Promise.all([inspectJava(custom, false), inspectJava(managed, true)])
+  if (mine && required && mine.majorVersion >= required.majorVersion) return custom
+  console.warn(`[game] custom Java ${custom} unusable (${mine ? 'Java ' + mine.majorVersion : 'not found'}), using Hemisphere's Java`)
+  return managed
 }
 
 function watch(proc: ChildProcess, accountId: string): void {

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Coffee, FolderOpen, Gamepad2, Plus, Rocket, User, Wrench, type LucideIcon } from 'lucide-react'
+import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Gamepad2, Plus, RotateCcw, Rocket, TriangleAlert, User, Wrench, type LucideIcon } from 'lucide-react'
 import type { JavaRuntimeInfo } from '@shared/game'
+import { RESOLUTIONS, parseJvmArgs, type Settings, type SystemInfo } from '@shared/settings'
 import { LANGUAGES, systemLanguage } from '../i18n'
 import { headUrl, useAccounts } from '../accounts'
 import Toggle from '../components/Toggle'
-import type { Settings } from '@shared/settings'
 
 export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'advanced'
 
@@ -16,6 +16,10 @@ const SECTIONS: { id: Section; icon: LucideIcon }[] = [
   { id: 'installation', icon: FolderOpen },
   { id: 'advanced', icon: Wrench },
 ]
+
+const selectClass = 'rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-white'
+const buttonClass = 'flex items-center gap-2 rounded-lg bg-gray-700/85 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:opacity-50'
+const gb = (mb: number) => `${(mb / 1024).toFixed(mb % 1024 ? 1 : 0)} GB`
 
 export default function Settings({ initialSection, onAddAccount, onRepair }: { initialSection: Section; onAddAccount(): void; onRepair(): void }) {
   const { t } = useTranslation()
@@ -29,9 +33,7 @@ export default function Settings({ initialSection, onAddAccount, onRepair }: { i
             key={id}
             onClick={() => setSection(id)}
             className={`flex items-center gap-2.5 rounded-lg px-3 py-[9px] text-left text-sm font-medium transition-colors duration-150 ${
-              section === id
-                ? 'bg-gray-700 text-white shadow-[inset_3px_0_0_var(--color-green-500)]'
-                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              section === id ? 'bg-gray-700 text-white shadow-[inset_3px_0_0_var(--color-green-500)]' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
           >
             <Icon size={17} />
@@ -42,45 +44,90 @@ export default function Settings({ initialSection, onAddAccount, onRepair }: { i
 
       <section key={section} className="animate-fade overflow-auto px-8 py-6">
         <h2 className="text-[26px] font-bold text-white">{t(`settings.sections.${section}`)}</h2>
-        {section === 'launcher' ? (
-          <LauncherSettings />
-        ) : section === 'game' ? (
-          <GameSettings />
-        ) : section === 'account' ? (
-          <AccountSettings onAddAccount={onAddAccount} />
-        ) : section === 'installation' ? (
-          <Row title={t('repair.title')} hint={t('repair.settingsHint')}>
-            <button onClick={onRepair} className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-green-500">
-              <Wrench size={16} /> {t('repair.short')}
-            </button>
-          </Row>
-        ) : section === 'advanced' ? (
-          <JavaSettings />
-        ) : (
-          <p className="mt-4 text-gray-400">{t('settings.sectionPlaceholder')}</p>
-        )}
+        {section === 'game' && <GameSettings />}
+        {section === 'launcher' && <LauncherSettings />}
+        {section === 'account' && <AccountSettings onAddAccount={onAddAccount} />}
+        {section === 'installation' && <InstallationSettings onRepair={onRepair} />}
+        {section === 'advanced' && <AdvancedSettings />}
       </section>
     </div>
   )
 }
 
-function useSettings(): [Settings | null, (patch: Partial<Settings>) => void] {
+function useSettings(): [Settings | null, (patch: Partial<Settings>) => Promise<string | null>] {
   const [settings, setSettings] = useState<Settings | null>(null)
   useEffect(() => {
     window.hemisphere.settings.get().then(setSettings)
     return window.hemisphere.settings.onChange(setSettings)
   }, [])
-  return [settings, (patch) => void window.hemisphere.settings.set(patch).then(setSettings)]
+  const update = async (patch: Partial<Settings>) => {
+    try {
+      setSettings(await window.hemisphere.settings.set(patch))
+      return null
+    } catch (err) {
+      return String(err)
+    }
+  }
+  return [settings, update]
 }
 
-const selectClass = 'rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-white'
+function useSystemInfo(): [SystemInfo | null, () => void] {
+  const [info, setInfo] = useState<SystemInfo | null>(null)
+  const load = () => void window.hemisphere.system.info().then(setInfo)
+  useEffect(load, [])
+  return [info, load]
+}
 
+// ---------------------------------------------------------------- Game
 function GameSettings() {
   const { t } = useTranslation()
   const [settings, update] = useSettings()
-  if (!settings) return null
+  const [info] = useSystemInfo()
+  const [draft, setDraft] = useState<number | null>(null)
+  if (!settings || !info) return null
+
+  const auto = settings.memoryMb === null
+  const value = draft ?? settings.memoryMb ?? info.recommendedMemoryMb
+  const tooHigh = value > info.totalMemoryMb * 0.75
+
   return (
     <div className="mt-2">
+      <Row title={t('settings.memory')} hint={t('settings.memoryHint', { recommended: gb(info.recommendedMemoryMb), total: gb(info.totalMemoryMb) })}>
+        <div className="flex w-[340px] flex-col items-end gap-1.5">
+          <div className="flex w-full items-center gap-3">
+            <input
+              type="range"
+              min={2048}
+              max={info.maxMemoryMb}
+              step={512}
+              value={value}
+              onChange={(e) => setDraft(Number(e.target.value))}
+              onPointerUp={() => draft !== null && update({ memoryMb: draft === info.recommendedMemoryMb ? null : draft }).then(() => setDraft(null))}
+              onKeyUp={() => draft !== null && update({ memoryMb: draft }).then(() => setDraft(null))}
+              className="w-full accent-green-500"
+              aria-label={t('settings.memory')}
+            />
+            <output className="w-16 text-right font-bold text-white tabular-nums">{gb(value)}</output>
+          </div>
+          {auto ? (
+            <span className="text-xs text-green-400">{t('settings.memoryAuto')}</span>
+          ) : (
+            <button onClick={() => update({ memoryMb: null })} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
+              <RotateCcw size={12} /> {t('settings.memoryUseRecommended')}
+            </button>
+          )}
+          {tooHigh && <span className="text-xs text-amber-400">{t('settings.memoryTooHigh')}</span>}
+        </div>
+      </Row>
+      <Row title={t('settings.resolution')} hint={t('settings.resolutionHint')}>
+        <select value={settings.resolution} onChange={(e) => update({ resolution: e.target.value as Settings['resolution'] })} className={selectClass}>
+          {RESOLUTIONS.map((r) => (
+            <option key={r} value={r}>
+              {r === 'auto' ? t('settings.resolutionAuto') : r === 'fullscreen' ? t('settings.resolutionFullscreen') : r.replace('x', ' × ')}
+            </option>
+          ))}
+        </select>
+      </Row>
       <Row title={t('settings.autoJoin')} hint={t('settings.autoJoinHint')}>
         <Toggle on={settings.autoJoin} onChange={(autoJoin) => update({ autoJoin })} label={t('settings.autoJoin')} />
       </Row>
@@ -88,17 +135,19 @@ function GameSettings() {
   )
 }
 
+// ---------------------------------------------------------------- Launcher
 function LauncherSettings() {
   const { t, i18n } = useTranslation()
   const [settings, update] = useSettings()
+  const [info] = useSystemInfo()
   const [version, setVersion] = useState('')
   useEffect(() => {
-    window.hemisphere.appInfo().then((info) => setVersion(info.version))
+    window.hemisphere.appInfo().then((a) => setVersion(a.version))
   }, [])
-  if (!settings) return null
+  if (!settings || !info) return null
 
   const changeLanguage = (language: string) => {
-    update({ language })
+    void update({ language })
     i18n.changeLanguage(language === 'auto' ? systemLanguage() : language)
   }
 
@@ -121,6 +170,9 @@ function LauncherSettings() {
           ))}
         </select>
       </Row>
+      <Row title={t('settings.startWithWindows')} hint={info.packaged ? t('settings.startWithWindowsHint') : t('settings.startWithWindowsDev')}>
+        <Toggle on={settings.startWithWindows} onChange={(startWithWindows) => update({ startWithWindows })} label={t('settings.startWithWindows')} />
+      </Row>
       <Row title={t('settings.version')} hint={version}>
         <span />
       </Row>
@@ -128,6 +180,7 @@ function LauncherSettings() {
   )
 }
 
+// ---------------------------------------------------------------- Account
 function AccountSettings({ onAddAccount }: { onAddAccount(): void }) {
   const { t } = useTranslation()
   const { state } = useAccounts()
@@ -151,7 +204,7 @@ function AccountSettings({ onAddAccount }: { onAddAccount(): void }) {
                 <span className="text-[12.5px] text-gray-400">{a.kind === 'offline' ? t('auth.dev.badge') : t('auth.microsoftAccount')}</span>
               </div>
               {!isActive && (
-                <button onClick={() => window.hemisphere.auth.switchTo(a.id)} className="rounded-lg bg-gray-700/85 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600">
+                <button onClick={() => window.hemisphere.auth.switchTo(a.id)} className={buttonClass}>
                   {t('auth.switch')}
                 </button>
               )}
@@ -162,23 +215,152 @@ function AccountSettings({ onAddAccount }: { onAddAccount(): void }) {
           )
         })}
       </div>
-      <button onClick={onAddAccount} className="mt-4 flex items-center gap-2 rounded-lg bg-gray-700/85 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600">
+      <button onClick={onAddAccount} className={`mt-4 ${buttonClass}`}>
         <Plus size={16} /> {t('auth.addAccount')}
       </button>
     </div>
   )
 }
 
-function JavaSettings() {
+// ---------------------------------------------------------------- Installation
+function InstallationSettings({ onRepair }: { onRepair(): void }) {
   const { t } = useTranslation()
+  const [info, reload] = useSystemInfo()
+  const [moving, setMoving] = useState(false)
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  if (!info) return null
+
+  const isDefault = info.gameDir.toLowerCase() === info.defaultGameDir.toLowerCase()
+  const move = async (target: 'choose' | 'default') => {
+    setMessage(null)
+    setMoving(true)
+    const res = await window.hemisphere.system.moveGameDir(target)
+    setMoving(false)
+    if (res.cancelled) return
+    setMessage(res.ok ? { ok: true, text: t('settings.moved') } : { ok: false, text: t(`settings.moveErrors.${res.reason ?? 'failed'}`) })
+    reload()
+  }
+
+  return (
+    <div className="mt-2">
+      <Row title={t('settings.gameDir')} hint={info.gameDir}>
+        <div className="flex gap-2">
+          <button onClick={() => window.hemisphere.system.openFolder('game')} className={buttonClass}>
+            <FolderOpen size={16} /> {t('settings.open')}
+          </button>
+          <button onClick={() => move('choose')} disabled={moving} className={buttonClass}>
+            <FolderInput size={16} /> {moving ? t('settings.moving') : t('settings.change')}
+          </button>
+          {!isDefault && (
+            <button onClick={() => move('default')} disabled={moving} className={buttonClass}>
+              <RotateCcw size={16} /> {t('settings.resetDefault')}
+            </button>
+          )}
+        </div>
+      </Row>
+      {message && <Notice ok={message.ok}>{message.text}</Notice>}
+      <Row title={t('settings.folders')} hint={t('settings.foldersHint')}>
+        <div className="flex gap-2">
+          <button onClick={() => window.hemisphere.system.openFolder('mods')} className={buttonClass}>
+            {t('settings.folderMods')}
+          </button>
+          <button onClick={() => window.hemisphere.system.openFolder('screenshots')} className={buttonClass}>
+            {t('settings.folderScreenshots')}
+          </button>
+        </div>
+      </Row>
+      <Row title={t('repair.title')} hint={t('repair.settingsHint')}>
+        <button onClick={onRepair} className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-green-500">
+          <Wrench size={16} /> {t('repair.short')}
+        </button>
+      </Row>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------- Advanced
+function AdvancedSettings() {
+  const { t } = useTranslation()
+  const [settings, update] = useSettings()
   const [java, setJava] = useState<JavaRuntimeInfo[] | null>(null)
+  const [javaMsg, setJavaMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [args, setArgs] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   useEffect(() => {
     window.hemisphere.game.javaInfo().then(setJava)
   }, [])
+  if (!settings) return null
+
+  const argsText = args ?? settings.jvmArgs
+  const invalidArgs = parseJvmArgs(argsText).invalid
+
+  const pickJava = async () => {
+    setJavaMsg(null)
+    const res = await window.hemisphere.system.pickJava()
+    if (res.cancelled) return
+    setJavaMsg(res.ok ? { ok: true, text: t('settings.javaChosen', { version: res.version }) } : { ok: false, text: t('settings.javaInvalid') })
+  }
 
   return (
-    <div className="mt-1">
-      <b className="mt-3 block font-semibold text-white">{t('settings.java.title')}</b>
+    <div className="mt-2">
+      <Row title="Java" hint={settings.javaPath ? t('settings.javaCustom', { path: settings.javaPath }) : t('settings.javaManaged')}>
+        <div className="flex gap-2">
+          <button onClick={pickJava} className={buttonClass}>
+            <Coffee size={16} /> {t('settings.javaChoose')}
+          </button>
+          {settings.javaPath && (
+            <button onClick={() => update({ javaPath: null })} className={buttonClass}>
+              <RotateCcw size={16} /> {t('settings.javaUseManaged')}
+            </button>
+          )}
+        </div>
+      </Row>
+      {javaMsg && <Notice ok={javaMsg.ok}>{javaMsg.text}</Notice>}
+
+      <Row title={t('settings.jvmArgs')} hint={t('settings.jvmArgsHint')}>
+        <div className="flex w-[340px] flex-col gap-1.5">
+          <div className="flex gap-2">
+            <input
+              value={argsText}
+              onChange={(e) => setArgs(e.target.value)}
+              placeholder="-XX:+UseZGC"
+              spellCheck={false}
+              className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 font-mono text-sm text-white"
+            />
+            <button disabled={args === null || invalidArgs.length > 0} onClick={() => update({ jvmArgs: argsText.trim() }).then(() => setArgs(null))} className={buttonClass}>
+              {t('settings.save')}
+            </button>
+          </div>
+          {invalidArgs.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-red-400">
+              <TriangleAlert size={12} /> {t('settings.jvmArgsInvalid', { args: invalidArgs.join(' ') })}
+            </span>
+          )}
+        </div>
+      </Row>
+
+      <Row title={t('settings.logs')} hint={t('settings.logsHint')}>
+        <div className="flex gap-2">
+          <button onClick={() => window.hemisphere.system.openFolder('gameLogs')} className={buttonClass}>
+            {t('settings.gameLogs')}
+          </button>
+          <button onClick={() => window.hemisphere.system.openFolder('launcherLogs')} className={buttonClass}>
+            {t('settings.launcherLogs')}
+          </button>
+          <button
+            onClick={async () => {
+              await window.hemisphere.system.copyDiagnostics()
+              setCopied(true)
+              setTimeout(() => setCopied(false), 2500)
+            }}
+            className={buttonClass}
+          >
+            {copied ? <Check size={16} className="text-green-400" /> : <ClipboardCopy size={16} />} {copied ? t('settings.copied') : t('settings.copyDiagnostics')}
+          </button>
+        </div>
+      </Row>
+
+      <b className="mt-5 block font-semibold text-white">{t('settings.java.title')}</b>
       <p className="text-[12.5px] text-gray-400">{t('settings.java.hint')}</p>
       <div className="mt-3 overflow-hidden rounded-lg bg-gray-900/55">
         {java === null ? (
@@ -192,7 +374,9 @@ function JavaSettings() {
               <div className="min-w-0 flex-1">
                 <b className="font-semibold text-white">Java {j.majorVersion}</b>
                 <span className="ml-2 text-xs text-gray-400">{j.version}</span>
-                <p className="truncate text-xs text-gray-400" title={j.path}>{j.path}</p>
+                <p className="truncate text-xs text-gray-400" title={j.path}>
+                  {j.path}
+                </p>
               </div>
               <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${j.managed ? 'bg-green-600/20 text-green-400' : 'bg-gray-700 text-gray-300'}`}>
                 {j.managed ? t('settings.java.managed') : t('settings.java.system')}
@@ -205,14 +389,23 @@ function JavaSettings() {
   )
 }
 
+// ---------------------------------------------------------------- helpers
 function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-5 border-b border-white/5 py-4">
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <b className="block font-semibold text-white">{title}</b>
-        {hint && <span className="text-[12.5px] text-gray-400">{hint}</span>}
+        {hint && <span className="block truncate text-[12.5px] text-gray-400" title={hint}>{hint}</span>}
       </div>
       {children}
     </div>
+  )
+}
+
+function Notice({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  return (
+    <p className={`animate-fade mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] ${ok ? 'bg-green-900/40 text-green-300' : 'bg-red-900/35 text-red-300'}`}>
+      {ok ? <Check size={14} /> : <TriangleAlert size={14} />} {children}
+    </p>
   )
 }
