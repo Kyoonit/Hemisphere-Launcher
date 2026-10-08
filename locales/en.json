@@ -357,7 +357,8 @@
     "notInstalledYet": "Not installed yet (next Play)",
     "disabledFilter": "Disabled",
     "undo": "Undo",
-    "undone": "Update undone: your mods are back as they were."
+    "undone": "Update undone: your mods are back as they were.",
+    "byName": "By name"
   },
   "repair": {
     "title": "Repair installation",

@@ -7,7 +7,8 @@ import Toggle from '../components/Toggle'
 import type { ClientSummary } from '@shared/client'
 import { localize } from '@shared/manifest'
 
-type Filter = 'all' | 'yours' | 'updates' | 'recent' | 'disabled'
+type Filter = 'all' | 'yours' | 'updates' | 'disabled'
+type Sort = 'name' | 'recent'
 
 /** Same palette idea as the wireframe: a stable colour per mod for its letter tile. */
 const TILE = ['#2563eb', '#0d9488', '#b45309', '#7c3aed', '#16a34a', '#db2777', '#0891b2', '#ca8a04', '#dc2626', '#4f46e5']
@@ -33,7 +34,9 @@ export function useClient(refreshKey: unknown = null): ClientSummary | null | un
 export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): void; onBrowse(): void; onHistory(): void }) {
   const { t, i18n } = useTranslation()
   const client = useClient()
+  // which mods (All or one filter) and in which order: they combine, e.g. "Added by you" by "Last added"
   const [filter, setFilter] = useState<Filter>('all')
+  const [sort, setSort] = useState<Sort>('name')
   const [query, setQuery] = useState('')
   // "undo": the restore point taken just before "Update all"
   const [notice, setNotice] = useState<{ text: string; undo?: string } | null>(null)
@@ -52,10 +55,10 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
   const items = useMemo(() => {
     const q = query.trim().toLowerCase()
     return (mods ?? [])
-      .filter((m) => (view === 'all' || view === 'recent' || (view === 'yours' ? !m.fromHemisphere : view === 'disabled' ? !m.enabled : !!m.update)) && (!q || m.name.toLowerCase().includes(q) || (m.file ?? '').toLowerCase().includes(q)))
+      .filter((m) => (view === 'all' || (view === 'yours' ? !m.fromHemisphere : view === 'disabled' ? !m.enabled : !!m.update)) && (!q || m.name.toLowerCase().includes(q) || (m.file ?? '').toLowerCase().includes(q)))
       // Last added: newest install first (mods not installed yet go last); otherwise alphabetical
-      .sort((a, b) => (view === 'recent' ? b.addedAt - a.addedAt : 0) || a.name.localeCompare(b.name, i18n.language, { sensitivity: 'base' }))
-  }, [mods, view, query, i18n.language])
+      .sort((a, b) => (sort === 'recent' ? b.addedAt - a.addedAt : 0) || a.name.localeCompare(b.name, i18n.language, { sensitivity: 'base' }))
+  }, [mods, view, sort, query, i18n.language])
   const libraries = client?.mods.filter((m) => m.category === 'library') ?? []
 
   if (client === undefined || mods === undefined)
@@ -81,13 +84,18 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
   // "Updates" only appears when something can be updated (locked mods included: they're shown, never updated)
   const withUpdate = mods.filter((m) => m.update).length
   const disabledCount = mods.filter((m) => !m.enabled).length
+  // after the line: Added by you, Disabled, Updates (the last two only when there's something to show)
   const filters: [Filter, string][] = [
-    ['all', t('mods.groups.all')],
     ['yours', `${t('mods.yours')} (${mods.filter((m) => !m.fromHemisphere).length})`],
-    ...(withUpdate ? [['updates', `${t('mods.updatesFilter')} (${withUpdate})`] as [Filter, string]] : []),
-    ['recent', t('mods.lastAdded')],
     ...(disabledCount ? [['disabled', `${t('mods.disabledFilter')} (${disabledCount})`] as [Filter, string]] : []),
+    ...(withUpdate ? [['updates', `${t('mods.updatesFilter')} (${withUpdate})`] as [Filter, string]] : []),
   ]
+  const sorts: [Sort, string][] = [
+    ['name', t('mods.byName')],
+    ['recent', t('mods.lastAdded')],
+  ]
+  const chip = (active: boolean) =>
+    `rounded-lg px-3 py-1 text-[13px] font-medium transition-colors ${active ? 'bg-green-600 text-white' : 'bg-gray-800/70 text-gray-300 hover:bg-gray-700 hover:text-white'}`
   const toolButton = 'flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-gray-300 transition-colors hover:bg-gray-700 hover:text-white'
 
   return (
@@ -144,13 +152,24 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
           </button>
         </div>
 
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
-          {filters.map(([f, label]) => (
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <button onClick={() => setFilter('all')} aria-pressed={view === 'all'} className={chip(view === 'all')}>
+            {t('mods.groups.all')}
+          </button>
+          {/* the order: a quieter highlight, it combines with All or a filter */}
+          {sorts.map(([s, label]) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`rounded-lg px-3 py-1 text-[13px] font-medium transition-colors ${view === f ? 'bg-green-600 text-white' : 'bg-gray-800/70 text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+              key={s}
+              onClick={() => setSort(s)}
+              aria-pressed={sort === s}
+              className={`rounded-lg px-3 py-1 text-[13px] font-medium transition-colors ${sort === s ? 'bg-green-900/50 text-green-300 ring-1 ring-green-500/70' : 'bg-gray-800/70 text-gray-300 hover:bg-gray-700 hover:text-white'}`}
             >
+              {label}
+            </button>
+          ))}
+          <span aria-hidden="true" className="mx-2.5 h-5 w-px bg-white/20" />
+          {filters.map(([f, label]) => (
+            <button key={f} onClick={() => setFilter(view === f ? 'all' : f)} aria-pressed={view === f} className={chip(view === f)}>
               {label}
             </button>
           ))}
@@ -193,7 +212,7 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
                 key={item.key}
                 item={item}
                 lang={i18n.language}
-                showAdded={view === 'recent'}
+                showAdded={sort === 'recent'}
                 picking={openPicker === (item.projectId ?? item.key)}
                 onTogglePicker={() => setOpenPicker((p) => (p === (item.projectId ?? item.key) ? null : (item.projectId ?? item.key)))}
                 onChanged={() => void reload()}

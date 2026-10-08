@@ -362,7 +362,8 @@
     "notInstalledYet": "Pas encore installé (prochain Jouer)",
     "disabledFilter": "Désactivés",
     "undo": "Annuler",
-    "undone": "Mise à jour annulée : tes mods sont revenus comme avant."
+    "undone": "Mise à jour annulée : tes mods sont revenus comme avant.",
+    "byName": "Par nom"
   },
   "repair": {
     "title": "Réparer l’installation",
