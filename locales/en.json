@@ -249,7 +249,7 @@
     "signInAgain": "Sign in again",
     "dev": {
       "title": "Staff test account",
-      "placeholder": "Offline name",
+      "placeholder": "Player name",
       "use": "Use",
       "badge": "Offline test account (dev only)",
       "hint": "Offline: everything in the launcher and singleplayer work; the Hemisphere server refuses offline accounts."

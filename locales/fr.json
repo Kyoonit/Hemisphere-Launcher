@@ -250,7 +250,7 @@
     "signInAgain": "Se reconnecter",
     "dev": {
       "title": "Compte de test staff",
-      "placeholder": "Pseudo hors ligne",
+      "placeholder": "Pseudo",
       "use": "Utiliser",
       "badge": "Compte test hors ligne (dev uniquement)",
       "hint": "Hors ligne : tout le launcher et le solo fonctionnent ; le serveur Hemisphere refuse les comptes hors ligne."

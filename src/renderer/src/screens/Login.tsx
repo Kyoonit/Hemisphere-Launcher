@@ -14,8 +14,10 @@ const ERROR_ACTION: Partial<Record<AuthErrorCode, LinkKey>> = {
 }
 
 export default function Login({ onBack }: { onBack?: () => void }) {
-  // hidden staff access (see StaffCode): only the keyboard shortcut opens it
+  // hidden staff access (see StaffCode): only the keyboard shortcut opens it, and the test account only shows once the
+  // code was entered here (every time, even on a PC already unlocked or in a development build)
   const [staffOpen, setStaffOpen] = useState(false)
+  const [staffOk, setStaffOk] = useState(false)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.code === 'KeyS') setStaffOpen((o) => !o)
@@ -107,8 +109,15 @@ export default function Login({ onBack }: { onBack?: () => void }) {
             </button>
           </div>
 
-          {staffOpen && !state?.devOfflineAllowed && !waiting && <StaffCode onClose={() => setStaffOpen(false)} />}
-          {state?.devOfflineAllowed && !waiting && <DevOffline onDone={onBack} />}
+          {staffOpen && !staffOk && !waiting && (
+            <StaffCode
+              onClose={(ok) => {
+                setStaffOpen(false)
+                setStaffOk(ok)
+              }}
+            />
+          )}
+          {staffOk && state?.devOfflineAllowed && !waiting && <DevOffline onDone={onBack} />}
         </div>
       </div>
     </div>
@@ -119,7 +128,7 @@ export default function Login({ onBack }: { onBack?: () => void }) {
  * Staff access, hidden on purpose: only Ctrl+Shift+S shows it (never visible when the launcher opens). The staff code (checked in the main
  * process, slowed down after wrong tries) unlocks the offline test account below and the Developer tab, on this PC.
  */
-function StaffCode({ onClose }: { onClose(): void }) {
+function StaffCode({ onClose }: { onClose(ok: boolean): void }) {
   const { t } = useTranslation()
   const [code, setCode] = useState('')
   const [message, setMessage] = useState<string | null>(null)
@@ -129,7 +138,7 @@ function StaffCode({ onClose }: { onClose(): void }) {
       onSubmit={async (e) => {
         e.preventDefault()
         const r = await window.hemisphere.dev.unlock(code)
-        if (r.ok) return onClose()
+        if (r.ok) return onClose(true)
         setCode('')
         setMessage(r.reason === 'wait' ? t('auth.staff.wait', { seconds: r.seconds ?? 30 }) : t('auth.staff.wrong'))
       }}
@@ -139,7 +148,7 @@ function StaffCode({ onClose }: { onClose(): void }) {
         type="password"
         value={code}
         onChange={(e) => setCode(e.target.value)}
-        onKeyDown={(e) => e.key === 'Escape' && onClose()}
+        onKeyDown={(e) => e.key === 'Escape' && onClose(false)}
         placeholder={message ?? t('auth.staff.placeholder')}
         aria-label={t('auth.staff.placeholder')}
         className={`min-w-0 flex-1 rounded-lg border bg-gray-900 px-3 py-1.5 text-sm text-white ${message ? 'border-red-500/60 placeholder:text-red-300' : 'border-gray-700'}`}
