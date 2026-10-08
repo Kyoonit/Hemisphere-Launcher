@@ -5,7 +5,7 @@ import { basename, join } from 'node:path'
 import { homedir } from 'node:os'
 import { z } from 'zod'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource, LauncherKind } from '@shared/importer'
-import type { ClientManifest } from '@shared/manifest'
+import { isSafeRelativePath, type ClientManifest } from '@shared/manifest'
 import { gamePaths } from '../game/target'
 import { blobPath, downloadToStore, sha512OfFile } from '../sync/download'
 
@@ -119,11 +119,23 @@ export function sourceFromFolder(dir: string): ImportSource | null {
 
 // ------------------------------------------------------------------------------------------------- import
 
+/** A plain .jar file name that is safe to create in mods/ (no folders, reserved names or odd characters). */
+export const isSafeModFileName = (f: string) => /\.jar$/i.test(f) && !f.startsWith('.') && !f.includes('/') && isSafeRelativePath(`mods/${f}`)
+
 const VersionSchema = z.object({
   id: z.string(),
   project_id: z.string(),
   name: z.string(),
-  files: z.array(z.object({ url: z.string(), filename: z.string(), primary: z.boolean(), size: z.number(), hashes: z.object({ sha512: z.string() }) })),
+  // Values from the API become file names and store paths: only a plain .jar name and a real sha512 are accepted.
+  files: z.array(
+    z.object({
+      url: z.string(),
+      filename: z.string().refine((n) => isSafeModFileName(n), 'unsafe file name'),
+      primary: z.boolean(),
+      size: z.number().int().positive().max(512 * 1024 * 1024),
+      hashes: z.object({ sha512: z.string().regex(/^[0-9a-f]{128}$/) }),
+    }),
+  ),
 })
 
 /** Project titles ("Litematica") for a list of Modrinth project ids. Falls back to nothing on error. */
@@ -222,7 +234,7 @@ export async function importFrom(source: ImportSource, opts: ImportOptions, mani
           continue
         }
         onProgress({ step: 'mods', ratio: 0.4 + (i / toUpdate.length) * 0.6, detail: title(v) })
-        const dest = join(inst, 'mods', basename(file.filename))
+        const dest = join(inst, 'mods', file.filename)
         if (!existsSync(dest)) {
           const blob = { url: file.url, sha512: file.hashes.sha512, size: file.size }
           await downloadToStore(store, blob, () => {}) // verified by hash, Modrinth CDN only
@@ -240,7 +252,6 @@ export async function importFrom(source: ImportSource, opts: ImportOptions, mani
 
 const modsDir = () => join(gamePaths().instance, 'mods')
 const disabledDir = () => join(gamePaths().instance, 'mods-disabled')
-const safeJar = (f: string) => /^[^\\/:*?"<>|]+\.jar$/i.test(f) && !f.startsWith('.')
 
 /** Mods the player added themselves: in mods/ (enabled) but not placed by Hemisphere, or parked in mods-disabled/. */
 export async function playerMods(owned: string[]): Promise<{ file: string; size: number; enabled: boolean }[]> {
@@ -256,7 +267,7 @@ export async function playerMods(owned: string[]): Promise<{ file: string; size:
 
 /** Moves one player mod between mods/ and mods-disabled/ (never deletes anything). */
 export async function setPlayerModEnabled(file: string, enabled: boolean, owned: string[]): Promise<boolean> {
-  if (!safeJar(file)) return false
+  if (!isSafeModFileName(file)) return false
   if (owned.some((p) => p.toLowerCase() === `mods/${file}`.toLowerCase())) return false // Hemisphere's own file
   const [from, to] = enabled ? [disabledDir(), modsDir()] : [modsDir(), disabledDir()]
   if (!existsSync(join(from, file)) || existsSync(join(to, file))) return false

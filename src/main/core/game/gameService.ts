@@ -56,6 +56,12 @@ function progressReporter() {
 }
 
 /** Recommended memory for this PC (used when the player hasn't chosen one). */
+/** xmcl's launch precheck errors for missing/corrupt version json, client jar or libraries. */
+function isMissingGameFiles(err: unknown): boolean {
+  const code = (err as { error?: unknown } | null)?.error
+  return code === 'MissingLibraries' || code === 'CorruptedVersionJar' || code === 'MissingVersionJson'
+}
+
 /** Hides the last error card (the player closed it). */
 export function dismissGameError(): void {
   if (state.error) set({ error: null })
@@ -100,7 +106,8 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     if (!manifest) throw new GameError('content', 'previous client not available')
 
     // 3-5. Minecraft + Java + Fabric, then Hemisphere mods (only what changed).
-    const { versionId, javaPath } = await ensureGameInstalled({ minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }, report)
+    const target = { minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }
+    let { versionId, javaPath } = await ensureGameInstalled(target, report)
     const synced = await syncClient(manifest, report('mods'))
     console.log(`[game] client ${manifest.clientVersion} in sync: ${synced.downloaded} downloaded, ${synced.placed} placed, ${synced.removed} removed`)
 
@@ -111,7 +118,6 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     const paths = gamePaths()
     const settings = getSettings()
     const memory = settings.memoryMb ?? recommendedMemoryMb()
-    const java = await chooseJava(javaPath)
     const resolution =
       settings.resolution === 'fullscreen'
         ? { fullscreen: true }
@@ -121,25 +127,38 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     // Pass the physical paths: if Windows redirects the folder (app containers, sync or security tools), Java sees
     // the real location and Fabric would otherwise treat its own loader as two different files and crash.
     const real = (p: string) => physicalPath(p, app.getPath('userData'))
-    const proc = await launch({
-      gamePath: real(paths.instance),
-      resourcePath: real(paths.minecraft),
-      javaPath: real(java),
-      version: versionId,
-      gameProfile: { name: creds.name, id: creds.uuid },
-      accessToken: creds.accessToken,
-      userType: creds.userType as 'mojang', // Minecraft accepts "msa"; xmcl's type predates it
-      launcherName: 'hemisphere-launcher',
-      launcherBrand: `Hemisphere Launcher ${app.getVersion()}`,
-      minMemory: Math.min(1024, memory),
-      maxMemory: memory,
-      ...(resolution ? { resolution } : {}),
-      extraJVMArgs: parseJvmArgs(settings.jvmArgs).args,
-      // The game is fully independent of the launcher: its own process group, and no pipes. Minecraft writes its
-      // own logs; if the launcher's end of a pipe closed (launcher closed while playing), the game would freeze.
-      extraExecOption: { detached: true, windowsHide: true, stdio: 'ignore' },
-      ...(autoJoin ? { quickPlayMultiplayer: `${SERVER.host}:${SERVER.port}` } : {}),
-    })
+    const start = async () =>
+      launch({
+        gamePath: real(paths.instance),
+        resourcePath: real(paths.minecraft),
+        javaPath: real(await chooseJava(javaPath)),
+        version: versionId,
+        gameProfile: { name: creds.name, id: creds.uuid },
+        accessToken: creds.accessToken,
+        userType: creds.userType as 'mojang', // Minecraft accepts "msa"; xmcl's type predates it
+        launcherName: 'hemisphere-launcher',
+        launcherBrand: `Hemisphere Launcher ${app.getVersion()}`,
+        minMemory: Math.min(1024, memory),
+        maxMemory: memory,
+        ...(resolution ? { resolution } : {}),
+        extraJVMArgs: parseJvmArgs(settings.jvmArgs).args,
+        // The game is fully independent of the launcher: its own process group, and no pipes. Minecraft writes its
+        // own logs; if the launcher's end of a pipe closed (launcher closed while playing), the game would freeze.
+        extraExecOption: { detached: true, windowsHide: true, stdio: 'ignore' },
+        ...(autoJoin ? { quickPlayMultiplayer: `${SERVER.host}:${SERVER.port}` } : {}),
+      })
+    let proc: Awaited<ReturnType<typeof launch>>
+    try {
+      proc = await start()
+    } catch (err) {
+      // Minecraft's own pre-launch check found missing or damaged game files (deleted by the player, an antivirus,
+      // a disk error…): check everything, download what is missing and try once more, like Repair would.
+      if (!isMissingGameFiles(err)) throw err
+      console.warn(`[game] ${(err as Error).message} — checking the installation and trying again`)
+      ;({ versionId, javaPath } = await ensureGameInstalled(target, report, true))
+      report('launching')(null)
+      proc = await start()
+    }
     proc.unref()
     if (proc.pid) await startSession(accountId, proc.pid).catch(() => {})
     watch(proc, accountId)

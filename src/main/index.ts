@@ -1,5 +1,5 @@
 
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import { join } from 'node:path'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
@@ -34,6 +34,7 @@ import { detectSources, importFrom, playerMods, setPlayerModEnabled, sourceFromF
 import type { ImportOptions, ImportSource } from '@shared/importer'
 import type { ClientSummary } from '@shared/client'
 import { loadWindowState, trackWindowState } from './core/system/windowState'
+import { handle, hardenApp, on, trustWindow } from './security'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
@@ -65,6 +66,7 @@ function createWindow(): void {
     },
   })
 
+  trustWindow(win)
   trackWindowState(win, saved)
   win.once('ready-to-show', () => {
     if (saved?.maximized) win?.maximize()
@@ -86,21 +88,21 @@ function createWindow(): void {
 }
 
 function registerIpc(): void {
-  ipcMain.on(IPC.windowMinimize, () => win?.minimize())
-  ipcMain.on(IPC.windowToggleMaximize, () => (win?.isMaximized() ? win.unmaximize() : win?.maximize()))
-  ipcMain.on(IPC.windowClose, () => win?.close())
+  on(IPC.windowMinimize, () => win?.minimize())
+  on(IPC.windowToggleMaximize, () => (win?.isMaximized() ? win.unmaximize() : win?.maximize()))
+  on(IPC.windowClose, () => win?.close())
 
-  ipcMain.on(IPC.openLink, (_e, key: unknown) => {
+  on(IPC.openLink, (_e, key: unknown) => {
     if (typeof key === 'string' && Object.hasOwn(LINKS, key)) {
       shell.openExternal(LINKS[key as LinkKey])
     }
   })
 
-  ipcMain.handle(IPC.serverStatusGet, async () => lastStatus ?? (lastStatus = await getServerStatus()))
-  ipcMain.handle(IPC.playtimeGet, () => getPlaytime(getAccountsState().activeId ?? 'none'))
+  handle(IPC.serverStatusGet, async () => lastStatus ?? (lastStatus = await getServerStatus()))
+  handle(IPC.playtimeGet, () => getPlaytime(getAccountsState().activeId ?? 'none'))
 
-  ipcMain.handle(IPC.authState, () => getAccountsState())
-  ipcMain.handle(IPC.authSignIn, async (_e, language: unknown) => {
+  handle(IPC.authState, () => getAccountsState())
+  handle(IPC.authSignIn, async (_e, language: unknown) => {
     const result = await signIn(typeof language === 'string' ? language : 'en')
     if (win) {
       if (win.isMinimized()) win.restore()
@@ -108,27 +110,27 @@ function registerIpc(): void {
     }
     return result
   })
-  ipcMain.on(IPC.authCancel, () => cancelSignIn())
-  ipcMain.handle(IPC.authSwitch, (_e, id: unknown) => (isId(id) ? switchAccount(id) : undefined))
-  ipcMain.handle(IPC.authSignOut, (_e, id: unknown) => (isId(id) ? signOut(id) : undefined))
-  ipcMain.handle(IPC.authDevOffline, (_e, name: unknown) =>
+  on(IPC.authCancel, () => cancelSignIn())
+  handle(IPC.authSwitch, (_e, id: unknown) => (isId(id) ? switchAccount(id) : undefined))
+  handle(IPC.authSignOut, (_e, id: unknown) => (isId(id) ? signOut(id) : undefined))
+  handle(IPC.authDevOffline, (_e, name: unknown) =>
     addDevOfflineAccount(typeof name === 'string' ? name : ''),
   )
 
-  ipcMain.handle(IPC.gameState, () => getGameState())
-  ipcMain.on(IPC.gameDismissError, () => dismissGameError())
-  ipcMain.on(IPC.gamePlay, (_e, opts: unknown) => {
+  handle(IPC.gameState, () => getGameState())
+  on(IPC.gameDismissError, () => dismissGameError())
+  on(IPC.gamePlay, (_e, opts: unknown) => {
     const active = getAccountsState().activeId
     const o = (opts ?? {}) as { target?: unknown; withoutPlayerMods?: unknown }
     if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest', withoutPlayerMods: o.withoutPlayerMods === true })
   })
-  ipcMain.handle(IPC.systemInfo, () => systemInfo())
-  ipcMain.on(IPC.systemOpenFolder, (_e, kind: unknown) => {
+  handle(IPC.systemInfo, () => systemInfo())
+  on(IPC.systemOpenFolder, (_e, kind: unknown) => {
     const kinds: FolderKind[] = ['game', 'mods', 'screenshots', 'gameLogs', 'crashReports', 'launcherLogs']
     if (kinds.includes(kind as FolderKind)) void openFolder(kind as FolderKind)
   })
-  ipcMain.handle(IPC.systemDiagnostics, () => copyDiagnostics())
-  ipcMain.handle(IPC.systemMoveGameDir, async (_e, target: unknown) => {
+  handle(IPC.systemDiagnostics, () => copyDiagnostics())
+  handle(IPC.systemMoveGameDir, async (_e, target: unknown) => {
     let dir = systemInfo().defaultGameDir
     if (target === 'choose') {
       const pick = await dialog.showOpenDialog(win!, { properties: ['openDirectory', 'createDirectory'], title: 'Hemisphere game folder' })
@@ -144,7 +146,7 @@ function registerIpc(): void {
       }
     })
   })
-  ipcMain.handle(IPC.systemPickJava, async () => {
+  handle(IPC.systemPickJava, async () => {
     const pick = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Java', extensions: ['exe'] }], title: 'javaw.exe' })
     if (pick.canceled || !pick.filePaths[0]) return { ok: false, cancelled: true }
     const path = pick.filePaths[0]
@@ -154,12 +156,12 @@ function registerIpc(): void {
     await updateSettings({ javaPath: path })
     return { ok: true, version: info.version, majorVersion: info.majorVersion }
   })
-  ipcMain.handle(IPC.importDetect, () => {
+  handle(IPC.importDetect, () => {
     const found = detectSources()
     for (const s of found) importSources.set(s.id, s)
     return found
   })
-  ipcMain.handle(IPC.importChoose, async () => {
+  handle(IPC.importChoose, async () => {
     const pick = await dialog.showOpenDialog(win!, { properties: ['openDirectory'], title: 'Minecraft folder' })
     if (pick.canceled || !pick.filePaths[0]) return null
     const src = sourceFromFolder(pick.filePaths[0])
@@ -167,7 +169,7 @@ function registerIpc(): void {
     importSources.set(src.id, src)
     return src
   })
-  ipcMain.handle(IPC.importRun, async (_e, id: unknown, opts: unknown) => {
+  handle(IPC.importRun, async (_e, id: unknown, opts: unknown) => {
     const source = typeof id === 'string' ? importSources.get(id) : undefined
     if (!source) return { ok: false, reason: 'unknownSource' }
     const g = getGameState()
@@ -183,31 +185,31 @@ function registerIpc(): void {
       return { ok: false, reason: 'failed', detail: String(err) }
     }
   })
-  ipcMain.handle(IPC.modsPlayer, async () => playerMods(Object.keys((await readInstanceState()).owned)))
-  ipcMain.handle(IPC.modsPlayerSet, async (_e, file: unknown, enabled: unknown) => {
+  handle(IPC.modsPlayer, async () => playerMods(Object.keys((await readInstanceState()).owned)))
+  handle(IPC.modsPlayerSet, async (_e, file: unknown, enabled: unknown) => {
     const g = getGameState()
     if (typeof file !== 'string' || typeof enabled !== 'boolean' || g.runningAccounts.length) return false
     return setPlayerModEnabled(file, enabled, Object.keys((await readInstanceState()).owned))
   })
-  ipcMain.handle(IPC.feedGet, () => getFeed())
-  ipcMain.on(IPC.feedOpenLink, (_e, id: unknown) => {
+  handle(IPC.feedGet, () => getFeed())
+  on(IPC.feedOpenLink, (_e, id: unknown) => {
     const url = getFeed().news.find((n) => n.id === id)?.link?.url
     if (url?.startsWith('https://')) void shell.openExternal(url)
   })
-  ipcMain.handle(IPC.settingsGet, () => getSettings())
-  ipcMain.handle(IPC.settingsSet, async (_e, patch: unknown) => {
+  handle(IPC.settingsGet, () => getSettings())
+  handle(IPC.settingsSet, async (_e, patch: unknown) => {
     // gameDir is only changed through the move (files must follow); javaPath only through the picker (validated).
     const { gameDir: _g, javaPath, ...rest } = (typeof patch === 'object' && patch ? patch : {}) as Record<string, unknown>
     return updateSettings({ ...rest, ...(javaPath === null ? { javaPath: null } : {}) })
   })
-  ipcMain.handle(IPC.gameRepair, (_e, mode: unknown) => repair(mode === 'full' ? 'full' : 'quick'))
-  ipcMain.handle(IPC.gameJava, async () => {
+  handle(IPC.gameRepair, (_e, mode: unknown) => repair(mode === 'full' ? 'full' : 'quick'))
+  handle(IPC.gameJava, async () => {
     const path = await installedJavaPath()
     const managed = path ? await inspectJava(path, true) : null
     return [...(managed ? [managed] : []), ...(await detectSystemJava())]
   })
 
-  ipcMain.handle(IPC.clientGet, async (): Promise<ClientSummary | null> => {
+  handle(IPC.clientGet, async (): Promise<ClientSummary | null> => {
     try {
       const { manifest, index, source } = await getContent()
       const installed = await readInstanceState()
@@ -237,13 +239,13 @@ function registerIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.modsEnabled, async () => getEnabledMods((await getContent()).manifest).catch(() => []))
-  ipcMain.handle(IPC.modsSet, async (_e, id: unknown, on: unknown) => {
+  handle(IPC.modsEnabled, async () => getEnabledMods((await getContent()).manifest).catch(() => []))
+  handle(IPC.modsSet, async (_e, id: unknown, on: unknown) => {
     if (typeof id !== 'string' || typeof on !== 'boolean') throw new Error('invalid arguments')
     return setModEnabled((await getContent()).manifest, id, on)
   })
 
-  ipcMain.handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))
+  handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))
 }
 
 // One launcher at a time: a second start focuses the existing window.
@@ -259,6 +261,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(async () => {
     installFileLogger()
+    hardenApp()
     app.setAppUserModelId('club.hemispheresurvival.launcher')
     await loadAccounts()
     onAccountsChanged(() => win?.webContents.send(IPC.authChanged, getAccountsState()))
