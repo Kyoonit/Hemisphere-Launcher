@@ -256,7 +256,13 @@ function Performance() {
             ))}
         </tbody>
       </table>
-      <p className="pt-1 text-[12.5px] font-semibold text-gray-200">{t('dev.perfNetwork', { minutes })}</p>
+      <p className="pt-1 text-[12.5px] font-semibold text-gray-200">
+        {t('dev.perfNetwork', { minutes })}
+        {perf.metered && <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-[11px] text-amber-200">{t('dev.perfMetered')}</span>}
+      </p>
+      <p className="text-[12.5px] text-green-300">
+        {t('dev.perfSaved', { notModified: perf.savings.notModified, notModifiedSize: size(perf.savings.notModifiedBytes), reused: perf.savings.reusedFiles, reusedSize: size(perf.savings.reusedBytes) })}
+      </p>
       {perf.network.length === 0 ? (
         <p className="text-[12.5px] text-gray-500">{t('dev.perfNoNetwork')}</p>
       ) : (

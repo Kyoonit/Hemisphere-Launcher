@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { isAllowedDownloadUrl } from '@shared/manifest'
+import { throttle } from '../system/network'
 
 /**
  * Content-addressed store: every file is kept once, named by its SHA-512, e.g. store/ab/abcdef….
@@ -82,8 +83,9 @@ export async function downloadToStore(
         }
         if (!res.body) throw new DownloadError('empty response', true)
         const body = Readable.fromWeb(res.body as never)
-        body.on('data', (chunk: Buffer) => onBytes(chunk.length))
-        await pipeline(body, createWriteStream(part, { flags: resumed ? 'a' : 'w' }))
+        const limited = throttle() // Settings > Launcher > download speed limit
+        limited.on('data', (chunk: Buffer) => onBytes(chunk.length))
+        await pipeline(body, limited, createWriteStream(part, { flags: resumed ? 'a' : 'w' }))
       }
 
       const size = (await stat(part)).size

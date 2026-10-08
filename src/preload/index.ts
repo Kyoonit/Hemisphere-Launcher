@@ -136,6 +136,7 @@ const api: HemisphereApi = {
     info: () => ipcRenderer.invoke(IPC.systemInfo),
     preflight: () => ipcRenderer.invoke(IPC.systemPreflight),
     lowEnd: () => ipcRenderer.invoke(IPC.systemLowEnd),
+    metered: () => ipcRenderer.invoke(IPC.systemMetered),
     notificationsBlocked: () => ipcRenderer.invoke(IPC.systemNotificationsBlocked),
     openNotificationSettings: () => ipcRenderer.send(IPC.systemOpenNotificationSettings),
     openFolder: (kind) => ipcRenderer.send(IPC.systemOpenFolder, kind),

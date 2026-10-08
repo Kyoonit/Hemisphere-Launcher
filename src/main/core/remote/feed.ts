@@ -6,6 +6,7 @@ import { CONTENT_BASE } from '@shared/manifest'
 import { FeedSchema, type Feed } from '@shared/feed'
 import { RESTART_SCHEDULE } from '@shared/server'
 import { CONTENT_PUBLIC_KEY } from './publicKey'
+import { conditionalGet, rememberEtag } from './conditional'
 
 /**
  * News + maintenance + restart schedule. Same trust model as the client definition: signed by staff, verified with
@@ -58,7 +59,12 @@ async function refresh(): Promise<Feed> {
   if (cached && cached.sequence > current.sequence) current = cached
   try {
     const base = (!app.isPackaged && import.meta.env?.MAIN_VITE_CONTENT_BASE) || CONTENT_BASE
-    const [bytes, sig] = await Promise.all([download(`${base}feed.json`), download(`${base}feed.json.sig`).then((b) => b.toString('utf8'))])
+    // Unchanged since the copy we kept: nothing downloaded (the feed is checked every 10 minutes).
+    const feedUrl = `${base}feed.json`
+    const got = await conditionalGet(feedUrl, MAX_BYTES, cached ? (await readFile(join(cacheDir(), 'feed.json'))).length : null, 15_000)
+    if (got.notModified) return current
+    const bytes = got.bytes
+    const sig = (await download(`${base}feed.json.sig`)).toString('utf8')
     const feed = verifyFeed(bytes, sig)
     if (feed.sequence < current.sequence) {
       console.warn(`[feed] ignoring older feed (sequence ${feed.sequence} < ${current.sequence})`)
@@ -70,6 +76,7 @@ async function refresh(): Promise<Feed> {
       await rename(join(cacheDir(), `${name}.tmp`), join(cacheDir(), name))
     }
     current = feed
+    await rememberEtag(feedUrl, got.etag)
   } catch (err) {
     console.warn('[feed] using last known feed:', err instanceof Error ? err.message : err)
   }

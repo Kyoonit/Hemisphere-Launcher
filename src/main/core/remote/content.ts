@@ -10,6 +10,8 @@ import {
   type ContentIndex,
 } from '@shared/manifest'
 import { CONTENT_PUBLIC_KEY } from './publicKey'
+import { conditionalGet, rememberEtag } from './conditional'
+import { savedNotModified } from '../system/network'
 
 /**
  * Downloads, verifies and caches the Hemisphere client definition.
@@ -121,13 +123,19 @@ async function loadContent(): Promise<LoadedContent> {
   const cached = await readCache()
   try {
     const base = contentBase()
-    const [indexBytes, sig] = await Promise.all([
-      download(`${base}index.json`, MAX_INDEX_BYTES),
-      download(`${base}index.json.sig`, 1024).then((b) => b.toString('utf8')),
-    ])
+    // Unchanged since the copy we kept (and verified again above): nothing else to download.
+    const indexUrl = `${base}index.json`
+    const got = await conditionalGet(indexUrl, MAX_INDEX_BYTES, cached ? cached.raw[0].length + cached.raw[2].length : null)
+    if (got.notModified && cached) return { index: cached.index, manifest: cached.manifest, source: 'network' }
+    if (got.notModified) throw new ContentError('index unchanged but no cached copy')
+    const indexBytes = got.bytes
+    const sig = (await download(`${base}index.json.sig`, 1024)).toString('utf8')
     // Peek at the (unverified) index only to know which manifest to fetch; everything is verified below.
     const peek = ContentIndexSchema.parse(JSON.parse(indexBytes.toString('utf8')))
-    const manifestBytes = await download(`${base}${peek.latest.manifest}`, peek.latest.size)
+    // the same client as before (only the index changed): keep the manifest we have
+    const sameManifest = cached && cached.index.latest.sha512 === peek.latest.sha512
+    if (sameManifest) savedNotModified(cached.raw[2].length)
+    const manifestBytes = sameManifest ? cached.raw[2] : await download(`${base}${peek.latest.manifest}`, peek.latest.size)
     const { index, manifest } = verifyContent(indexBytes, sig, manifestBytes)
 
     // Replay protection: never go back to an older signed index than one we already trusted.
@@ -136,6 +144,7 @@ async function loadContent(): Promise<LoadedContent> {
       return { index: cached.index, manifest: cached.manifest, source: 'cache' }
     }
     await writeCache(indexBytes, sig, manifestBytes)
+    await rememberEtag(indexUrl, got.etag)
     return { index, manifest, source: 'network' }
   } catch (err) {
     console.warn('[content] using cached client definition:', err instanceof Error ? err.message : err)

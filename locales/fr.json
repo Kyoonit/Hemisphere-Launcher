@@ -132,7 +132,14 @@
       "autoOff": "Auto (désactivée sur ce PC)",
       "on": "Activée",
       "off": "Désactivée"
-    }
+    },
+    "downloadLimit": "Limite de vitesse de téléchargement",
+    "downloadLimitHint": "Laisse de la place au reste de ta connexion pendant que le launcher télécharge les mods et mises à jour.",
+    "downloadLimitNone": "Aucune limite",
+    "downloadLimitValue": "{{value}} Mo/s",
+    "saveDataOnMetered": "Économiser les données sur les connexions limitées",
+    "saveDataOnMeteredHint": "En partage de connexion ou en 4G, les mises à jour se téléchargent seulement quand tu appuies sur JOUER.",
+    "saveDataOnMeteredNow": "Ta connexion est limitée en ce moment : les mises à jour se téléchargent seulement quand tu appuies sur JOUER."
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -1179,7 +1186,9 @@
     "perfRequests_one": "{{count}} requête",
     "perfRequests_other": "{{count}} requêtes",
     "releaseHint": "Comme au lancement de Minecraft : la fenêtre se ferme pour libérer sa mémoire, le launcher reste dans la zone de notification. Les notifications arrivent toujours et le rouvrent.",
-    "releaseTest": "Fermer la fenêtre maintenant (test)"
+    "releaseTest": "Fermer la fenêtre maintenant (test)",
+    "perfMetered": "connexion limitée",
+    "perfSaved": "Pas retéléchargés : {{notModified}} fichiers inchangés ({{notModifiedSize}}), {{reused}} fichiers Minecraft d’un autre launcher ({{reusedSize}})"
   },
   "launcherNews": {
     "intro": "Tout ce qui a changé dans le launcher, jour par jour : {{count}} changements sur {{days}} jours.",

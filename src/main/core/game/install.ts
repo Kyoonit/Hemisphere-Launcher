@@ -7,9 +7,11 @@ import type { GameStage } from '@shared/game'
 import { ensureJava, managedJavaPath } from './java'
 import { gamePaths, type GameTarget } from './target'
 import { GameError, withRetries, type ProgressFn } from './util'
+import { reuseAssets } from './reuseAssets'
+import { xmclConcurrency } from '../system/network'
 
-/** Windows limits open files; more parallel downloads than this cause EMFILE errors (seen in the spike). */
-const DOWNLOAD_OPTIONS = { assetsDownloadConcurrency: 16, librariesDownloadConcurrency: 8 }
+/** Windows limits open files: at most 16 assets / 8 libraries at once (EMFILE otherwise); fewer with a speed limit. */
+const downloadOptions = () => xmclConcurrency()
 
 interface InstallState {
   minecraft: string
@@ -78,8 +80,10 @@ export async function ensureGameInstalled(
   const list = await withRetries(() => getVersionList())
   const meta = list.versions.find((v) => v.id === TARGET.minecraft)
   if (!meta) throw new GameError('unknown', `Minecraft ${TARGET.minecraft} not found in Mojang's version list`)
+  // assets another launcher on this PC already has aren't downloaded again
+  await reuseAssets(meta.url, mc).catch((err) => console.warn('[install] reusing assets skipped:', err instanceof Error ? err.message : err))
   const vanilla = await withRetries(() => {
-    const task = installTask(meta, mc, DOWNLOAD_OPTIONS)
+    const task = installTask(meta, mc, downloadOptions())
     return task.startAndWait({ onUpdate: () => onMc(task.total ? task.progress / task.total : null) })
   })
 
@@ -93,7 +97,7 @@ export async function ensureGameInstalled(
   const versionId = await withRetries(() => installFabric({ minecraftVersion: TARGET.minecraft, version: TARGET.fabricLoader, minecraft: mc }))
   const fabric = await Version.parse(mc, versionId)
   await withRetries(() => {
-    const task = installDependenciesTask(fabric, DOWNLOAD_OPTIONS)
+    const task = installDependenciesTask(fabric, downloadOptions())
     return task.startAndWait({ onUpdate: () => onFabric(task.total ? task.progress / task.total : null) })
   })
 

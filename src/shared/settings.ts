@@ -33,6 +33,10 @@ export interface Settings {
   seenLauncherVersion: string | null
   /** Light interface (no blur, animations or background changes): auto = on modest PCs */
   lightMode: 'auto' | 'on' | 'off'
+  /** Speed limit for the launcher's downloads, in MB/s (0 = no limit) */
+  downloadLimit: 0 | 2 | 5 | 10
+  /** On a metered connection (phone hotspot, 4G), nothing is downloaded in the background */
+  saveDataOnMetered: boolean
   /** Install client updates and check files while the launcher is open, so PLAY starts right away */
   backgroundUpdates: boolean
   /** On PCs with two graphics chips: run Minecraft on the high-performance one */
@@ -69,6 +73,8 @@ export const DEFAULT_SETTINGS: Settings = {
   seenChangelog: null,
   seenLauncherVersion: null,
   lightMode: 'auto',
+  downloadLimit: 0,
+  saveDataOnMetered: true,
   backgroundUpdates: true,
   highPerformanceGpu: true,
   reportDiscord: '',

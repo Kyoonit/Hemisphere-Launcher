@@ -112,6 +112,7 @@ export const IPC = {
   packsInstall: 'packs:install',
   systemPreflight: 'system:preflight',
   systemLowEnd: 'system:lowEnd',
+  systemMetered: 'system:metered',
   systemNotificationsBlocked: 'system:notificationsBlocked',
   systemOpenNotificationSettings: 'system:openNotificationSettings',
   systemOpenFolder: 'system:open-folder',
@@ -300,6 +301,8 @@ export interface HemisphereApi {
     preflight(): Promise<PreflightWarning[]>
     /** a modest PC? (the light interface turns on by itself) */
     lowEnd(): Promise<LowEndInfo>
+    /** Windows says this connection is metered (phone hotspot, 4G) */
+    metered(): Promise<boolean>
     /** Windows notifications are turned off (for all apps or this launcher): no alert can show */
     notificationsBlocked(): Promise<boolean>
     /** opens Windows Settings > Notifications */

@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import electronUpdater from 'electron-updater'
 import type { LauncherUpdateState as UpdateState } from '@shared/launcherUpdate'
+import { backgroundDownloadsAllowed } from './network'
 
 /**
  * Launcher updates from GitHub releases: checked at start and every 4 hours, downloaded in the background,
@@ -39,8 +40,12 @@ export function startUpdater(): void {
     if (state.phase !== 'ready') set({ phase: 'error', message: String(err?.message ?? err).slice(0, 300) })
   })
 
-  setTimeout(() => void checkForUpdates(), 10_000)
-  setInterval(() => void checkForUpdates(), CHECK_EVERY_MS).unref()
+  // automatic checks wait for a normal connection (metered: only when the player asks in Settings)
+  const auto = async () => {
+    if (await backgroundDownloadsAllowed()) void checkForUpdates()
+  }
+  setTimeout(() => void auto(), 10_000)
+  setInterval(() => void auto(), CHECK_EVERY_MS).unref()
 }
 
 export async function checkForUpdates(): Promise<UpdateState> {

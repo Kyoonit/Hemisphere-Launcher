@@ -13,4 +13,16 @@ export interface PerfSnapshot {
   network: { host: string; requests: number; bytes: number }[]
   since: number
   windowOpen: boolean
+  savings: NetworkSavings
+  metered: boolean
+}
+
+/** What the launcher didn't have to download. */
+export interface NetworkSavings {
+  /** files the server said hadn't changed (304) */
+  notModified: number
+  notModifiedBytes: number
+  /** Minecraft assets taken from another launcher on this PC */
+  reusedFiles: number
+  reusedBytes: number
 }

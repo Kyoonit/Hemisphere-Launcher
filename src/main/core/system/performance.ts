@@ -1,6 +1,7 @@
 import { app, BrowserWindow, session } from 'electron'
 import { availableParallelism, totalmem } from 'node:os'
 import type { LowEndInfo, PerfSnapshot } from '@shared/performance'
+import { isMetered, networkSavings } from './network'
 
 /**
  * How much the launcher itself costs: memory and CPU per process, and what it downloads (Developer tab > Performance),
@@ -57,7 +58,7 @@ export function installNetMeter(): void {
   })
 }
 
-export function perfSnapshot(windowOpen: boolean): PerfSnapshot {
+export async function perfSnapshot(windowOpen: boolean): Promise<PerfSnapshot> {
   const processes = app.getAppMetrics().map((m) => ({
     type: m.type,
     name: m.name ?? m.serviceName ?? '',
@@ -70,6 +71,8 @@ export function perfSnapshot(windowOpen: boolean): PerfSnapshot {
     network: [...sources.entries()].map(([host, s]) => ({ host, ...s })).sort((a, b) => b.bytes - a.bytes || b.requests - a.requests),
     since: started,
     windowOpen,
+    savings: networkSavings(),
+    metered: await isMetered(),
   }
 }
 

@@ -61,6 +61,7 @@ import { REPORT_CATEGORIES, REPORT_FREQUENCY, REPORT_PARTS, REPORT_WHEN, type Re
 import { deleteSet, duplicateSet, importSetCode, isSetId, listSets, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
 import { installNetMeter, lowEndInfo, perfSnapshot, trimChromium, trimGpuProcess } from './core/system/performance'
+import { isMetered } from './core/system/network'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
@@ -211,6 +212,7 @@ function registerIpc(): void {
     return exportScreenshots(names.filter((n): n is string => typeof n === 'string'), pick.filePaths[0])
   })
   handle(IPC.systemLowEnd, () => lowEndInfo())
+  handle(IPC.systemMetered, () => isMetered())
   handle(IPC.systemNotificationsBlocked, () => notificationsBlocked())
   on(IPC.systemOpenNotificationSettings, () => void shell.openExternal('ms-settings:notifications'))
   handle(IPC.systemPreflight, async () => devPreflight(await preflightWarnings()))
@@ -609,7 +611,7 @@ function registerIpc(): void {
     if (lastStatus) onServerStatus(devStatus(lastStatus) ?? lastStatus)
   }
   handle(IPC.devGet, () => ({ devBuild: !app.isPackaged, unlocked: devUnlocked(), state: devEnabled() ? getDevState() : null }))
-  handle(IPC.devPerf, () => (devEnabled() ? perfSnapshot(!!win && !win.isDestroyed()) : null))
+  handle(IPC.devPerf, async () => (devEnabled() ? perfSnapshot(!!win && !win.isDestroyed()) : null))
   handle(IPC.devCheckDiscord, async (_e, id: unknown) => (devEnabled() && typeof id === 'string' ? checkDiscordAppId(id) : { ok: false, reason: 'notApp' }))
   handle(IPC.devUnlock, async (_e, code: unknown) => {
     const result = await unlockDev(code, getFeed().staffCode)

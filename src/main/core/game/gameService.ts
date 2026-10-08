@@ -10,6 +10,7 @@ import { SERVER } from '@shared/server'
 import { getLaunchCredentials } from '../auth/accounts'
 import { AuthError } from '../auth/errors'
 import { ensureGameInstalled, instanceLogPath, type GameRepairInfo } from './install'
+import { backgroundDownloadsAllowed } from '../system/network'
 import { gamePaths } from './target'
 import { getContent, getPreviousManifest } from '../remote/content'
 import { getSettings } from '../settings/settings'
@@ -111,8 +112,10 @@ export function prepareInBackground(): Promise<void> {
   if (backgroundJob) return backgroundJob
   if (modsHeld) return Promise.resolve()
   if (state.phase !== 'idle' || state.runningAccounts.length || !getSettings().backgroundUpdates) return Promise.resolve()
-  set({ background: true })
   backgroundJob = (async () => {
+    // metered connection (phone hotspot, 4G): PLAY downloads what's needed, nothing is fetched ahead
+    if (!(await backgroundDownloadsAllowed())) return void (backgroundJob = null)
+    set({ background: true })
     const started = Date.now()
     try {
       const { manifest } = await getContent(true)

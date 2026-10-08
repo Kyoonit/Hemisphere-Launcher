@@ -182,6 +182,31 @@ function NotificationsBlocked() {
   )
 }
 
+/** Download speed limit, and no background downloads on a metered connection (says when it's metered now). */
+function NetworkRows({ settings, update }: { settings: Settings; update(patch: Partial<Settings>): Promise<string | null> }) {
+  const { t } = useTranslation()
+  const [metered, setMetered] = useState(false)
+  useEffect(() => {
+    window.hemisphere.system.metered().then(setMetered)
+  }, [])
+  return (
+    <>
+      <Row title={t('settings.downloadLimit')} hint={t('settings.downloadLimitHint')}>
+        <select value={settings.downloadLimit} onChange={(e) => update({ downloadLimit: Number(e.target.value) as Settings['downloadLimit'] })} className={selectClass}>
+          {([0, 10, 5, 2] as const).map((v) => (
+            <option key={v} value={v}>
+              {v === 0 ? t('settings.downloadLimitNone') : t('settings.downloadLimitValue', { value: v })}
+            </option>
+          ))}
+        </select>
+      </Row>
+      <Row title={t('settings.saveDataOnMetered')} hint={metered ? t('settings.saveDataOnMeteredNow') : t('settings.saveDataOnMeteredHint')}>
+        <Toggle on={settings.saveDataOnMetered} onChange={(saveDataOnMetered) => update({ saveDataOnMetered })} label={t('settings.saveDataOnMetered')} />
+      </Row>
+    </>
+  )
+}
+
 /** Light interface: auto says whether this PC gets it. */
 function LightModeRow({ lightMode, onChange }: { lightMode: Settings['lightMode']; onChange(v: Settings['lightMode']): void }) {
   const { t } = useTranslation()
@@ -242,6 +267,7 @@ function LauncherSettings() {
       <Row title={t('settings.backgroundUpdates')} hint={t('settings.backgroundUpdatesHint')}>
         <Toggle on={settings.backgroundUpdates} onChange={(backgroundUpdates) => update({ backgroundUpdates })} label={t('settings.backgroundUpdates')} />
       </Row>
+      <NetworkRows settings={settings} update={update} />
       <h3 className="mt-6 mb-1 text-xs font-bold tracking-[0.08em] text-gray-400 uppercase">{t('community.title')}</h3>
       <NotificationsBlocked />
       <Row title={t('community.tray')} hint={t('community.trayHint')}>

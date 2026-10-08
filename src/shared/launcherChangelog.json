@@ -3,6 +3,30 @@
     "date": "2026-10-08",
     "changes": [
       {
+        "version": "1.0.3",
+        "area": "performance",
+        "en": "News and the mod list are only downloaded again when they changed: much less data while the launcher is open.",
+        "fr": "Les news et la liste des mods ne sont retéléchargées que si elles ont changé : beaucoup moins de données pendant que le launcher est ouvert."
+      },
+      {
+        "version": "1.0.3",
+        "area": "performance",
+        "en": "Minecraft files another launcher on this PC already has (official launcher, Prism, Modrinth App, CurseForge) are reused instead of downloaded: up to 1 GB saved on the first install.",
+        "fr": "Les fichiers Minecraft déjà présents dans un autre launcher de ce PC (launcher officiel, Prism, Modrinth App, CurseForge) sont réutilisés au lieu d’être téléchargés : jusqu’à 1 Go économisé à la première installation."
+      },
+      {
+        "version": "1.0.3",
+        "area": "settings",
+        "en": "Download speed limit (Settings > Launcher), to keep your connection smooth for everything else.",
+        "fr": "Limite de vitesse de téléchargement (Paramètres > Launcher), pour garder ta connexion fluide pour le reste."
+      },
+      {
+        "version": "1.0.3",
+        "area": "settings",
+        "en": "On a phone hotspot or 4G, nothing is downloaded in the background: updates wait until you press PLAY.",
+        "fr": "En partage de connexion ou en 4G, rien n’est téléchargé en arrière-plan : les mises à jour attendent que tu appuies sur JOUER."
+      },
+      {
         "version": "1.0.2",
         "area": "launcher",
         "en": "Every launcher update now has its own version number. What’s new shows the newest one first, and Hemisphere Client (mods) updates are labeled as such.",
