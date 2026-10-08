@@ -525,9 +525,9 @@
     "devInstall": "Developer tab: this pretend update can’t be installed. In the real launcher, the launcher would now close, update to {{version}} and reopen."
   },
   "whatsNew": {
-    "title": "What's new in {{version}}",
+    "title": "Hemisphere Client {{version}} (mods)",
     "close": "Close",
-    "launcherTitle": "What's new in the launcher {{version}}",
+    "launcherTitle": "What’s new in the launcher {{version}}",
     "seeMore": "See more"
   },
   "preflight": {
@@ -1143,7 +1143,6 @@
     "yesterday": "Yesterday",
     "changes_one": "{{count}} change",
     "changes_other": "{{count}} changes",
-    "inDev": "Not released yet",
     "version": "Version {{version}}",
     "areas": {
       "play": "Play",
@@ -1154,6 +1153,7 @@
       "settings": "Settings",
       "performance": "Performance",
       "launcher": "Launcher"
-    }
+    },
+    "versions": "Versions {{version}}"
   }
 }

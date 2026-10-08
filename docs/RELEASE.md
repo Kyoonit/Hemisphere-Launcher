@@ -22,20 +22,21 @@ This makes `dist/Hemisphere-Launcher-Setup-<version>.exe` (about 115 MB). Run it
 
 ## Launcher history and "What's new" (required for every release)
 
-The launcher's history lives in `src/shared/launcherChangelog.json`: **one entry per day** (not per push), newest
-first, each change with an area (play, home, content, screenshots, community, settings, performance, launcher) and its
-English and French text. Players see it in **News > Launcher updates**, and the last 2 days they haven't seen yet in the
-**What's new** card on Home (with **See more** leading to the full history).
+**Every push raises the launcher version** (`"version"` in `package.json`: 1.0.2, then 1.0.3…). The launcher's history
+lives in `src/shared/launcherChangelog.json`: **one entry per day**, newest first; each change has the version of the
+push that brought it, an area (play, home, content, screenshots, community, settings, performance, launcher) and its
+English and French text. Players see it in **News > Launcher updates** (a day's versions newest first), and the last 2
+days they haven't seen yet in the **What's new** card on Home (with **See more** leading to the full history).
 
-- Add each change to today's entry as it's pushed (a new day = a new entry at the top, with `"version": "next"`).
-- `npm run release` gives every `"next"` day the new version number, uses the same text for the GitHub release, and
-  **refuses to publish** when there's nothing new or a change is missing its English or French text.
-- After a release, commit `src/shared/launcherChangelog.json`.
+- With each push: raise the version, and add its changes to today's entry (a new day = a new entry at the top). A test
+  checks that the newest change is the version in `package.json`.
+- `npm run release` takes every change since the latest GitHub release for the release text, and **refuses to
+  publish** when there's nothing new or a change is incomplete.
 
 ## Publish a release (players get it automatically)
 
-1. Raise `"version"` in `package.json` and check the `"next"` days in `src/shared/launcherChangelog.json`, then commit
-   and push.
+1. Check that the last push raised `"version"` in `package.json` and added its changes to
+   `src/shared/launcherChangelog.json` (both are done with every push).
 2. Create a GitHub token with **Contents: read and write** on this repository
    (GitHub → Settings → Developer settings → Fine-grained tokens).
 3. In PowerShell:

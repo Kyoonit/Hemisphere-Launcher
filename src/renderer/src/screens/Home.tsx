@@ -1,30 +1,54 @@
-import { useTranslation } from 'react-i18next'
-import { useEffect, useState } from 'react'
-import { BookOpen, Clock, Globe, Map, TriangleAlert, Upload, WifiOff, X, HardDrive, MemoryStick, Sparkles, ArrowRight } from 'lucide-react'
-import type { LinkKey } from '@shared/ipc'
-import { nextRestart } from '@shared/restart'
-import DiscordIcon from '../components/DiscordIcon'
-import ServerPanel from '../components/ServerPanel'
-import PlaytimeCard from '../components/PlaytimeCard'
-import NewsPeek from '../components/NewsPeek'
-import PlayZone, { useGameState } from '../components/PlayZone'
-import type { ReportCategory } from '@shared/report'
-import { useClient } from './Mods'
-import { useFeed, useNow, usePlaytime, useServerStatus, useSettings, useLiveRestart } from '../hooks'
-import type { ClientSummary } from '@shared/client'
-import type { PreflightWarning, Settings } from '@shared/settings'
-import type { AppInfo } from '@shared/ipc'
-import { LAUNCHER_CHANGELOG, launcherNotesSince } from '@shared/launcherChangelog'
-import { dayLabel, relativeDay } from '../components/LauncherUpdates'
-import type { Feed } from '@shared/feed'
-import { localize } from '@shared/manifest'
-import { useAccounts } from '../accounts'
+import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
+import {
+  BookOpen,
+  Clock,
+  Globe,
+  Map,
+  TriangleAlert,
+  Upload,
+  WifiOff,
+  X,
+  HardDrive,
+  MemoryStick,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
+import type { LinkKey } from "@shared/ipc";
+import { nextRestart } from "@shared/restart";
+import DiscordIcon from "../components/DiscordIcon";
+import ServerPanel from "../components/ServerPanel";
+import PlaytimeCard from "../components/PlaytimeCard";
+import NewsPeek from "../components/NewsPeek";
+import PlayZone, { useGameState } from "../components/PlayZone";
+import type { ReportCategory } from "@shared/report";
+import { useClient } from "./Mods";
+import {
+  useFeed,
+  useNow,
+  usePlaytime,
+  useServerStatus,
+  useSettings,
+  useLiveRestart,
+} from "../hooks";
+import type { ClientSummary } from "@shared/client";
+import type { PreflightWarning, Settings } from "@shared/settings";
+import type { AppInfo } from "@shared/ipc";
+import {
+  byVersion,
+  LAUNCHER_CHANGELOG,
+  launcherNotesSince,
+} from "@shared/launcherChangelog";
+import { dayLabel, relativeDay } from "../components/LauncherUpdates";
+import type { Feed } from "@shared/feed";
+import { localize } from "@shared/manifest";
+import { useAccounts } from "../accounts";
 
 const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
-  { key: 'website', icon: <Globe size={18} /> },
-  { key: 'map', icon: <Map size={18} /> },
-  { key: 'rules', icon: <BookOpen size={18} /> },
-]
+  { key: "website", icon: <Globe size={18} /> },
+  { key: "map", icon: <Map size={18} /> },
+  { key: "rules", icon: <BookOpen size={18} /> },
+];
 
 export default function Home({
   onOpenNews,
@@ -34,22 +58,24 @@ export default function Home({
   onOpenMods,
   onReport,
 }: {
-  onOpenNews(): void
+  onOpenNews(): void;
   /** News > Launcher: the launcher's whole history */
-  onOpenLauncherNews(): void
-  onRepair(): void
-  onImport(): void
-  onOpenMods(): void
-  onReport(category: ReportCategory | null): void
+  onOpenLauncherNews(): void;
+  onRepair(): void;
+  onImport(): void;
+  onOpenMods(): void;
+  onReport(category: ReportCategory | null): void;
 }) {
-  const { t } = useTranslation()
-  const status = useServerStatus()
-  const feed = useFeed()
-  const { active } = useAccounts()
-  const game = useGameState()
+  const { t } = useTranslation();
+  const status = useServerStatus();
+  const feed = useFeed();
+  const { active } = useAccounts();
+  const game = useGameState();
   // Reload client info whenever a launch/repair finishes (an update may have just been installed).
-  const client = useClient(game?.phase === 'preparing' ? 'busy' : `${game?.phase}-${game?.background}`)
-  const crashed = game?.error?.code === 'crashed'
+  const client = useClient(
+    game?.phase === "preparing" ? "busy" : `${game?.phase}-${game?.background}`,
+  );
+  const crashed = game?.error?.code === "crashed";
 
   return (
     <div className="home-pad relative flex h-full flex-col items-center px-7">
@@ -59,19 +85,30 @@ export default function Home({
       <ServerPanel status={status} feed={feed} onOpenNews={onOpenNews} />
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center-safe text-center">
-        {active?.status === 'expired' && <ExpiredBanner />}
+        {active?.status === "expired" && <ExpiredBanner />}
         {/* one compact line while the crash card needs the room */}
         <h1
-          className={`${crashed ? 'home-title-compact' : 'home-title'} animate-rise leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]`}
+          className={`${crashed ? "home-title-compact" : "home-title"} animate-rise leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]`}
         >
-          {active ? t('home.welcomeBack') : t('home.welcomeTo')}
-          {crashed ? ' ' : <br />}
-          <span className="text-green-400">{active ? active.name : t('app.name')}</span>
+          {active ? t("home.welcomeBack") : t("home.welcomeTo")}
+          {crashed ? " " : <br />}
+          <span className="text-green-400">
+            {active ? active.name : t("app.name")}
+          </span>
         </h1>
 
-        <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-2' : 'home-gap'}`}>
-          <PlayZone client={client ?? null} onRepair={onRepair} onOpenMods={onOpenMods} onReport={onReport} />
-          <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
+        <div
+          className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? "mt-2" : "home-gap"}`}
+        >
+          <PlayZone
+            client={client ?? null}
+            onRepair={onRepair}
+            onOpenMods={onOpenMods}
+            onReport={onReport}
+          />
+          <div
+            className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? "empty:hidden" : ""}`}
+          >
             <ServerNotice offline={status?.online === false} feed={feed} />
             {!crashed && <PreflightHints />}
             {feed?.maintenance.active && <MaintenanceBanner feed={feed} />}
@@ -82,11 +119,11 @@ export default function Home({
       <footer className="animate-rise relative z-10 flex w-full flex-none items-end justify-between gap-4 pt-4 [animation-delay:400ms]">
         <div className="flex gap-2">
           <button
-            onClick={() => window.hemisphere.openLink('discord')}
+            onClick={() => window.hemisphere.openLink("discord")}
             className="flex items-center gap-2 rounded-lg bg-discord px-4 py-[9px] text-sm font-semibold text-white shadow-md transition-all duration-300 hover:scale-[1.04] hover:bg-discord-hover"
           >
             <DiscordIcon />
-            {t('links.discord')}
+            {t("links.discord")}
           </button>
           {LINK_BUTTONS.map(({ key, icon }) => (
             <button
@@ -102,62 +139,96 @@ export default function Home({
         <NewsPeek feed={feed} onOpen={onOpenNews} />
       </footer>
     </div>
-  )
+  );
 }
 
 /** The Microsoft session of the active account can no longer be renewed. */
 function ExpiredBanner() {
-  const { t, i18n } = useTranslation()
+  const { t, i18n } = useTranslation();
   return (
     <div className="animate-fade mb-5 flex items-center gap-3 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/55 px-4 py-2.5 text-[13px] text-amber-100 backdrop-blur-sm">
       <TriangleAlert size={16} className="text-amber-400" />
-      {t('auth.expiredBanner')}
+      {t("auth.expiredBanner")}
       <button
         onClick={() => window.hemisphere.auth.signIn(i18n.language)}
         className="rounded-md bg-amber-400 px-3 py-1 text-xs font-bold text-gray-900 hover:bg-amber-300"
       >
-        {t('auth.signInAgain')}
+        {t("auth.signInAgain")}
       </button>
     </div>
-  )
+  );
 }
 
 /**
  * "What's new": once after the launcher updates itself (its notes come with each GitHub release) and once after a
  * Hemisphere Client update, until closed. Nothing on a first start.
  */
-function WhatsNew({ client, onSeeMore }: { client: ClientSummary | null; onSeeMore(): void }) {
-  const { t, i18n } = useTranslation()
-  const [settings, update] = useSettings()
-  const [app, setApp] = useState<AppInfo | null>(null)
+function WhatsNew({
+  client,
+  onSeeMore,
+}: {
+  client: ClientSummary | null;
+  onSeeMore(): void;
+}) {
+  const { t, i18n } = useTranslation();
+  const [settings, update] = useSettings();
+  const [app, setApp] = useState<AppInfo | null>(null);
   useEffect(() => {
-    window.hemisphere.appInfo().then(setApp)
-  }, [])
-  const installed = client?.installedVersion ?? null
+    window.hemisphere.appInfo().then(setApp);
+  }, []);
+  const installed = client?.installedVersion ?? null;
   useEffect(() => {
     // First start (or first time with this feature): remember the current versions without showing anything.
-    if (!settings) return
-    const patch: Partial<Settings> = {}
-    if (installed && settings.seenChangelog === null) patch.seenChangelog = installed
-    if (app && settings.seenLauncherVersion === null) patch.seenLauncherVersion = app.version
-    if (Object.keys(patch).length) void update(patch)
-  }, [settings, installed, app])
-  if (!settings || !app) return null
-  const fr = i18n.language.startsWith('fr')
-  const launcher = launcherNotesSince(LAUNCHER_CHANGELOG, settings.seenLauncherVersion, app.version, !app.packaged)
+    if (!settings) return;
+    const patch: Partial<Settings> = {};
+    if (installed && settings.seenChangelog === null)
+      patch.seenChangelog = installed;
+    if (app && settings.seenLauncherVersion === null)
+      patch.seenLauncherVersion = app.version;
+    if (Object.keys(patch).length) void update(patch);
+  }, [settings, installed, app]);
+  if (!settings || !app) return null;
+  const fr = i18n.language.startsWith("fr");
+  const launcher = launcherNotesSince(
+    LAUNCHER_CHANGELOG,
+    settings.seenLauncherVersion,
+    app.version,
+  );
   // only the last 2 days of changes here; the whole history (by area, easier to read) is in News > Launcher
-  const days = launcher.slice(0, 2)
-  const clientNew = !!client && !!installed && installed === client.clientVersion && settings.seenChangelog !== null && settings.seenChangelog !== installed && client.changelog.length > 0
-  if (launcher.length === 0 && !clientNew) return null
-  const close = () => void update({ seenLauncherVersion: app.version, ...(installed ? { seenChangelog: installed } : {}) })
-  const Section = ({ title, sub, lines }: { title: string; sub?: string; lines: string[] }) => (
+  const days = launcher.slice(0, 2);
+  const clientNew =
+    !!client &&
+    !!installed &&
+    installed === client.clientVersion &&
+    settings.seenChangelog !== null &&
+    settings.seenChangelog !== installed &&
+    client.changelog.length > 0;
+  if (launcher.length === 0 && !clientNew) return null;
+  const close = () =>
+    void update({
+      seenLauncherVersion: app.version,
+      ...(installed ? { seenChangelog: installed } : {}),
+    });
+  const Section = ({
+    title,
+    sub,
+    lines,
+  }: {
+    title: string;
+    sub?: string;
+    lines: string[];
+  }) => (
     <>
       {title && (
         <p className="flex items-center gap-1.5 pr-4 text-[13px] font-semibold text-white">
           <Sparkles size={14} className="flex-none text-green-400" /> {title}
         </p>
       )}
-      {sub && <p className="mt-1.5 text-[10.5px] font-bold tracking-[0.08em] text-green-400 uppercase">{sub}</p>}
+      {sub && (
+        <p className="mt-1.5 text-[10.5px] font-bold tracking-[0.08em] text-green-400 uppercase">
+          {sub}
+        </p>
+      )}
       <ul className="mt-1 mb-2 space-y-1 text-xs text-gray-300 last:mb-0">
         {lines.map((line, i) => (
           <li key={i} className="flex gap-1.5">
@@ -167,119 +238,209 @@ function WhatsNew({ client, onSeeMore }: { client: ClientSummary | null; onSeeMo
         ))}
       </ul>
     </>
-  )
+  );
   return (
     <aside className="glass animate-rise absolute top-[232px] left-6 w-[210px] px-4 py-3.5 [animation-delay:450ms]">
-      <button onClick={close} aria-label={t('whatsNew.close')} className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white">
+      <button
+        onClick={close}
+        aria-label={t("whatsNew.close")}
+        className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white"
+      >
         <X size={14} />
       </button>
       <div className="max-h-[170px] overflow-y-auto pr-1 [scrollbar-color:var(--color-gray-600)_transparent] [scrollbar-width:thin]">
-        {days.map((d, i) => (
+        {days.flatMap((d, i) =>
+          byVersion(d).map((v, j) => (
+            <Section
+              key={v.version}
+              title={
+                i === 0 && j === 0
+                  ? t("whatsNew.launcherTitle", { version: v.version })
+                  : ""
+              }
+              sub={`${relativeDay(d.date) ? t(`launcherNews.${relativeDay(d.date)}`) : dayLabel(d.date, i18n.language, "short")} · ${v.version}`}
+              lines={v.changes.map((c) => (fr ? c.fr : c.en))}
+            />
+          )),
+        )}
+        {clientNew && (
           <Section
-            key={d.date}
-            title={i === 0 ? t('whatsNew.launcherTitle', { version: d.version }) : ''}
-            sub={relativeDay(d.date) ? t(`launcherNews.${relativeDay(d.date)}`) : dayLabel(d.date, i18n.language, 'short')}
-            lines={d.changes.map((c) => (fr ? c.fr : c.en))}
+            title={t("whatsNew.title", { version: installed })}
+            lines={client.changelog.map((line) =>
+              localize(line, i18n.language),
+            )}
           />
-        ))}
-        {clientNew && <Section title={t('whatsNew.title', { version: installed })} lines={client.changelog.map((line) => localize(line, i18n.language))} />}
+        )}
       </div>
       {launcher.length > 0 && (
-        <button onClick={onSeeMore} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-gray-700/70 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-gray-600">
-          {t('whatsNew.seeMore')} <ArrowRight size={13} />
+        <button
+          onClick={onSeeMore}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-gray-700/70 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-gray-600"
+        >
+          {t("whatsNew.seeMore")} <ArrowRight size={13} />
         </button>
       )}
     </aside>
-  )
+  );
 }
 
 /** Low disk space / little RAM: worth knowing before PLAY, never blocking. */
 function PreflightHints() {
-  const { t } = useTranslation()
-  const [hints, setHints] = useState<PreflightWarning[]>([])
+  const { t } = useTranslation();
+  const [hints, setHints] = useState<PreflightWarning[]>([]);
   useEffect(() => {
-    window.hemisphere.system.preflight().then(setHints)
-  }, [])
+    window.hemisphere.system.preflight().then(setHints);
+  }, []);
   return (
     <>
       {hints.map((h) => (
-        <Line key={h.code} icon={h.code === 'lowDisk' ? <HardDrive size={14} /> : <MemoryStick size={14} />} className="text-amber-400">
+        <Line
+          key={h.code}
+          icon={
+            h.code === "lowDisk" ? (
+              <HardDrive size={14} />
+            ) : (
+              <MemoryStick size={14} />
+            )
+          }
+          className="text-amber-400"
+        >
           {t(`preflight.${h.code}`, { value: h.value })}
         </Line>
       ))}
     </>
-  )
+  );
 }
 
 /** One-time card for new players coming from another launcher (dismissible; hidden after the first game). */
 function ImportPrompt({ onImport }: { onImport(): void }) {
-  const { t } = useTranslation()
-  const playtime = usePlaytime()
-  const [dismissed, setDismissed] = useState(true)
+  const { t } = useTranslation();
+  const playtime = usePlaytime();
+  const [dismissed, setDismissed] = useState(true);
   useEffect(() => {
-    window.hemisphere.settings.get().then((s) => setDismissed(s.importPromptDismissed))
-  }, [])
-  if (dismissed || !playtime || playtime.sessions > 0) return null
+    window.hemisphere.settings
+      .get()
+      .then((s) => setDismissed(s.importPromptDismissed));
+  }, []);
+  if (dismissed || !playtime || playtime.sessions > 0) return null;
   const dismiss = () => {
-    setDismissed(true)
-    void window.hemisphere.settings.set({ importPromptDismissed: true })
-  }
+    setDismissed(true);
+    void window.hemisphere.settings.set({ importPromptDismissed: true });
+  };
   return (
     <aside className="glass animate-rise absolute top-[232px] left-6 w-[210px] px-4 py-3.5 [animation-delay:450ms]">
-      <button onClick={dismiss} aria-label={t('import.dismiss')} className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white">
+      <button
+        onClick={dismiss}
+        aria-label={t("import.dismiss")}
+        className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white"
+      >
         <X size={14} />
       </button>
-      <p className="pr-4 text-[13px] font-semibold text-white">{t('import.promptTitle')}</p>
-      <p className="mt-1 text-xs text-gray-400">{t('import.promptBody')}</p>
-      <button onClick={onImport} className="mt-2.5 flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300">
-        <Upload size={13} /> {t('import.settingsButton')}
+      <p className="pr-4 text-[13px] font-semibold text-white">
+        {t("import.promptTitle")}
+      </p>
+      <p className="mt-1 text-xs text-gray-400">{t("import.promptBody")}</p>
+      <button
+        onClick={onImport}
+        className="mt-2.5 flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300"
+      >
+        <Upload size={13} /> {t("import.settingsButton")}
       </button>
     </aside>
-  )
+  );
 }
 
 /** Staff maintenance message (from the signed feed), with the end time in the player's own time zone. */
 function MaintenanceBanner({ feed }: { feed: Feed }) {
-  const { t, i18n } = useTranslation()
-  const until = feed.maintenance.until ? new Date(feed.maintenance.until) : null
+  const { t, i18n } = useTranslation();
+  const until = feed.maintenance.until
+    ? new Date(feed.maintenance.until)
+    : null;
   return (
     <div className="animate-fade mt-2 flex max-w-[400px] items-center gap-3 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/55 px-4 py-2.5 text-left text-[13px] text-amber-100 backdrop-blur-sm">
       <TriangleAlert size={16} className="flex-none text-amber-400" />
       <span>
-        <b className="text-white">{t('server.maintenance')}</b> · {localize(feed.maintenance.message, i18n.language)}
+        <b className="text-white">{t("server.maintenance")}</b> ·{" "}
+        {localize(feed.maintenance.message, i18n.language)}
         {until && until.getTime() > Date.now() && (
-          <> {t('home.maintenanceUntil', { time: until.toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) })}</>
+          <>
+            {" "}
+            {t("home.maintenanceUntil", {
+              time: until.toLocaleString(i18n.language, {
+                weekday: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            })}
+          </>
         )}
       </span>
     </div>
-  )
+  );
 }
 
 /** Restart / offline hint shown under the PLAY button. */
-function ServerNotice({ offline, feed }: { offline: boolean; feed: Feed | null }) {
-  const { t } = useTranslation()
-  const now = useNow()
-  const live = useLiveRestart()
-  if (!feed?.restart || feed.maintenance.active) return offline ? <Line icon={<WifiOff size={14} />} className="text-red-400">{t('home.serverOffline')}</Line> : null
-  const restart = nextRestart(now, feed.restart)
+function ServerNotice({
+  offline,
+  feed,
+}: {
+  offline: boolean;
+  feed: Feed | null;
+}) {
+  const { t } = useTranslation();
+  const now = useNow();
+  const live = useLiveRestart();
+  if (!feed?.restart || feed.maintenance.active)
+    return offline ? (
+      <Line icon={<WifiOff size={14} />} className="text-red-400">
+        {t("home.serverOffline")}
+      </Line>
+    ) : null;
+  const restart = nextRestart(now, feed.restart);
 
-  if (live?.phase === 'restarting')
-    return <Line icon={<Clock size={14} />} className="text-red-400">{t('home.restartingNow')}</Line>
-  if (live?.phase === 'back') return <Line icon={<Clock size={14} />} className="text-green-400">{t('server.backOnline')}</Line>
-  if (offline) return <Line icon={<WifiOff size={14} />} className="text-red-400">{t('home.serverOffline')}</Line>
-  if (restart.phase === 'soon') {
-    const s = Math.floor(restart.msLeft / 1000)
-    const time = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-    return <Line icon={<Clock size={14} />} className="text-amber-400 tabular-nums">{t('server.restartIn', { time })}</Line>
+  if (live?.phase === "restarting")
+    return (
+      <Line icon={<Clock size={14} />} className="text-red-400">
+        {t("home.restartingNow")}
+      </Line>
+    );
+  if (live?.phase === "back")
+    return (
+      <Line icon={<Clock size={14} />} className="text-green-400">
+        {t("server.backOnline")}
+      </Line>
+    );
+  if (offline)
+    return (
+      <Line icon={<WifiOff size={14} />} className="text-red-400">
+        {t("home.serverOffline")}
+      </Line>
+    );
+  if (restart.phase === "soon") {
+    const s = Math.floor(restart.msLeft / 1000);
+    const time = `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+    return (
+      <Line icon={<Clock size={14} />} className="text-amber-400 tabular-nums">
+        {t("server.restartIn", { time })}
+      </Line>
+    );
   }
-  return null
+  return null;
 }
 
-function Line({ icon, className = '', children }: { icon: React.ReactNode; className?: string; children: React.ReactNode }) {
+function Line({
+  icon,
+  className = "",
+  children,
+}: {
+  icon: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
     <p className={`flex items-center gap-1.5 ${className}`}>
       {icon}
       {children}
     </p>
-  )
+  );
 }

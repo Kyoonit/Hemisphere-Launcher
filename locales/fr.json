@@ -539,7 +539,7 @@
     "devInstall": "Menu Développeur : cette fausse mise à jour ne peut pas s’installer. Dans le vrai launcher, il se fermerait, passerait en {{version}} et se rouvrirait."
   },
   "whatsNew": {
-    "title": "Nouveautés de la {{version}}",
+    "title": "Hemisphere Client {{version}} (mods)",
     "close": "Fermer",
     "launcherTitle": "Nouveautés du launcher {{version}}",
     "seeMore": "Voir plus"
@@ -1188,7 +1188,6 @@
     "yesterday": "Hier",
     "changes_one": "{{count}} changement",
     "changes_other": "{{count}} changements",
-    "inDev": "Pas encore publié",
     "version": "Version {{version}}",
     "areas": {
       "play": "Jouer",
@@ -1199,6 +1198,7 @@
       "settings": "Paramètres",
       "performance": "Performances",
       "launcher": "Launcher"
-    }
+    },
+    "versions": "Versions {{version}}"
   }
 }
