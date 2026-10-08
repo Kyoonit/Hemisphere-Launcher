@@ -94,9 +94,27 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
     <div className="h-full overflow-auto">
       {/* Stays at the top while scrolling: search, find, updates, import, folder, filters. */}
       <div className="sticky top-0 z-10 border-b border-white/10 bg-gray-900 px-8 pt-5 pb-3 shadow-lg">
-        <div className="mb-3">
-          <p className="text-xs font-bold tracking-[0.08em] text-green-400 uppercase">{t('mods.subtitle', { version: client.clientVersion, minecraft: client.minecraft })}</p>
-          <h1 className="text-[30px] leading-tight font-bold text-white">{t('nav.mods').toUpperCase()}</h1>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold tracking-[0.08em] text-green-400 uppercase">{t('mods.subtitle', { version: client.clientVersion, minecraft: client.minecraft })}</p>
+            <h1 className="text-[30px] leading-tight font-bold text-white">{t('nav.mods').toUpperCase()}</h1>
+          </div>
+          {/* top right, under the window buttons: sets, history, import */}
+          <div className="flex flex-none items-center gap-1.5">
+            <ModSetsMenu
+              className={toolButton}
+              onSwitched={() => {
+                setNotice(null)
+                void reload()
+              }}
+            />
+            <button onClick={onHistory} className={toolButton}>
+              <History size={14} /> {t('history.title')}
+            </button>
+            <button onClick={onImport} className={toolButton}>
+              <Upload size={14} /> {t('import.settingsButton')}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -121,19 +139,6 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
               void reload()
             }}
           />
-          <ModSetsMenu
-            className={toolButton}
-            onSwitched={() => {
-              setNotice(null)
-              void reload()
-            }}
-          />
-          <button onClick={onHistory} className={toolButton}>
-            <History size={14} /> {t('history.title')}
-          </button>
-          <button onClick={onImport} className={toolButton}>
-            <Upload size={14} /> {t('import.settingsButton')}
-          </button>
           <button onClick={() => window.hemisphere.system.openFolder('mods')} className={toolButton}>
             <FolderOpen size={14} /> {t('mods.openFolder')}
           </button>

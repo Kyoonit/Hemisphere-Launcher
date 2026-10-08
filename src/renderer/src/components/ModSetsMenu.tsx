@@ -107,7 +107,7 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
       </button>
 
       {open && (
-        <div className="animate-fade absolute top-full left-0 z-30 mt-1.5 w-[380px] max-w-[calc(100vw-48px)] rounded-xl bg-gray-900 p-3 shadow-2xl ring-1 ring-gray-700">
+        <div className="animate-fade absolute top-full right-0 z-30 mt-1.5 w-[380px] max-w-[calc(100vw-48px)] rounded-xl bg-gray-900 p-3 shadow-2xl ring-1 ring-gray-700">
           <b className="block px-1 text-sm text-white">{t('sets.title')}</b>
           <p className="mb-2 px-1 text-[12px] text-gray-400">{t('sets.hint')}</p>
 
