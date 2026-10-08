@@ -1,22 +1,26 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import TitleBar, { type Screen } from './components/TitleBar'
 import Background from './components/Background'
 import AccountMenu from './components/AccountMenu'
 import Home from './screens/Home'
 import Login from './screens/Login'
-import News from './screens/News'
-import Content, { type BrowseKind, type ContentTab } from './screens/Content'
-import Repair from './screens/Repair'
-import Import from './screens/Import'
-import ModBrowser from './screens/ModBrowser'
-import ModHistory from './screens/ModHistory'
-import Screenshots from './screens/Screenshots'
-import Report from './screens/Report'
+import type { BrowseKind, ContentTab } from './screens/Content'
 import type { ReportCategory } from '@shared/report'
-import Settings, { type Section } from './screens/Settings'
+import type { Section } from './screens/Settings'
 import { useAccounts } from './accounts'
-import { useFeed, useSettings } from './hooks'
+import { useFeed, useLightMode, useSettings } from './hooks'
+
+// Home and sign-in load with the launcher; the other screens load the first time they're opened (faster start, less memory).
+const News = lazy(() => import('./screens/News'))
+const Content = lazy(() => import('./screens/Content'))
+const Repair = lazy(() => import('./screens/Repair'))
+const Import = lazy(() => import('./screens/Import'))
+const ModBrowser = lazy(() => import('./screens/ModBrowser'))
+const ModHistory = lazy(() => import('./screens/ModHistory'))
+const Screenshots = lazy(() => import('./screens/Screenshots'))
+const Report = lazy(() => import('./screens/Report'))
+const Settings = lazy(() => import('./screens/Settings'))
 import { markNewsSeen, unseenNewsCount } from '@shared/feed'
 
 export default function App() {
@@ -43,6 +47,9 @@ export default function App() {
       void updateSettings({ seenNews: markNewsSeen(feed.news, settings.seenNews) })
   }, [screen, feed, settings])
 
+  const light = useLightMode()
+  useEffect(() => void document.documentElement.classList.toggle('lite', light), [light])
+
   const needsLogin = state !== null && state.accounts.length === 0
   const showLogin = needsLogin || addingAccount
   const dimmed = !showLogin && screen !== 'home' && screen !== 'repair' && screen !== 'import'
@@ -54,7 +61,7 @@ export default function App() {
 
   return (
     <div className="relative h-full overflow-clip">
-      <Background dimmed={dimmed} />
+      <Background dimmed={dimmed} still={light} />
       <TitleBar
         screen={screen}
         onNavigate={(s) => {
@@ -69,7 +76,7 @@ export default function App() {
           {showLogin ? (
             <Login onBack={needsLogin ? undefined : () => setAddingAccount(false)} />
           ) : (
-            <>
+            <Suspense fallback={null}>
               {screen === 'home' && <Home
                   onOpenNews={() => setScreen('news')}
                   onRepair={() => setScreen('repair')}
@@ -102,7 +109,7 @@ export default function App() {
               {screen === 'report' && <Report initialCategory={report?.category ?? null} onBack={() => setScreen(report?.from && report.from !== 'report' ? report.from : 'home')} />}
               {screen === 'import' && <Import onClose={() => setScreen('home')} />}
               {screen === 'repair' && <Repair onClose={() => openSettings('installation')} onDone={() => setScreen('home')} />}
-            </>
+            </Suspense>
           )}
         </main>
       )}

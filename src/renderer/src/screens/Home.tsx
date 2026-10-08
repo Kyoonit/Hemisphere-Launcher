@@ -12,7 +12,9 @@ import type { ReportCategory } from '@shared/report'
 import { useClient } from './Mods'
 import { useFeed, useNow, usePlaytime, useServerStatus, useSettings, useLiveRestart } from '../hooks'
 import type { ClientSummary } from '@shared/client'
-import type { PreflightWarning } from '@shared/settings'
+import type { PreflightWarning, Settings } from '@shared/settings'
+import type { AppInfo } from '@shared/ipc'
+import { LAUNCHER_CHANGELOG, launcherNotesSince } from '@shared/launcherChangelog'
 import type { Feed } from '@shared/feed'
 import { localize } from '@shared/manifest'
 import { useAccounts } from '../accounts'
@@ -116,37 +118,56 @@ function ExpiredBanner() {
   )
 }
 
-/** "What's new in Hemisphere Client x": once after a client update, until closed. */
+/**
+ * "What's new": once after the launcher updates itself (its notes come with each GitHub release) and once after a
+ * Hemisphere Client update, until closed. Nothing on a first start.
+ */
 function WhatsNew({ client }: { client: ClientSummary | null }) {
   const { t, i18n } = useTranslation()
   const [settings, update] = useSettings()
+  const [app, setApp] = useState<AppInfo | null>(null)
+  useEffect(() => {
+    window.hemisphere.appInfo().then(setApp)
+  }, [])
   const installed = client?.installedVersion ?? null
   useEffect(() => {
-    // First run with this feature (or a brand-new player): remember the current version without showing anything.
-    if (settings && installed && settings.seenChangelog === null) void update({ seenChangelog: installed })
-  }, [settings, installed])
-  if (!client || !settings || !installed || installed !== client.clientVersion) return null
-  if (settings.seenChangelog === null || settings.seenChangelog === installed || client.changelog.length === 0) return null
-  return (
-    <aside className="glass animate-rise absolute top-[232px] left-6 w-[210px] px-4 py-3.5 [animation-delay:450ms]">
-      <button
-        onClick={() => void update({ seenChangelog: installed })}
-        aria-label={t('whatsNew.close')}
-        className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white"
-      >
-        <X size={14} />
-      </button>
+    // First start (or first time with this feature): remember the current versions without showing anything.
+    if (!settings) return
+    const patch: Partial<Settings> = {}
+    if (installed && settings.seenChangelog === null) patch.seenChangelog = installed
+    if (app && settings.seenLauncherVersion === null) patch.seenLauncherVersion = app.version
+    if (Object.keys(patch).length) void update(patch)
+  }, [settings, installed, app])
+  if (!settings || !app) return null
+  const fr = i18n.language.startsWith('fr')
+  const launcher = launcherNotesSince(LAUNCHER_CHANGELOG, settings.seenLauncherVersion, app.version, !app.packaged)
+  const clientNew = !!client && !!installed && installed === client.clientVersion && settings.seenChangelog !== null && settings.seenChangelog !== installed && client.changelog.length > 0
+  if (launcher.length === 0 && !clientNew) return null
+  const close = () => void update({ seenLauncherVersion: app.version, ...(installed ? { seenChangelog: installed } : {}) })
+  const Section = ({ title, lines }: { title: string; lines: string[] }) => (
+    <>
       <p className="flex items-center gap-1.5 pr-4 text-[13px] font-semibold text-white">
-        <Sparkles size={14} className="text-green-400" /> {t('whatsNew.title', { version: installed })}
+        <Sparkles size={14} className="flex-none text-green-400" /> {title}
       </p>
-      <ul className="mt-1.5 max-h-[150px] space-y-1 overflow-y-auto pr-1 text-xs text-gray-300">
-        {client.changelog.map((line, i) => (
+      <ul className="mt-1.5 mb-2 space-y-1 text-xs text-gray-300 last:mb-0">
+        {lines.map((line, i) => (
           <li key={i} className="flex gap-1.5">
             <span className="text-green-400">•</span>
-            {localize(line, i18n.language)}
+            {line}
           </li>
         ))}
       </ul>
+    </>
+  )
+  return (
+    <aside className="glass animate-rise absolute top-[232px] left-6 w-[210px] px-4 py-3.5 [animation-delay:450ms]">
+      <button onClick={close} aria-label={t('whatsNew.close')} className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white">
+        <X size={14} />
+      </button>
+      <div className="max-h-[170px] overflow-y-auto pr-1 [scrollbar-color:var(--color-gray-600)_transparent] [scrollbar-width:thin]">
+        {launcher.length > 0 && <Section title={t('whatsNew.launcherTitle', { version: launcher[0].version })} lines={launcher.flatMap((r) => (fr ? r.fr : r.en))} />}
+        {clientNew && <Section title={t('whatsNew.title', { version: installed })} lines={client.changelog.map((line) => localize(line, i18n.language))} />}
+      </div>
     </aside>
   )
 }

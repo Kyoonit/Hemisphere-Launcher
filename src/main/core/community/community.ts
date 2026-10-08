@@ -1,4 +1,7 @@
 import { app, Menu, nativeImage, Notification, Tray, type BrowserWindow } from 'electron'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+import { REG_EXE } from '../system/windows'
 import { join } from 'node:path'
 import type { Feed } from '@shared/feed'
 import { LINKS } from '@shared/ipc'
@@ -75,6 +78,8 @@ const text = () => TEXT[lang()]
 
 export interface CommunityHooks {
   window(): BrowserWindow | null
+  /** shows the launcher window, opening it again if it was closed to free memory */
+  showWindow(): void
   feed(): Feed
   /** PLAY from the tray; false when it can't start now (not signed in, already preparing) */
   play(): boolean
@@ -93,19 +98,58 @@ let restarting = false
 /** when a "back online" notification was last sent (the restart one and the general one never both) */
 let lastBackNotice = 0
 
-function show(): void {
-  const win = hooks?.window()
-  if (!win) return
-  if (win.isMinimized()) win.restore()
-  win.show()
-  win.focus()
-}
+const show = () => hooks?.showWindow()
 
+/**
+ * Notifications are sent from here (the main process), so they keep working while the launcher's window is closed to
+ * free memory. Each one is kept referenced until it's gone: a collected Notification no longer reacts to its click.
+ */
+const shown = new Set<Notification>()
 function notify(title: string, body: string): void {
   if (!Notification.isSupported()) return
   const n = new Notification({ title, body, icon: icon(), silent: false })
-  n.on('click', show)
+  shown.add(n)
+  const forget = () => shown.delete(n)
+  // Windows refused it (notifications turned off for apps, or for this launcher): Settings tells the player
+  n.on('failed', (_e, error) => {
+    forget()
+    blockedByWindows = true
+    console.warn('[community] notification refused by Windows:', error)
+  })
+  n.on('click', () => {
+    forget()
+    show()
+  })
+  n.on('close', forget)
+  setTimeout(forget, 10 * 60_000).unref() // Windows keeps old ones in the Action Center: clicks there still open
   n.show()
+}
+
+let blockedByWindows = false
+const reg = promisify(execFile)
+/** Is the value set to 0 (turned off) in this registry key? */
+async function regOff(key: string, value: string): Promise<boolean> {
+  const out = await reg(REG_EXE, ['query', key, '/v', value], { windowsHide: true }).then((r) => r.stdout, () => '')
+  return /REG_DWORD\s+0x0\b/.test(out)
+}
+/**
+ * Windows notifications turned off for every app, or for this launcher (Windows Settings > System > Notifications):
+ * then no reminder or alert can show, and Settings says so. Nothing is changed on the PC.
+ */
+export async function notificationsBlocked(): Promise<boolean> {
+  if (blockedByWindows) return true
+  if (process.platform !== 'win32') return false
+  const base = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion'
+  const [all, mine] = await Promise.all([regOff(`${base}\\PushNotifications`, 'ToastEnabled'), regOff(`${base}\\Notifications\\Settings\\club.hemispheresurvival.launcher`, 'Enabled')])
+  return all || mine
+}
+
+/** The window was closed to free memory (game running, or kept in the tray): a tray icon stays to bring it back. */
+let released = false
+export function setLauncherReleased(r: boolean): void {
+  if (r === released) return
+  released = r
+  applyTray(getSettings().closeToTray || released)
 }
 
 // ------------------------------------------------------------------------------ tray
@@ -159,12 +203,12 @@ function applyTray(on: boolean): void {
   }
 }
 
-/** Closing the window hides it in the tray when the player chose so (Quit from the tray really quits). */
-export function keepInTrayOnClose(win: BrowserWindow): void {
+/** Closing the window keeps the launcher in the tray when the player chose so (Quit from the tray really quits). */
+export function keepInTrayOnClose(win: BrowserWindow, toTray: () => void): void {
   win.on('close', (e) => {
     if (quitting || !getSettings().closeToTray || !tray) return
     e.preventDefault()
-    win.hide()
+    toTray()
   })
 }
 
@@ -296,13 +340,13 @@ export async function devDiscord(on: boolean): Promise<'ok' | 'noAppId' | 'noDis
 export function startCommunity(h: CommunityHooks): void {
   hooks = h
   app.on('before-quit', () => (quitting = true))
-  applyTray(getSettings().closeToTray)
+  applyTray(getSettings().closeToTray || released)
   setInterval(() => void checkReminders(), 30_000).unref()
   void checkReminders()
 }
 
 export function onCommunitySettings(s: Settings): void {
-  applyTray(s.closeToTray)
+  applyTray(s.closeToTray || released)
   refreshTray() // language may have changed
   if (!s.discordStatus && presence) onGameExited(false)
 }

@@ -62,10 +62,24 @@ export async function getServerStatus(): Promise<ServerStatus> {
   }
 }
 
-/** Polls the status every minute and pushes each result to `onUpdate`. */
-export function startStatusPolling(onUpdate: (status: ServerStatus) => void): () => void {
-  const tick = () => void getServerStatus().then(onUpdate)
-  tick()
-  const timer = setInterval(tick, REFRESH_MS)
+/** While nobody looks at the launcher (and no notification needs the status): every 5 minutes only. */
+const IDLE_MS = 5 * 60_000
+let pollNow: () => void = () => {}
+/** A fresh status right away (the launcher window opens again). */
+export const refreshStatusNow = () => pollNow()
+
+/** Polls the status every minute (every 5 when `idle()`) and pushes each result to `onUpdate`. */
+export function startStatusPolling(onUpdate: (status: ServerStatus) => void, idle: () => boolean = () => false): () => void {
+  let last = 0
+  const poll = () => {
+    last = Date.now()
+    void getServerStatus().then(onUpdate)
+  }
+  pollNow = poll
+  poll()
+  const timer = setInterval(() => {
+    if (idle() && Date.now() - last < IDLE_MS - 1000) return
+    poll()
+  }, REFRESH_MS)
   return () => clearInterval(timer)
 }

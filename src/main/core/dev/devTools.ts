@@ -170,6 +170,8 @@ export const devPreflight = (w: PreflightWarning[]): PreflightWarning[] =>
 
 export interface DevActionHooks {
   window(): BrowserWindow | null
+  /** closes the window to free memory, as when Minecraft starts */
+  release(): void
   gameState(patch: Partial<GameState>): void
   notify(kind: 'back' | 'event' | 'warn15' | 'warn1' | 'start'): void
   discord(on: boolean): Promise<'ok' | 'noAppId' | 'noDiscord' | 'invalidId' | 'failed'>
@@ -232,6 +234,11 @@ export async function runDevAction(action: DevAction, h: DevActionHooks): Promis
         await wait(2500)
       }
       return 'every notification sent, 2.5 s apart (restart ones follow your restart alerts settings)'
+    case 'release:test':
+      // as when Minecraft starts: the page closes to free its memory; a notification a little later reopens it
+      setTimeout(() => h.release(), 1500)
+      setTimeout(() => h.notify('event'), 15_000)
+      return 'the window closes in 1.5 s to free its memory; click the notification (in 15 s) or the tray icon to bring it back'
     case 'ui:reload':
       h.window()?.webContents.reloadIgnoringCache()
       return 'reloaded'

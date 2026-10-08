@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { gamePaths } from './core/game/target'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
-import { getServerStatus, startStatusPolling } from './core/status/serverStatus'
+import { getServerStatus, startStatusPolling, refreshStatusNow } from './core/status/serverStatus'
 import { getPlaytime } from './core/playtime/playtimeStore'
 import {
   addDevOfflineAccount,
@@ -50,7 +50,7 @@ import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePo
 import { checkPackUpdates, installPack, knownPackProjects, listPacks, moveResourcePack, packVersions, removePack, setPackActive, setPackLock, setPackVersion, shadersOff, updatePacks } from './core/packs/packs'
 import { PACK_TYPES, type PackType } from '@shared/packs'
 import { buildReport, lastReportZip, prepareReport } from './core/support/report'
-import { devDiscord, devNotify, keepInTrayOnClose, onCommunitySettings, onGameExited, onGameLaunched, onRestartLive, onRestartMoment, onServerStatus, startCommunity } from './core/community/community'
+import { devDiscord, devNotify, keepInTrayOnClose, notificationsBlocked, setLauncherReleased, onCommunitySettings, onGameExited, onGameLaunched, onRestartLive, onRestartMoment, onServerStatus, startCommunity } from './core/community/community'
 import { startRestartWatch } from './core/status/restartWatch'
 import { nextRestart, type LiveRestart } from '@shared/restart'
 import { checkDiscordAppId, devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, runDevAction, setDevState, unlockDev } from './core/dev/devTools'
@@ -60,17 +60,56 @@ import { writeFile } from 'node:fs/promises'
 import { REPORT_CATEGORIES, REPORT_FREQUENCY, REPORT_PARTS, REPORT_WHEN, type ReportDraft } from '@shared/report'
 import { deleteSet, duplicateSet, importSetCode, isSetId, listSets, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
+import { installNetMeter, lowEndInfo, perfSnapshot, trimChromium, trimGpuProcess } from './core/system/performance'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
 let win: BrowserWindow | null = null
+/** Sends to the launcher's page, when it's open (it's closed while hidden for a while, to free memory). */
+const toWindow = (channel: string, ...args: unknown[]) => {
+  if (win && !win.isDestroyed()) win.webContents.send(channel, ...args)
+}
+/** the window was closed on purpose to free memory: the launcher keeps running (tray, notifications, reminders) */
+let released = false
+let releaseTimer: NodeJS.Timeout | undefined
 let lastStatus: ServerStatus | null = null
 /** the daily restart, live (checked on the server itself around the restart) */
 let liveRestart: LiveRestart = null
 /** Sources the player may import from: only ones the launcher found or the player picked in the dialog. */
 const importSources = new Map<string, ImportSource>()
 
-function createWindow(): void {
+/**
+ * Hides the window, and after `releaseAfterMs` closes its page to give its memory back (about 150–250 MB: worth it
+ * while Minecraft runs, or while the launcher waits in the tray). Everything that matters keeps running here in the
+ * main process: notifications, event reminders, restart tracking, background updates, tray. showWindow() reopens it.
+ */
+function toBackground(releaseAfterMs: number): void {
+  win?.hide()
+  clearTimeout(releaseTimer)
+  releaseTimer = setTimeout(() => {
+    if (!win || win.isDestroyed() || win.isVisible()) return
+    released = true
+    setLauncherReleased(true)
+    win.destroy()
+    setTimeout(trimGpuProcess, 2000)
+  }, releaseAfterMs)
+}
+
+/** Shows the launcher window, opening it again if it was closed to free memory. */
+function showWindow(focus = true): void {
+  clearTimeout(releaseTimer)
+  if (!win) {
+    createWindow()
+    refreshStatusNow()
+    return
+  }
+  if (win.isMinimized()) win.restore()
+  if (!win.isVisible()) win.show()
+  if (focus) win.focus()
+}
+
+function createWindow(startHidden = false): void {
+  released = false
   const saved = loadWindowState()
   win = new BrowserWindow({
     width: 1120,
@@ -95,17 +134,20 @@ function createWindow(): void {
 
   trustWindow(win)
   trackWindowState(win, saved)
-  keepInTrayOnClose(win)
+  keepInTrayOnClose(win, () => toBackground(60_000))
   win.once('ready-to-show', () => {
     if (saved?.maximized) win?.maximize()
     // Started with Windows: stay out of the way (in the tray when the player keeps it there, else the taskbar).
-    if (process.argv.includes(AUTOSTART_ARG)) {
+    if (startHidden) {
       if (!getSettings().closeToTray) win?.minimize()
+      else toBackground(60_000) // waiting in the tray: no page in memory until opened
+    } else {
+      win?.show()
+      setLauncherReleased(false)
     }
-    else win?.show()
   })
-  win.on('maximize', () => win?.webContents.send(IPC.windowMaximizedChanged, true))
-  win.on('unmaximize', () => win?.webContents.send(IPC.windowMaximizedChanged, false))
+  win.on('maximize', () => toWindow(IPC.windowMaximizedChanged, true))
+  win.on('unmaximize', () => toWindow(IPC.windowMaximizedChanged, false))
   win.on('closed', () => (win = null))
 
   // The UI never navigates away or opens windows; external links go through IPC.openLink.
@@ -168,6 +210,9 @@ function registerIpc(): void {
     if (pick.canceled || !pick.filePaths[0]) return null
     return exportScreenshots(names.filter((n): n is string => typeof n === 'string'), pick.filePaths[0])
   })
+  handle(IPC.systemLowEnd, () => lowEndInfo())
+  handle(IPC.systemNotificationsBlocked, () => notificationsBlocked())
+  on(IPC.systemOpenNotificationSettings, () => void shell.openExternal('ms-settings:notifications'))
   handle(IPC.systemPreflight, async () => devPreflight(await preflightWarnings()))
   on(IPC.systemOpenFolder, (_e, kind: unknown) => {
     const kinds: FolderKind[] = ['game', 'mods', 'resourcepacks', 'shaderpacks', 'screenshots', 'gameLogs', 'crashReports', 'launcherLogs']
@@ -186,7 +231,7 @@ function registerIpc(): void {
     return moveGameFolder(dir, g.phase === 'preparing' || g.background || g.runningAccounts.length > 0, (ratio) => {
       if (ratio === 1 || ratio - last >= 0.01) {
         last = ratio
-        win?.webContents.send(IPC.systemMoveProgress, ratio)
+        toWindow(IPC.systemMoveProgress, ratio)
       }
     })
   })
@@ -223,7 +268,7 @@ function registerIpc(): void {
     try {
       const { manifest } = await getContent()
       await createRestorePoint({ kind: 'import' }, { clientVersion: manifest.clientVersion, minecraft: manifest.minecraft })
-      const report = await importFrom(source, options, manifest, (p) => win?.webContents.send(IPC.importProgress, p))
+      const report = await importFrom(source, options, manifest, (p) => toWindow(IPC.importProgress, p))
       return { ok: true, report }
     } catch (err) {
       console.error('[import] failed:', err)
@@ -558,12 +603,13 @@ function registerIpc(): void {
   on(IPC.reportOpenSupport, () => void shell.openExternal(getFeed().support?.url ?? LINKS.discord))
   // Developer tab: development builds, or the installed launcher once the staff code was entered (else refused)
   const devRefresh = () => {
-    win?.webContents.send(IPC.feedChanged, devFeed(getFeed()))
-    win?.webContents.send(IPC.serverStatusUpdate, devStatus(lastStatus))
-    win?.webContents.send(IPC.launcherUpdateChanged, devUpdate(getUpdateState()))
+    toWindow(IPC.feedChanged, devFeed(getFeed()))
+    toWindow(IPC.serverStatusUpdate, devStatus(lastStatus))
+    toWindow(IPC.launcherUpdateChanged, devUpdate(getUpdateState()))
     if (lastStatus) onServerStatus(devStatus(lastStatus) ?? lastStatus)
   }
   handle(IPC.devGet, () => ({ devBuild: !app.isPackaged, unlocked: devUnlocked(), state: devEnabled() ? getDevState() : null }))
+  handle(IPC.devPerf, () => (devEnabled() ? perfSnapshot(!!win && !win.isDestroyed()) : null))
   handle(IPC.devCheckDiscord, async (_e, id: unknown) => (devEnabled() && typeof id === 'string' ? checkDiscordAppId(id) : { ok: false, reason: 'notApp' }))
   handle(IPC.devUnlock, async (_e, code: unknown) => {
     const result = await unlockDev(code, getFeed().staffCode)
@@ -590,18 +636,19 @@ function registerIpc(): void {
     if (!devEnabled() || !DEV_ACTIONS.includes(action as DevAction)) return 'not available'
     return runDevAction(action as DevAction, {
       window: () => win,
+      release: () => toBackground(0),
       gameState: simulateGameState,
       notify: devNotify,
       discord: devDiscord,
       resetSeen: async () => {
-        // seenChangelog: older than any version, so "What's new" shows again (null means a first run: nothing shown)
-        await updateSettings({ seenNews: [], seenChangelog: '0.0.0', importPromptDismissed: false })
+        // seen versions: older than any, so both "What's new" show again (null means a first run: nothing shown)
+        await updateSettings({ seenNews: [], seenChangelog: '0.0.0', seenLauncherVersion: '0.0.0', importPromptDismissed: false })
       },
       simulateRestart: async () => {
         const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
         const setLive = (live: LiveRestart) => {
           liveRestart = live
-          win?.webContents.send(IPC.restartLiveChanged, live)
+          toWindow(IPC.restartLiveChanged, live)
           onRestartLive(live?.phase ?? null)
         }
         onRestartMoment('warn15', Date.now() + 15 * 60_000)
@@ -694,7 +741,7 @@ function registerIpc(): void {
     return setModEnabled((await getContent()).manifest, id, on)
   })
 
-  handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))
+  handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform, packaged: app.isPackaged }))
   handle(IPC.launcherUpdateGet, () => devUpdate(getUpdateState()))
   handle(IPC.launcherUpdateCheck, () => checkForUpdates())
   on(IPC.launcherUpdateInstall, () => {
@@ -727,6 +774,10 @@ function syncLoginItem(): void {
   if (app.getLoginItemSettings({ args: [AUTOSTART_ARG] }).openAtLogin !== want) app.setLoginItemSettings({ openAtLogin: want, args: [AUTOSTART_ARG] })
 }
 
+// Lighter Chromium, and a count of what the launcher downloads (Developer tab > Performance).
+trimChromium()
+installNetMeter()
+
 // Screenshot images reach the page through hemi-shot:// (registered before the app is ready).
 registerScreenshotScheme()
 
@@ -734,13 +785,7 @@ registerScreenshotScheme()
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
-  app.on('second-instance', () => {
-    if (win) {
-      if (win.isMinimized()) win.restore()
-      if (!win.isVisible()) win.show()
-      win.focus()
-    }
-  })
+  app.on('second-instance', () => showWindow())
 
   app.whenReady().then(async () => {
     installFileLogger()
@@ -748,31 +793,31 @@ if (!app.requestSingleInstanceLock()) {
     serveScreenshots()
     app.setAppUserModelId('club.hemispheresurvival.launcher')
     await loadAccounts()
-    onAccountsChanged(() => win?.webContents.send(IPC.authChanged, getAccountsState()))
-    onGameState((s) => win?.webContents.send(IPC.gameStateChanged, s))
+    onAccountsChanged(() => toWindow(IPC.authChanged, getAccountsState()))
+    onGameState((s) => toWindow(IPC.gameStateChanged, s))
     onSettingsChanged((s) => {
-      win?.webContents.send(IPC.settingsChanged, s)
+      toWindow(IPC.settingsChanged, s)
       onCommunitySettings(s)
     })
     // Launcher window while playing: hide (default), keep, or close. It comes back when the game exits.
     gameEvents.onLaunched = () => {
       void readInstanceState().then((s) => onGameLaunched(s.minecraft))
       const mode = getSettings().onGameStart
-      if (mode === 'hide') win?.hide()
+      if (mode === 'hide') toBackground(10_000) // its memory goes to Minecraft
       else if (mode === 'close') setTimeout(() => app.quit(), 1500)
     }
     gameEvents.onExited = ({ crashed, anyRunning }) => {
       onGameExited(anyRunning)
       if (!anyRunning) setTimeout(() => void prepareInBackground(), 60_000) // e.g. an update published while playing
-      if (win && (crashed || !anyRunning) && !win.isVisible()) win.show()
-      if (crashed) win?.focus()
+      if ((crashed || !anyRunning) && !win?.isVisible()) showWindow(crashed)
     }
-    gameEvents.onPlaytimeChanged = () => win?.webContents.send(IPC.playtimeChanged)
-    void recoverSessions(instanceLogPath(), () => win?.webContents.send(IPC.playtimeChanged))
+    gameEvents.onPlaytimeChanged = () => toWindow(IPC.playtimeChanged)
+    void recoverSessions(instanceLogPath(), () => toWindow(IPC.playtimeChanged))
     registerIpc()
-    createWindow()
+    createWindow(process.argv.includes(AUTOSTART_ARG))
     startCommunity({
       window: () => win,
+      showWindow: () => showWindow(),
       feed: () => devFeed(getFeed()),
       play: () => {
         const active = getAccountsState().activeId
@@ -790,11 +835,11 @@ if (!app.requestSingleInstanceLock()) {
       },
       onChange: (live) => {
         liveRestart = live
-        win?.webContents.send(IPC.restartLiveChanged, live)
+        toWindow(IPC.restartLiveChanged, live)
         onRestartLive(live?.phase ?? null)
         if (live?.phase === 'back') void getServerStatus().then((s) => {
           lastStatus = s
-          win?.webContents.send(IPC.serverStatusUpdate, devStatus(s))
+          toWindow(IPC.serverStatusUpdate, devStatus(s))
         })
       },
       onMoment: (moment, at) => {
@@ -804,12 +849,12 @@ if (!app.requestSingleInstanceLock()) {
     })
     startStatusPolling((status) => {
       lastStatus = status
-      win?.webContents.send(IPC.serverStatusUpdate, devStatus(status))
+      toWindow(IPC.serverStatusUpdate, devStatus(status))
       onServerStatus(devStatus(status) ?? status)
-    })
+    }, () => (!win || !win.isVisible()) && !getSettings().notifyServerBack) // "back online" needs every minute
     void refreshAccount() // renew the active session silently in the background
-    startFeedPolling((feed) => win?.webContents.send(IPC.feedChanged, devFeed(feed)))
-    onUpdateState((s) => win?.webContents.send(IPC.launcherUpdateChanged, devUpdate(s)))
+    startFeedPolling((feed) => toWindow(IPC.feedChanged, devFeed(feed)))
+    onUpdateState((s) => toWindow(IPC.launcherUpdateChanged, devUpdate(s)))
     void detectGpus()
     // Get the next PLAY ready shortly after start (once the window and status are up), then twice an hour.
     setTimeout(() => void prepareInBackground(), 15_000)
@@ -818,5 +863,8 @@ if (!app.requestSingleInstanceLock()) {
     syncLoginItem()
   })
 
-  app.on('window-all-closed', () => app.quit())
+  // closed to free memory: keep running (tray, notifications); otherwise closing the window quits
+  app.on('window-all-closed', () => {
+    if (!released) app.quit()
+  })
 }

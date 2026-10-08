@@ -163,6 +163,30 @@
   }
 }
 
+/* Light interface (Settings > Launcher; auto on modest PCs): no blur, no decorative motion, a still background.
+   Spinners and progress bars keep moving: they say something is happening. */
+html.lite *,
+html.lite *::before,
+html.lite *::after {
+  backdrop-filter: none !important;
+  transition-duration: 0s !important;
+}
+html.lite .animate-rise,
+html.lite .animate-fade,
+html.lite .animate-pop,
+html.lite .animate-ping,
+html.lite .animate-pulse,
+html.lite .skeleton,
+html.lite .bg-slide {
+  animation: none !important;
+}
+html.lite .bg-slide {
+  transform: none;
+}
+html.lite .glass {
+  background-color: rgb(31 41 55 / 0.88);
+}
+
 /* Progress bar when the total size isn't known yet */
 @keyframes indeterminate {
   from {

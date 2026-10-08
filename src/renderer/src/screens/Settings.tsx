@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bell, Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, FlaskConical, Flag, Gamepad2, History, KeyRound, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
+import { Bell, Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, FlaskConical, Flag, Gamepad2, History, KeyRound, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon, BellOff } from 'lucide-react'
 import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
 import type { JavaRuntimeInfo } from '@shared/game'
@@ -11,6 +11,7 @@ import Toggle from '../components/Toggle'
 import Backups from './Backups'
 import Developer from './Developer'
 import type { DevAccess } from '@shared/dev'
+import type { LowEndInfo } from '@shared/performance'
 
 export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'backups' | 'advanced' | 'developer'
 
@@ -159,6 +160,46 @@ function GameSettings() {
 }
 
 // ---------------------------------------------------------------- Launcher
+/** Windows turned notifications off: the alerts below can't show until the player turns them back on. */
+function NotificationsBlocked() {
+  const { t } = useTranslation()
+  const [blocked, setBlocked] = useState(false)
+  useEffect(() => {
+    const check = () => void window.hemisphere.system.notificationsBlocked().then(setBlocked)
+    check()
+    window.addEventListener('focus', check) // back from Windows Settings
+    return () => window.removeEventListener('focus', check)
+  }, [])
+  if (!blocked) return null
+  return (
+    <div className="my-2 flex items-start gap-2.5 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/45 px-3.5 py-2.5 text-[13px] text-amber-100">
+      <BellOff size={16} className="mt-0.5 flex-none text-amber-400" />
+      <span className="min-w-0 flex-1">{t('community.notificationsOff')}</span>
+      <button onClick={() => window.hemisphere.system.openNotificationSettings()} className="flex-none rounded-md bg-amber-400 px-2.5 py-1 text-xs font-bold text-gray-900 hover:bg-amber-300">
+        {t('community.notificationsOffOpen')}
+      </button>
+    </div>
+  )
+}
+
+/** Light interface: auto says whether this PC gets it. */
+function LightModeRow({ lightMode, onChange }: { lightMode: Settings['lightMode']; onChange(v: Settings['lightMode']): void }) {
+  const { t } = useTranslation()
+  const [pc, setPc] = useState<LowEndInfo | null>(null)
+  useEffect(() => {
+    window.hemisphere.system.lowEnd().then(setPc)
+  }, [])
+  return (
+    <Row title={t('settings.lightMode')} hint={t('settings.lightModeHint')}>
+      <select value={lightMode} onChange={(e) => onChange(e.target.value as Settings['lightMode'])} className={selectClass}>
+        <option value="auto">{pc ? t(pc.lowEnd ? 'settings.lightModeOptions.autoOn' : 'settings.lightModeOptions.autoOff', { ram: Math.round(pc.ramGb) }) : t('settings.lightModeOptions.auto')}</option>
+        <option value="on">{t('settings.lightModeOptions.on')}</option>
+        <option value="off">{t('settings.lightModeOptions.off')}</option>
+      </select>
+    </Row>
+  )
+}
+
 function LauncherSettings() {
   const { t, i18n } = useTranslation()
   const [settings, update] = useSettings()
@@ -184,6 +225,7 @@ function LauncherSettings() {
           <option value="close">{t('settings.onGameStartOptions.close')}</option>
         </select>
       </Row>
+      <LightModeRow lightMode={settings.lightMode} onChange={(lightMode) => update({ lightMode })} />
       <Row title={t('settings.language')} hint={t('settings.languageHint')}>
         <select value={settings.language} onChange={(e) => changeLanguage(e.target.value)} className={selectClass}>
           <option value="auto">{t('settings.languageAuto')}</option>
@@ -201,6 +243,7 @@ function LauncherSettings() {
         <Toggle on={settings.backgroundUpdates} onChange={(backgroundUpdates) => update({ backgroundUpdates })} label={t('settings.backgroundUpdates')} />
       </Row>
       <h3 className="mt-6 mb-1 text-xs font-bold tracking-[0.08em] text-gray-400 uppercase">{t('community.title')}</h3>
+      <NotificationsBlocked />
       <Row title={t('community.tray')} hint={t('community.trayHint')}>
         <Toggle on={settings.closeToTray} onChange={(closeToTray) => update({ closeToTray })} label={t('community.tray')} />
       </Row>

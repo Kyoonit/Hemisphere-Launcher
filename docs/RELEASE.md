@@ -20,9 +20,20 @@ npm run dist
 
 This makes `dist/Hemisphere-Launcher-Setup-<version>.exe` (about 115 MB). Run it to install: no admin rights are needed. It installs for the current Windows user, with desktop and Start menu shortcuts. Uninstalling keeps accounts, settings and the game, so a reinstall is instant.
 
+## "What's new" (required for every release)
+
+Each update shows players a **What's new in the launcher** card on Home, once. Its text lives in
+`src/shared/launcherChangelog.json`, in English and French (same number of lines):
+
+- Changes waiting for the next release go in the `"next"` entry, as they're pushed.
+- `npm run release` turns `"next"` into the new version with today's date, and uses the same text for the GitHub
+  release. It **refuses to publish** a version without notes, or with English and French lists that don't match.
+- After a release, commit `src/shared/launcherChangelog.json`, then start a new `"next"` entry for the following changes.
+
 ## Publish a release (players get it automatically)
 
-1. Raise `"version"` in `package.json`, then commit and push.
+1. Raise `"version"` in `package.json` and check the `"next"` notes in `src/shared/launcherChangelog.json`, then commit
+   and push.
 2. Create a GitHub token with **Contents: read and write** on this repository
    (GitHub → Settings → Developer settings → Fine-grained tokens).
 3. In PowerShell:

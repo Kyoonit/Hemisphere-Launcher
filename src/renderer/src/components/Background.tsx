@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapPin } from 'lucide-react'
-import kingdom from '../assets/backgrounds/kingdom.png'
+import kingdom from '../assets/backgrounds/kingdom.webp'
 import hempshire from '../assets/backgrounds/hempshire.avif'
-import playerBases from '../assets/backgrounds/player-bases.png'
+import playerBases from '../assets/backgrounds/player-bases.webp'
 import community from '../assets/backgrounds/community.avif'
 
 /** Bundled inside the app (not editable on disk). Add a picture: import it and append it here. */
@@ -15,14 +15,28 @@ const BACKGROUNDS = [
 ]
 const ROTATE_MS = 60_000
 
-export default function Background({ dimmed }: { dimmed: boolean }) {
+/**
+ * still = light interface: one picture, no slow zoom or changes. Only the current picture (and the previous one, while
+ * it fades out) is loaded: the others aren't kept in memory.
+ */
+export default function Background({ dimmed, still }: { dimmed: boolean; still: boolean }) {
   const { t } = useTranslation()
   const [index, setIndex] = useState(() => Math.floor(Math.random() * BACKGROUNDS.length))
+  const [previous, setPrevious] = useState<number | null>(null)
+  const current = useRef(index)
 
   useEffect(() => {
+    if (still) return
     const timer = setInterval(() => setIndex((i) => (i + 1) % BACKGROUNDS.length), ROTATE_MS)
     return () => clearInterval(timer)
-  }, [])
+  }, [still])
+  useEffect(() => {
+    if (current.current === index) return
+    setPrevious(current.current)
+    current.current = index
+    const done = setTimeout(() => setPrevious(null), 2500) // after the cross-fade
+    return () => clearTimeout(done)
+  }, [index])
 
   return (
     <div className="absolute inset-0" aria-hidden>
@@ -30,7 +44,7 @@ export default function Background({ dimmed }: { dimmed: boolean }) {
         <div
           key={bg.src}
           className={`bg-slide ${i === index ? 'is-active' : ''}`}
-          style={{ backgroundImage: `url(${bg.src})` }}
+          style={i === index || i === previous ? { backgroundImage: `url(${bg.src})` } : undefined}
         />
       ))}
       {/* Gradient always there; the dark layer for other screens fades in/out the same way in both directions

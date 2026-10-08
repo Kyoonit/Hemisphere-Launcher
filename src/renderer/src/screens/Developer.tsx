@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '../i18n'
-import { Bell, BellRing, Bug, Code, Languages, ZoomIn, CalendarDays, Construction, FlaskConical, FolderOpen, Gauge, Image, Info, LoaderCircle, Lock, Monitor, Newspaper, RefreshCw, RotateCcw, Server, Trash2, type LucideIcon } from 'lucide-react'
+import { Activity, Bell, BellRing, Bug, MemoryStick, Code, Languages, ZoomIn, CalendarDays, Construction, FlaskConical, FolderOpen, Gauge, Image, Info, LoaderCircle, Lock, Monitor, Newspaper, RefreshCw, RotateCcw, Server, Trash2, type LucideIcon } from 'lucide-react'
 import type { DevAccess, DevAction, DevState } from '@shared/dev'
+import type { PerfSnapshot } from '@shared/performance'
 import Toggle from '../components/Toggle'
 
 /**
@@ -59,6 +60,14 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
           <Info size={14} className="text-green-400" /> {result}
         </p>
       )}
+
+      <Performance />
+      <Group icon={MemoryStick} title={t('dev.groups.memory')}>
+        <p className="text-[12.5px] text-gray-400">{t('dev.releaseHint')}</p>
+        <div className="flex flex-wrap gap-2">
+          <Action action="release:test" icon={MemoryStick} label={t('dev.releaseTest')} />
+        </div>
+      </Group>
 
       <Group icon={Newspaper} title={t('dev.groups.feed')}>
         <Line label={t('dev.sampleEvents')} hint={t('dev.sampleEventsHint')}>
@@ -211,6 +220,59 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
         </div>
       </Group>
     </div>
+  )
+}
+
+/** What the launcher costs right now: memory and CPU per process, and what it downloaded, per site. */
+function Performance() {
+  const { t, i18n } = useTranslation()
+  const [perf, setPerf] = useState<PerfSnapshot | null>(null)
+  useEffect(() => {
+    const load = () => void window.hemisphere.dev.perf().then(setPerf)
+    load()
+    const timer = setInterval(load, 2000)
+    return () => clearInterval(timer)
+  }, [])
+  if (!perf) return null
+  const size = (b: number) => (b >= 1024 ** 2 ? `${(b / 1024 ** 2).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`)
+  const minutes = Math.max(1, Math.round((Date.now() - perf.since) / 60_000))
+  return (
+    <Group icon={Activity} title={t('dev.groups.perf')}>
+      <div className="flex items-baseline gap-3">
+        <b className="text-2xl font-bold text-white tabular-nums">{perf.totalMb} MB</b>
+        <span className="text-[12.5px] text-gray-400">{t('dev.perfTotal', { count: perf.processes.length })}</span>
+      </div>
+      <table className="w-full text-[12.5px] tabular-nums">
+        <tbody>
+          {perf.processes
+            .slice()
+            .sort((a, b) => b.memoryMb - a.memoryMb)
+            .map((p, i) => (
+              <tr key={i} className="border-t border-gray-800 text-gray-300">
+                <td className="py-1">{t(`dev.perfProcess.${p.type}`, { defaultValue: p.type })}{p.name ? <span className="text-gray-500"> · {p.name}</span> : null}</td>
+                <td className="py-1 text-right">{p.memoryMb} MB</td>
+                <td className="w-16 py-1 text-right text-gray-400">{p.cpu.toLocaleString(i18n.language)} %</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+      <p className="pt-1 text-[12.5px] font-semibold text-gray-200">{t('dev.perfNetwork', { minutes })}</p>
+      {perf.network.length === 0 ? (
+        <p className="text-[12.5px] text-gray-500">{t('dev.perfNoNetwork')}</p>
+      ) : (
+        <table className="w-full text-[12.5px] tabular-nums">
+          <tbody>
+            {perf.network.slice(0, 8).map((n) => (
+              <tr key={n.host} className="border-t border-gray-800 text-gray-300">
+                <td className="max-w-0 truncate py-1">{n.host}</td>
+                <td className="w-24 py-1 text-right text-gray-400">{t('dev.perfRequests', { count: n.requests })}</td>
+                <td className="w-20 py-1 text-right">{size(n.bytes)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </Group>
   )
 }
 

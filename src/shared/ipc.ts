@@ -14,6 +14,7 @@ import type { LiveRestart } from './restart'
 import type { ModHistoryItem, ModSetInfo, ModSetsState, SetImportResult, SetShareResult, SetSwitchResult, UndoResult } from './modSets'
 import type { RestorePointInfo, RestorePreview, RestoreResult, SetupExportResult, SetupImportResult, SetupPick } from './restorePoints'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
+import type { LowEndInfo, PerfSnapshot } from './performance'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -88,6 +89,7 @@ export const IPC = {
   devUnlock: 'dev:unlock',
   devCheckDiscord: 'dev:checkDiscord',
   devLock: 'dev:lock',
+  devPerf: 'dev:perf',
   eventsSetReminder: 'events:setReminder',
   reportBuild: 'report:build',
   reportShow: 'report:show',
@@ -109,6 +111,9 @@ export const IPC = {
   packsProjectVersions: 'packs:projectVersions',
   packsInstall: 'packs:install',
   systemPreflight: 'system:preflight',
+  systemLowEnd: 'system:lowEnd',
+  systemNotificationsBlocked: 'system:notificationsBlocked',
+  systemOpenNotificationSettings: 'system:openNotificationSettings',
   systemOpenFolder: 'system:open-folder',
   systemDiagnostics: 'system:diagnostics',
   systemMoveGameDir: 'system:move-game-dir',
@@ -149,6 +154,8 @@ export type LinkKey = keyof typeof LINKS
 export interface AppInfo {
   version: string
   platform: string
+  /** the installed launcher (false: a development build) */
+  packaged: boolean
 }
 
 /** API exposed on `window.hemisphere` by the preload script. */
@@ -240,6 +247,8 @@ export interface HemisphereApi {
     lock(): Promise<boolean>
     set(patch: Partial<DevState>): Promise<DevState | null>
     action(action: DevAction): Promise<string>
+    /** memory, CPU and downloads of the launcher right now */
+    perf(): Promise<PerfSnapshot | null>
   }
   /** Events calendar (from the feed) */
   events: {
@@ -289,6 +298,12 @@ export interface HemisphereApi {
     info(): Promise<SystemInfo>
     /** Low disk space / little RAM hints for the PLAY screen */
     preflight(): Promise<PreflightWarning[]>
+    /** a modest PC? (the light interface turns on by itself) */
+    lowEnd(): Promise<LowEndInfo>
+    /** Windows notifications are turned off (for all apps or this launcher): no alert can show */
+    notificationsBlocked(): Promise<boolean>
+    /** opens Windows Settings > Notifications */
+    openNotificationSettings(): void
     openFolder(kind: 'game' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'screenshots' | 'gameLogs' | 'crashReports' | 'launcherLogs'): void
     /** Builds the support report and copies it to the clipboard */
     copyDiagnostics(): Promise<string>

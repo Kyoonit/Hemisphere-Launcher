@@ -81,6 +81,7 @@ const api: HemisphereApi = {
     unlock: (code) => ipcRenderer.invoke(IPC.devUnlock, code),
     checkDiscord: (id) => ipcRenderer.invoke(IPC.devCheckDiscord, id),
     lock: () => ipcRenderer.invoke(IPC.devLock),
+    perf: () => ipcRenderer.invoke(IPC.devPerf),
     set: (patch) => ipcRenderer.invoke(IPC.devSet, patch),
     action: (action) => ipcRenderer.invoke(IPC.devAction, action),
   },
@@ -134,6 +135,9 @@ const api: HemisphereApi = {
   system: {
     info: () => ipcRenderer.invoke(IPC.systemInfo),
     preflight: () => ipcRenderer.invoke(IPC.systemPreflight),
+    lowEnd: () => ipcRenderer.invoke(IPC.systemLowEnd),
+    notificationsBlocked: () => ipcRenderer.invoke(IPC.systemNotificationsBlocked),
+    openNotificationSettings: () => ipcRenderer.send(IPC.systemOpenNotificationSettings),
     openFolder: (kind) => ipcRenderer.send(IPC.systemOpenFolder, kind),
     copyDiagnostics: () => ipcRenderer.invoke(IPC.systemDiagnostics),
     moveGameDir: (target) => ipcRenderer.invoke(IPC.systemMoveGameDir, target),

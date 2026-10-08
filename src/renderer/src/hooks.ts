@@ -93,3 +93,18 @@ export function useLiveRestart(): LiveRestart {
   }, [])
   return live
 }
+
+let lowEnd: Promise<boolean> | null = null
+/**
+ * The light interface (no blur, animations or background changes): Settings > Launcher. Auto = on for a modest PC
+ * (8 GB of RAM or less, 4 CPU threads or fewer) or when Windows asks for less motion.
+ */
+export function useLightMode(): boolean {
+  const [settings] = useSettings()
+  const [modest, setModest] = useState(false)
+  useEffect(() => {
+    void (lowEnd ??= window.hemisphere.system.lowEnd().then((i) => i.lowEnd)).then(setModest)
+  }, [])
+  if (!settings || settings.lightMode === 'off') return false
+  return settings.lightMode === 'on' || modest || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}

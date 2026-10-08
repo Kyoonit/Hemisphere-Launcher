@@ -65,11 +65,11 @@
     "autoJoin": "Join Hemisphere automatically",
     "autoJoinHint": "Skip the title screen and connect straight to the server (latest version only)",
     "onGameStart": "When Minecraft starts",
-    "onGameStartHint": "The launcher comes back when you quit the game",
+    "onGameStartHint": "Hidden, the launcher gives its memory to Minecraft and comes back when you quit the game. Notifications and reminders keep working.",
     "onGameStartOptions": {
-      "hide": "Hide the launcher",
+      "hide": "Hide it (frees its memory for the game)",
       "keep": "Keep it open",
-      "close": "Close it"
+      "close": "Close it (no notifications)"
     },
     "memory": "Memory",
     "memoryHint": "Recommended for your PC: {{recommended}} · installed: {{total}}",
@@ -123,7 +123,16 @@
     "backgroundUpdatesHint": "Installs Hemisphere updates while the launcher is open, so PLAY starts right away",
     "devTools": "Developer tools",
     "devToolsHint": "Only in development builds",
-    "markNewsUnread": "Mark all news as unread"
+    "markNewsUnread": "Mark all news as unread",
+    "lightMode": "Light interface",
+    "lightModeHint": "No blur, animations or changing backgrounds: smoother on modest PCs.",
+    "lightModeOptions": {
+      "auto": "Auto",
+      "autoOn": "Auto (on: {{ram}} GB of RAM)",
+      "autoOff": "Auto (off on this PC)",
+      "on": "On",
+      "off": "Off"
+    }
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -513,7 +522,8 @@
   },
   "whatsNew": {
     "title": "What's new in {{version}}",
-    "close": "Close"
+    "close": "Close",
+    "launcherTitle": "What's new in the launcher {{version}}"
   },
   "preflight": {
     "lowDisk": "Low disk space: {{value}} GB free",
@@ -1005,7 +1015,9 @@
       "before1": "1 min before",
       "start": "When it starts",
       "back": "When it’s back"
-    }
+    },
+    "notificationsOff": "Windows notifications are turned off on this PC: restart alerts and event reminders can’t show. Turn them on in Windows Settings > System > Notifications.",
+    "notificationsOffOpen": "Open Windows settings"
   },
   "dev": {
     "staffAccess": "Staff access",
@@ -1029,7 +1041,9 @@
       "community": "Notifications and Discord",
       "launcher": "Launcher",
       "files": "Files",
-      "window": "Window"
+      "window": "Window",
+      "perf": "Performance",
+      "memory": "Memory while playing"
     },
     "sampleEvents": "Sample events",
     "sampleEventsHint": "One live, one starting in 16 minutes (its reminder fires about a minute later), one in 3 days. In News and on Home.",
@@ -1102,6 +1116,19 @@
     "language": "Language, quick",
     "languageHint": "This window only, until reload (Settings keep yours).",
     "reload": "Reload interface",
-    "devtools": "Open DevTools"
+    "devtools": "Open DevTools",
+    "perfTotal": "used by the launcher right now ({{count}} processes)",
+    "perfProcess": {
+      "Browser": "Main",
+      "Tab": "Interface",
+      "GPU": "Graphics",
+      "Utility": "Utility"
+    },
+    "perfNetwork": "Downloaded by the launcher ({{minutes}} min)",
+    "perfNoNetwork": "Nothing yet.",
+    "perfRequests_one": "{{count}} request",
+    "perfRequests_other": "{{count}} requests",
+    "releaseHint": "As when Minecraft starts: the window closes to free its memory, the launcher stays in the tray. Notifications still arrive and reopen it.",
+    "releaseTest": "Close the window now (test)"
   }
 }

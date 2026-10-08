@@ -29,6 +29,10 @@ export interface Settings {
   seenNews: string[]
   /** Client version whose "What's new" was shown or dismissed */
   seenChangelog: string | null
+  /** Launcher version whose "What's new" was shown or dismissed (null = first start: nothing to show) */
+  seenLauncherVersion: string | null
+  /** Light interface (no blur, animations or background changes): auto = on modest PCs */
+  lightMode: 'auto' | 'on' | 'off'
   /** Install client updates and check files while the launcher is open, so PLAY starts right away */
   backgroundUpdates: boolean
   /** On PCs with two graphics chips: run Minecraft on the high-performance one */
@@ -63,6 +67,8 @@ export const DEFAULT_SETTINGS: Settings = {
   importPromptDismissed: false,
   seenNews: [],
   seenChangelog: null,
+  seenLauncherVersion: null,
+  lightMode: 'auto',
   backgroundUpdates: true,
   highPerformanceGpu: true,
   reportDiscord: '',

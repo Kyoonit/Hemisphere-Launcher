@@ -1,0 +1,20 @@
+[
+  {
+    "version": "next",
+    "date": "",
+    "en": [
+      "Lighter while you play: the launcher closes its window to give its memory to Minecraft, and comes back when you quit the game. Notifications and event reminders keep working.",
+      "Light interface for modest PCs (no blur or animations), turned on by itself with 8 GB of RAM or less. Settings > Launcher.",
+      "Less downloading in the background when nobody is looking at the launcher.",
+      "Online now: up to 6 players, the rest scrolls.",
+      "Launcher updates show in orange next to the window buttons."
+    ],
+    "fr": [
+      "Plus léger pendant que tu joues : le launcher ferme sa fenêtre pour laisser sa mémoire à Minecraft, et revient quand tu quittes le jeu. Les notifications et rappels d’événements continuent de fonctionner.",
+      "Interface légère pour les PC modestes (sans flou ni animations), activée toute seule avec 8 Go de RAM ou moins. Paramètres > Launcher.",
+      "Moins de téléchargements en arrière-plan quand personne ne regarde le launcher.",
+      "En ligne : jusqu’à 6 joueurs, les autres défilent.",
+      "Les mises à jour du launcher s’affichent en orange, à côté des boutons de la fenêtre."
+    ]
+  }
+]

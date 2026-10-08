@@ -65,11 +65,11 @@
     "autoJoin": "Rejoindre Hemisphere automatiquement",
     "autoJoinHint": "Passe l’écran titre et connecte-toi directement au serveur (dernière version uniquement)",
     "onGameStart": "Au lancement de Minecraft",
-    "onGameStartHint": "Le launcher revient quand tu quittes le jeu",
+    "onGameStartHint": "Masqué, le launcher laisse sa mémoire à Minecraft et revient quand tu quittes le jeu. Les notifications et rappels continuent de fonctionner.",
     "onGameStartOptions": {
-      "hide": "Masquer le launcher",
+      "hide": "Le masquer (libère sa mémoire pour le jeu)",
       "keep": "Le garder ouvert",
-      "close": "Le fermer"
+      "close": "Le fermer (plus de notifications)"
     },
     "memory": "Mémoire",
     "memoryHint": "Recommandé pour ton PC : {{recommended}} · installé : {{total}}",
@@ -123,7 +123,16 @@
     "backgroundUpdatesHint": "Installe les mises à jour Hemisphere pendant que le launcher est ouvert, pour que JOUER démarre tout de suite",
     "devTools": "Outils de développement",
     "devToolsHint": "Uniquement dans les versions de développement",
-    "markNewsUnread": "Marquer toutes les actus comme non lues"
+    "markNewsUnread": "Marquer toutes les actus comme non lues",
+    "lightMode": "Interface légère",
+    "lightModeHint": "Sans flou, animations ni changement de fond : plus fluide sur les PC modestes.",
+    "lightModeOptions": {
+      "auto": "Auto",
+      "autoOn": "Auto (activée : {{ram}} Go de RAM)",
+      "autoOff": "Auto (désactivée sur ce PC)",
+      "on": "Activée",
+      "off": "Désactivée"
+    }
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -527,7 +536,8 @@
   },
   "whatsNew": {
     "title": "Nouveautés de la {{version}}",
-    "close": "Fermer"
+    "close": "Fermer",
+    "launcherTitle": "Nouveautés du launcher {{version}}"
   },
   "preflight": {
     "lowDisk": "Peu d’espace disque : {{value}} Go libres",
@@ -1050,7 +1060,9 @@
       "before1": "1 min avant",
       "start": "Au début",
       "back": "Quand il revient"
-    }
+    },
+    "notificationsOff": "Les notifications Windows sont désactivées sur ce PC : les alertes de restart et rappels d’événements ne peuvent pas s’afficher. Active-les dans Paramètres Windows > Système > Notifications.",
+    "notificationsOffOpen": "Ouvrir les paramètres Windows"
   },
   "dev": {
     "staffAccess": "Accès staff",
@@ -1074,7 +1086,9 @@
       "community": "Notifications et Discord",
       "launcher": "Launcher",
       "files": "Fichiers",
-      "window": "Fenêtre"
+      "window": "Fenêtre",
+      "perf": "Performances",
+      "memory": "Mémoire pendant le jeu"
     },
     "sampleEvents": "Événements d’exemple",
     "sampleEventsHint": "Un en cours, un dans 16 minutes (son rappel arrive environ une minute après), un dans 3 jours. Dans Actus et sur l’accueil.",
@@ -1147,6 +1161,19 @@
     "language": "Langue, rapide",
     "languageHint": "Cette fenêtre seulement, jusqu’au rechargement (tes paramètres ne changent pas).",
     "reload": "Recharger l’interface",
-    "devtools": "Ouvrir les DevTools"
+    "devtools": "Ouvrir les DevTools",
+    "perfTotal": "utilisés par le launcher en ce moment ({{count}} processus)",
+    "perfProcess": {
+      "Browser": "Principal",
+      "Tab": "Interface",
+      "GPU": "Graphismes",
+      "Utility": "Utilitaire"
+    },
+    "perfNetwork": "Téléchargé par le launcher ({{minutes}} min)",
+    "perfNoNetwork": "Rien pour l’instant.",
+    "perfRequests_one": "{{count}} requête",
+    "perfRequests_other": "{{count}} requêtes",
+    "releaseHint": "Comme au lancement de Minecraft : la fenêtre se ferme pour libérer sa mémoire, le launcher reste dans la zone de notification. Les notifications arrivent toujours et le rouvrent.",
+    "releaseTest": "Fermer la fenêtre maintenant (test)"
   }
 }

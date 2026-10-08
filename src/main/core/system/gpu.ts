@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { REG_EXE } from './windows'
 
 /**
  * Laptops with two graphics chips (built-in + gaming card) often run Java on the weak built-in one, which is the
@@ -45,10 +46,10 @@ export async function detectGpus(): Promise<void> {
 export async function applyGpuPreference(javaExe: string, highPerformance: boolean): Promise<void> {
   if (process.platform !== 'win32' || !detected.hybrid) return
   if (highPerformance) {
-    await run('reg.exe', ['add', KEY, '/v', javaExe, '/t', 'REG_SZ', '/d', HIGH_PERFORMANCE, '/f'], { windowsHide: true })
+    await run(REG_EXE, ['add', KEY, '/v', javaExe, '/t', 'REG_SZ', '/d', HIGH_PERFORMANCE, '/f'], { windowsHide: true })
     return
   }
   // Only undo what we set: a preference the player chose in Windows' own settings is left alone.
-  const current = await run('reg.exe', ['query', KEY, '/v', javaExe], { windowsHide: true }).catch(() => null)
-  if (current?.stdout.includes(HIGH_PERFORMANCE)) await run('reg.exe', ['delete', KEY, '/v', javaExe, '/f'], { windowsHide: true })
+  const current = await run(REG_EXE, ['query', KEY, '/v', javaExe], { windowsHide: true }).catch(() => null)
+  if (current?.stdout.includes(HIGH_PERFORMANCE)) await run(REG_EXE, ['delete', KEY, '/v', javaExe, '/f'], { windowsHide: true })
 }
