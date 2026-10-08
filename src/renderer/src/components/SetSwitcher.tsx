@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, Layers, LoaderCircle, Settings2 } from 'lucide-react'
 import type { ModSetsState } from '@shared/modSets'
 
+/** An action that couldn't reach the launcher's core: shown as an error, never silently ignored. */
+const failed = { ok: false, reason: 'failed' } as const
+
 /** Home, under PLAY: the active mod set, with a small menu to switch to another one in one click. */
 export default function SetSwitcher({ onManage }: { onManage(): void }) {
   const { t } = useTranslation()
@@ -34,7 +37,7 @@ export default function SetSwitcher({ onManage }: { onManage(): void }) {
     if (id === state.active) return setOpen(false)
     setError(null)
     setBusy(id)
-    const r = await window.hemisphere.modSets.switchTo(id, t('sets.myMods'))
+    const r = await window.hemisphere.modSets.switchTo(id, t('sets.myMods')).catch(() => failed)
     setBusy(null)
     await reload()
     if (r.ok) setOpen(false)

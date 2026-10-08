@@ -4,6 +4,9 @@ import { Check, ChevronDown, ClipboardPaste, Copy, Layers, LoaderCircle, Pencil,
 import { SET_NAME_MAX, type ModSetInfo, type ModSetsState } from '@shared/modSets'
 import ConfirmDialog from './ConfirmDialog'
 
+/** An action that couldn't reach the launcher's core: shown as an error, never silently ignored. */
+const failed = { ok: false, reason: 'failed' } as const
+
 type Message = { ok: boolean; text: string; list?: string[] }
 
 /**
@@ -49,7 +52,7 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
   const switchTo = async (s: ModSetInfo) => {
     setMessage(null)
     setBusy(s.id)
-    const r = await window.hemisphere.modSets.switchTo(s.id, t('sets.myMods'))
+    const r = await window.hemisphere.modSets.switchTo(s.id, t('sets.myMods')).catch(() => failed)
     setBusy(null)
     if (r.ok) {
       const text = r.savedAs ? t('sets.switchedSaved', { name: s.name, saved: r.savedAs }) : t('sets.switched', { name: s.name })
@@ -62,20 +65,20 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
     const name = text.trim()
     if (!name) return
     setBusy('save')
-    const r = await window.hemisphere.modSets.save(name)
+    const r = await window.hemisphere.modSets.save(name).catch(() => null)
     setBusy(null)
     reset()
     setMessage(r ? { ok: true, text: t('sets.saved', { name: r.name }) } : { ok: false, text: t('sets.errors.failed') })
     void reload()
   }
   const rename = async (id: string) => {
-    if (text.trim()) await window.hemisphere.modSets.rename(id, text)
+    if (text.trim()) await window.hemisphere.modSets.rename(id, text).catch(() => false)
     reset()
     void reload()
   }
   const share = async (s: ModSetInfo) => {
     setMessage(null)
-    const r = await window.hemisphere.modSets.share(s.id)
+    const r = await window.hemisphere.modSets.share(s.id).catch(() => failed)
     if (r.ok) setMessage({ ok: true, text: t('sets.shared', { name: s.name }), list: r.left.length ? [t('sets.notShared', { names: r.left.join(', ') })] : undefined })
     else setMessage({ ok: false, text: t(`sets.errors.${r.reason}`) })
   }
@@ -83,7 +86,7 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
     if (!text.trim()) return
     setMessage(null)
     setBusy('code')
-    const r = await window.hemisphere.modSets.importCode(text)
+    const r = await window.hemisphere.modSets.importCode(text).catch(() => failed)
     setBusy(null)
     if (r.ok) {
       reset()
@@ -94,7 +97,7 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
   }
   const duplicate = async (s: ModSetInfo) => {
     setMessage(null)
-    const copy = await window.hemisphere.modSets.duplicate(s.id)
+    const copy = await window.hemisphere.modSets.duplicate(s.id).catch(() => null)
     await reload()
     if (!copy) return setMessage({ ok: false, text: t('sets.errors.failed') })
     setMessage({ ok: true, text: t('sets.duplicated', { name: s.name, copy: copy.name }) })
@@ -105,7 +108,7 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
   }
   const remove = async (s: ModSetInfo) => {
     setDeleting(null)
-    await window.hemisphere.modSets.remove(s.id)
+    await window.hemisphere.modSets.remove(s.id).catch(() => false)
     setMessage({ ok: true, text: t('sets.deleted', { name: s.name }) })
     void reload()
   }
