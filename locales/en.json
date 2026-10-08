@@ -352,7 +352,8 @@
     "updateLockedHint": "Locked: this update is not installed until you unlock the mod",
     "lastAdded": "Last added",
     "addedOn": "Added {{date}}",
-    "notInstalledYet": "Not installed yet (next Play)"
+    "notInstalledYet": "Not installed yet (next Play)",
+    "disabledFilter": "Disabled"
   },
   "repair": {
     "title": "Repair installation",

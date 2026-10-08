@@ -6,7 +6,7 @@ import Toggle from '../components/Toggle'
 import type { ClientSummary } from '@shared/client'
 import { localize } from '@shared/manifest'
 
-type Filter = 'all' | 'yours' | 'updates' | 'recent'
+type Filter = 'all' | 'yours' | 'updates' | 'recent' | 'disabled'
 
 /** Same palette idea as the wireframe: a stable colour per mod for its letter tile. */
 const TILE = ['#2563eb', '#0d9488', '#b45309', '#7c3aed', '#16a34a', '#db2777', '#0891b2', '#ca8a04', '#dc2626', '#4f46e5']
@@ -44,11 +44,12 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
   }, [])
 
   // nothing left to update: the Updates view falls back to All
-  const view: Filter = filter === 'updates' && !mods?.some((m) => m.update) ? 'all' : filter
+  const view: Filter =
+    (filter === 'updates' && !mods?.some((m) => m.update)) || (filter === 'disabled' && !mods?.some((m) => !m.enabled)) ? 'all' : filter
   const items = useMemo(() => {
     const q = query.trim().toLowerCase()
     return (mods ?? [])
-      .filter((m) => (view === 'all' || view === 'recent' || (view === 'yours' ? !m.fromHemisphere : !!m.update)) && (!q || m.name.toLowerCase().includes(q) || (m.file ?? '').toLowerCase().includes(q)))
+      .filter((m) => (view === 'all' || view === 'recent' || (view === 'yours' ? !m.fromHemisphere : view === 'disabled' ? !m.enabled : !!m.update)) && (!q || m.name.toLowerCase().includes(q) || (m.file ?? '').toLowerCase().includes(q)))
       // Last added: newest install first (mods not installed yet go last); otherwise alphabetical
       .sort((a, b) => (view === 'recent' ? b.addedAt - a.addedAt : 0) || a.name.localeCompare(b.name, i18n.language, { sensitivity: 'base' }))
   }, [mods, view, query, i18n.language])
@@ -76,11 +77,13 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
 
   // "Updates" only appears when something can be updated (locked mods included: they're shown, never updated)
   const withUpdate = mods.filter((m) => m.update).length
+  const disabledCount = mods.filter((m) => !m.enabled).length
   const filters: [Filter, string][] = [
     ['all', t('mods.groups.all')],
     ['yours', `${t('mods.yours')} (${mods.filter((m) => !m.fromHemisphere).length})`],
     ...(withUpdate ? [['updates', `${t('mods.updatesFilter')} (${withUpdate})`] as [Filter, string]] : []),
     ['recent', t('mods.lastAdded')],
+    ...(disabledCount ? [['disabled', `${t('mods.disabledFilter')} (${disabledCount})`] as [Filter, string]] : []),
   ]
   const toolButton = 'flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-gray-300 transition-colors hover:bg-gray-700 hover:text-white'
 
