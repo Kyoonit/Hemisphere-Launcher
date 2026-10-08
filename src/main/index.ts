@@ -42,7 +42,7 @@ import type { ImportOptions, ImportSource } from '@shared/importer'
 import type { ClientSummary } from '@shared/client'
 import { loadWindowState, trackWindowState } from './core/system/windowState'
 import { handle, hardenApp, on, trustWindow } from './security'
-import { copyScreenshot, deleteScreenshot, listScreenshots, registerScreenshotScheme, serveScreenshots, showScreenshotInFolder } from './core/system/screenshots'
+import { copyScreenshot, deleteScreenshot, exportScreenshots, listScreenshots, registerScreenshotScheme, serveScreenshots, showScreenshotInFolder } from './core/system/screenshots'
 import { checkForUpdates, getUpdateState, installUpdateNow, onUpdateState, startUpdater } from './core/system/updater'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
@@ -140,6 +140,12 @@ function registerIpc(): void {
   handle(IPC.screenshotsCopy, (_e, name: unknown) => (typeof name === 'string' ? copyScreenshot(name) : false))
   on(IPC.screenshotsShow, (_e, name: unknown) => typeof name === 'string' && showScreenshotInFolder(name))
   handle(IPC.screenshotsDelete, (_e, name: unknown) => (typeof name === 'string' ? deleteScreenshot(name) : false))
+  handle(IPC.screenshotsExport, async (_e, names: unknown) => {
+    if (!Array.isArray(names) || !names.length) return null
+    const pick = await dialog.showOpenDialog(win!, { properties: ['openDirectory', 'createDirectory'], title: 'Copy screenshots to' })
+    if (pick.canceled || !pick.filePaths[0]) return null
+    return exportScreenshots(names.filter((n): n is string => typeof n === 'string'), pick.filePaths[0])
+  })
   handle(IPC.systemPreflight, () => preflightWarnings())
   on(IPC.systemOpenFolder, (_e, kind: unknown) => {
     const kinds: FolderKind[] = ['game', 'mods', 'screenshots', 'gameLogs', 'crashReports', 'launcherLogs']

@@ -576,6 +576,26 @@
     "today": "Aujourd’hui",
     "yesterday": "Hier",
     "copyFailed": "Impossible de copier cette capture.",
-    "deleteFailed": "Impossible de supprimer cette capture. Ferme Minecraft s’il est ouvert, puis réessaie."
+    "deleteFailed": "Impossible de supprimer cette capture. Ferme Minecraft s’il est ouvert, puis réessaie.",
+    "select": "Sélectionner",
+    "selectHint": "Choisis plusieurs captures. Astuce : Ctrl+clic en choisit une, Maj+clic une plage, Ctrl+A toutes.",
+    "selected_one": "{{count}} sélectionnée",
+    "selected_other": "{{count}} sélectionnées",
+    "selected_many": "{{count}} sélectionnées",
+    "selectAll": "Tout sélectionner",
+    "deselectAll": "Tout désélectionner",
+    "selectDay": "Sélectionner ce jour",
+    "deselectDay": "Désélectionner ce jour",
+    "exportTo": "Copier dans un dossier…",
+    "exported_one": "{{count}} capture copiée dans {{folder}}",
+    "exported_other": "{{count}} captures copiées dans {{folder}}",
+    "exported_many": "{{count}} captures copiées dans {{folder}}",
+    "deleteMany_one": "Mettre {{count}} capture à la corbeille",
+    "deleteMany_other": "Mettre {{count}} captures à la corbeille",
+    "deleteMany_many": "Mettre {{count}} captures à la corbeille",
+    "deleteManyFailed_one": "{{count}} capture n’a pas pu être supprimée. Ferme Minecraft s’il est ouvert, puis réessaie.",
+    "deleteManyFailed_other": "{{count}} captures n’ont pas pu être supprimées. Ferme Minecraft s’il est ouvert, puis réessaie.",
+    "deleteManyFailed_many": "{{count}} captures n’ont pas pu être supprimées. Ferme Minecraft s’il est ouvert, puis réessaie.",
+    "done": "Terminé"
   }
 }

@@ -1,8 +1,8 @@
 import { app, clipboard, ClipboardItem, nativeImage, protocol, shell } from 'electron'
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { copyFileSync, constants, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import type { Screenshot, ScreenshotList } from '@shared/screenshots'
+import { basename, extname, join } from 'node:path'
+import type { Screenshot, ScreenshotExport, ScreenshotList } from '@shared/screenshots'
 import { gamePaths } from '../game/target'
 
 /**
@@ -103,4 +103,27 @@ export async function deleteScreenshot(name: string): Promise<boolean> {
   if (!file) return false
   await shell.trashItem(file)
   return true
+}
+
+/** Copies screenshots into another folder (to share several at once); never overwrites, "name (2).png" instead. */
+export function exportScreenshots(names: string[], folder: string): ScreenshotExport {
+  let copied = 0
+  for (const name of new Set(names)) {
+    const file = existing(name)
+    if (!file) continue
+    const stem = basename(name, extname(name))
+    for (let i = 1; i < 1000; i++) {
+      try {
+        copyFileSync(file, join(folder, i === 1 ? name : `${stem} (${i}).png`), constants.COPYFILE_EXCL)
+        copied++
+        break
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') {
+          console.warn('[screenshots] could not copy', name, err)
+          break
+        }
+      }
+    }
+  }
+  return { copied, folder }
 }

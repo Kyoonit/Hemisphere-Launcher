@@ -6,7 +6,7 @@ import type { Feed } from './feed'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from './importer'
 import type { ClientSummary } from './client'
 import type { LauncherUpdateState } from './launcherUpdate'
-import type { ScreenshotList } from './screenshots'
+import type { ScreenshotExport, ScreenshotList } from './screenshots'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
@@ -53,6 +53,7 @@ export const IPC = {
   screenshotsCopy: 'screenshots:copy',
   screenshotsShow: 'screenshots:show',
   screenshotsDelete: 'screenshots:delete',
+  screenshotsExport: 'screenshots:export',
   systemPreflight: 'system:preflight',
   systemOpenFolder: 'system:open-folder',
   systemDiagnostics: 'system:diagnostics',
@@ -114,6 +115,8 @@ export interface HemisphereApi {
     showInFolder(name: string): void
     /** to the Recycle Bin */
     remove(name: string): Promise<boolean>
+    /** copies them to a folder the player picks; null when the picker was cancelled */
+    exportTo(names: string[]): Promise<ScreenshotExport | null>
   }
   /** Updates of the launcher itself (GitHub releases) */
   launcherUpdate: {

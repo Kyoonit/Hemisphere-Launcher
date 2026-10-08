@@ -26,6 +26,7 @@ const api: HemisphereApi = {
     copy: (name) => ipcRenderer.invoke(IPC.screenshotsCopy, name),
     showInFolder: (name) => ipcRenderer.send(IPC.screenshotsShow, name),
     remove: (name) => ipcRenderer.invoke(IPC.screenshotsDelete, name),
+    exportTo: (names) => ipcRenderer.invoke(IPC.screenshotsExport, names),
   },
   launcherUpdate: {
     get: () => ipcRenderer.invoke(IPC.launcherUpdateGet),

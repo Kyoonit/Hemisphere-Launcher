@@ -15,4 +15,10 @@ export interface ScreenshotList {
 }
 
 /** Image URLs served by the launcher (only files from the screenshots folder). */
+/** Result of copying screenshots to a folder. */
+export interface ScreenshotExport {
+  copied: number
+  folder: string
+}
+
 export const screenshotUrl = (kind: 'thumb' | 'full', s: Screenshot) => `hemi-shot://${kind}/${encodeURIComponent(s.name)}?v=${s.version}`

@@ -561,6 +561,22 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "copyFailed": "Couldn’t copy this screenshot.",
-    "deleteFailed": "Couldn’t delete this screenshot. Close Minecraft if it’s open, then try again."
+    "deleteFailed": "Couldn’t delete this screenshot. Close Minecraft if it’s open, then try again.",
+    "select": "Select",
+    "selectHint": "Pick several screenshots. Tip: Ctrl+click picks one, Shift+click a range, Ctrl+A all.",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "selectDay": "Select this day",
+    "deselectDay": "Deselect this day",
+    "exportTo": "Copy to folder…",
+    "exported_one": "{{count}} screenshot copied to {{folder}}",
+    "exported_other": "{{count}} screenshots copied to {{folder}}",
+    "deleteMany_one": "Move {{count}} to Recycle Bin",
+    "deleteMany_other": "Move {{count}} to Recycle Bin",
+    "deleteManyFailed_one": "{{count}} screenshot couldn’t be deleted. Close Minecraft if it’s open, then try again.",
+    "deleteManyFailed_other": "{{count}} screenshots couldn’t be deleted. Close Minecraft if it’s open, then try again.",
+    "done": "Done"
   }
 }
