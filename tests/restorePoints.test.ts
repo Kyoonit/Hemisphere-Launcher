@@ -132,3 +132,36 @@ describe('mod differences', () => {
     expect(d).toEqual({ back: [], away: [], changed: [{ name: 'Sodium', from: 'x', to: 'y' }], switched: 1 })
   })
 })
+
+describe('packs in restore points and setups', () => {
+  test('a restore point puts back the exact pack files (and which are on, through options.txt)', async () => {
+    put('resourcepacks/A.zip', 'A1')
+    put('shaderpacks/BSL.zip', 'B1')
+    put('options.txt', 'resourcePacks:["vanilla","file/A.zip"]\n')
+    const id = (await rp.createRestorePoint({ kind: 'updateAll' }))!
+    rmSync(inst('resourcepacks/A.zip'))
+    put('resourcepacks/New.zip', 'N1')
+    put('shaderpacks/BSL.zip', 'B2') // updated
+    put('options.txt', 'resourcePacks:["vanilla","file/New.zip"]\n')
+    const preview = (await rp.previewRestore(id))!
+    expect(preview.packsBack.sort()).toEqual(['A', 'BSL'])
+    expect(preview.packsAway.sort()).toEqual(['BSL', 'New'])
+    expect(await rp.restorePoint(id, null)).toMatchObject({ ok: true, missing: [] })
+    expect(readdirSync(inst('resourcepacks'))).toEqual(['A.zip'])
+    expect(read('shaderpacks/BSL.zip')).toBe('B1')
+    expect(read('options.txt')).toContain('file/A.zip')
+  })
+
+  test('a setup carries the pack files that aren’t on Modrinth', async () => {
+    put('resourcepacks/Mine.zip', 'MINE')
+    put('options.txt', 'resourcePacks:["vanilla","file/Mine.zip"]\n')
+    const file = join(root, 'packs.hemisphere')
+    expect(await setup.exportSetup(file, '1.0.0', null)).toMatchObject({ ok: true, packs: 1 })
+    const parsed = (await setup.readSetup(file))!
+    expect(setup.summarize(file, parsed, '26.3').packs).toBe(1)
+    rmSync(inst(), { recursive: true })
+    expect(await setup.importSetup(parsed, manifest, null)).toMatchObject({ ok: true, packs: 1, skipped: [] })
+    expect(read('resourcepacks/Mine.zip')).toBe('MINE')
+    expect(read('options.txt')).toContain('file/Mine.zip')
+  })
+})

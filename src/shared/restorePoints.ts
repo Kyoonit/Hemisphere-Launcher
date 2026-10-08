@@ -35,6 +35,9 @@ export interface RestorePreview {
   away: string[]
   /** same mod, other version: "Sodium 0.7.0 -> 0.6.1" */
   changed: { name: string; from: string; to: string }[]
+  /** resource / shader pack files that come back, or go away */
+  packsBack: string[]
+  packsAway: string[]
   /** mods switched on or off */
   switched: number
   options: boolean
@@ -63,6 +66,8 @@ export interface SetupSummary {
   options: boolean
   servers: boolean
   launcherSettings: boolean
+  /** resource and shader pack files */
+  packs: number
 }
 
 export type SetupPick = { ok: true; token: string; summary: SetupSummary } | { ok: false; reason: 'cancelled' | 'invalid' }
@@ -71,6 +76,8 @@ export type SetupImportResult =
   | {
       ok: true
       installed: number
+      /** resource and shader packs put in place */
+      packs: number
       /** switched to another version (the setup came from another Minecraft version) */
       updated: string[]
       skipped: { name: string; reason: 'blocked' | 'notAvailable' | 'download' }[]
@@ -78,6 +85,6 @@ export type SetupImportResult =
     }
   | { ok: false; reason: 'busy' | 'invalid' | 'failed'; detail?: string }
 
-export type SetupExportResult = { ok: true; path: string; bytes: number; mods: number; embedded: number } | { ok: false; reason: 'cancelled' | 'failed'; detail?: string }
+export type SetupExportResult = { ok: true; path: string; bytes: number; mods: number; embedded: number; packs: number } | { ok: false; reason: 'cancelled' | 'failed'; detail?: string }
 
 export const MAX_RESTORE_POINTS = 10

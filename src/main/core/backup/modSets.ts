@@ -7,12 +7,13 @@ import type { ClientManifest } from '@shared/manifest'
 import { MODRINTH_ID, policyFor, type ModPolicy } from '@shared/modBrowser'
 import { MAX_SETS, SET_NAME_MAX, type ModSetInfo, type ModSetsState, type SetImportResult, type SetShareResult, type SetSwitchResult } from '@shared/modSets'
 import { gamePaths } from '../game/target'
-import { getProjects, getVersions, isSafeModFileName, pickVersion, primaryFile, projectVersions, type ModrinthVersion } from '../modrinth/api'
+import { getProjects, getVersions, isSafeModFileName, isSafePackFileName, pickVersion, primaryFile, projectVersions, safeIcon, type ModrinthVersion, type ProjectKind } from '../modrinth/api'
 import { record } from '../modrinth/history'
 import { readPlayerRegistry, registryKey, withPlayerMods, type PlayerModRecord } from '../modrinth/playerMods'
 import { blobPath, downloadToStore } from '../sync/download'
 import { readInstanceState } from '../sync/sync'
-import { packEntries } from '../packs/packs'
+import { addPackVersion, identifiedPacks, packEntries } from '../packs/packs'
+import type { PackType } from '@shared/packs'
 import { readResourcePacks, readShaders, writeResourcePacks, writeShaders } from '../packs/gameSettings'
 import { applyPlan, cleanJars, currentMods, jarPath, setsDir, storeJar, withJarStore, type PointMod } from './restorePoints'
 
@@ -241,70 +242,121 @@ export const switchSet = (id: string, manifest: ClientManifest | null, fallbackN
 // ------------------------------------------------------------------------------ sharing as a code
 
 const CODE_PREFIX = 'HSET1-'
-const CodeSchema = z.object({
+const mid = z.string().regex(MODRINTH_ID)
+const bit = z.union([z.literal(0), z.literal(1)])
+const modId = z.string().regex(/^[a-z0-9-]{1,64}$/)
+const CodeV1 = z.object({
   v: z.literal(1),
   n: z.string().max(SET_NAME_MAX),
   mc: z.string().max(40),
-  m: z.array(z.tuple([z.string().regex(MODRINTH_ID), z.string().regex(MODRINTH_ID), z.union([z.literal(0), z.literal(1)])])).max(300),
-  c: z.record(z.string().regex(/^[a-z0-9-]{1,64}$/), z.boolean()),
+  m: z.array(z.tuple([mid, mid, bit])).max(300),
+  c: z.record(modId, z.boolean()),
 })
+/** v2: everything a preset holds. m = mods [project, version, on, locked]; r = resource packs [project, version,
+ * position when on (0 = top) or -1, locked]; s = shader packs [project, version, in use, locked]; so = shaders on. */
+const CodeV2 = z.object({
+  v: z.literal(2),
+  n: z.string().max(SET_NAME_MAX),
+  mc: z.string().max(40),
+  m: z.array(z.tuple([mid, mid, bit, bit])).max(300),
+  c: z.record(modId, z.boolean()),
+  d: z.array(modId).max(200),
+  r: z.array(z.tuple([mid, mid, z.number().int().min(-1).max(500), bit])).max(300),
+  s: z.array(z.tuple([mid, mid, bit, bit])).max(100),
+  so: bit,
+})
+export type SetCode = z.infer<typeof CodeV2> | (z.infer<typeof CodeV1> & { d?: undefined; r?: undefined; s?: undefined; so?: undefined })
 
-/** A short code with the set's Modrinth mods (others can't be shared: they're listed in `left`). */
+/**
+ * A short code with everything in the preset that's on Modrinth: mods (on/off, locks), Hemisphere mod choices and
+ * take-overs, resource packs (on/off and order, locks), shader packs (the one in use, locks) and whether shaders are on.
+ * Files that aren't on Modrinth can't be shared: they're listed in `left`.
+ */
 export const shareSet = (id: string, minecraft: string): Promise<SetShareResult> =>
   serial(async () => {
-    const set = await readSet(id)
-    if (!set) return { ok: false, reason: 'notFound' }
+    const saved = await readSet(id)
+    if (!saved) return { ok: false, reason: 'notFound' }
+    // the active preset's saved copy may be behind: share it as it is now
+    const set: ModSet = (await activeId()) === id ? { ...saved, ...(await capture()) } : saved
     const left: string[] = []
-    const m: [string, string, 0 | 1][] = []
+    const lock = (pinned: string | null | undefined): 0 | 1 => (pinned && pinned === minecraft ? 1 : 0)
+    const m: [string, string, 0 | 1, 0 | 1][] = []
     for (const mod of set.mods) {
       const r = set.registry[registryKey(mod.file)]
-      if (r?.projectId && r.versionId) m.push([r.projectId, r.versionId, mod.enabled ? 1 : 0])
+      if (r?.projectId && r.versionId) m.push([r.projectId, r.versionId, mod.enabled ? 1 : 0, lock(r.pinned)])
       else left.push(mod.title ?? mod.file.replace(/\.jar$/i, ''))
     }
-    if (!m.length && !Object.keys(set.choices).length) return { ok: false, reason: 'empty' }
-    const json = JSON.stringify({ v: 1, n: set.name, mc: minecraft, m, c: set.choices })
-    return { ok: true, code: CODE_PREFIX + deflateRawSync(json).toString('base64url'), left }
+    const order = set.packs?.resource ?? (await readResourcePacks()).active
+    const shader = set.packs?.shader ?? (await readShaders())
+    const r: [string, string, number, 0 | 1][] = []
+    for (const p of await identifiedPacks('resourcepack')) {
+      if (p.projectId && p.versionId) r.push([p.projectId, p.versionId, order.indexOf(p.file), lock(p.pinned)])
+      else if (order.includes(p.file)) left.push(p.file.replace(/\.zip$/i, ''))
+    }
+    const s: [string, string, 0 | 1, 0 | 1][] = []
+    for (const p of await identifiedPacks('shader')) {
+      if (p.projectId && p.versionId) s.push([p.projectId, p.versionId, shader.pack === p.file ? 1 : 0, lock(p.pinned)])
+      else if (shader.on && shader.pack === p.file) left.push(p.file.replace(/\.zip$/i, ''))
+    }
+    if (!m.length && !r.length && !s.length && !Object.keys(set.choices).length) return { ok: false, reason: 'empty' }
+    const code: z.infer<typeof CodeV2> = { v: 2, n: set.name, mc: minecraft, m, c: set.choices, d: set.detached, r, s, so: shader.on ? 1 : 0 }
+    return { ok: true, code: CODE_PREFIX + deflateRawSync(JSON.stringify(code)).toString('base64url'), left }
   })
 
-export function decodeSetCode(code: string): z.infer<typeof CodeSchema> | null {
+export function decodeSetCode(code: string): SetCode | null {
   const raw = code.trim().replace(/\s+/g, '')
-  if (!raw.startsWith(CODE_PREFIX) || raw.length > 20_000) return null
+  if (!raw.startsWith(CODE_PREFIX) || raw.length > 40_000) return null
   try {
-    const json = inflateRawSync(Buffer.from(raw.slice(CODE_PREFIX.length), 'base64url'), { maxOutputLength: 200_000 }).toString('utf8')
-    return CodeSchema.parse(JSON.parse(json))
+    const json = JSON.parse(inflateRawSync(Buffer.from(raw.slice(CODE_PREFIX.length), 'base64url'), { maxOutputLength: 400_000 }).toString('utf8')) as { v?: unknown }
+    return json.v === 2 ? CodeV2.parse(json) : CodeV1.parse(json)
   } catch {
     return null
   }
 }
 
+type Skipped = Extract<SetImportResult, { ok: true }>['skipped']
+
+/** The version to install for a shared one: the same when the Minecraft version matches, else its version for this one. */
+async function shared(projectId: string, versionId: string, sameMinecraft: boolean, versions: ModrinthVersion[], minecraft: string, kind: ProjectKind) {
+  const v = sameMinecraft ? (versions.find((x) => x.id === versionId && x.project_id === projectId) ?? null) : null
+  return v ?? pickVersion(await projectVersions(projectId, minecraft, kind).catch(() => []))
+}
+
 /**
- * Adds a friend's set from its code: each Modrinth mod is downloaded (hash-checked), in the same version when the
- * Minecraft version matches, else its version for this one. Blocked mods are left out. The set is added, not switched to.
+ * Adds a friend's preset from its code: each Modrinth mod and pack is downloaded (hash-checked), in the same version
+ * when the Minecraft version matches (locks kept), else its version for this one (locks dropped). Blocked ones are
+ * left out. The preset is added, not switched to.
  */
 export async function importSetCode(code: unknown, manifest: ClientManifest, policy: ModPolicy | null | undefined): Promise<SetImportResult> {
   const data = typeof code === 'string' ? decodeSetCode(code) : null
   if (!data) return { ok: false, reason: 'invalid' }
-  const skipped: Extract<SetImportResult, { ok: true }>['skipped'] = []
+  const skipped: Skipped = []
+  const same = data.mc === manifest.minecraft
+  const resource = data.r ?? []
+  const shaderList = data.s ?? []
   let versions: ModrinthVersion[]
   try {
-    versions = await getVersions(data.m.map(([, v]) => v))
+    versions = await getVersions([...data.m, ...resource, ...shaderList].map(([, v]) => v))
   } catch {
     return { ok: false, reason: 'failed' }
   }
-  const titles = await getProjects(data.m.map(([p]) => p))
+  const titles = await getProjects([...data.m, ...resource, ...shaderList].map(([p]) => p))
+  const name = (p: string) => titles.get(p)?.title ?? p
+  const allowed = (p: string) => {
+    if (policyFor(policy, p).verdict !== 'blocked') return true
+    skipped.push({ name: name(p), reason: 'blocked' })
+    return false
+  }
   const store = join(gamePaths().root, 'store')
   const mods: PointMod[] = []
   const registry: Record<string, PlayerModRecord> = {}
-  for (const [projectId, versionId, enabled] of data.m) {
-    const name = titles.get(projectId)?.title ?? projectId
-    let v: ModrinthVersion | null = versions.find((x) => x.id === versionId && x.project_id === projectId) ?? null
-    if (!v || data.mc !== manifest.minecraft) v = pickVersion(await projectVersions(projectId, manifest.minecraft).catch(() => []))
+  for (const entry of data.m) {
+    const [projectId, versionId, enabled] = entry
+    const locked = entry.length > 3 ? entry[3] : 0 // codes from before locks were shared
+    if (!allowed(projectId)) continue
+    const v = await shared(projectId, versionId, same, versions, manifest.minecraft, 'mod')
     if (!v) {
-      skipped.push({ name, reason: 'notAvailable' })
-      continue
-    }
-    if (policyFor(policy, projectId).verdict === 'blocked') {
-      skipped.push({ name, reason: 'blocked' })
+      skipped.push({ name: name(projectId), reason: 'notAvailable' })
       continue
     }
     const f = primaryFile(v)
@@ -313,10 +365,10 @@ export async function importSetCode(code: unknown, manifest: ClientManifest, pol
       await downloadToStore(store, { url: f.url, sha512: f.hashes.sha512, size: f.size }, () => {})
       await withJarStore(() => storeJar(blobPath(store, f.hashes.sha512), f.hashes.sha512))
     } catch {
-      skipped.push({ name, reason: 'download' })
+      skipped.push({ name: name(projectId), reason: 'download' })
       continue
     }
-    mods.push({ file: f.filename, enabled: enabled === 1, sha512: f.hashes.sha512, size: f.size, title: name, version: v.version_number })
+    mods.push({ file: f.filename, enabled: enabled === 1, sha512: f.hashes.sha512, size: f.size, title: name(projectId), version: v.version_number })
     registry[registryKey(f.filename)] = {
       file: f.filename,
       size: f.size,
@@ -326,36 +378,73 @@ export async function importSetCode(code: unknown, manifest: ClientManifest, pol
       projectId,
       versionId: v.id,
       versionNumber: v.version_number,
-      title: name,
-      icon: '',
+      title: name(projectId),
+      icon: safeIcon(titles.get(projectId)?.icon_url),
       update: null,
       incompatibleWith: null,
-      pinned: null,
+      pinned: locked && v.id === versionId ? manifest.minecraft : null,
     }
   }
+
+  // packs go to their folders (shared by every preset); the preset remembers which are on, in which order
+  let packs: ModSet['packs']
+  let packCount = 0
+  if (data.v === 2) {
+    const add = async (type: PackType, projectId: string, versionId: string, locked: number) => {
+      if (!allowed(projectId)) return null
+      const v = await shared(projectId, versionId, same, versions, manifest.minecraft, type)
+      if (!v || !isSafePackFileName(primaryFile(v).filename)) {
+        skipped.push({ name: name(projectId), reason: 'notAvailable' })
+        return null
+      }
+      try {
+        packCount++
+        return await addPackVersion(type, v, titles.get(projectId)?.title ?? null, safeIcon(titles.get(projectId)?.icon_url), locked && v.id === versionId ? manifest.minecraft : null)
+      } catch {
+        packCount--
+        skipped.push({ name: name(projectId), reason: 'download' })
+        return null
+      }
+    }
+    const on: { file: string; at: number }[] = []
+    for (const [projectId, versionId, at, locked] of data.r) {
+      const file = await add('resourcepack', projectId, versionId, locked)
+      if (file && at >= 0) on.push({ file, at })
+    }
+    let inUse = ''
+    for (const [projectId, versionId, active, locked] of data.s) {
+      const file = await add('shader', projectId, versionId, locked)
+      if (file && active) inUse = file
+    }
+    packs = { resource: on.sort((a, b) => a.at - b.at).map((x) => x.file), shader: { pack: inUse, on: data.so === 1 && !!inUse } }
+  }
+
   return serial(async () => {
     const sets = await allSets()
     if (sets.length >= MAX_SETS) return { ok: false, reason: 'failed' } as const
     const now = Date.now()
     const known = new Set(manifest.mods.map((m) => m.id))
-    // the friend's own version of a Hemisphere mod: the set takes that mod over (else it's a duplicate, kept off)
+    // the friend's own version of a Hemisphere mod: the preset takes that mod over (else it's a duplicate, kept off)
     const projects = new Set(Object.values(registry).map((r) => r.projectId))
-    const detached = manifest.mods.filter((m) => m.category !== 'library' && m.source && projects.has(m.source.modrinth.projectId)).map((m) => m.id)
+    const inferred = manifest.mods.filter((m) => m.category !== 'library' && m.source && projects.has(m.source.modrinth.projectId)).map((m) => m.id)
+    // (a taken-over mod whose file couldn't be shared stays Hemisphere's: taking it over without a file would hide it)
+    const detached = inferred.filter((id) => known.has(id))
     const set: ModSet = {
       format: 1,
       id: newId(),
-      name: uniqueName(cleanName(data.n) || 'Shared set', sets),
+      name: uniqueName(cleanName(data.n) || 'Shared preset', sets),
       createdAt: now,
       updatedAt: now,
       choices: Object.fromEntries(Object.entries(data.c).filter(([k]) => known.has(k))),
       detached,
       mods,
       registry,
+      ...(packs ? { packs } : {}),
     }
     await writeJson(setFile(set.id), set)
     void record({ kind: 'setImport', name: set.name })
-    console.log(`[mod-sets] imported "${set.name}" (${mods.length} mods, ${skipped.length} left out)`)
-    return { ok: true, id: set.id, name: set.name, mods: mods.length, skipped }
+    console.log(`[mod-sets] imported "${set.name}" (${mods.length} mods, ${packCount} packs, ${skipped.length} left out)`)
+    return { ok: true, id: set.id, name: set.name, mods: mods.length, packs: packCount, skipped }
   })
 }
 

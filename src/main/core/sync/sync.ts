@@ -289,6 +289,17 @@ export function detachMod(manifest: ClientManifest, id: string): Promise<{ hande
 }
 
 /** Hemisphere manages the mod again (its version is placed on the next sync). */
+/** Taken-over mods whose file is gone (deleted outside the launcher…): Hemisphere manages them again, choice kept. */
+export function forgetDetached(ids: string[]): Promise<void> {
+  const run = toggleQueue.then(async () => {
+    const state = await readInstanceState()
+    state.detached = state.detached.filter((d) => !ids.includes(d))
+    await writeInstanceState(state)
+  })
+  toggleQueue = run.catch(() => {})
+  return run
+}
+
 export function reattachMod(id: string): Promise<void> {
   const run = toggleQueue.then(async () => {
     const state = await readInstanceState()

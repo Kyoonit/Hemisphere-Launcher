@@ -88,7 +88,7 @@ describe('mod sets', () => {
     if (!r.ok) throw new Error(r.reason)
     expect(r.code.startsWith('HSET1-')).toBe(true)
     expect(r.left).toEqual(['jade-2.0'])
-    expect(sets.decodeSetCode(r.code)).toMatchObject({ n: 'Mine', mc: '26.3', m: [['AANobbMI', 'abcdEFGH', 1]], c: { iris: false } })
+    expect(sets.decodeSetCode(r.code)).toMatchObject({ n: 'Mine', mc: '26.3', m: [['AANobbMI', 'abcdEFGH', 1, 0]], c: { iris: false }, v: 2 })
     expect(sets.decodeSetCode('HSET1-garbage')).toBeNull()
     expect(sets.decodeSetCode('hello')).toBeNull()
   })
@@ -219,5 +219,48 @@ describe('presets with packs', () => {
     await sets.switchSet(building.id, manifest, 'My mods')
     expect(readFileSync(inst('options.txt'), 'utf8')).toContain('resourcePacks:["vanilla","file/C.zip"]')
     expect(readFileSync(inst('config/iris.properties'), 'utf8')).toContain('enableShaders=false')
+  })
+})
+
+describe('share codes with packs', () => {
+  test('carry resource packs (on/off, order, locks), the shader in use and whether shaders are on', async () => {
+    const { statSync } = await import('node:fs')
+    for (const f of ['A.zip', 'B.zip', 'Mine.zip']) put(`resourcepacks/${f}`, f)
+    put('shaderpacks/BSL.zip', 'bsl')
+    const rec = (type: string, file: string, projectId: string | null, versionId: string | null, pinned: string | null = null) => {
+      const st = statSync(inst(type === 'resourcepack' ? 'resourcepacks' : 'shaderpacks', file))
+      return [`${type}/${file.toLowerCase()}`, { file, size: st.size, mtimeMs: st.mtimeMs, addedAt: 0, sha512: 'x', lookedUp: true, projectId, versionId, versionNumber: '1', title: file, icon: '', update: null, pinned }]
+    }
+    put(
+      '.hemisphere/packs.json',
+      JSON.stringify(
+        Object.fromEntries([
+          rec('resourcepack', 'A.zip', 'AAAAAAAA', 'aaaaaaaa', '26.3'),
+          rec('resourcepack', 'B.zip', 'BBBBBBBB', 'bbbbbbbb'),
+          rec('resourcepack', 'Mine.zip', null, null),
+          rec('shader', 'BSL.zip', 'SSSSSSSS', 'ssssssss'),
+        ]),
+      ),
+    )
+    put('options.txt', 'resourcePacks:["vanilla","file/Mine.zip","file/A.zip"]\n')
+    put('config/iris.properties', 'shaderPack=BSL.zip\nenableShaders=true\n')
+    const p = (await sets.saveSet('Packs'))!
+    const r = await sets.shareSet(p.id, '26.3')
+    if (!r.ok) throw new Error(r.reason)
+    const code = sets.decodeSetCode(r.code)!
+    // A is on top (position 0) and locked, B is off, Mine isn't on Modrinth (left out, it's on)
+    expect(code.r).toEqual([
+      ['AAAAAAAA', 'aaaaaaaa', 0, 1],
+      ['BBBBBBBB', 'bbbbbbbb', -1, 0],
+    ])
+    expect(code.s).toEqual([['SSSSSSSS', 'ssssssss', 1, 0]])
+    expect(code.so).toBe(1)
+    expect(r.left).toContain('Mine')
+  })
+
+  test('codes from before packs are still read', async () => {
+    const { deflateRawSync } = await import('node:zlib')
+    const old = 'HSET1-' + deflateRawSync(JSON.stringify({ v: 1, n: 'Old', mc: '26.3', m: [['AANobbMI', 'abcdEFGH', 1]], c: {} })).toString('base64url')
+    expect(sets.decodeSetCode(old)).toMatchObject({ v: 1, n: 'Old' })
   })
 })

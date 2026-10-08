@@ -28,14 +28,14 @@ import { decideUpdate } from '@shared/update'
 import { detectSystemJava, inspectJava } from './core/game/java'
 import { installedJavaPath } from './core/game/install'
 import { getContent } from './core/remote/content'
-import { getEnabledMods, setModEnabled } from './core/sync/sync'
+import { getEnabledMods, reattachMod, setModEnabled } from './core/sync/sync'
 import { getModIcons } from './core/remote/modIcons'
 import { getFeed, startFeedPolling } from './core/remote/feed'
 import { installFileLogger } from './core/logging/logger'
 import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemInfo, type FolderKind } from './core/system/system'
 import { detectGpus } from './core/system/gpu'
 import { detectSources, importFrom, setPlayerModEnabled, sourceFromFolder } from './core/importer/importer'
-import { canEnablePlayerMod, hemisphereMods, installMod, knownPlayerProjects, listPlayerMods } from './core/modrinth/playerMods'
+import { canEnablePlayerMod, hemisphereMods, installMod, knownPlayerProjects, listPlayerMods, playerJars } from './core/modrinth/playerMods'
 import { backToHemisphere, checkAllUpdates, listHistory, listMods, undoHistory, removeFor, setLockFor, setVersionFor, updateAll, versionsFor } from './core/modrinth/allMods'
 import { pickVersion, projectVersions, safeIcon, searchMods } from './core/modrinth/api'
 import { MODRINTH_ID, policyFor, type InstallResult, type ModItem, type ModSearchResult, type ModVersionChoice, type SetVersionResult, type UpdateApplied, type UpdateCheck } from '@shared/modBrowser'
@@ -405,13 +405,31 @@ function registerIpc(): void {
   // settings when they close).
   const isPackType = (t: unknown): t is PackType => PACK_TYPES.includes(t as PackType)
   const isPackFile = (f: unknown): f is string => typeof f === 'string' && f.length > 0 && f.length <= 200 && !/[\\/:*?"<>|]/.test(f) && f !== '.' && f !== '..'
-  /** Iris installed and on: Hemisphere's Iris switched on (and not taken over), or the player's own Iris jar in mods/. */
+  const IRIS = 'YL57xq9U'
+  const irisJar = (f: string) => /^iris[-_].*\.jar$/i.test(f)
+  /**
+   * Iris will load: Hemisphere's Iris switched on (placed with the next Play at the latest), or, when the player took
+   * it over, their own Iris jar switched on (in mods/).
+   */
   const irisReady = async (manifest: ClientManifest) => {
     const state = await readInstanceState()
-    const iris = manifest.mods.find((m) => m.source?.modrinth.projectId === 'YL57xq9U')
-    if (iris && !state.detached.includes(iris.id) && (await getEnabledMods(manifest)).includes(iris.id)) return true
+    const iris = manifest.mods.find((m) => m.source?.modrinth.projectId === IRIS)
+    if (iris && !state.detached.includes(iris.id)) return (await getEnabledMods(manifest)).includes(iris.id)
     const mods = join(gamePaths().instance, 'mods')
-    return existsSync(mods) && readdirSync(mods).some((f) => /^iris[-_].*\.jar$/i.test(f))
+    return existsSync(mods) && readdirSync(mods).some((f) => irisJar(f) && !Object.keys(state.owned).some((o) => o.toLowerCase() === `mods/${f}`.toLowerCase()))
+  }
+  /** "Turn on Iris": the player's own Iris (switched back on), else Hemisphere's (managed again if needed). */
+  const enableIris = async (manifest: ClientManifest): Promise<boolean> => {
+    const state = await readInstanceState()
+    const iris = manifest.mods.find((m) => m.source?.modrinth.projectId === IRIS)
+    if (iris && state.detached.includes(iris.id)) {
+      const own = playerJars(Object.keys(state.owned)).find((j) => irisJar(j.file))
+      if (own) return own.enabled || (await setPlayerModEnabled(own.file, true, Object.keys(state.owned)))
+      await reattachMod(iris.id)
+    } else if (iris) await setModEnabled(manifest, iris.id, true)
+    else return false
+    void prepareInBackground() // place it now rather than at the next Play
+    return true
   }
   handle(IPC.packsList, async (_e, type: unknown) =>
     isPackType(type) ? withManifest(null, async (m) => listPacks(type, m.minecraft, getFeed().modPolicy, type === 'shader' ? await irisReady(m) : false)) : null,
@@ -419,6 +437,7 @@ function registerIpc(): void {
   handle(IPC.packsSetActive, async (_e, type: unknown, file: unknown, on: unknown) =>
     isPackType(type) && isPackFile(file) && typeof on === 'boolean' && !modsBusy() ? setPackActive(type, file, on) : false,
   )
+  handle(IPC.packsEnableIris, async () => (modsBusy() ? false : withManifest(false, (m) => enableIris(m))))
   handle(IPC.packsShadersOff, async () => (modsBusy() ? false : shadersOff().then(() => true)))
   handle(IPC.packsMove, async (_e, file: unknown, delta: unknown) => (isPackFile(file) && (delta === -1 || delta === 1) && !modsBusy() ? moveResourcePack(file, delta) : false))
   handle(IPC.packsRemove, async (_e, type: unknown, file: unknown) => (isPackType(type) && isPackFile(file) && !modsBusy() ? removePack(type, file) : false))
@@ -434,7 +453,15 @@ function registerIpc(): void {
     isPackType(type) && isPackFile(file) && typeof locked === 'boolean' && !modsBusy() ? withManifest(false, (m) => setPackLock(type, file, locked, m.minecraft)) : false,
   )
   handle(IPC.packsCheckUpdates, async (_e, type: unknown) => (isPackType(type) ? withManifest<UpdateCheck | null>(null, (m) => checkPackUpdates(type, m.minecraft)) : null))
-  handle(IPC.packsUpdateAll, async (_e, type: unknown) => (isPackType(type) && !modsBusy() ? withManifest<UpdateApplied | null>(null, (m) => updatePacks(type, m.minecraft)) : null))
+  handle(IPC.packsUpdateAll, async (_e, type: unknown) =>
+    isPackType(type) && !modsBusy()
+      ? withManifest<UpdateApplied | null>(null, async (m) => {
+          // like the mods' Update all: a restore point first
+          const restorePoint = await createRestorePoint({ kind: 'updateAll' }, { clientVersion: m.clientVersion, minecraft: m.minecraft })
+          return { ...(await updatePacks(type, m.minecraft)), restorePoint }
+        })
+      : null,
+  )
   handle(IPC.packsSearch, async (_e, type: unknown, query: unknown, offset: unknown): Promise<ModSearchResult | null> => {
     if (!isPackType(type) || typeof query !== 'string' || typeof offset !== 'number' || !Number.isInteger(offset) || offset < 0 || offset > 10_000) return null
     try {

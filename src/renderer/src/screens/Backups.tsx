@@ -183,6 +183,8 @@ function RestorePanel({ id, onCancel, onDone }: { id: string; onCancel(): void; 
   if (preview.back.length) lines.push([t('backups.will.back', { count: preview.back.length }), preview.back])
   if (preview.away.length) lines.push([t('backups.will.away', { count: preview.away.length }), preview.away])
   if (preview.switched) lines.push([t('backups.will.switched', { count: preview.switched })])
+  if (preview.packsBack.length) lines.push([t('backups.will.packsBack', { count: preview.packsBack.length }), preview.packsBack])
+  if (preview.packsAway.length) lines.push([t('backups.will.packsAway', { count: preview.packsAway.length }), preview.packsAway])
 
   return (
     <div className="animate-fade px-4 pb-4 pl-16">
@@ -281,6 +283,7 @@ function MoveSetup({ onImported }: { onImported(): void }) {
           <ul className="mt-3 space-y-1 text-[13px] text-gray-300">
             {[
               t('backups.setupMods', { count: s.mods }) + (s.embedded ? ` ${t('backups.setupEmbedded', { count: s.embedded })}` : ''),
+              s.packs > 0 && t('backups.setupPacks', { count: s.packs }),
               s.options && t('backups.keybindsLong'),
               s.servers && t('backups.serversLong'),
               s.configFiles > 0 && t('backups.configCount', { count: s.configFiles }),
@@ -319,7 +322,7 @@ function importMessage(r: SetupImportResult, t: (k: string, o?: Record<string, u
     ...(r.updated.length ? [t('backups.importUpdated', { names: r.updated.join(', ') })] : []),
     ...r.skipped.map((s) => t(`backups.skipped.${s.reason}`, { name: s.name })),
   ]
-  return { ok: !r.skipped.length, text: t('backups.imported', { count: r.installed }), list }
+  return { ok: !r.skipped.length, text: t('backups.imported', { count: r.installed, packs: r.packs }), list }
 }
 
 function Note({ message, onClose }: { message: Message; onClose(): void }) {

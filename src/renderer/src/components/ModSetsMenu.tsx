@@ -92,7 +92,7 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
     if (r.ok) {
       reset()
       const skipped = r.skipped.map((s) => t(`backups.skipped.${s.reason}`, { name: s.name }))
-      setMessage({ ok: !skipped.length, text: t('sets.imported', { name: r.name, count: r.mods }), list: skipped.length ? skipped : undefined })
+      setMessage({ ok: !skipped.length, text: t('sets.imported', { name: r.name, count: r.mods, packs: r.packs }), list: skipped.length ? skipped : undefined })
     } else setMessage({ ok: false, text: t(`sets.errors.${r.reason}`) })
     void reload()
   }

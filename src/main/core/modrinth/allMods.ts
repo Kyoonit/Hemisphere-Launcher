@@ -5,7 +5,7 @@ import { resolveEnabled } from '@shared/modSelection'
 import { type ModItem, type ModPolicy, type ModVersionChoice, type SetVersionResult, type UpdateApplied, type UpdateCheck } from '@shared/modBrowser'
 import { gamePaths } from '../game/target'
 import { getModIcons } from '../remote/modIcons'
-import { detachMod, readInstanceState, reattachMod } from '../sync/sync'
+import { detachMod, forgetDetached, readInstanceState, reattachMod } from '../sync/sync'
 import { latestByHash, pickVersion, projectVersions, updateTarget } from './api'
 import { createRestorePoint } from '../backup/restorePoints'
 import { readHistory, record } from './history'
@@ -16,6 +16,7 @@ import {
   hemisphereMods,
   installMod,
   isLocked,
+  modKey,
   listPlayerMods,
   modVersions,
   placeHemisphereFileAsPlayer,
@@ -56,6 +57,18 @@ export async function listMods(manifest: ClientManifest, policy: ModPolicy | nul
   const icons = await getModIcons(manifest.mods.flatMap((m) => (m.source ? [m.source.modrinth.projectId] : [])))
   const byProject = new Map(manifest.mods.flatMap((m) => (m.source ? [[m.source.modrinth.projectId, m] as const] : [])))
   const players = await listPlayerMods(Object.keys(state.owned), policy, hemisphereMods(manifest, detached), manifest.minecraft)
+
+  // A taken-over mod with no file left would vanish from the list (Hemisphere no longer places it, the player has
+  // none): Hemisphere manages it again.
+  const ghosts = manifest.mods
+    .filter((m) => detached.has(m.id))
+    .filter((m) => !players.some((p) => (m.source && p.projectId === m.source.modrinth.projectId) || modKey(p.title ?? p.file) === modKey(m.name) || modKey(p.file) === modKey(m.file.path.split('/').pop() ?? '')))
+    .map((m) => m.id)
+  if (ghosts.length) {
+    await forgetDetached(ghosts)
+    for (const id of ghosts) detached.delete(id)
+    console.log(`[mods] taken-over mods without a file, back to Hemisphere: ${ghosts.join(', ')}`)
+  }
 
   const managed: ModItem[] = manifest.mods
     .filter((m) => editable(m) && !detached.has(m.id))

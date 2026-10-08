@@ -78,6 +78,7 @@ export const IPC = {
   packsList: 'packs:list',
   packsSetActive: 'packs:setActive',
   packsShadersOff: 'packs:shadersOff',
+  packsEnableIris: 'packs:enableIris',
   packsMove: 'packs:move',
   packsRemove: 'packs:remove',
   packsVersions: 'packs:versions',
@@ -192,6 +193,8 @@ export interface HemisphereApi {
     /** resource pack: on = on top of the others; shader: on = the one in use */
     setActive(type: PackType, file: string, on: boolean): Promise<boolean>
     shadersOff(): Promise<boolean>
+    /** switches Iris on (Hemisphere's, or the player's own copy) */
+    enableIris(): Promise<boolean>
     /** resource pack that is on: -1 = up (wins over more), +1 = down */
     move(file: string, delta: -1 | 1): Promise<boolean>
     remove(type: PackType, file: string): Promise<boolean>

@@ -178,8 +178,8 @@ export default function Packs({ type, top, onBrowse }: { type: PackType; top: Re
             <span className="min-w-0 flex-1">{t('packs.needsIris')}</span>
             <button
               onClick={async () => {
-                await window.hemisphere.client.setModEnabled('iris', true)
-                setNotice({ ok: true, text: t('packs.irisOn') })
+                const ok = await window.hemisphere.packs.enableIris().catch(() => false)
+                setNotice(ok ? { ok: true, text: t('packs.irisOn') } : { ok: false, text: t('packs.busy') })
                 void reload()
               }}
               className="flex-none rounded-md bg-amber-400 px-3 py-1 text-xs font-bold text-gray-900 hover:bg-amber-300"

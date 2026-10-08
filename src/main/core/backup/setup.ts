@@ -9,12 +9,15 @@ import { MODRINTH_ID, policyFor, type ModPolicy } from '@shared/modBrowser'
 import { SETUP_SETTINGS, type SetupExportResult, type SetupImportResult, type SetupSummary } from '@shared/restorePoints'
 import type { Settings } from '@shared/settings'
 import { gamePaths } from '../game/target'
-import { isSafeModFileName, latestByHash, pickVersion, primaryFile, projectVersions, versionsByHash, type ModrinthVersion } from '../modrinth/api'
+import { isSafeModFileName, isSafePackFileName, latestByHash, pickVersion, primaryFile, projectVersions, versionsByHash, type ModrinthVersion, type ProjectKind } from '../modrinth/api'
 import { identifyPlayerMods, registryKey, type PlayerModRecord } from '../modrinth/playerMods'
 import { getSettings, updateSettings } from '../settings/settings'
 import { blobPath, downloadToStore } from '../sync/download'
 import { readInstanceState } from '../sync/sync'
 import { applyPlan, createRestorePoint, currentMods, gameFiles, isSetupPath, sha512Of, type ApplyPlan } from './restorePoints'
+import { addPackFile, addPackVersion, identifiedPacks } from '../packs/packs'
+import { readResourcePacks, readShaders, writeResourcePacks, writeShaders } from '../packs/gameSettings'
+import { PACK_TYPES, type PackType } from '@shared/packs'
 
 /**
  * "Export my setup" / "Import my setup": keybinds and video settings, the server list, mod configs, the player's mods
@@ -57,6 +60,22 @@ const HeaderSchema = z.object({
     )
     .max(1000),
   files: z.array(z.object({ path: z.string().refine(isSetupPath, 'unsafe path'), size: z.number().int().nonnegative().max(8 * 1024 * 1024) })).max(20_000),
+  /** resource and shader pack files (which are on, and the order, come with options.txt and config/iris.properties) */
+  packs: z
+    .array(
+      z.object({
+        type: z.enum(['resourcepack', 'shader']),
+        file: z.string().max(200).refine(isSafePackFileName, 'unsafe pack file name'),
+        sha512,
+        size: z.number().int().nonnegative().max(512 * 1024 * 1024),
+        title: z.string().max(200).nullable(),
+        projectId: z.string().regex(MODRINTH_ID).nullable(),
+        locked: z.boolean(),
+        embedded: z.boolean(),
+      }),
+    )
+    .max(1000)
+    .default([]),
 })
 type Header = z.infer<typeof HeaderSchema>
 
@@ -100,6 +119,15 @@ export async function exportSetup(path: string, launcherVersion: string, client:
         embedded,
       })
     }
+    // packs: Modrinth ones are downloaded again on the other PC, the others travel inside the file
+    const packEntries: Header['packs'] = []
+    for (const type of PACK_TYPES)
+      for (const p of await identifiedPacks(type)) {
+        if (p.folder || !p.sha512) continue
+        const embedded = !p.projectId
+        if (embedded) blobs.push(await readFile(p.path))
+        packEntries.push({ type, file: p.file, sha512: p.sha512, size: (await stat(p.path)).size, title: p.title, projectId: p.projectId, locked: !!minecraft && p.pinned === minecraft, embedded })
+      }
     const settings = getSettings()
     const header: Header = {
       format: 'hemisphere-setup',
@@ -113,14 +141,15 @@ export async function exportSetup(path: string, launcherVersion: string, client:
       detached: state.detached,
       mods: modEntries,
       files: fileEntries,
+      packs: packEntries,
     }
     const json = Buffer.from(JSON.stringify(header))
     const len = Buffer.alloc(4)
     len.writeUInt32LE(json.length)
     const packed = await promisify(gzip)(Buffer.concat([MAGIC, len, json, ...blobs]))
     await writeFile(path, packed)
-    console.log(`[setup] exported ${modEntries.length} mods (${modEntries.filter((m) => m.embedded).length} inside), ${fileEntries.length} files, ${packed.length} bytes`)
-    return { ok: true, path, bytes: packed.length, mods: modEntries.length, embedded: modEntries.filter((m) => m.embedded).length }
+    console.log(`[setup] exported ${modEntries.length} mods (${modEntries.filter((m) => m.embedded).length} inside), ${packEntries.length} packs, ${fileEntries.length} files, ${packed.length} bytes`)
+    return { ok: true, path, bytes: packed.length, mods: modEntries.length, embedded: modEntries.filter((m) => m.embedded).length, packs: packEntries.length }
   } catch (err) {
     console.error('[setup] export failed:', err)
     return { ok: false, reason: 'failed', detail: String(err) }
@@ -152,6 +181,12 @@ export async function readSetup(path: string): Promise<ParsedSetup | null> {
       if (sha512Of(data) !== m.sha512) return null
       embedded.set(m.sha512, data)
     }
+    for (const p of header.packs) {
+      if (!p.embedded) continue
+      const data = take(p.size)
+      if (sha512Of(data) !== p.sha512) return null
+      embedded.set(p.sha512, data)
+    }
     if (offset !== raw.length) return null
     return { header, files, embedded }
   } catch (err) {
@@ -174,13 +209,14 @@ export function summarize(name: string, s: ParsedSetup, currentMinecraft: string
     options: h.files.some((f) => f.path === 'options.txt'),
     servers: h.files.some((f) => f.path === 'servers.dat'),
     launcherSettings: Object.keys(h.settings).length > 0,
+    packs: h.packs.length,
   }
 }
 
 /** Newest stable version for this Minecraft version, from Modrinth's "latest" for a file. */
-async function versionFor(latest: ModrinthVersion, minecraft: string): Promise<ModrinthVersion | null> {
+async function versionFor(latest: ModrinthVersion, minecraft: string, kind: ProjectKind = 'mod'): Promise<ModrinthVersion | null> {
   if (latest.version_type === 'release') return latest
-  return pickVersion(await projectVersions(latest.project_id, minecraft).catch(() => [])) ?? latest
+  return pickVersion(await projectVersions(latest.project_id, minecraft, kind).catch(() => [])) ?? latest
 }
 
 /**
@@ -253,6 +289,7 @@ export async function importSetup(s: ParsedSetup, manifest: ClientManifest, poli
 
   // 2. Safety net, then apply.
   let safetyPoint: string | null
+  let packCount = 0
   try {
     safetyPoint = await createRestorePoint({ kind: 'setupImport' }, { clientVersion: manifest.clientVersion, minecraft: manifest.minecraft })
   } catch (err) {
@@ -262,6 +299,7 @@ export async function importSetup(s: ParsedSetup, manifest: ClientManifest, poli
   try {
     const missing = await applyPlan(plan, manifest)
     for (const n of missing) skipped.push({ name: n, reason: 'download' })
+    packCount = await importPacks(h, s, manifest, policy, incoming, skipped, updated)
     await applySettings(h.settings)
   } catch (err) {
     console.error('[setup] import failed:', err)
@@ -269,8 +307,74 @@ export async function importSetup(s: ParsedSetup, manifest: ClientManifest, poli
   } finally {
     await rm(incoming, { recursive: true, force: true })
   }
-  console.log(`[setup] imported ${plan.mods.length} mods (${updated.length} other version, ${skipped.length} skipped), ${plan.files.length} files`)
-  return { ok: true, installed: plan.mods.length, updated, skipped, safetyPoint }
+  console.log(`[setup] imported ${plan.mods.length} mods, ${packCount} packs (${updated.length} other version, ${skipped.length} skipped), ${plan.files.length} files`)
+  return { ok: true, installed: plan.mods.length, packs: packCount, updated, skipped, safetyPoint }
+}
+
+/**
+ * Pack files of a setup into their folders (packs already here stay). Modrinth packs are downloaded again (another
+ * version when Minecraft differs: the game settings then follow the new file name); the others come from the file.
+ */
+async function importPacks(
+  h: Header,
+  s: ParsedSetup,
+  manifest: ClientManifest,
+  policy: ModPolicy | null | undefined,
+  incoming: string,
+  skipped: Extract<SetupImportResult, { ok: true }>['skipped'],
+  updated: string[],
+): Promise<number> {
+  const same = h.minecraft === manifest.minecraft
+  const renamed: Record<PackType, Map<string, string>> = { resourcepack: new Map(), shader: new Map() }
+  let count = 0
+  for (const type of PACK_TYPES) {
+    const list = h.packs.filter((p) => p.type === type)
+    const remote = list.filter((p) => !p.embedded)
+    let found: Record<string, ModrinthVersion> = {}
+    try {
+      found = same ? await versionsByHash(remote.map((p) => p.sha512)) : await latestByHash(remote.map((p) => p.sha512), manifest.minecraft, type)
+    } catch (err) {
+      console.warn('[setup] Modrinth lookup for packs failed:', err)
+    }
+    for (const p of list) {
+      const name = p.title ?? p.file.replace(/\.zip$/i, '')
+      if (p.embedded) {
+        const tmp = join(incoming, `${p.sha512.slice(0, 40)}.zip`)
+        await writeFile(tmp, s.embedded.get(p.sha512)!)
+        if (await addPackFile(type, p.file, tmp)) count++
+        continue
+      }
+      let v: ModrinthVersion | null = found[p.sha512] ?? null
+      if (v && !same) v = await versionFor(v, manifest.minecraft, type)
+      if (!v || !isSafePackFileName(primaryFile(v).filename)) {
+        skipped.push({ name, reason: 'notAvailable' })
+        continue
+      }
+      if (policyFor(policy, v.project_id).verdict === 'blocked') {
+        skipped.push({ name, reason: 'blocked' })
+        continue
+      }
+      try {
+        const exact = primaryFile(v).hashes.sha512 === p.sha512
+        const file = await addPackVersion(type, v, p.title, '', p.locked && exact ? manifest.minecraft : null)
+        if (!exact) updated.push(name)
+        if (file !== p.file) renamed[type].set(p.file, file)
+        count++
+      } catch (err) {
+        console.warn(`[setup] download of ${p.file} failed:`, err)
+        skipped.push({ name, reason: 'download' })
+      }
+    }
+  }
+  // the game settings (from the setup) name the packs by file: follow the new names
+  if (renamed.resourcepack.size) {
+    const { active } = await readResourcePacks()
+    await writeResourcePacks(active.map((f) => renamed.resourcepack.get(f) ?? f))
+  }
+  const shader = await readShaders()
+  const to = renamed.shader.get(shader.pack)
+  if (to) await writeShaders({ ...shader, pack: to })
+  return count
 }
 
 /** Launcher settings from a setup, one by one (an invalid value is just left as it is). */

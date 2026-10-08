@@ -25,7 +25,7 @@ export interface ModSetsState {
 export type SetSwitchResult = { ok: true; missing: string[]; savedAs: string | null } | { ok: false; reason: 'busy' | 'notFound' | 'failed' }
 export type SetShareResult = { ok: true; code: string; left: string[] } | { ok: false; reason: 'notFound' | 'empty' }
 export type SetImportResult =
-  | { ok: true; id: string; name: string; mods: number; skipped: { name: string; reason: 'blocked' | 'notAvailable' | 'download' }[] }
+  | { ok: true; id: string; name: string; mods: number; packs: number; skipped: { name: string; reason: 'blocked' | 'notAvailable' | 'download' }[] }
   | { ok: false; reason: 'invalid' | 'failed' | 'busy' }
 
 export const SET_NAME_MAX = 40

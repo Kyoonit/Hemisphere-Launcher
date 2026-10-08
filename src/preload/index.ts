@@ -56,6 +56,7 @@ const api: HemisphereApi = {
     list: (type) => ipcRenderer.invoke(IPC.packsList, type),
     setActive: (type, file, on) => ipcRenderer.invoke(IPC.packsSetActive, type, file, on),
     shadersOff: () => ipcRenderer.invoke(IPC.packsShadersOff),
+    enableIris: () => ipcRenderer.invoke(IPC.packsEnableIris),
     move: (file, delta) => ipcRenderer.invoke(IPC.packsMove, file, delta),
     remove: (type, file) => ipcRenderer.invoke(IPC.packsRemove, type, file),
     versions: (type, file) => ipcRenderer.invoke(IPC.packsVersions, type, file),

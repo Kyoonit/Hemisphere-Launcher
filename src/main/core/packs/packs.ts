@@ -81,7 +81,7 @@ export function packEntries(type: PackType): { file: string; folder: boolean; pa
 }
 
 /** Hashes new/changed .zip packs and asks Modrinth what they are (batched; offline = retried next time). */
-async function identify(type: PackType): Promise<Registry> {
+async function identify(type: PackType, lookup = true): Promise<Registry> {
   const reg = readRegistry()
   const present = new Set(packEntries(type).map((e) => key(type, e.file)))
   for (const k of Object.keys(reg)) if (k.startsWith(`${type}/`) && !present.has(k)) delete reg[k]
@@ -113,7 +113,7 @@ async function identify(type: PackType): Promise<Registry> {
     reg[key(type, e.file)] = r
     fresh.push(r)
   }
-  if (fresh.length) {
+  if (fresh.length && lookup) {
     try {
       const found = await versionsByHash(fresh.map((r) => r.sha512))
       const projects = await getProjects([...new Set(Object.values(found).map((v) => v.project_id))])
@@ -490,4 +490,42 @@ export function packUndoFor(e: ModHistoryEntry, items: PackItem[], minecraft: st
     default:
       return null
   }
+}
+
+// ------------------------------------------------------------------------------ presets, share codes, setups
+
+/** Every pack of a kind with what it is on Modrinth (null for unknown files and folders). */
+export function identifiedPacks(
+  type: PackType,
+  lookup = true,
+): Promise<{ file: string; folder: boolean; projectId: string | null; versionId: string | null; pinned: string | null; title: string | null; sha512: string | null; path: string }[]> {
+  return serial(async () => {
+    const reg = await identify(type, lookup)
+    return packEntries(type).map((e) => {
+      const r = reg[key(type, e.file)]
+      return { file: e.file, folder: e.folder, path: e.path, projectId: r?.projectId ?? null, versionId: r?.versionId ?? null, pinned: r?.pinned ?? null, title: r?.title ?? null, sha512: r?.sha512 ?? null }
+    })
+  })
+}
+
+/** Puts one Modrinth version of a pack in its folder (if it isn't there yet) and remembers it; settings untouched. */
+export function addPackVersion(type: PackType, v: ModrinthVersion, title: string | null, icon: string, lockFor: string | null): Promise<string> {
+  return serial(async () => {
+    const placed = await download(type, v)
+    const reg = readRegistry()
+    reg[key(type, placed.file)] = await recordFor(type, placed.file, v, { title, icon, pinned: lockFor })
+    await writeRegistry(reg)
+    return placed.file
+  })
+}
+
+/** Puts a pack file (from a setup or a restore point) in its folder under its name, unless it's there already. */
+export async function addPackFile(type: PackType, file: string, from: string): Promise<boolean> {
+  if (!isSafePackFileName(file)) return false
+  const dest = join(packDir(type), file)
+  if (existsSync(dest)) return true
+  await mkdir(packDir(type), { recursive: true })
+  await copyFile(from, `${dest}.tmp`)
+  await rename(`${dest}.tmp`, dest)
+  return true
 }

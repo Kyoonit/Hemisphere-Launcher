@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { copyFile, link, lstat, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { isSafeRelativePath, type ClientManifest } from '@shared/manifest'
@@ -9,6 +9,8 @@ import { modKey, playerJars, readPlayerRegistry, registryKey, withPlayerMods, wr
 import { isSafeModFileName } from '../modrinth/api'
 import { sha512OfFile, tempNameFor } from '../sync/download'
 import { readInstanceState, restoreModChoices } from '../sync/sync'
+import { addPackFile, identifiedPacks, packDir, packEntries } from '../packs/packs'
+import { PACK_TYPES, type PackType } from '@shared/packs'
 
 /**
  * Restore points: what a player tunes by hand, saved before the big changes (client update, import, "Update all",
@@ -42,6 +44,14 @@ interface Point {
   files: string[]
   /** the player's mod records (Modrinth identity, locks) */
   registry: Record<string, PlayerModRecord>
+  /** resource and shader pack files (.zip; unpacked folders aren't kept). Missing in points from before packs. */
+  packs?: PointPack[]
+}
+interface PointPack {
+  type: PackType
+  file: string
+  sha512: string
+  size: number
 }
 
 const CONFIG_FILE_MAX = 8 * 1024 * 1024
@@ -167,6 +177,14 @@ async function takePoint(reason: RestoreReason, client: { clientVersion: string;
     return { found, reg }
   })
   if (!state.clientVersion && !mods.found.length && !files.length) return null // nothing to protect yet
+  // pack files: kept like mods (one copy each); which are on is in options.txt / config/iris.properties
+  const packs: PointPack[] = []
+  for (const type of PACK_TYPES)
+    for (const p of await identifiedPacks(type, false)) {
+      if (p.folder || !p.sha512) continue
+      await storeJar(p.path, p.sha512)
+      packs.push({ type, file: p.file, sha512: p.sha512, size: statSync(p.path).size })
+    }
 
   await rm(building, { recursive: true, force: true })
   for (const rel of files) {
@@ -186,11 +204,12 @@ async function takePoint(reason: RestoreReason, client: { clientVersion: string;
     mods: mods.found.map(({ path: _p, ...m }) => m),
     files: files.filter((rel) => existsSync(join(building, 'files', ...rel.split('/')))),
     registry: Object.fromEntries(mods.found.map((m) => [registryKey(m.file), mods.reg[registryKey(m.file)]]).filter(([, e]) => !!e)),
+    packs,
   }
   await mkdir(building, { recursive: true })
   await writeFile(join(building, 'point.json'), JSON.stringify(point))
   await rename(building, dir) // complete or not there at all
-  console.log(`[restore-points] ${id}: before ${reason.kind} (${point.mods.length} mods, ${point.files.length} files)`)
+  console.log(`[restore-points] ${id}: before ${reason.kind} (${point.mods.length} mods, ${packs.length} packs, ${point.files.length} files)`)
   await prune()
   return id
 }
@@ -199,14 +218,16 @@ async function takePoint(reason: RestoreReason, client: { clientVersion: string;
 async function prune(): Promise<void> {
   const points = await allPoints()
   for (const p of points.slice(MAX_RESTORE_POINTS)) await rm(join(root(), p.id), { recursive: true, force: true })
-  await cleanJars(points.slice(0, MAX_RESTORE_POINTS).flatMap((p) => p.mods.map((m) => m.sha512)))
+  await cleanJars(points.slice(0, MAX_RESTORE_POINTS).flatMap(keptFiles))
   // leftovers of an interrupted point
   for (const name of await readdir(root()).catch(() => [] as string[])) if (name.endsWith('.tmp')) await rm(join(root(), name), { recursive: true, force: true })
 }
 
-/** Deletes kept mod files that no restore point and no mod set needs any more. */
+const keptFiles = (p: Point) => [...p.mods.map((m) => m.sha512), ...(p.packs ?? []).map((x) => x.sha512)]
+
+/** Deletes kept files (mods, packs) that no restore point and no preset needs any more. */
 export async function cleanJars(fromPoints?: string[]): Promise<void> {
-  const shas = fromPoints ?? (await allPoints()).flatMap((p) => p.mods.map((m) => m.sha512))
+  const shas = fromPoints ?? (await allPoints()).flatMap(keptFiles)
   for (const name of await readdir(setsDir()).catch(() => [] as string[])) {
     if (!name.endsWith('.json') || name === 'active.json') continue
     try {
@@ -271,8 +292,15 @@ export const previewRestore = (id: string): Promise<RestorePreview | null> =>
     for (const rel of p.files) if (rel.startsWith('config/') && (await differs(rel))) configs++
     const choices = new Set([...Object.keys(p.choices), ...Object.keys(state.choices)])
     const switchedHemisphere = [...choices].filter((k) => p.choices[k] !== state.choices[k]).length
+    // pack files: by name (their on/off and order come with options.txt)
+    const nowPacks = (await Promise.all(PACK_TYPES.map(async (type) => (await identifiedPacks(type, false)).filter((x) => !x.folder).map((x) => ({ ...x, type }))))).flat()
+    const packName = (f: string) => f.replace(/\.zip$/i, '')
+    const packsBack = (p.packs ?? []).filter((x) => !nowPacks.some((n) => n.type === x.type && n.file === x.file && n.sha512 === x.sha512)).map((x) => packName(x.file))
+    const packsAway = p.packs ? nowPacks.filter((n) => !p.packs!.some((x) => x.type === n.type && x.file === n.file && x.sha512 === n.sha512)).map((n) => packName(n.file)) : []
     return {
       ...mods,
+      packsBack,
+      packsAway,
       switched: mods.switched + switchedHemisphere,
       options: p.files.includes('options.txt') && (await differs('options.txt')),
       servers: p.files.includes('servers.dat') && (await differs('servers.dat')),
@@ -394,12 +422,34 @@ export async function restorePoint(id: string, manifest: ClientManifest | null):
         manifest,
       ),
     )
+    if (p.packs) missing.push(...(await serial(() => restorePacks(p.packs!))))
     console.log(`[restore-points] restored ${id}${missing.length ? ` (missing: ${missing.join(', ')})` : ''}`)
     return { ok: true, safetyPoint, missing }
   } catch (err) {
     console.error('[restore-points] restore failed:', err)
     return { ok: false, reason: 'failed', detail: String(err) }
   }
+}
+
+/**
+ * Pack files exactly as in a point: other .zip packs go (they're in the "Before restoring" point), missing ones come
+ * back from the kept copies. Unpacked folders are left alone. Returns the packs whose copy wasn't kept.
+ */
+async function restorePacks(packs: PointPack[]): Promise<string[]> {
+  const missing: string[] = []
+  for (const type of PACK_TYPES) {
+    const wanted = packs.filter((x) => x.type === type)
+    for (const e of packEntries(type)) {
+      if (e.folder) continue
+      const keep = wanted.find((w) => w.file === e.file)
+      if (!keep || (await sha512OfFile(e.path)) !== keep.sha512) await rm(e.path, { force: true })
+    }
+    for (const w of wanted) {
+      if (existsSync(join(packDir(type), w.file))) continue
+      if (!existsSync(jarPath(w.sha512)) || !(await addPackFile(type, w.file, jarPath(w.sha512)))) missing.push(w.file.replace(/\.zip$/i, ''))
+    }
+  }
+  return missing
 }
 
 /** For tests: the hash of a buffer the way jars are named. */
