@@ -968,5 +968,26 @@
     "quickLookHint": "Staff see this first. It’s automatic: your description matters most.",
     "filesIncluded_one": "{{count}} file in the report",
     "filesIncluded_other": "{{count}} files in the report"
+  },
+  "events": {
+    "title": "Upcoming events",
+    "live": "Live now",
+    "yourTime": "your time",
+    "remind": "Remind me",
+    "reminderOn": "Reminder set",
+    "remindHint": "One notification 15 minutes before it starts",
+    "reminderOnHint": "You’ll get one notification 15 minutes before. Click to cancel.",
+    "calendar": "Add to calendar",
+    "calendarHint": "Opens it in your calendar app (Outlook, Calendar…)"
+  },
+  "community": {
+    "title": "Community",
+    "tray": "Keep in the system tray",
+    "trayHint": "Closing the window keeps the launcher next to the clock, with the server status. Quit from there.",
+    "serverBack": "Tell me when the server is back",
+    "serverBackHint": "One notification when Hemisphere is online again after a restart or maintenance.",
+    "discord": "Show “Playing on Hemisphere SMP” in Discord",
+    "discordHint": "In your Discord status, only while the game runs.",
+    "discordNotReady": "Not available yet: the staff haven’t set it up."
   }
 }

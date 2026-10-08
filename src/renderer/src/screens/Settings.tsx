@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Flag, Gamepad2, History, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
 import { useLauncherUpdate } from '../launcherUpdate'
-import { useSettings } from '../hooks'
+import { useFeed, useSettings } from '../hooks'
 import type { JavaRuntimeInfo } from '@shared/game'
 import { RESOLUTIONS, parseJvmArgs, type Settings, type SystemInfo } from '@shared/settings'
 import { LANGUAGES, systemLanguage } from '../i18n'
@@ -146,6 +146,7 @@ function LauncherSettings() {
   const { t, i18n } = useTranslation()
   const [settings, update] = useSettings()
   const [info] = useSystemInfo()
+  const feed = useFeed()
   const [version, setVersion] = useState('')
   useEffect(() => {
     window.hemisphere.appInfo().then((a) => setVersion(a.version))
@@ -181,6 +182,16 @@ function LauncherSettings() {
       </Row>
       <Row title={t('settings.backgroundUpdates')} hint={t('settings.backgroundUpdatesHint')}>
         <Toggle on={settings.backgroundUpdates} onChange={(backgroundUpdates) => update({ backgroundUpdates })} label={t('settings.backgroundUpdates')} />
+      </Row>
+      <h3 className="mt-6 mb-1 text-xs font-bold tracking-[0.08em] text-gray-400 uppercase">{t('community.title')}</h3>
+      <Row title={t('community.tray')} hint={t('community.trayHint')}>
+        <Toggle on={settings.closeToTray} onChange={(closeToTray) => update({ closeToTray })} label={t('community.tray')} />
+      </Row>
+      <Row title={t('community.serverBack')} hint={t('community.serverBackHint')}>
+        <Toggle on={settings.notifyServerBack} onChange={(notifyServerBack) => update({ notifyServerBack })} label={t('community.serverBack')} />
+      </Row>
+      <Row title={t('community.discord')} hint={feed?.discordAppId ? t('community.discordHint') : t('community.discordNotReady')}>
+        <Toggle on={settings.discordStatus} disabled={!feed?.discordAppId} onChange={(discordStatus) => update({ discordStatus })} label={t('community.discord')} />
       </Row>
       <LauncherVersionRow version={version} />
     </div>

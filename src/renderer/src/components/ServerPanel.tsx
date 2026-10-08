@@ -1,5 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { Clock, Construction, Signal } from 'lucide-react'
+import { CalendarDays, Clock, Construction, Signal } from 'lucide-react'
+import { eventPhase, upcomingEvents } from '@shared/events'
+import { localize } from '@shared/manifest'
+import { relativeTime } from './Events'
 import type { ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
 import { restartState, type RestartSchedule, type RestartState } from '@shared/restart'
@@ -9,7 +12,7 @@ import { splitDuration, useNow, useWindowHeight } from '../hooks'
 // 2 rows in the smallest window, one more row every 40 px, up to 5 rows.
 const headRows = (height: number) => Math.min(5, Math.max(2, 2 + Math.floor((height - 600) / 40)))
 
-export default function ServerPanel({ status, feed }: { status: ServerStatus | null; feed: Feed | null }) {
+export default function ServerPanel({ status, feed, onOpenNews }: { status: ServerStatus | null; feed: Feed | null; onOpenNews?: () => void }) {
   const { t, i18n } = useTranslation()
   const now = useNow()
   const schedule: RestartSchedule | null = feed ? feed.restart : null
@@ -17,6 +20,7 @@ export default function ServerPanel({ status, feed }: { status: ServerStatus | n
   const restarting = restart?.phase === 'restarting'
   const maintenance = feed?.maintenance.active === true
   const online = status?.online === true && !restarting && !maintenance
+  const next = upcomingEvents(feed?.events, now).find((e) => Date.parse(e.start) - now < 7 * 24 * 3600_000)
 
   return (
     <aside className="glass animate-rise absolute top-5 right-6 w-[268px] p-4 [animation-delay:300ms]">
@@ -48,7 +52,21 @@ export default function ServerPanel({ status, feed }: { status: ServerStatus | n
         restart && <RestartBox restart={restart} />
       )}
 
-      {online && <PlayerList status={status} />}
+      {next && (
+        <button
+          onClick={onOpenNews}
+          title={localize(next.title, i18n.language)}
+          className={`mt-2.5 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[12.5px] transition-colors ${eventPhase(next, now) === 'live' ? 'bg-green-900/45 text-green-100 hover:bg-green-900/60' : 'bg-gray-900/55 text-gray-300 hover:bg-gray-800/80'}`}
+        >
+          <CalendarDays size={15} className="flex-none text-green-400" />
+          <span className="min-w-0 flex-1 truncate">
+            <b className="font-semibold text-white">{localize(next.title, i18n.language)}</b>
+          </span>
+          <span className="flex-none text-[11.5px] text-gray-400">{eventPhase(next, now) === 'live' ? t('events.live') : relativeTime(Date.parse(next.start), now, i18n.language)}</span>
+        </button>
+      )}
+
+      {online && <PlayerList status={status} fewer={next ? 1 : 0} />}
     </aside>
   )
 }
@@ -113,9 +131,9 @@ function RestartBox({ restart }: { restart: RestartState }) {
   )
 }
 
-function PlayerList({ status }: { status: ServerStatus }) {
+function PlayerList({ status, fewer = 0 }: { status: ServerStatus; fewer?: number }) {
   const { t } = useTranslation()
-  const shown = status.players.slice(0, headRows(useWindowHeight()) * 2)
+  const shown = status.players.slice(0, Math.max(1, headRows(useWindowHeight()) - fewer) * 2)
   const total = status.playersOnline ?? status.players.length
   const more = total - shown.length
 

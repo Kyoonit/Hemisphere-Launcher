@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, ExternalLink, Newspaper } from 'lucide-react'
 import { NEWS_CATEGORIES, type NewsItem } from '@shared/feed'
 import { localize } from '@shared/manifest'
 import NewsImage from '../components/NewsImage'
+import Events from '../components/Events'
 import { useFeed } from '../hooks'
 
 type Filter = 'all' | (typeof NEWS_CATEGORIES)[number]
@@ -74,6 +75,8 @@ export default function News() {
           ))}
         </div>
       </div>
+
+      <Events events={feed.events} />
 
       {!featured ? (
         <div className="grid h-[60%] place-items-center text-gray-400">

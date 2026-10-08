@@ -77,6 +77,8 @@ export const IPC = {
   historyList: 'history:list',
   historyUndo: 'history:undo',
   reportPrepare: 'report:prepare',
+  eventsAddToCalendar: 'events:addToCalendar',
+  eventsSetReminder: 'events:setReminder',
   reportBuild: 'report:build',
   reportShow: 'report:show',
   reportDrag: 'report:drag',
@@ -213,6 +215,13 @@ export interface HemisphereApi {
     search(type: PackType, query: string, offset: number): Promise<ModSearchResult | null>
     projectVersions(type: PackType, projectId: string): Promise<ModVersionChoice[] | null>
     install(type: PackType, projectId: string, confirmed: boolean, versionId?: string | null): Promise<InstallResult>
+  }
+  /** Events calendar (from the feed) */
+  events: {
+    /** opens the event in the player's calendar app (.ics) */
+    addToCalendar(id: string): void
+    /** one notification shortly before the event; returns the events with a reminder */
+    setReminder(id: string, on: boolean): Promise<string[]>
   }
   /** "Report a problem": a zip for staff + a message for the Discord ticket */
   report: {

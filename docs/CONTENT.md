@@ -128,3 +128,33 @@ custom Java, mods changed in the last 24 h, preset switches, graphics chip setti
 The report ID (`HR-…`) is in the message, the zip name and the README, so ticket and file always match. Private
 details are removed before anything is written: Windows user name and folders, sign-in tokens, e-mail addresses,
 IP addresses in network lines, other accounts' names, and (by default) chat lines of the game log.
+
+## Events calendar and Discord status
+
+**Events** (`events` in `content-src/feed.json`, optional). Players see them in News (and the next one, live or within
+a week, in the server panel on Home), each in their own time, with **Remind me** (one notification 15 minutes before,
+only if they ask) and **Add to calendar** (a calendar file for Outlook / Windows Calendar / Google Calendar).
+
+```json
+"events": [
+  {
+    "id": "build-contest-castles",
+    "title": { "en": "Build contest: castles", "fr": "Concours de construction : châteaux" },
+    "body": { "en": "Build the best castle in 3 hours. Prizes for the top 3!", "fr": "…" },
+    "start": "2026-10-17T20:00:00+02:00",
+    "end": "2026-10-17T23:00:00+02:00",
+    "where": { "en": "/warp contest" },
+    "link": { "label": { "en": "Rules", "fr": "Règles" }, "url": "https://hemispheresurvival.club/rules" }
+  }
+]
+```
+
+`start` / `end` need their time zone (`+02:00` in Paris summer time, `+01:00` in winter, or `Z` for UTC). `end` is
+optional (the event then counts as "live" for 2 hours). Events disappear by themselves once over; up to 50.
+
+**Discord status** (`"discordAppId": "<id>"`, optional). Players can turn on "Show “Playing on Hemisphere SMP” in
+Discord" (Settings → Launcher; off by default, only while the game runs). It needs a Discord application:
+1. https://discord.com/developers/applications → **New Application** → name it **Hemisphere SMP** (that name is what
+   Discord shows: "Playing Hemisphere SMP").
+2. **Rich Presence → Art Assets**: upload the server logo with the name **`logo`**.
+3. Copy the **Application ID** into `"discordAppId"` and publish the feed. Until then the option is greyed out.

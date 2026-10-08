@@ -50,6 +50,9 @@ import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePo
 import { checkPackUpdates, installPack, knownPackProjects, listPacks, moveResourcePack, packVersions, removePack, setPackActive, setPackLock, setPackVersion, shadersOff, updatePacks } from './core/packs/packs'
 import { PACK_TYPES, type PackType } from '@shared/packs'
 import { buildReport, lastReportZip, prepareReport } from './core/support/report'
+import { keepInTrayOnClose, onCommunitySettings, onGameExited, onGameLaunched, onServerStatus, startCommunity } from './core/community/community'
+import { eventIcs } from '@shared/events'
+import { writeFile } from 'node:fs/promises'
 import { REPORT_CATEGORIES, REPORT_FREQUENCY, REPORT_PARTS, REPORT_WHEN, type ReportDraft } from '@shared/report'
 import { deleteSet, duplicateSet, importSetCode, isSetId, listSets, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
@@ -86,10 +89,13 @@ function createWindow(): void {
 
   trustWindow(win)
   trackWindowState(win, saved)
+  keepInTrayOnClose(win)
   win.once('ready-to-show', () => {
     if (saved?.maximized) win?.maximize()
-    // Started with Windows: stay out of the way in the taskbar.
-    if (process.argv.includes(AUTOSTART_ARG)) win?.minimize()
+    // Started with Windows: stay out of the way (in the tray when the player keeps it there, else the taskbar).
+    if (process.argv.includes(AUTOSTART_ARG)) {
+      if (!getSettings().closeToTray) win?.minimize()
+    }
     else win?.show()
   })
   win.on('maximize', () => win?.webContents.send(IPC.windowMaximizedChanged, true))
@@ -543,9 +549,24 @@ function registerIpc(): void {
     if (typeof message === 'string' && message.length <= 4000) clipboard.writeText(message)
   })
   on(IPC.reportOpenSupport, () => void shell.openExternal(getFeed().support?.url ?? LINKS.discord))
+  // Events: "Add to calendar" opens a calendar file in the player's calendar app; reminders are one per event.
+  on(IPC.eventsAddToCalendar, (_e, id: unknown) => {
+    const ev = getFeed().events?.find((x) => x.id === id)
+    if (!ev) return
+    const s = getSettings().language
+    const file = join(app.getPath('temp'), `hemisphere-${ev.id}.ics`)
+    void writeFile(file, eventIcs(ev, s === 'auto' ? app.getLocale() : s)).then(() => shell.openPath(file))
+  })
+  handle(IPC.eventsSetReminder, async (_e, id: unknown, on: unknown) => {
+    if (typeof id !== 'string' || typeof on !== 'boolean' || !getFeed().events?.some((x) => x.id === id)) return getSettings().eventReminders
+    const list = getSettings().eventReminders.filter((x) => x !== id)
+    return (await updateSettings({ eventReminders: on ? [...list, id].slice(-50) : list })).eventReminders
+  })
   handle(IPC.feedGet, () => getFeed())
   on(IPC.feedOpenLink, (_e, id: unknown) => {
-    const url = getFeed().news.find((n) => n.id === id)?.link?.url
+    const feed = getFeed()
+    // a news item's or an event's button (looked up in the verified feed, never a raw URL)
+    const url = feed.news.find((n) => n.id === id)?.link?.url ?? feed.events?.find((e) => e.id === id)?.link?.url
     if (url?.startsWith('https://')) void shell.openExternal(url)
   })
   handle(IPC.settingsGet, () => getSettings())
@@ -643,14 +664,19 @@ if (!app.requestSingleInstanceLock()) {
     await loadAccounts()
     onAccountsChanged(() => win?.webContents.send(IPC.authChanged, getAccountsState()))
     onGameState((s) => win?.webContents.send(IPC.gameStateChanged, s))
-    onSettingsChanged((s) => win?.webContents.send(IPC.settingsChanged, s))
+    onSettingsChanged((s) => {
+      win?.webContents.send(IPC.settingsChanged, s)
+      onCommunitySettings(s)
+    })
     // Launcher window while playing: hide (default), keep, or close. It comes back when the game exits.
     gameEvents.onLaunched = () => {
+      void readInstanceState().then((s) => onGameLaunched(s.minecraft))
       const mode = getSettings().onGameStart
       if (mode === 'hide') win?.hide()
       else if (mode === 'close') setTimeout(() => app.quit(), 1500)
     }
     gameEvents.onExited = ({ crashed, anyRunning }) => {
+      onGameExited(anyRunning)
       if (!anyRunning) setTimeout(() => void prepareInBackground(), 60_000) // e.g. an update published while playing
       if (win && (crashed || !anyRunning) && !win.isVisible()) win.show()
       if (crashed) win?.focus()
@@ -659,9 +685,21 @@ if (!app.requestSingleInstanceLock()) {
     void recoverSessions(instanceLogPath(), () => win?.webContents.send(IPC.playtimeChanged))
     registerIpc()
     createWindow()
+    startCommunity({
+      window: () => win,
+      feed: () => getFeed(),
+      play: () => {
+        const active = getAccountsState().activeId
+        const g = getGameState()
+        if (!active || g.phase === 'preparing' || g.runningAccounts.includes(active)) return false
+        void play(active, { target: 'latest' })
+        return true
+      },
+    })
     startStatusPolling((status) => {
       lastStatus = status
       win?.webContents.send(IPC.serverStatusUpdate, status)
+      onServerStatus(status)
     })
     void refreshAccount() // renew the active session silently in the background
     startFeedPolling((feed) => win?.webContents.send(IPC.feedChanged, feed))

@@ -50,7 +50,7 @@ export default function Home({
       <PlaytimeCard key={active?.id} />
       <ImportPrompt onImport={onImport} />
       <WhatsNew client={client ?? null} />
-      <ServerPanel status={status} feed={feed} />
+      <ServerPanel status={status} feed={feed} onOpenNews={onOpenNews} />
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center-safe text-center">
         {active?.status === 'expired' && <ExpiredBanner />}

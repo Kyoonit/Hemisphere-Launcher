@@ -5,6 +5,7 @@
 import { z } from 'zod'
 import { CONTENT_BASE, LocalizedSchema } from './manifest.ts'
 import { ModPolicySchema } from './modBrowser.ts'
+import { EventSchema } from './events.ts'
 
 /** News images: our own content folder or the Hemisphere website. */
 export function isAllowedImageUrl(url: string, contentBase = CONTENT_BASE): boolean {
@@ -79,6 +80,10 @@ export const FeedSchema = z
         howTo: LocalizedSchema.optional(),
       })
       .optional(),
+    /** Events calendar (optional): shown in News and on Home, each player in their own time */
+    events: z.array(EventSchema).max(50).optional(),
+    /** Discord application id for "Playing on Hemisphere SMP" in players' Discord status (optional) */
+    discordAppId: z.string().regex(/^\d{17,20}$/).optional(),
   })
   .superRefine((f, ctx) => {
     if (f.restart) {
@@ -92,6 +97,11 @@ export const FeedSchema = z
     for (const n of f.news) {
       if (ids.has(n.id)) ctx.addIssue({ code: 'custom', message: `duplicate news id ${n.id}` })
       ids.add(n.id)
+    }
+    const eventIds = new Set<string>()
+    for (const e of f.events ?? []) {
+      if (eventIds.has(e.id)) ctx.addIssue({ code: 'custom', message: `duplicate event id ${e.id}` })
+      eventIds.add(e.id)
     }
   })
 export type Feed = z.infer<typeof FeedSchema>

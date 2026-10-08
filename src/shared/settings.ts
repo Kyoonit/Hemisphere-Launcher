@@ -34,6 +34,14 @@ export interface Settings {
   highPerformanceGpu: boolean
   /** Discord name given in the last problem report (filled in next time) */
   reportDiscord: string
+  /** Closing the window keeps the launcher in the system tray (off: closing quits) */
+  closeToTray: boolean
+  /** "Playing on Hemisphere SMP" in the player's Discord status while the game runs */
+  discordStatus: boolean
+  /** A Windows notification when the server is back after a restart or maintenance */
+  notifyServerBack: boolean
+  /** Events the player asked to be reminded of (one notification shortly before each) */
+  eventReminders: string[]
 }
 
 export const RESOLUTIONS = ['auto', '1280x720', '1600x900', '1920x1080', '2560x1440', 'fullscreen'] as const
@@ -55,6 +63,10 @@ export const DEFAULT_SETTINGS: Settings = {
   backgroundUpdates: true,
   highPerformanceGpu: true,
   reportDiscord: '',
+  closeToTray: false,
+  discordStatus: false,
+  notifyServerBack: false,
+  eventReminders: [],
 }
 
 /**
