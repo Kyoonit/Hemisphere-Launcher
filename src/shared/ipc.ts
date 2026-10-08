@@ -3,6 +3,7 @@ import type { AccountsState, AuthResult } from './auth'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport } from './game'
 import type { Settings, SystemInfo } from './settings'
 import type { Feed } from './feed'
+import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from './importer'
 import type { ClientSummary } from './client'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
@@ -44,6 +45,13 @@ export const IPC = {
   systemDiagnostics: 'system:diagnostics',
   systemMoveGameDir: 'system:move-game-dir',
   systemPickJava: 'system:pick-java',
+  systemMoveProgress: 'system:move-progress',
+  importDetect: 'import:detect',
+  importChoose: 'import:choose',
+  importRun: 'import:run',
+  importProgress: 'import:progress',
+  modsPlayer: 'mods:player',
+  modsPlayerSet: 'mods:player-set',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -98,8 +106,18 @@ export interface HemisphereApi {
     copyDiagnostics(): Promise<string>
     /** Asks for a folder (Windows dialog) or uses 'default', then moves the game there */
     moveGameDir(target: 'choose' | 'default'): Promise<{ ok: boolean; reason?: string; gameDir?: string; cancelled?: boolean }>
+    /** 0..1 while the game folder is being copied to another drive */
+    onMoveProgress(cb: (ratio: number) => void): () => void
     /** Asks for javaw.exe (Windows dialog) and saves it if it works */
     pickJava(): Promise<{ ok: boolean; version?: string; majorVersion?: number; reason?: string; cancelled?: boolean }>
+  }
+  importer: {
+    /** Minecraft setups found on this PC */
+    detect(): Promise<ImportSource[]>
+    /** Windows folder picker; null if cancelled or nothing importable there */
+    chooseFolder(): Promise<ImportSource | null | 'nothing'>
+    run(sourceId: string, opts: ImportOptions): Promise<{ ok: true; report: ImportReport } | { ok: false; reason: 'busy' | 'unknownSource' | 'failed'; detail?: string }>
+    onProgress(cb: (p: ImportProgress) => void): () => void
   }
   settings: {
     get(): Promise<Settings>
@@ -133,5 +151,8 @@ export interface HemisphereApi {
     enabledMods(): Promise<string[]>
     /** Toggle a mod; returns the new enabled set and other mods switched as a consequence */
     setModEnabled(id: string, on: boolean): Promise<{ enabled: string[]; alsoChanged: string[] }>
+    /** .jar files the player added themselves (enabled = in mods/, disabled = parked in mods-disabled/) */
+    playerMods(): Promise<{ file: string; size: number; enabled: boolean }[]>
+    setPlayerMod(file: string, enabled: boolean): Promise<boolean>
   }
 }

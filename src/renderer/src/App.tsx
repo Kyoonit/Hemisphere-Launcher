@@ -7,6 +7,7 @@ import Login from './screens/Login'
 import News from './screens/News'
 import Mods from './screens/Mods'
 import Repair from './screens/Repair'
+import Import from './screens/Import'
 import Settings, { type Section } from './screens/Settings'
 import { useAccounts } from './accounts'
 
@@ -18,7 +19,7 @@ export default function App() {
 
   const needsLogin = state !== null && state.accounts.length === 0
   const showLogin = needsLogin || addingAccount
-  const dimmed = !showLogin && screen !== 'home' && screen !== 'repair'
+  const dimmed = !showLogin && screen !== 'home' && screen !== 'repair' && screen !== 'import'
 
   const openSettings = (section: Section) => {
     setSettingsSection(section)
@@ -43,10 +44,11 @@ export default function App() {
             <Login onBack={needsLogin ? undefined : () => setAddingAccount(false)} />
           ) : (
             <>
-              {screen === 'home' && <Home onOpenNews={() => setScreen('news')} onRepair={() => setScreen('repair')} />}
+              {screen === 'home' && <Home onOpenNews={() => setScreen('news')} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} />}
               {screen === 'news' && <News />}
-              {screen === 'mods' && <Mods />}
-              {screen === 'settings' && <Settings initialSection={settingsSection} onAddAccount={() => setAddingAccount(true)} onRepair={() => setScreen('repair')} />}
+              {screen === 'mods' && <Mods onImport={() => setScreen('import')} />}
+              {screen === 'settings' && <Settings initialSection={settingsSection} onAddAccount={() => setAddingAccount(true)} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} />}
+              {screen === 'import' && <Import onClose={() => setScreen('home')} />}
               {screen === 'repair' && <Repair onClose={() => openSettings('installation')} onDone={() => setScreen('home')} />}
             </>
           )}

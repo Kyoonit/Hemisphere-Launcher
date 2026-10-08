@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Compact layout for short windows (small laptop screens, resized window). */
+@custom-variant short (@media (max-height: 720px));
+
 /* Hemisphere design tokens (Phase 1). The website is built on Tailwind's default gray/green
    palette, so standard classes like bg-gray-900 or text-green-400 match it exactly. */
 @theme {
@@ -47,6 +50,21 @@
   }
   button {
     cursor: pointer;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background: rgb(55 65 81 / 0.8);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(75 85 99);
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
   }
   :focus {
     outline: none;
@@ -150,5 +168,20 @@
   }
   to {
     transform: translateX(300%);
+  }
+}
+
+/* Loading placeholder with a soft shimmer */
+.skeleton {
+  background: linear-gradient(90deg, rgb(31 41 55 / 0.7) 25%, rgb(55 65 81 / 0.7) 50%, rgb(31 41 55 / 0.7) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
   }
 }

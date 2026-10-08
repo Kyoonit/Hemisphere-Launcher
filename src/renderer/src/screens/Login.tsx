@@ -122,6 +122,7 @@ function DevOffline({ onDone }: { onDone?: () => void }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t('auth.dev.placeholder')}
+          aria-label={t('auth.dev.placeholder')}
           maxLength={16}
           className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-white"
         />

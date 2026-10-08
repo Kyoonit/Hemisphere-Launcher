@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { BookOpen, Clock, Globe, Map, TriangleAlert, WifiOff } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { BookOpen, Clock, Globe, Map, TriangleAlert, Upload, WifiOff, X } from 'lucide-react'
 import type { LinkKey } from '@shared/ipc'
 import { restartState } from '@shared/restart'
 import DiscordIcon from '../components/DiscordIcon'
@@ -8,7 +9,7 @@ import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
 import PlayZone, { useGameState } from '../components/PlayZone'
 import { useClient } from './Mods'
-import { useFeed, useNow, useServerStatus } from '../hooks'
+import { useFeed, useNow, usePlaytime, useServerStatus } from '../hooks'
 import type { Feed } from '@shared/feed'
 import { localize } from '@shared/manifest'
 import { useAccounts } from '../accounts'
@@ -19,7 +20,7 @@ const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
   { key: 'rules', icon: <BookOpen size={18} /> },
 ]
 
-export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onRepair(): void }) {
+export default function Home({ onOpenNews, onRepair, onImport }: { onOpenNews(): void; onRepair(): void; onImport(): void }) {
   const { t } = useTranslation()
   const status = useServerStatus()
   const feed = useFeed()
@@ -27,21 +28,25 @@ export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onR
   const game = useGameState()
   // Reload client info whenever a launch/repair finishes (an update may have just been installed).
   const client = useClient(game?.phase === 'preparing' ? 'busy' : game?.phase)
+  const crashed = game?.error?.code === 'crashed'
 
   return (
-    <div className="relative flex h-full flex-col items-center px-7 pb-6">
+    <div className="relative flex h-full flex-col items-center px-7 pb-6 short:pb-4">
       <PlaytimeCard key={active?.id} />
+      <ImportPrompt onImport={onImport} />
       <ServerPanel status={status} feed={feed} />
 
-      <section className="flex flex-1 flex-col items-center justify-center text-center">
+      <section className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
         {active?.status === 'expired' && <ExpiredBanner />}
-        <h1 className="animate-rise text-[44px] leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]">
+        <h1
+          className={`animate-rise text-[44px] leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms] short:text-[34px] ${crashed ? 'short:hidden' : ''}`}
+        >
           {active ? t('home.welcomeBack') : t('home.welcomeTo')}
           <br />
           <span className="text-green-400">{active ? active.name : t('app.name')}</span>
         </h1>
 
-        <div className="animate-rise mt-8 flex flex-col items-center [animation-delay:250ms]">
+        <div className="animate-rise mt-8 flex flex-col items-center [animation-delay:250ms] short:mt-5">
           <PlayZone client={client ?? null} onRepair={onRepair} />
           <div className="mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400">
             <ServerNotice offline={status?.online === false} feed={feed} />
@@ -50,7 +55,7 @@ export default function Home({ onOpenNews, onRepair }: { onOpenNews(): void; onR
         </div>
       </section>
 
-      <footer className="animate-rise flex w-full items-end justify-between gap-4 [animation-delay:400ms]">
+      <footer className="animate-rise relative z-10 flex w-full flex-none items-end justify-between gap-4 pt-4 [animation-delay:400ms]">
         <div className="flex gap-2">
           <button
             onClick={() => window.hemisphere.openLink('discord')}
@@ -90,6 +95,33 @@ function ExpiredBanner() {
         {t('auth.signInAgain')}
       </button>
     </div>
+  )
+}
+
+/** One-time card for new players coming from another launcher (dismissible; hidden after the first game). */
+function ImportPrompt({ onImport }: { onImport(): void }) {
+  const { t } = useTranslation()
+  const playtime = usePlaytime()
+  const [dismissed, setDismissed] = useState(true)
+  useEffect(() => {
+    window.hemisphere.settings.get().then((s) => setDismissed(s.importPromptDismissed))
+  }, [])
+  if (dismissed || !playtime || playtime.sessions > 0) return null
+  const dismiss = () => {
+    setDismissed(true)
+    void window.hemisphere.settings.set({ importPromptDismissed: true })
+  }
+  return (
+    <aside className="glass animate-rise absolute top-[232px] left-6 w-[210px] px-4 py-3.5 [animation-delay:450ms]">
+      <button onClick={dismiss} aria-label={t('import.dismiss')} className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white">
+        <X size={14} />
+      </button>
+      <p className="pr-4 text-[13px] font-semibold text-white">{t('import.promptTitle')}</p>
+      <p className="mt-1 text-xs text-gray-400">{t('import.promptBody')}</p>
+      <button onClick={onImport} className="mt-2.5 flex items-center gap-1.5 text-xs font-semibold text-green-400 hover:text-green-300">
+        <Upload size={13} /> {t('import.settingsButton')}
+      </button>
+    </aside>
   )
 }
 

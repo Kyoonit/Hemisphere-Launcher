@@ -1,3 +1,4 @@
+
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { join } from 'node:path'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
@@ -29,17 +30,24 @@ import { getModIcons } from './core/remote/modIcons'
 import { getFeed, startFeedPolling } from './core/remote/feed'
 import { installFileLogger } from './core/logging/logger'
 import { copyDiagnostics, moveGameFolder, openFolder, systemInfo, type FolderKind } from './core/system/system'
+import { detectSources, importFrom, playerMods, setPlayerModEnabled, sourceFromFolder } from './core/importer/importer'
+import type { ImportOptions, ImportSource } from '@shared/importer'
 import type { ClientSummary } from '@shared/client'
+import { loadWindowState, trackWindowState } from './core/system/windowState'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
 let win: BrowserWindow | null = null
 let lastStatus: ServerStatus | null = null
+/** Sources the player may import from: only ones the launcher found or the player picked in the dialog. */
+const importSources = new Map<string, ImportSource>()
 
 function createWindow(): void {
+  const saved = loadWindowState()
   win = new BrowserWindow({
     width: 1120,
     height: 700,
+    ...saved?.bounds,
     minWidth: 960,
     minHeight: 600,
     frame: false,
@@ -57,7 +65,11 @@ function createWindow(): void {
     },
   })
 
-  win.once('ready-to-show', () => win?.show())
+  trackWindowState(win, saved)
+  win.once('ready-to-show', () => {
+    if (saved?.maximized) win?.maximize()
+    win?.show()
+  })
   win.on('maximize', () => win?.webContents.send(IPC.windowMaximizedChanged, true))
   win.on('unmaximize', () => win?.webContents.send(IPC.windowMaximizedChanged, false))
   win.on('closed', () => (win = null))
@@ -106,8 +118,8 @@ function registerIpc(): void {
   ipcMain.handle(IPC.gameState, () => getGameState())
   ipcMain.on(IPC.gamePlay, (_e, opts: unknown) => {
     const active = getAccountsState().activeId
-    const o = (opts ?? {}) as { target?: unknown }
-    if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest' })
+    const o = (opts ?? {}) as { target?: unknown; withoutPlayerMods?: unknown }
+    if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest', withoutPlayerMods: o.withoutPlayerMods === true })
   })
   ipcMain.handle(IPC.systemInfo, () => systemInfo())
   ipcMain.on(IPC.systemOpenFolder, (_e, kind: unknown) => {
@@ -123,7 +135,13 @@ function registerIpc(): void {
       dir = pick.filePaths[0]
     }
     const g = getGameState()
-    return moveGameFolder(dir, g.phase === 'preparing' || g.runningAccounts.length > 0)
+    let last = 0
+    return moveGameFolder(dir, g.phase === 'preparing' || g.runningAccounts.length > 0, (ratio) => {
+      if (ratio === 1 || ratio - last >= 0.01) {
+        last = ratio
+        win?.webContents.send(IPC.systemMoveProgress, ratio)
+      }
+    })
   })
   ipcMain.handle(IPC.systemPickJava, async () => {
     const pick = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Java', extensions: ['exe'] }], title: 'javaw.exe' })
@@ -134,6 +152,41 @@ function registerIpc(): void {
     if (!info) return { ok: false, reason: 'notJava' }
     await updateSettings({ javaPath: path })
     return { ok: true, version: info.version, majorVersion: info.majorVersion }
+  })
+  ipcMain.handle(IPC.importDetect, () => {
+    const found = detectSources()
+    for (const s of found) importSources.set(s.id, s)
+    return found
+  })
+  ipcMain.handle(IPC.importChoose, async () => {
+    const pick = await dialog.showOpenDialog(win!, { properties: ['openDirectory'], title: 'Minecraft folder' })
+    if (pick.canceled || !pick.filePaths[0]) return null
+    const src = sourceFromFolder(pick.filePaths[0])
+    if (!src) return 'nothing'
+    importSources.set(src.id, src)
+    return src
+  })
+  ipcMain.handle(IPC.importRun, async (_e, id: unknown, opts: unknown) => {
+    const source = typeof id === 'string' ? importSources.get(id) : undefined
+    if (!source) return { ok: false, reason: 'unknownSource' }
+    const g = getGameState()
+    if (g.phase === 'preparing' || g.runningAccounts.length) return { ok: false, reason: 'busy' }
+    const o = (opts ?? {}) as Record<string, unknown>
+    const options: ImportOptions = { settings: !!o.settings, servers: !!o.servers, resourcepacks: !!o.resourcepacks, shaderpacks: !!o.shaderpacks, config: !!o.config, mods: !!o.mods }
+    try {
+      const { manifest } = await getContent()
+      const report = await importFrom(source, options, manifest, (p) => win?.webContents.send(IPC.importProgress, p))
+      return { ok: true, report }
+    } catch (err) {
+      console.error('[import] failed:', err)
+      return { ok: false, reason: 'failed', detail: String(err) }
+    }
+  })
+  ipcMain.handle(IPC.modsPlayer, async () => playerMods(Object.keys((await readInstanceState()).owned)))
+  ipcMain.handle(IPC.modsPlayerSet, async (_e, file: unknown, enabled: unknown) => {
+    const g = getGameState()
+    if (typeof file !== 'string' || typeof enabled !== 'boolean' || g.runningAccounts.length) return false
+    return setPlayerModEnabled(file, enabled, Object.keys((await readInstanceState()).owned))
   })
   ipcMain.handle(IPC.feedGet, () => getFeed())
   ipcMain.on(IPC.feedOpenLink, (_e, id: unknown) => {

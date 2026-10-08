@@ -18,6 +18,8 @@ export interface Settings {
   jvmArgs: string
   /** Open the launcher when Windows starts (installed version only) */
   startWithWindows: boolean
+  /** The "coming from another launcher?" card on Home was dismissed */
+  importPromptDismissed: boolean
 }
 
 export const RESOLUTIONS = ['auto', '1280x720', '1600x900', '1920x1080', '2560x1440', 'fullscreen'] as const
@@ -33,6 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   javaPath: null,
   jvmArgs: '',
   startWithWindows: false,
+  importPromptDismissed: false,
 }
 
 /**

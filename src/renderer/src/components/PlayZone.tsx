@@ -4,6 +4,7 @@ import { Check, RotateCcw, TriangleAlert, Wrench } from 'lucide-react'
 import type { GameState } from '@shared/game'
 import type { ClientSummary } from '@shared/client'
 import { useAccounts } from '../accounts'
+import CrashCard from './CrashCard'
 
 const STAGES = ['account', 'minecraft', 'java', 'fabric', 'mods', 'launching'] as const
 const REPAIR_STAGES = ['minecraft', 'java', 'fabric', 'mods'] as const
@@ -67,7 +68,11 @@ export default function PlayZone({ client, onRepair }: { client: ClientSummary |
       <button className="play-button uppercase" onClick={() => window.hemisphere.game.play()}>
         {t('home.play')}
       </button>
-      {game.error ? (
+      {game.error?.code === 'crashed' ? (
+        <div className="mt-4">
+          <CrashCard suspects={game.error.suspects ?? []} onRepair={onRepair} />
+        </div>
+      ) : game.error ? (
         <ErrorLine code={game.error.code} onRepair={onRepair} />
       ) : (
         <p className="mt-3 flex items-center gap-1.5 text-[13px] text-gray-400">

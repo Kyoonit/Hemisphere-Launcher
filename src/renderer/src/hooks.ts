@@ -2,6 +2,19 @@ import { useEffect, useState } from 'react'
 import type { PlaytimeSummary, ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
 
+/** True while the window is short (same breakpoint as the CSS `short:` variant). */
+export function useShortWindow(): boolean {
+  const query = '(max-height: 720px)'
+  const [short, setShort] = useState(() => matchMedia(query).matches)
+  useEffect(() => {
+    const mq = matchMedia(query)
+    const onChange = () => setShort(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return short
+}
+
 /** Current time, re-rendered every `intervalMs`. */
 export function useNow(intervalMs = 1000): number {
   const [now, setNow] = useState(Date.now)

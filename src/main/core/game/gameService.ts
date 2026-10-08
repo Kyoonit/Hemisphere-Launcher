@@ -1,5 +1,5 @@
 import { totalmem } from 'node:os'
-import { existsSync, readFileSync, realpathSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { app } from 'electron'
 import type { ChildProcess } from 'node:child_process'
 import { readdirSync, statSync } from 'node:fs'
@@ -15,6 +15,9 @@ import { getContent, getPreviousManifest } from '../remote/content'
 import { getSettings } from '../settings/settings'
 import { parseJvmArgs } from '@shared/settings'
 import { inspectJava } from './java'
+import { physicalPath } from '../system/redirect'
+import { disableAllPlayerMods } from '../importer/importer'
+import { readInstanceState } from '../sync/sync'
 import { endSession, startSession } from '../playtime/playtimeStore'
 import { cleanStore, syncClient } from '../sync/sync'
 import { GameError, toGameError } from './util'
@@ -73,6 +76,11 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
   try {
     const report = progressReporter()
 
+    if (opts.withoutPlayerMods) {
+      const moved = await disableAllPlayerMods(Object.keys((await readInstanceState()).owned))
+      console.log(`[game] launching without player mods (${moved} parked in mods-disabled)`)
+    }
+
     // 1. Account: fresh Minecraft session.
     report('account')(null)
     const creds = await getLaunchCredentials(accountId).catch((err) => {
@@ -105,9 +113,9 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
         : settings.resolution !== 'auto'
           ? { width: Number(settings.resolution.split('x')[0]), height: Number(settings.resolution.split('x')[1]) }
           : undefined
-    // Pass fully resolved paths: if Windows redirects the folder (app containers, sync or security tools), Java sees
+    // Pass the physical paths: if Windows redirects the folder (app containers, sync or security tools), Java sees
     // the real location and Fabric would otherwise treat its own loader as two different files and crash.
-    const real = (p: string) => realpathSync.native(p)
+    const real = (p: string) => physicalPath(p, app.getPath('userData'))
     const proc = await launch({
       gamePath: real(paths.instance),
       resourcePath: real(paths.minecraft),
@@ -203,11 +211,33 @@ function watch(proc: ChildProcess, accountId: string): void {
       phase: runningAccounts.length ? 'running' : state.phase === 'preparing' ? 'preparing' : 'idle',
       runningAccounts,
       error: crashed
-        ? { code: 'crashed', detail: newCrashReport(startedAt) ?? lastLogLines() ?? `exit code ${code} after ${Math.round((Date.now() - startedAt) / 1000)} s` }
+        ? {
+            code: 'crashed',
+            detail: newCrashReport(startedAt) ?? lastLogLines() ?? `exit code ${code} after ${Math.round((Date.now() - startedAt) / 1000)} s`,
+            suspects: crashSuspects(startedAt),
+          }
         : state.error,
     })
     gameEvents.onExited({ accountId, crashed, anyRunning: runningAccounts.length > 0 })
   })
+}
+
+/** Mod ids named in the crash output ("provided by 'x'", "from mod x"), most-mentioned first. */
+function crashSuspects(since: number): string[] {
+  const texts = [newCrashReport(since), instanceLogPath()].flatMap((p) => {
+    try {
+      // only files written by this launch (a JVM that fails instantly leaves the previous run's log behind)
+      return p && existsSync(p) && statSync(p).mtimeMs >= since - 2000 ? [readFileSync(p, 'utf8').slice(-200_000)] : []
+    } catch {
+      return []
+    }
+  })
+  const counts = new Map<string, number>()
+  const IGNORE = new Set(['minecraft', 'java', 'fabricloader', 'fabric-loader', 'mixinextras'])
+  for (const t of texts)
+    for (const m of t.matchAll(/(?:provided by '|from mod |by mod )([a-z0-9_.-]{2,64})/g))
+      if (!IGNORE.has(m[1])) counts.set(m[1], (counts.get(m[1]) ?? 0) + 1)
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id).slice(0, 5)
 }
 
 /** The crash report Minecraft wrote during this session, if any. */

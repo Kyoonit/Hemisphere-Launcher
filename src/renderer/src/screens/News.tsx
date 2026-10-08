@@ -31,7 +31,19 @@ export default function News() {
     return () => document.removeEventListener('keydown', esc)
   }, [])
 
-  if (!feed) return null
+  if (!feed)
+    return (
+      <div className="h-full overflow-hidden px-8 py-6" aria-busy="true">
+        <div className="skeleton mb-2 h-3 w-32 rounded" />
+        <div className="skeleton mb-6 h-8 w-56 rounded" />
+        <div className="skeleton mb-4 h-[260px] rounded-lg" />
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="skeleton h-[180px] rounded-lg" />
+          ))}
+        </div>
+      </div>
+    )
   const open = feed.news.find((n) => n.id === openId)
   if (open) return <Article item={open} lang={lang} onBack={() => setOpenId(null)} />
 

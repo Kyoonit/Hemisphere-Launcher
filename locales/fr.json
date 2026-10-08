@@ -285,7 +285,11 @@
     "warnVoice": "Tu n’entendras plus le chat vocal ni la musique personnalisée sur Hemisphere.",
     "alsoOff": "{{names}} aussi désactivé — a besoin de {{mod}}.",
     "alsoOn": "{{names}} aussi activé — {{mod}} en a besoin.",
-    "warnFeature": "Recommandé par Hemisphere — tu perdras cette fonction en jeu."
+    "warnFeature": "Recommandé par Hemisphere — tu perdras cette fonction en jeu.",
+    "yours": "Ajoutés par toi",
+    "yoursEmpty": "Pas encore de mods à toi. Importe-les, ou dépose des fichiers .jar dans le dossier mods.",
+    "yoursHint": "Hemisphere ne les supprime jamais. Les mods désactivés sont gardés dans le dossier mods-disabled. Vérifie qu’ils respectent les règles du serveur.",
+    "openFolder": "Ouvrir le dossier"
   },
   "repair": {
     "title": "Réparer l’installation",
@@ -334,5 +338,91 @@
     "button": "Mettre à jour vers {{version}}",
     "playPrevious": "Jouer en {{version}}",
     "previousHint": "Ancienne version · ne se connecte pas à Hemisphere"
+  },
+  "import": {
+    "label": "Importer",
+    "titleA": "Récupère ta",
+    "titleB": "configuration",
+    "intro": "Copie tes touches, réglages, liste de serveurs, packs et mods depuis un autre launcher Minecraft.",
+    "sources": "Installations Minecraft trouvées sur ce PC",
+    "chooseFolder": "Choisir un dossier…",
+    "chooseFolderHint": "MultiMC, GDLauncher, une sauvegarde… n’importe quel dossier Minecraft",
+    "noneFound": "Aucun autre launcher trouvé automatiquement — choisis un dossier.",
+    "nothingThere": "Ce dossier ne contient ni réglages ni mods Minecraft.",
+    "modCount_one": "{{count}} mod",
+    "modCount_other": "{{count}} mods",
+    "modCount_many": "{{count}} mods",
+    "launchers": {
+      "official": "Launcher Minecraft",
+      "modrinth": "Modrinth App",
+      "curseforge": "CurseForge",
+      "prism": "Prism Launcher",
+      "atlauncher": "ATLauncher",
+      "folder": "Dossier"
+    },
+    "items": {
+      "settings": "Réglages & touches",
+      "servers": "Liste de serveurs",
+      "resourcepacks": "Packs de ressources",
+      "shaderpacks": "Shaders",
+      "config": "Réglages des mods",
+      "mods": "Mes mods"
+    },
+    "itemHints": {
+      "settings": "Les actuels sont sauvegardés",
+      "servers": "Ta liste actuelle est sauvegardée",
+      "resourcepacks": "Les packs déjà présents sont gardés",
+      "shaderpacks": "Pour Iris (active-le dans Mods)",
+      "config": "Seulement les fichiers manquants",
+      "mods": "Mis à jour pour Hemisphere · peuvent entrer en conflit"
+    },
+    "steps": {
+      "files": "Copie de tes fichiers…",
+      "mods": "Vérification de tes mods…"
+    },
+    "start": "Importer",
+    "done": "Terminé",
+    "safe": "Ton dossier d’origine est seulement lu — rien n’y est modifié.",
+    "errors": {
+      "busy": "Ferme Minecraft avant d’importer.",
+      "unknownSource": "Choisis à nouveau une installation.",
+      "failed": "L’import a échoué — vérifie ta connexion internet et réessaie."
+    },
+    "result": {
+      "settings": "Réglages & touches importés",
+      "servers": "Liste de serveurs importée",
+      "resourcepacks_one": "{{count}} pack de ressources ajouté",
+      "resourcepacks_other": "{{count}} packs de ressources ajoutés",
+      "resourcepacks_many": "{{count}} packs de ressources ajoutés",
+      "shaderpacks_one": "{{count}} shader ajouté",
+      "shaderpacks_other": "{{count}} shaders ajoutés",
+      "shaderpacks_many": "{{count}} shaders ajoutés",
+      "config_one": "{{count}} réglage de mod ajouté",
+      "config_other": "{{count}} réglages de mods ajoutés",
+      "config_many": "{{count}} réglages de mods ajoutés",
+      "modsAdded": "Ajoutés (version compatible) : {{names}}",
+      "modsIncluded": "Déjà dans le client Hemisphere : {{names}}",
+      "modsUnavailable": "Pas encore de version pour ce Minecraft : {{names}}",
+      "modsUnknown": "Introuvables sur Modrinth, non copiés : {{names}}",
+      "nothing": "Rien de nouveau à importer."
+    },
+    "settingsTitle": "Importer depuis un autre launcher",
+    "settingsHint": "Touches, réglages, serveurs, packs et tes mods",
+    "settingsButton": "Importer…",
+    "promptTitle": "Tu viens d’un autre launcher ?",
+    "promptBody": "Récupère tes touches, réglages et mods en un clic.",
+    "dismiss": "Fermer"
+  },
+  "crash": {
+    "title": "Minecraft n’a pas pu démarrer",
+    "subtitle": "Le jeu s’est fermé pendant le chargement. Rien n’est perdu.",
+    "causeOwnMods_one": "Cause probable : le mod que tu as ajouté ne fonctionne pas avec cette version.",
+    "causeOwnMods_other": "Cause probable : un des {{count}} mods que tu as ajoutés ne fonctionne pas avec cette version.",
+    "causeOwnMods_many": "Cause probable : un des {{count}} mods que tu as ajoutés ne fonctionne pas avec cette version.",
+    "causeMods": "Un mod n’a pas pu se charger.",
+    "mentioned": "Cités dans le crash : {{mods}}",
+    "withoutMyMods": "Lancer sans mes mods",
+    "reports": "Rapports de crash",
+    "help": "Demander de l’aide"
   }
 }

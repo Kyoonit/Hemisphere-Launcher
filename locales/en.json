@@ -285,7 +285,11 @@
     "warnVoice": "You won't hear voice chat or custom music on Hemisphere.",
     "alsoOff": "{{names}} also turned off — needs {{mod}}.",
     "alsoOn": "{{names}} also turned on — {{mod}} needs it.",
-    "warnFeature": "Recommended by Hemisphere — you’ll lose this feature in game."
+    "warnFeature": "Recommended by Hemisphere — you’ll lose this feature in game.",
+    "yours": "Added by you",
+    "yoursEmpty": "No mods of your own yet. Import them, or drop .jar files in the mods folder.",
+    "yoursHint": "Hemisphere never deletes these. Turned-off mods are kept in the mods-disabled folder. Make sure they follow the server rules.",
+    "openFolder": "Open folder"
   },
   "repair": {
     "title": "Repair installation",
@@ -331,5 +335,86 @@
     "button": "Update to {{version}}",
     "playPrevious": "Play on {{version}}",
     "previousHint": "Older version · won't connect to Hemisphere"
+  },
+  "import": {
+    "label": "Import",
+    "titleA": "Bring your",
+    "titleB": "setup along",
+    "intro": "Copy your keybinds, settings, server list, packs and mods from another Minecraft launcher.",
+    "sources": "Minecraft setups found on this PC",
+    "chooseFolder": "Choose a folder…",
+    "chooseFolderHint": "MultiMC, GDLauncher, a backup… any Minecraft folder or instance",
+    "noneFound": "No other launcher found automatically — choose a folder instead.",
+    "nothingThere": "That folder doesn't contain Minecraft settings or mods.",
+    "modCount_one": "{{count}} mod",
+    "modCount_other": "{{count}} mods",
+    "launchers": {
+      "official": "Minecraft Launcher",
+      "modrinth": "Modrinth App",
+      "curseforge": "CurseForge",
+      "prism": "Prism Launcher",
+      "atlauncher": "ATLauncher",
+      "folder": "Folder"
+    },
+    "items": {
+      "settings": "Settings & keybinds",
+      "servers": "Server list",
+      "resourcepacks": "Resource packs",
+      "shaderpacks": "Shader packs",
+      "config": "Mod settings",
+      "mods": "My mods"
+    },
+    "itemHints": {
+      "settings": "Your current ones are backed up",
+      "servers": "Your current list is backed up",
+      "resourcepacks": "Packs you already have are kept",
+      "shaderpacks": "For Iris (turn it on in Mods)",
+      "config": "Only files you don’t have yet",
+      "mods": "Updated for Hemisphere · may conflict with its mods"
+    },
+    "steps": {
+      "files": "Copying your files…",
+      "mods": "Checking your mods…"
+    },
+    "start": "Import",
+    "done": "Done",
+    "safe": "Your original folder is only read — nothing in it is changed.",
+    "errors": {
+      "busy": "Close Minecraft before importing.",
+      "unknownSource": "Choose a setup again.",
+      "failed": "Import failed — check your internet connection and try again."
+    },
+    "result": {
+      "settings": "Settings & keybinds imported",
+      "servers": "Server list imported",
+      "resourcepacks_one": "{{count}} resource pack added",
+      "resourcepacks_other": "{{count}} resource packs added",
+      "shaderpacks_one": "{{count}} shader pack added",
+      "shaderpacks_other": "{{count}} shader packs added",
+      "config_one": "{{count}} mod setting added",
+      "config_other": "{{count}} mod settings added",
+      "modsAdded": "Added (compatible version): {{names}}",
+      "modsIncluded": "Already in the Hemisphere client: {{names}}",
+      "modsUnavailable": "No version for this Minecraft yet: {{names}}",
+      "modsUnknown": "Not found on Modrinth, not copied: {{names}}",
+      "nothing": "Nothing new to import."
+    },
+    "settingsTitle": "Import from another launcher",
+    "settingsHint": "Keybinds, settings, server list, packs and your mods",
+    "settingsButton": "Import…",
+    "promptTitle": "Coming from another launcher?",
+    "promptBody": "Bring your keybinds, settings and mods along in one click.",
+    "dismiss": "Dismiss"
+  },
+  "crash": {
+    "title": "Minecraft couldn't start",
+    "subtitle": "The game closed while loading. Nothing is lost.",
+    "causeOwnMods_one": "Likely cause: the mod you added doesn’t work with this version.",
+    "causeOwnMods_other": "Likely cause: one of the {{count}} mods you added doesn’t work with this version.",
+    "causeMods": "A mod failed to load.",
+    "mentioned": "Mentioned in the crash: {{mods}}",
+    "withoutMyMods": "Launch without my mods",
+    "reports": "Crash reports",
+    "help": "Get help"
   }
 }

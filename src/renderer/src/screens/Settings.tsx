@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Gamepad2, Plus, RotateCcw, Rocket, TriangleAlert, User, Wrench, type LucideIcon } from 'lucide-react'
+import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Gamepad2, Plus, RotateCcw, Rocket, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
 import type { JavaRuntimeInfo } from '@shared/game'
 import { RESOLUTIONS, parseJvmArgs, type Settings, type SystemInfo } from '@shared/settings'
 import { LANGUAGES, systemLanguage } from '../i18n'
@@ -21,7 +21,7 @@ const selectClass = 'rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 tex
 const buttonClass = 'flex items-center gap-2 rounded-lg bg-gray-700/85 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:opacity-50'
 const gb = (mb: number) => `${(mb / 1024).toFixed(mb % 1024 ? 1 : 0)} GB`
 
-export default function Settings({ initialSection, onAddAccount, onRepair }: { initialSection: Section; onAddAccount(): void; onRepair(): void }) {
+export default function Settings({ initialSection, onAddAccount, onRepair, onImport }: { initialSection: Section; onAddAccount(): void; onRepair(): void; onImport(): void }) {
   const { t } = useTranslation()
   const [section, setSection] = useState<Section>(initialSection)
 
@@ -47,7 +47,7 @@ export default function Settings({ initialSection, onAddAccount, onRepair }: { i
         {section === 'game' && <GameSettings />}
         {section === 'launcher' && <LauncherSettings />}
         {section === 'account' && <AccountSettings onAddAccount={onAddAccount} />}
-        {section === 'installation' && <InstallationSettings onRepair={onRepair} />}
+        {section === 'installation' && <InstallationSettings onRepair={onRepair} onImport={onImport} />}
         {section === 'advanced' && <AdvancedSettings />}
       </section>
     </div>
@@ -223,10 +223,12 @@ function AccountSettings({ onAddAccount }: { onAddAccount(): void }) {
 }
 
 // ---------------------------------------------------------------- Installation
-function InstallationSettings({ onRepair }: { onRepair(): void }) {
+function InstallationSettings({ onRepair, onImport }: { onRepair(): void; onImport(): void }) {
   const { t } = useTranslation()
   const [info, reload] = useSystemInfo()
   const [moving, setMoving] = useState(false)
+  const [moveRatio, setMoveRatio] = useState<number | null>(null)
+  useEffect(() => window.hemisphere.system.onMoveProgress(setMoveRatio), [])
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   if (!info) return null
 
@@ -234,8 +236,10 @@ function InstallationSettings({ onRepair }: { onRepair(): void }) {
   const move = async (target: 'choose' | 'default') => {
     setMessage(null)
     setMoving(true)
+    setMoveRatio(null)
     const res = await window.hemisphere.system.moveGameDir(target)
     setMoving(false)
+    setMoveRatio(null)
     if (res.cancelled) return
     setMessage(res.ok ? { ok: true, text: t('settings.moved') } : { ok: false, text: t(`settings.moveErrors.${res.reason ?? 'failed'}`) })
     reload()
@@ -249,7 +253,7 @@ function InstallationSettings({ onRepair }: { onRepair(): void }) {
             <FolderOpen size={16} /> {t('settings.open')}
           </button>
           <button onClick={() => move('choose')} disabled={moving} className={buttonClass}>
-            <FolderInput size={16} /> {moving ? t('settings.moving') : t('settings.change')}
+            <FolderInput size={16} /> {moving ? (moveRatio !== null ? `${t('settings.moving')} ${Math.round(moveRatio * 100)}%` : t('settings.moving')) : t('settings.change')}
           </button>
           {!isDefault && (
             <button onClick={() => move('default')} disabled={moving} className={buttonClass}>
@@ -258,6 +262,11 @@ function InstallationSettings({ onRepair }: { onRepair(): void }) {
           )}
         </div>
       </Row>
+      {moving && moveRatio !== null && (
+        <div className="mt-1 mb-2 h-2 overflow-hidden rounded-full bg-gray-700/90" role="progressbar" aria-valuenow={Math.round(moveRatio * 100)} aria-valuemin={0} aria-valuemax={100}>
+          <i className="block h-full rounded-full bg-gradient-to-r from-green-600 to-green-400 transition-[width] duration-300" style={{ width: `${moveRatio * 100}%` }} />
+        </div>
+      )}
       {message && <Notice ok={message.ok}>{message.text}</Notice>}
       <Row title={t('settings.folders')} hint={t('settings.foldersHint')}>
         <div className="flex gap-2">
@@ -268,6 +277,11 @@ function InstallationSettings({ onRepair }: { onRepair(): void }) {
             {t('settings.folderScreenshots')}
           </button>
         </div>
+      </Row>
+      <Row title={t('import.settingsTitle')} hint={t('import.settingsHint')}>
+        <button onClick={onImport} className={buttonClass}>
+          <Upload size={16} /> {t('import.settingsButton')}
+        </button>
       </Row>
       <Row title={t('repair.title')} hint={t('repair.settingsHint')}>
         <button onClick={onRepair} className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-green-500">
@@ -392,7 +406,7 @@ function AdvancedSettings() {
 // ---------------------------------------------------------------- helpers
 function Row({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-5 border-b border-white/5 py-4">
+    <div role="group" aria-label={title} className="flex items-center gap-5 border-b border-white/5 py-4">
       <div className="min-w-0 flex-1">
         <b className="block font-semibold text-white">{title}</b>
         {hint && <span className="block truncate text-[12.5px] text-gray-400" title={hint}>{hint}</span>}

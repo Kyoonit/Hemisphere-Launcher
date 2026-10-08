@@ -17,6 +17,7 @@ const fields = {
   javaPath: z.string().refine((p) => isAbsolute(p) && /javaw?\.exe$/i.test(p), 'must be a java.exe or javaw.exe').nullable(),
   jvmArgs: z.string().max(1000).refine((s) => parseJvmArgs(s).invalid.length === 0, 'unsupported JVM argument'),
   startWithWindows: z.boolean(),
+  importPromptDismissed: z.boolean(),
 }
 
 /** Loading: a bad or unknown value falls back to its default, field by field (never breaks the launcher). */
@@ -31,6 +32,7 @@ const LoadSchema = z.object({
   javaPath: fields.javaPath.catch(D.javaPath),
   jvmArgs: fields.jvmArgs.catch(D.jvmArgs),
   startWithWindows: fields.startWithWindows.catch(D.startWithWindows),
+  importPromptDismissed: fields.importPromptDismissed.catch(D.importPromptDismissed),
 })
 /** Updating: invalid values are rejected with an error the UI can show. */
 const UpdateSchema = z.object(fields)

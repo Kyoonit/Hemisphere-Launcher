@@ -5,6 +5,7 @@ import type { AccountsState } from '@shared/auth'
 import type { GameState } from '@shared/game'
 import type { Settings } from '@shared/settings'
 import type { Feed } from '@shared/feed'
+import type { ImportProgress } from '@shared/importer'
 
 const api: HemisphereApi = {
   window: {
@@ -49,7 +50,22 @@ const api: HemisphereApi = {
     openFolder: (kind) => ipcRenderer.send(IPC.systemOpenFolder, kind),
     copyDiagnostics: () => ipcRenderer.invoke(IPC.systemDiagnostics),
     moveGameDir: (target) => ipcRenderer.invoke(IPC.systemMoveGameDir, target),
+    onMoveProgress: (cb) => {
+      const listener = (_e: unknown, ratio: number): void => cb(ratio)
+      ipcRenderer.on(IPC.systemMoveProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.systemMoveProgress, listener)
+    },
     pickJava: () => ipcRenderer.invoke(IPC.systemPickJava),
+  },
+  importer: {
+    detect: () => ipcRenderer.invoke(IPC.importDetect),
+    chooseFolder: () => ipcRenderer.invoke(IPC.importChoose),
+    run: (sourceId, opts) => ipcRenderer.invoke(IPC.importRun, sourceId, opts),
+    onProgress: (cb) => {
+      const listener = (_e: unknown, p: ImportProgress): void => cb(p)
+      ipcRenderer.on(IPC.importProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.importProgress, listener)
+    },
   },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
@@ -88,6 +104,8 @@ const api: HemisphereApi = {
     get: () => ipcRenderer.invoke(IPC.clientGet),
     enabledMods: () => ipcRenderer.invoke(IPC.modsEnabled),
     setModEnabled: (id, on) => ipcRenderer.invoke(IPC.modsSet, id, on),
+    playerMods: () => ipcRenderer.invoke(IPC.modsPlayer),
+    setPlayerMod: (file, enabled) => ipcRenderer.invoke(IPC.modsPlayerSet, file, enabled),
   },
 }
 

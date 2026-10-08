@@ -1,7 +1,7 @@
 import { app, clipboard, shell } from 'electron'
 import { cpus, release, totalmem } from 'node:os'
 import { existsSync, readFileSync } from 'node:fs'
-import { cp, mkdir, readdir, rename, rm, writeFile } from 'node:fs/promises'
+import { copyFile, cp, mkdir, readdir, rename, rm, stat, utimes, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, normalize, relative, resolve } from 'node:path'
 import { parseJvmArgs, type SystemInfo } from '@shared/settings'
 import { defaultGameDir, gamePaths } from '../game/target'
@@ -90,7 +90,7 @@ export type MoveResult = { ok: true; gameDir: string } | { ok: false; reason: 'b
  * Moves the game folder (Minecraft, Java, instance, store) to `target`. Same drive: instant rename.
  * Other drive: copy, then delete the old copy only after everything was copied.
  */
-export async function moveGameFolder(target: string, busy: boolean): Promise<MoveResult> {
+export async function moveGameFolder(target: string, busy: boolean, onProgress: (ratio: number) => void = () => {}): Promise<MoveResult> {
   if (busy) return { ok: false, reason: 'busy' }
   if (!isAbsolute(target)) return { ok: false, reason: 'invalid' }
   const from = resolve(gamePaths().root)
@@ -120,6 +120,8 @@ export async function moveGameFolder(target: string, busy: boolean): Promise<Mov
   }
 
   const moved: string[] = []
+  let copyTotal = 0
+  let copied = 0
   try {
     for (const item of GAME_ITEMS) {
       const src = join(from, item)
@@ -127,11 +129,17 @@ export async function moveGameFolder(target: string, busy: boolean): Promise<Mov
       try {
         await rename(src, join(to, item)) // same drive: instant
       } catch {
-        await cp(src, join(to, item), { recursive: true, preserveTimestamps: true }) // other drive
+        // Other drive: copy file by file (with progress), then delete the original.
+        if (!copyTotal) copyTotal = (await Promise.all(GAME_ITEMS.map((i) => sizeOf(join(from, i))))).reduce((a, b) => a + b, 0)
+        await copyTree(src, join(to, item), (n) => {
+          copied += n
+          onProgress(Math.min(0.99, copied / copyTotal))
+        })
         await rm(src, { recursive: true, force: true })
       }
       moved.push(item)
     }
+    onProgress(1)
     await updateSettings({ gameDir: toDefault ? null : to })
     console.log(`[system] game folder moved to ${to}`)
     return { ok: true, gameDir: to }
@@ -145,4 +153,27 @@ export async function moveGameFolder(target: string, busy: boolean): Promise<Mov
     }
     return { ok: false, reason: 'failed', detail: String(err) }
   }
+}
+
+/** Total size of a file or folder in bytes. */
+async function sizeOf(path: string): Promise<number> {
+  const st = await stat(path).catch(() => null)
+  if (!st) return 0
+  if (!st.isDirectory()) return st.size
+  let total = 0
+  for (const name of await readdir(path)) total += await sizeOf(join(path, name))
+  return total
+}
+
+/** Recursive copy that reports bytes and keeps modification times (the sync engine uses them). */
+async function copyTree(src: string, dest: string, onBytes: (n: number) => void): Promise<void> {
+  const st = await stat(src)
+  if (st.isDirectory()) {
+    await mkdir(dest, { recursive: true })
+    for (const name of await readdir(src)) await copyTree(join(src, name), join(dest, name), onBytes)
+    return
+  }
+  await copyFile(src, dest)
+  await utimes(dest, st.atime, st.mtime)
+  onBytes(st.size)
 }

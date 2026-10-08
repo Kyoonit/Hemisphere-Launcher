@@ -29,8 +29,8 @@ export interface GameState {
   progress: GameProgress | null
   /** Accounts with a running game (one game per account) */
   runningAccounts: string[]
-  /** Last problem, cleared on next PLAY */
-  error: { code: GameErrorCode; detail?: string } | null
+  /** Last problem, cleared on next PLAY. suspects = mod ids named in the crash output */
+  error: { code: GameErrorCode; detail?: string; suspects?: string[] } | null
 }
 
 /** latest = current client (auto-joins if enabled); previous = "Play on <old Minecraft>" (never auto-joins) */
@@ -38,6 +38,8 @@ export type PlayTarget = 'latest' | 'previous'
 
 export interface PlayOptions {
   target: PlayTarget
+  /** move the player's own mods to mods-disabled/ first (after a crash) */
+  withoutPlayerMods?: boolean
 }
 
 export type RepairMode = 'quick' | 'full'
