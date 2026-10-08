@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { copyFile, mkdir, rename, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ClientManifest } from '@shared/manifest'
-import { policyFor, type InstallResult, type ModPolicy, type PlayerModInfo, type UpdateApplied, type UpdateCheck } from '@shared/modBrowser'
+import { policyFor, type InstallResult, type ModPolicy, type ModVersionChoice, type PlayerModInfo, type SetVersionResult, type UpdateApplied, type UpdateCheck } from '@shared/modBrowser'
 import { gamePaths } from '../game/target'
 import { blobPath, downloadToStore, sha512OfFile } from '../sync/download'
 import { getProjects, isSafeModFileName, latestByHash, pickVersion, primaryFile, projectVersions, safeIcon, versionsByHash, type ModrinthVersion } from './api'
@@ -28,6 +28,8 @@ interface Entry {
   icon: string
   update: { versionId: string; versionNumber: string } | null
   incompatibleWith: string | null
+  /** Minecraft version for which the player picked this exact version (updates skip it); null = follow latest */
+  pinned?: string | null
 }
 type Registry = Record<string, Entry>
 
@@ -100,6 +102,7 @@ async function identify(owned: string[]): Promise<Registry> {
       icon: '',
       update: null,
       incompatibleWith: old?.incompatibleWith ?? null,
+      pinned: null,
     }
     reg[key(file)] = entry
     fresh.push(entry)
@@ -180,7 +183,12 @@ export function canEnablePlayerMod(file: string, manifest: ClientManifest): bool
   return !isDuplicate({ file, projectId: e?.projectId ?? null, title: e?.title ?? null }, hemisphereMods(manifest))
 }
 
-export function listPlayerMods(owned: string[], policy: ModPolicy | null | undefined, hemisphere: HemisphereMods | null = null): Promise<PlayerModInfo[]> {
+export function listPlayerMods(
+  owned: string[],
+  policy: ModPolicy | null | undefined,
+  hemisphere: HemisphereMods | null = null,
+  minecraft: string | null = null,
+): Promise<PlayerModInfo[]> {
   return serial(async () => {
     const reg = await identify(owned)
     if (hemisphere) await parkDuplicatesNow(owned, reg, hemisphere)
@@ -198,6 +206,7 @@ export function listPlayerMods(owned: string[], policy: ModPolicy | null | undef
           ...policyFor(policy, e?.projectId ?? null),
           update: e?.update ? { versionNumber: e.update.versionNumber } : null,
           incompatibleWith: e?.incompatibleWith ?? null,
+          pinned: !!minecraft && e?.pinned === minecraft,
           inHemisphere: isDuplicate({ file, projectId: e?.projectId ?? null, title: e?.title ?? null }, hemisphere),
         }
       })
@@ -301,7 +310,7 @@ export function removePlayerMod(file: string, owned: string[]): Promise<boolean>
 export function checkPlayerModUpdates(owned: string[], minecraft: string): Promise<UpdateCheck> {
   return serial(async () => {
     const reg = await identify(owned)
-    const known = Object.values(reg).filter((e) => e.projectId && e.versionId)
+    const known = Object.values(reg).filter((e) => e.projectId && e.versionId && e.pinned !== minecraft)
     const latest = await latestByHash(
       known.map((e) => e.sha512),
       minecraft,
@@ -326,7 +335,7 @@ export function updatePlayerMods(owned: string[], minecraft: string, disableInco
   return serial(async () => {
     const reg = await identify(owned)
     const files = new Map(playerFiles(owned).map((f) => [key(f.file), f]))
-    const known = Object.values(reg).filter((e) => e.projectId && e.versionId && files.has(key(e.file)))
+    const known = Object.values(reg).filter((e) => e.projectId && e.versionId && files.has(key(e.file)) && e.pinned !== minecraft)
     const latest = await latestByHash(
       known.map((e) => e.sha512),
       minecraft,
@@ -361,5 +370,80 @@ export function updatePlayerMods(owned: string[], minecraft: string, disableInco
     await writeRegistry(reg)
     if (updated.length || disabled.length) console.log(`[player-mods] for ${minecraft}: updated ${updated.length}, switched off ${disabled.length}`)
     return { updated, disabled }
+  })
+}
+
+/** Every Modrinth version of one of the player's mods for Fabric + this Minecraft version, newest first. */
+export function modVersions(file: string, owned: string[], minecraft: string): Promise<ModVersionChoice[] | null> {
+  return serial(async () => {
+    const e = (await identify(owned))[key(file)]
+    if (!e?.projectId) return null
+    const versions = (await projectVersions(e.projectId, minecraft)).sort((a, b) => b.date_published.localeCompare(a.date_published))
+    const latest = pickVersion(versions)
+    return versions.slice(0, 60).map((v) => ({
+      id: v.id,
+      versionNumber: v.version_number,
+      name: v.name,
+      type: v.version_type,
+      published: v.date_published,
+      current: v.id === e.versionId,
+      latest: v.id === latest?.id,
+    }))
+  })
+}
+
+/**
+ * Switches one of the player's mods to a specific Modrinth version (same Minecraft version). Picking anything but the
+ * newest pins it, so "Update all" leaves it alone; picking the newest unpins. The old file goes to the Recycle Bin.
+ */
+export function setModVersion(file: string, versionId: string, owned: string[], minecraft: string): Promise<SetVersionResult> {
+  return serial(async () => {
+    const reg = await identify(owned)
+    const e = reg[key(file)]
+    const loc = playerFiles(owned).find((f) => key(f.file) === key(file))
+    if (!e?.projectId || !loc) return { ok: false, reason: 'notFound' }
+    let versions: ModrinthVersion[]
+    try {
+      versions = await projectVersions(e.projectId, minecraft)
+    } catch {
+      return { ok: false, reason: 'network' }
+    }
+    const v = versions.find((x) => x.id === versionId)
+    if (!v) return { ok: false, reason: 'notFound' }
+    const pinned = v.id !== pickVersion(versions)?.id
+    if (v.id === e.versionId) {
+      e.pinned = pinned ? minecraft : null
+      e.update = null
+      await writeRegistry(reg)
+      return { ok: true, versionNumber: v.version_number, pinned }
+    }
+    const f = primaryFile(v)
+    try {
+      // same file name for both versions: make room first (the old one is still recoverable from the Recycle Bin)
+      if (f.filename.toLowerCase() === file.toLowerCase()) await shell.trashItem(join(loc.dir, file))
+      await placeVersion(v, loc.dir)
+      if (f.filename.toLowerCase() !== file.toLowerCase()) await shell.trashItem(join(loc.dir, file))
+    } catch (err) {
+      console.warn(`[player-mods] version change of ${file} failed:`, err)
+      return { ok: false, reason: 'network' }
+    }
+    const st = await stat(join(loc.dir, f.filename))
+    delete reg[key(file)]
+    reg[key(f.filename)] = {
+      ...e,
+      file: f.filename,
+      size: st.size,
+      mtimeMs: st.mtimeMs,
+      sha512: f.hashes.sha512,
+      lookedUp: true,
+      versionId: v.id,
+      versionNumber: v.version_number,
+      update: null,
+      incompatibleWith: null,
+      pinned: pinned ? minecraft : null,
+    }
+    await writeRegistry(reg)
+    console.log(`[player-mods] ${e.title ?? file}: ${e.versionNumber} -> ${v.version_number}${pinned ? ' (pinned)' : ''}`)
+    return { ok: true, versionNumber: v.version_number, pinned }
   })
 }

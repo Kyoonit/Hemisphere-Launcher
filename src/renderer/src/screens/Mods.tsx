@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CloudOff, Download, FolderOpen, Info, RefreshCw, Search, Trash2, TriangleAlert, Upload } from 'lucide-react'
-import type { PlayerModInfo } from '@shared/modBrowser'
+import { ChevronDown, CloudOff, Download, FolderOpen, History, Info, Loader2, RefreshCw, Search, Trash2, TriangleAlert, Upload } from 'lucide-react'
+import type { ModVersionChoice, PlayerModInfo } from '@shared/modBrowser'
 import { Icon as BrowserIcon } from './ModBrowser'
 import Toggle from '../components/Toggle'
 import type { ClientSummary, ModSummary } from '@shared/client'
@@ -84,7 +84,8 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
 
   const hemisphereOn = client.mods.filter((m) => m.category !== 'library' && enabled.has(m.id)).length
   const yoursOn = own?.filter((m) => m.enabled).length ?? 0
-  const toolButton = 'flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-gray-300 transition-colors hover:bg-gray-700 hover:text-white'
+  const toolButton =
+    'flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-gray-300 transition-colors hover:bg-gray-700 hover:text-white'
 
   return (
     <div className="h-full overflow-auto">
@@ -110,7 +111,10 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
               className="w-full rounded-lg border border-gray-700 bg-gray-900 py-2 pr-3 pl-8 text-sm text-white"
             />
           </label>
-          <button onClick={onBrowse} className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-[13px] font-semibold text-white shadow-md transition-colors hover:bg-green-500">
+          <button
+            onClick={onBrowse}
+            className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-[13px] font-semibold text-white shadow-md transition-colors hover:bg-green-500"
+          >
             <Download size={14} /> {t('browse.open')}
           </button>
           <PlayerModUpdates
@@ -150,7 +154,10 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
         </div>
 
         {notice && (
-          <div role="status" className="animate-fade mt-2.5 flex items-center gap-2 rounded-lg border-l-[3px] border-green-400 bg-gray-800/80 px-3.5 py-2 text-[13px] text-gray-200">
+          <div
+            role="status"
+            className="animate-fade mt-2.5 flex items-center gap-2 rounded-lg border-l-[3px] border-green-400 bg-gray-800/80 px-3.5 py-2 text-[13px] text-gray-200"
+          >
             <Info size={15} className="text-green-400" />
             {notice}
           </div>
@@ -164,7 +171,7 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
               item.kind === 'hemisphere' ? (
                 <ModRow key={`h-${item.mod.id}`} mod={item.mod} lang={i18n.language} on={enabled.has(item.mod.id)} onToggle={(on) => toggle(item.mod, on)} />
               ) : (
-                <PlayerModRow key={`p-${item.mod.file}`} mod={item.mod} lang={i18n.language} onChanged={() => void reloadOwn()} />
+                <PlayerModRow key={`p-${item.mod.file}`} mod={item.mod} lang={i18n.language} onChanged={() => void reloadOwn()} onNotice={setNotice} />
               ),
             )}
           </div>
@@ -195,7 +202,10 @@ function ModIcon({ mod }: { mod: ModSummary }) {
       />
     )
   return (
-    <span className="grid h-[34px] w-[34px] flex-none place-items-center rounded-lg text-sm font-extrabold text-white" style={{ background: tileColor(mod.id) }}>
+    <span
+      className="grid h-[34px] w-[34px] flex-none place-items-center rounded-lg text-sm font-extrabold text-white"
+      style={{ background: tileColor(mod.id) }}
+    >
       {(mod.name.match(/[A-Za-z0-9]/) ?? ['?'])[0].toUpperCase()}
     </span>
   )
@@ -212,7 +222,8 @@ function ModRow({ mod, lang, on, onToggle }: { mod: ModSummary; lang: string; on
         <p className="truncate text-[12.5px] text-gray-400">{localize(mod.description, lang)}</p>
         {mod.recommended && !on && (
           <p className="mt-0.5 flex items-center gap-1 text-xs text-amber-400">
-            <TriangleAlert size={12} /> {t(mod.category === 'voice' ? 'mods.warnVoice' : mod.category === 'performance' ? 'mods.warnRecommended' : 'mods.warnFeature')}
+            <TriangleAlert size={12} />{' '}
+            {t(mod.category === 'voice' ? 'mods.warnVoice' : mod.category === 'performance' ? 'mods.warnRecommended' : 'mods.warnFeature')}
           </p>
         )}
       </div>
@@ -226,74 +237,183 @@ function ModRow({ mod, lang, on, onToggle }: { mod: ModSummary; lang: string; on
 const fileSize = (bytes: number) => (bytes < 100 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`)
 
 /** One of the player's own mods: name and icon from Modrinth, staff policy, update badge, on/off, remove. */
-function PlayerModRow({ mod, lang, onChanged }: { mod: PlayerModInfo; lang: string; onChanged(): void }) {
+function PlayerModRow({ mod, lang, onChanged, onNotice }: { mod: PlayerModInfo; lang: string; onChanged(): void; onNotice(text: string): void }) {
   const { t } = useTranslation()
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [picking, setPicking] = useState(false)
   const name = mod.title ?? mod.file
   return (
-    <div className="flex items-center gap-3.5 border-t border-white/5 px-3.5 py-2.5 first:border-t-0">
-      <BrowserIcon src={mod.icon} />
-      <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2">
-          <b className={`truncate font-semibold ${mod.enabled ? 'text-white' : 'text-gray-500'}`} title={mod.file}>
-            {name}
-          </b>
-          <Badge tone="gray">{t('mods.yoursTag')}</Badge>
-          {mod.inHemisphere && <Badge tone="amber">{t('mods.duplicate')}</Badge>}
-          {mod.verdict === 'blocked' && <Badge tone="red">{t('browse.notAllowed')}</Badge>}
-          {mod.verdict === 'askStaff' && <Badge tone="amber">{t('browse.askStaff')}</Badge>}
-          {mod.update && <Badge tone="green">{t('mods.updateAvailable', { version: mod.update.versionNumber })}</Badge>}
-        </p>
-        <p className="truncate text-xs text-gray-400">
-          {mod.inHemisphere
-            ? t('mods.duplicateHint')
-            : mod.incompatibleWith
-            ? t('mods.incompatible', { minecraft: mod.incompatibleWith })
-            : mod.verdict !== 'allowed' && mod.reason
-              ? localize(mod.reason, lang)
-              : [mod.versionNumber, mod.projectId ? null : t('mods.notOnModrinth'), fileSize(mod.size)].filter(Boolean).join(' · ')}
-        </p>
+    <div className="border-t border-white/5 first:border-t-0">
+      <div className="flex items-center gap-3.5 px-3.5 py-2.5">
+        <BrowserIcon src={mod.icon} />
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2">
+            <b className={`truncate font-semibold ${mod.enabled ? 'text-white' : 'text-gray-500'}`} title={mod.file}>
+              {name}
+            </b>
+            <Badge tone="gray">{t('mods.yoursTag')}</Badge>
+            {mod.inHemisphere && <Badge tone="amber">{t('mods.duplicate')}</Badge>}
+            {mod.verdict === 'blocked' && <Badge tone="red">{t('browse.notAllowed')}</Badge>}
+            {mod.verdict === 'askStaff' && <Badge tone="amber">{t('browse.askStaff')}</Badge>}
+            {mod.pinned && (
+              <span title={t('mods.pinnedHint')}>
+                <Badge tone="blue">{t('mods.pinned')}</Badge>
+              </span>
+            )}
+            {mod.update && <Badge tone="green">{t('mods.updateAvailable', { version: mod.update.versionNumber })}</Badge>}
+          </p>
+          <p className="truncate text-xs text-gray-400">
+            {mod.inHemisphere ? (
+              t('mods.duplicateHint')
+            ) : mod.incompatibleWith ? (
+              t('mods.incompatible', { minecraft: mod.incompatibleWith })
+            ) : mod.verdict !== 'allowed' && mod.reason ? (
+              localize(mod.reason, lang)
+            ) : (
+              <>
+                {mod.projectId && mod.versionNumber ? (
+                  <button onClick={() => setPicking((p) => !p)} className="inline-flex items-center gap-0.5 rounded hover:text-white">
+                    {mod.versionNumber}
+                    <ChevronDown size={12} className={`transition-transform ${picking ? 'rotate-180' : ''}`} />
+                  </button>
+                ) : (
+                  (mod.versionNumber ?? t('mods.notOnModrinth'))
+                )}
+                {' · '}
+                {fileSize(mod.size)}
+              </>
+            )}
+          </p>
+        </div>
+        {confirmRemove ? (
+          <span className="flex items-center gap-1.5">
+            <button
+              onClick={async () => {
+                setConfirmRemove(false)
+                if (await window.hemisphere.client.removePlayerMod(mod.file)) onChanged()
+              }}
+              className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-500"
+            >
+              {t('mods.removeConfirm')}
+            </button>
+            <button onClick={() => setConfirmRemove(false)} className="rounded-md px-2 py-1 text-xs text-gray-400 hover:bg-gray-700 hover:text-white">
+              {t('browse.cancel')}
+            </button>
+          </span>
+        ) : (
+          <>
+            {mod.projectId && (
+              <button
+                onClick={() => setPicking((p) => !p)}
+                aria-label={t('mods.versions', { mod: name })}
+                title={t('mods.versions', { mod: name })}
+                aria-expanded={picking}
+                className={`rounded-md p-1.5 transition-colors hover:bg-gray-700 hover:text-white ${picking ? 'bg-gray-700 text-white' : 'text-gray-500'}`}
+              >
+                <History size={15} />
+              </button>
+            )}
+            <button
+              onClick={() => setConfirmRemove(true)}
+              aria-label={t('mods.remove', { mod: name })}
+              title={t('mods.remove', { mod: name })}
+              className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-700 hover:text-red-400"
+            >
+              <Trash2 size={15} />
+            </button>
+          </>
+        )}
+        <Toggle
+          on={mod.enabled}
+          label={name}
+          disabled={mod.inHemisphere && !mod.enabled}
+          title={mod.inHemisphere ? t('mods.duplicateLocked') : undefined}
+          onChange={async (on) => {
+            if (await window.hemisphere.client.setPlayerMod(mod.file, on)) onChanged()
+          }}
+        />
       </div>
-      {confirmRemove ? (
-        <span className="flex items-center gap-1.5">
-          <button
-            onClick={async () => {
-              setConfirmRemove(false)
-              if (await window.hemisphere.client.removePlayerMod(mod.file)) onChanged()
-            }}
-            className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-500"
-          >
-            {t('mods.removeConfirm')}
-          </button>
-          <button onClick={() => setConfirmRemove(false)} className="rounded-md px-2 py-1 text-xs text-gray-400 hover:bg-gray-700 hover:text-white">
-            {t('browse.cancel')}
-          </button>
-        </span>
-      ) : (
-        <button
-          onClick={() => setConfirmRemove(true)}
-          aria-label={t('mods.remove', { mod: name })}
-          title={t('mods.remove', { mod: name })}
-          className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-700 hover:text-red-400"
-        >
-          <Trash2 size={15} />
-        </button>
+      {picking && (
+        <VersionPicker
+          mod={mod}
+          onDone={(text) => {
+            setPicking(false)
+            onNotice(text)
+            onChanged()
+          }}
+        />
       )}
-      <Toggle
-        on={mod.enabled}
-        label={name}
-        disabled={mod.inHemisphere && !mod.enabled}
-        title={mod.inHemisphere ? t('mods.duplicateLocked') : undefined}
-        onChange={async (on) => {
-          if (await window.hemisphere.client.setPlayerMod(mod.file, on)) onChanged()
-        }}
-      />
     </div>
   )
 }
 
-function Badge({ tone, children }: { tone: 'red' | 'amber' | 'green' | 'gray'; children: React.ReactNode }) {
-  const tones = { red: 'bg-red-900/50 text-red-300', amber: 'bg-amber-900/50 text-amber-300', green: 'bg-green-900/50 text-green-300', gray: 'bg-gray-700/80 text-gray-300' }
+/** Every Modrinth version of the mod for this Minecraft version; picking an older one pins it. */
+function VersionPicker({ mod, onDone }: { mod: PlayerModInfo; onDone(text: string): void }) {
+  const { t, i18n } = useTranslation()
+  const [versions, setVersions] = useState<ModVersionChoice[] | null | undefined>(undefined)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    window.hemisphere.client.playerModVersions(mod.file).then(setVersions)
+  }, [mod.file])
+  const name = mod.title ?? mod.file
+
+  const choose = async (v: ModVersionChoice) => {
+    setBusy(v.id)
+    setError(null)
+    const r = await window.hemisphere.client.setPlayerModVersion(mod.file, v.id)
+    setBusy(null)
+    if (r.ok)
+      onDone(r.pinned ? t('mods.versionPinned', { mod: name, version: r.versionNumber }) : t('mods.versionLatest', { mod: name, version: r.versionNumber }))
+    else setError(t(`mods.versionErrors.${r.reason}`))
+  }
+
+  return (
+    <div className="mx-3.5 mb-3 rounded-lg border border-white/10 bg-gray-950/60 p-2">
+      <p className="px-1.5 pb-1.5 text-xs text-gray-400">{t('mods.versionsHint')}</p>
+      {error && <p className="px-1.5 pb-1.5 text-xs text-red-400">{error}</p>}
+      {versions === undefined ? (
+        <div className="space-y-1">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="skeleton h-8 rounded-md" />
+          ))}
+        </div>
+      ) : versions === null || versions.length === 0 ? (
+        <p className="px-1.5 py-1 text-[13px] text-gray-400">{versions === null ? t('mods.versionErrors.network') : t('mods.versionsNone')}</p>
+      ) : (
+        <ul className="max-h-[240px] overflow-y-auto pr-1">
+          {versions.map((v) => (
+            <li key={v.id}>
+              <button
+                onClick={() => choose(v)}
+                disabled={busy !== null || (v.current && (v.latest ? !mod.pinned : mod.pinned))}
+                className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors disabled:cursor-default ${v.current ? 'bg-green-900/30' : 'hover:bg-gray-700/60'}`}
+              >
+                <span className="min-w-0 flex-1 truncate font-semibold text-white">{v.versionNumber}</span>
+                {v.type !== 'release' && <Badge tone="amber">{t(`mods.versionType.${v.type}`)}</Badge>}
+                {v.latest && <Badge tone="green">{t('mods.latest')}</Badge>}
+                {v.current && <Badge tone="gray">{t('mods.current')}</Badge>}
+                <span className="w-[86px] flex-none text-right text-xs text-gray-400 tabular-nums">
+                  {new Date(v.published).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+                <span className="grid w-4 flex-none place-items-center">{busy === v.id && <Loader2 size={13} className="animate-spin text-gray-300" />}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function Badge({ tone, children }: { tone: 'red' | 'amber' | 'green' | 'gray' | 'blue'; children: React.ReactNode }) {
+  const tones = {
+    red: 'bg-red-900/50 text-red-300',
+    amber: 'bg-amber-900/50 text-amber-300',
+    green: 'bg-green-900/50 text-green-300',
+    gray: 'bg-gray-700/80 text-gray-300',
+    blue: 'bg-blue-900/50 text-blue-300',
+  }
   return <span className={`flex-none rounded-full px-2 py-px text-[11px] font-semibold ${tones[tone]}`}>{children}</span>
 }
 
@@ -315,11 +435,7 @@ function PlayerModUpdates({ own, onDone, className }: { own: PlayerModInfo[] | n
     setBusy(false)
   }
   return (
-    <button
-      onClick={run}
-      disabled={busy}
-      className={`${className} disabled:opacity-50 ${pending ? '!bg-green-600 !text-white hover:!bg-green-500' : ''}`}
-    >
+    <button onClick={run} disabled={busy} className={`${className} disabled:opacity-50 ${pending ? '!bg-green-600 !text-white hover:!bg-green-500' : ''}`}>
       <RefreshCw size={14} className={busy ? 'animate-spin' : ''} /> {pending ? t('mods.updateAll', { count: pending }) : t('mods.checkUpdates')}
     </button>
   )

@@ -124,6 +124,8 @@ const api: HemisphereApi = {
     removePlayerMod: (file) => ipcRenderer.invoke(IPC.modsPlayerRemove, file),
     checkPlayerModUpdates: () => ipcRenderer.invoke(IPC.modsPlayerCheckUpdates),
     updatePlayerMods: () => ipcRenderer.invoke(IPC.modsPlayerUpdate),
+    playerModVersions: (file) => ipcRenderer.invoke(IPC.modsPlayerVersions, file),
+    setPlayerModVersion: (file, versionId) => ipcRenderer.invoke(IPC.modsPlayerSetVersion, file, versionId),
   },
 }
 

@@ -71,6 +71,8 @@ export interface PlayerModInfo {
   reason?: Localized
   /** a newer version for the current Minecraft version (after "Check for updates") */
   update: { versionNumber: string } | null
+  /** the player chose this version on purpose: "Update all" leaves it alone (for this Minecraft version) */
+  pinned: boolean
   /** Hemisphere ships this mod too: the player's copy is a duplicate */
   inHemisphere: boolean
   /** switched off because no version exists yet for this Minecraft version */
@@ -80,6 +82,20 @@ export interface PlayerModInfo {
 export type InstallResult =
   | { ok: true; installed: string[]; alreadyHad: string[] }
   | { ok: false; reason: 'blocked' | 'needsConfirm' | 'notCompatible' | 'inHemisphere' | 'busy' | 'network' }
+
+/** One Modrinth version of a mod, for the version picker. */
+export interface ModVersionChoice {
+  id: string
+  versionNumber: string
+  name: string
+  type: 'release' | 'beta' | 'alpha'
+  /** ISO date */
+  published: string
+  current: boolean
+  latest: boolean
+}
+
+export type SetVersionResult = { ok: true; versionNumber: string; pinned: boolean } | { ok: false; reason: 'busy' | 'notFound' | 'network' }
 
 export interface UpdateCheck {
   checked: number

@@ -324,7 +324,25 @@
     "yoursTag": "Ajouté par toi",
     "duplicate": "Doublon",
     "duplicateHint": "Hemisphere inclut déjà ce mod : supprime cette copie et utilise l’interrupteur d’Hemisphere",
-    "duplicateLocked": "Supprime cette copie pour l’activer : Hemisphere inclut déjà ce mod"
+    "duplicateLocked": "Supprime cette copie pour l’activer : Hemisphere inclut déjà ce mod",
+    "versions": "Versions de {{mod}}",
+    "versionsHint": "Choisis une version plus ancienne si la plus récente ne fonctionne pas avec un autre mod. Elle reste celle que tu as choisie jusqu’à ce que tu reprennes la plus récente.",
+    "versionsNone": "Aucune version pour cette version de Minecraft sur Modrinth.",
+    "current": "Actuelle",
+    "latest": "Dernière",
+    "versionType": {
+      "beta": "Bêta",
+      "alpha": "Alpha"
+    },
+    "pinned": "Épinglé",
+    "pinnedHint": "Tu as choisi cette version : « Tout mettre à jour » n’y touche pas",
+    "versionPinned": "{{mod}} est maintenant en {{version}} et y reste (épinglé).",
+    "versionLatest": "{{mod}} est maintenant en {{version}}, la dernière version.",
+    "versionErrors": {
+      "busy": "Ferme Minecraft (ou attends que le launcher ait fini) avant de changer de version.",
+      "notFound": "Cette version n’est plus disponible.",
+      "network": "Impossible de joindre Modrinth. Vérifie ta connexion internet et réessaie."
+    }
   },
   "repair": {
     "title": "Réparer l’installation",

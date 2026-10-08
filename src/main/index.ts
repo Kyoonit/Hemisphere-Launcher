@@ -33,9 +33,9 @@ import { installFileLogger } from './core/logging/logger'
 import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemInfo, type FolderKind } from './core/system/system'
 import { detectGpus } from './core/system/gpu'
 import { detectSources, importFrom, setPlayerModEnabled, sourceFromFolder } from './core/importer/importer'
-import { canEnablePlayerMod, checkPlayerModUpdates, hemisphereMods, hemisphereProjects, installMod, knownPlayerProjects, listPlayerMods, removePlayerMod, updatePlayerMods } from './core/modrinth/playerMods'
+import { canEnablePlayerMod, checkPlayerModUpdates, modVersions, setModVersion, hemisphereMods, hemisphereProjects, installMod, knownPlayerProjects, listPlayerMods, removePlayerMod, updatePlayerMods } from './core/modrinth/playerMods'
 import { safeIcon, searchMods } from './core/modrinth/api'
-import { MODRINTH_ID, policyFor, type InstallResult, type ModSearchResult } from '@shared/modBrowser'
+import { MODRINTH_ID, policyFor, type InstallResult, type ModSearchResult, type SetVersionResult } from '@shared/modBrowser'
 import type { ImportOptions, ImportSource } from '@shared/importer'
 import type { ClientSummary } from '@shared/client'
 import { loadWindowState, trackWindowState } from './core/system/windowState'
@@ -198,7 +198,10 @@ function registerIpc(): void {
     const hemisphere = await getContent()
       .then((c) => hemisphereMods(c.manifest))
       .catch(() => null)
-    return listPlayerMods(Object.keys((await readInstanceState()).owned), getFeed().modPolicy, hemisphere)
+    const minecraft = await getContent()
+      .then((c) => c.manifest.minecraft)
+      .catch(() => null)
+    return listPlayerMods(Object.keys((await readInstanceState()).owned), getFeed().modPolicy, hemisphere, minecraft)
   })
   // Changing mods while the game runs (or while the launcher is installing) is refused.
   const modsBusy = () => {
@@ -244,6 +247,22 @@ function registerIpc(): void {
   handle(IPC.modsPlayerRemove, async (_e, file: unknown) => {
     if (typeof file !== 'string' || modsBusy()) return false
     return removePlayerMod(file, Object.keys((await readInstanceState()).owned))
+  })
+  handle(IPC.modsPlayerVersions, async (_e, file: unknown) => {
+    if (typeof file !== 'string') return null
+    try {
+      const { manifest } = await getContent()
+      return await modVersions(file, Object.keys((await readInstanceState()).owned), manifest.minecraft)
+    } catch (err) {
+      console.warn('[mods] versions failed:', err)
+      return null
+    }
+  })
+  handle(IPC.modsPlayerSetVersion, async (_e, file: unknown, versionId: unknown): Promise<SetVersionResult> => {
+    if (typeof file !== 'string' || typeof versionId !== 'string' || !MODRINTH_ID.test(versionId)) return { ok: false, reason: 'notFound' }
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    const { manifest } = await getContent()
+    return setModVersion(file, versionId, Object.keys((await readInstanceState()).owned), manifest.minecraft)
   })
   handle(IPC.modsPlayerCheckUpdates, async () => {
     try {

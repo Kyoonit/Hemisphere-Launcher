@@ -319,7 +319,25 @@
     "yoursTag": "Added by you",
     "duplicate": "Duplicate",
     "duplicateHint": "Hemisphere already includes this mod: remove this copy and use Hemisphere’s switch instead",
-    "duplicateLocked": "Remove this copy to switch it on: Hemisphere already includes this mod"
+    "duplicateLocked": "Remove this copy to switch it on: Hemisphere already includes this mod",
+    "versions": "Versions of {{mod}}",
+    "versionsHint": "Pick an older version if the newest one doesn’t work with another mod. An older version stays as you chose until you pick the latest again.",
+    "versionsNone": "No versions for this Minecraft version on Modrinth.",
+    "current": "Current",
+    "latest": "Latest",
+    "versionType": {
+      "beta": "Beta",
+      "alpha": "Alpha"
+    },
+    "pinned": "Pinned",
+    "pinnedHint": "You chose this version: \"Update all\" leaves it as it is",
+    "versionPinned": "{{mod}} is now on {{version}} and stays on it (pinned).",
+    "versionLatest": "{{mod}} is now on {{version}}, the latest version.",
+    "versionErrors": {
+      "busy": "Close Minecraft (or wait for the launcher to finish) before changing versions.",
+      "notFound": "That version isn’t available anymore.",
+      "network": "Couldn’t reach Modrinth. Check your internet connection and try again."
+    }
   },
   "repair": {
     "title": "Repair installation",

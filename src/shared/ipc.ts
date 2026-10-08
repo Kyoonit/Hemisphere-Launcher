@@ -6,7 +6,7 @@ import type { Feed } from './feed'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from './importer'
 import type { ClientSummary } from './client'
 import type { LauncherUpdateState } from './launcherUpdate'
-import type { InstallResult, ModSearchResult, PlayerModInfo, UpdateApplied, UpdateCheck } from './modBrowser'
+import type { InstallResult, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -65,6 +65,8 @@ export const IPC = {
   modsPlayerRemove: 'mods:player-remove',
   modsPlayerCheckUpdates: 'mods:player-check-updates',
   modsPlayerUpdate: 'mods:player-update',
+  modsPlayerVersions: 'mods:player-versions',
+  modsPlayerSetVersion: 'mods:player-set-version',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -186,6 +188,9 @@ export interface HemisphereApi {
     removePlayerMod(file: string): Promise<boolean>
     checkPlayerModUpdates(): Promise<UpdateCheck | null>
     updatePlayerMods(): Promise<UpdateApplied | null>
+    /** Modrinth versions of one of the player's mods (null = not on Modrinth / offline) */
+    playerModVersions(file: string): Promise<ModVersionChoice[] | null>
+    setPlayerModVersion(file: string, versionId: string): Promise<SetVersionResult>
     setPlayerMod(file: string, enabled: boolean): Promise<boolean>
   }
 }
