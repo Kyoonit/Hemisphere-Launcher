@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Copy, Minus, Newspaper, Package, Play, RefreshCw, Settings, Square, X, type LucideIcon } from 'lucide-react'
 import logo from '../assets/logo.png'
 import { useLauncherUpdate } from '../launcherUpdate'
+import { useFeed, useSettings } from '../hooks'
+import { newsBadgeLabel, unseenNewsCount } from '@shared/feed'
 
 export type Screen = 'home' | 'news' | 'mods' | 'settings' | 'repair' | 'import'
 
@@ -24,6 +26,10 @@ interface Props {
 export default function TitleBar({ screen, onNavigate, minimal, account }: Props) {
   const { t } = useTranslation()
   const [maximized, setMaximized] = useState(false)
+  const feed = useFeed()
+  const [settings] = useSettings()
+  const unseen = feed && settings && screen !== 'news' ? unseenNewsCount(feed.news, settings.seenNews) : 0
+  const badge = newsBadgeLabel(unseen)
   useEffect(() => window.hemisphere.window.onMaximizedChange(setMaximized), [])
 
   return (
@@ -39,12 +45,21 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
             key={id}
             onClick={() => onNavigate(id)}
             aria-current={screen === id ? 'page' : undefined}
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-[7px] text-sm font-medium transition-all duration-300 ${
+            aria-label={id === 'news' && badge ? `${t(label)} (${t('news.unseen', { count: unseen })})` : undefined}
+            className={`relative flex items-center gap-2 rounded-lg px-3.5 py-[7px] text-sm font-medium transition-all duration-300 ${
               screen === id || ((screen === 'repair' || screen === 'import') && id === 'settings') ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
           >
             <Icon size={16} strokeWidth={2} />
             {t(label)}
+            {id === 'news' && badge && (
+              <span
+                aria-hidden
+                className="animate-pop absolute -top-1.5 -right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-red-600 px-1 text-[11px] leading-none font-bold text-white shadow-md ring-2 ring-gray-900"
+              >
+                {badge}
+              </span>
+            )}
           </button>
         ))}
       </nav>

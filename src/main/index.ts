@@ -16,7 +16,7 @@ import {
   switchAccount,
 } from './core/auth/accounts'
 import { cancelSignIn } from './core/auth/oauth'
-import { dismissGameError, gameEvents, getGameState, onGameState, play, repair } from './core/game/gameService'
+import { dismissGameError, gameEvents, getGameState, onGameState, play, prepareInBackground, repair } from './core/game/gameService'
 import { getSettings, onSettingsChanged, updateSettings } from './core/settings/settings'
 import { AUTOSTART_ARG } from '@shared/settings'
 import { recoverSessions } from './core/playtime/playtimeStore'
@@ -30,7 +30,8 @@ import { getEnabledMods, setModEnabled } from './core/sync/sync'
 import { getModIcons } from './core/remote/modIcons'
 import { getFeed, startFeedPolling } from './core/remote/feed'
 import { installFileLogger } from './core/logging/logger'
-import { copyDiagnostics, moveGameFolder, openFolder, systemInfo, type FolderKind } from './core/system/system'
+import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemInfo, type FolderKind } from './core/system/system'
+import { detectGpus } from './core/system/gpu'
 import { detectSources, importFrom, playerMods, setPlayerModEnabled, sourceFromFolder } from './core/importer/importer'
 import type { ImportOptions, ImportSource } from '@shared/importer'
 import type { ClientSummary } from '@shared/client'
@@ -129,6 +130,7 @@ function registerIpc(): void {
     if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest', withoutPlayerMods: o.withoutPlayerMods === true })
   })
   handle(IPC.systemInfo, () => systemInfo())
+  handle(IPC.systemPreflight, () => preflightWarnings())
   on(IPC.systemOpenFolder, (_e, kind: unknown) => {
     const kinds: FolderKind[] = ['game', 'mods', 'screenshots', 'gameLogs', 'crashReports', 'launcherLogs']
     if (kinds.includes(kind as FolderKind)) void openFolder(kind as FolderKind)
@@ -143,7 +145,7 @@ function registerIpc(): void {
     }
     const g = getGameState()
     let last = 0
-    return moveGameFolder(dir, g.phase === 'preparing' || g.runningAccounts.length > 0, (ratio) => {
+    return moveGameFolder(dir, g.phase === 'preparing' || g.background || g.runningAccounts.length > 0, (ratio) => {
       if (ratio === 1 || ratio - last >= 0.01) {
         last = ratio
         win?.webContents.send(IPC.systemMoveProgress, ratio)
@@ -177,7 +179,7 @@ function registerIpc(): void {
     const source = typeof id === 'string' ? importSources.get(id) : undefined
     if (!source) return { ok: false, reason: 'unknownSource' }
     const g = getGameState()
-    if (g.phase === 'preparing' || g.runningAccounts.length) return { ok: false, reason: 'busy' }
+    if (g.phase === 'preparing' || g.background || g.runningAccounts.length) return { ok: false, reason: 'busy' }
     const o = (opts ?? {}) as Record<string, unknown>
     const options: ImportOptions = { settings: !!o.settings, servers: !!o.servers, resourcepacks: !!o.resourcepacks, shaderpacks: !!o.shaderpacks, config: !!o.config, mods: !!o.mods }
     try {
@@ -204,7 +206,9 @@ function registerIpc(): void {
   handle(IPC.settingsSet, async (_e, patch: unknown) => {
     // gameDir is only changed through the move (files must follow); javaPath only through the picker (validated).
     const { gameDir: _g, javaPath, ...rest } = (typeof patch === 'object' && patch ? patch : {}) as Record<string, unknown>
-    return updateSettings({ ...rest, ...(javaPath === null ? { javaPath: null } : {}) })
+    const next = await updateSettings({ ...rest, ...(javaPath === null ? { javaPath: null } : {}) })
+    if (rest.backgroundUpdates === true) void prepareInBackground()
+    return next
   })
   handle(IPC.gameRepair, (_e, mode: unknown) => repair(mode === 'full' ? 'full' : 'quick'))
   handle(IPC.gameJava, async () => {
@@ -225,6 +229,8 @@ function registerIpc(): void {
         loader: manifest.loader.version,
         source,
         update,
+        installedVersion: installed.clientVersion ?? null,
+        changelog: manifest.changelog ?? [],
         mods: manifest.mods.map((m) => ({
           id: m.id,
           name: m.name,
@@ -295,6 +301,7 @@ if (!app.requestSingleInstanceLock()) {
       else if (mode === 'close') setTimeout(() => app.quit(), 1500)
     }
     gameEvents.onExited = ({ crashed, anyRunning }) => {
+      if (!anyRunning) setTimeout(() => void prepareInBackground(), 60_000) // e.g. an update published while playing
       if (win && (crashed || !anyRunning) && !win.isVisible()) win.show()
       if (crashed) win?.focus()
     }
@@ -309,6 +316,10 @@ if (!app.requestSingleInstanceLock()) {
     void refreshAccount() // renew the active session silently in the background
     startFeedPolling((feed) => win?.webContents.send(IPC.feedChanged, feed))
     onUpdateState((s) => win?.webContents.send(IPC.launcherUpdateChanged, s))
+    void detectGpus()
+    // Get the next PLAY ready shortly after start (once the window and status are up), then twice an hour.
+    setTimeout(() => void prepareInBackground(), 15_000)
+    setInterval(() => void prepareInBackground(), 30 * 60_000).unref()
     startUpdater()
     syncLoginItem()
   })

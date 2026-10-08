@@ -58,6 +58,7 @@ const api: HemisphereApi = {
   },
   system: {
     info: () => ipcRenderer.invoke(IPC.systemInfo),
+    preflight: () => ipcRenderer.invoke(IPC.systemPreflight),
     openFolder: (kind) => ipcRenderer.send(IPC.systemOpenFolder, kind),
     copyDiagnostics: () => ipcRenderer.invoke(IPC.systemDiagnostics),
     moveGameDir: (target) => ipcRenderer.invoke(IPC.systemMoveGameDir, target),

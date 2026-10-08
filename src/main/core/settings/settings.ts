@@ -18,6 +18,10 @@ const fields = {
   jvmArgs: z.string().max(1000).refine((s) => parseJvmArgs(s).invalid.length === 0, 'unsupported JVM argument'),
   startWithWindows: z.boolean(),
   importPromptDismissed: z.boolean(),
+  seenNews: z.array(z.string().regex(/^[a-z0-9-]{1,64}$/)).max(500),
+  seenChangelog: z.string().regex(/^\d+\.\d+\.\d+$/).nullable(),
+  backgroundUpdates: z.boolean(),
+  highPerformanceGpu: z.boolean(),
 }
 
 /** Loading: a bad or unknown value falls back to its default, field by field (never breaks the launcher). */
@@ -33,6 +37,10 @@ const LoadSchema = z.object({
   jvmArgs: fields.jvmArgs.catch(D.jvmArgs),
   startWithWindows: fields.startWithWindows.catch(D.startWithWindows),
   importPromptDismissed: fields.importPromptDismissed.catch(D.importPromptDismissed),
+  seenNews: fields.seenNews.catch(D.seenNews),
+  seenChangelog: fields.seenChangelog.catch(D.seenChangelog),
+  backgroundUpdates: fields.backgroundUpdates.catch(D.backgroundUpdates),
+  highPerformanceGpu: fields.highPerformanceGpu.catch(D.highPerformanceGpu),
 })
 /** Updating: invalid values are rejected with an error the UI can show. */
 const UpdateSchema = z.object(fields)

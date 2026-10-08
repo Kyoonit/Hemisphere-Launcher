@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import TitleBar, { type Screen } from './components/TitleBar'
 import Background from './components/Background'
 import AccountMenu from './components/AccountMenu'
@@ -10,12 +10,22 @@ import Repair from './screens/Repair'
 import Import from './screens/Import'
 import Settings, { type Section } from './screens/Settings'
 import { useAccounts } from './accounts'
+import { useFeed, useSettings } from './hooks'
+import { markNewsSeen, unseenNewsCount } from '@shared/feed'
 
 export default function App() {
   const { state } = useAccounts()
   const [screen, setScreen] = useState<Screen>('home')
   const [settingsSection, setSettingsSection] = useState<Section>('game')
   const [addingAccount, setAddingAccount] = useState(false)
+
+  // Opening News (or news arriving while it's open) marks every item as seen: the red badge goes away.
+  const feed = useFeed()
+  const [settings, updateSettings] = useSettings()
+  useEffect(() => {
+    if (screen === 'news' && feed && settings && unseenNewsCount(feed.news, settings.seenNews) > 0)
+      void updateSettings({ seenNews: markNewsSeen(feed.news, settings.seenNews) })
+  }, [screen, feed, settings])
 
   const needsLogin = state !== null && state.accounts.length === 0
   const showLogin = needsLogin || addingAccount

@@ -31,6 +31,8 @@ export interface GameState {
   runningAccounts: string[]
   /** Last problem, cleared on next PLAY. suspects = mod ids named in the crash output */
   error: { code: GameErrorCode; detail?: string; suspects?: string[] } | null
+  /** Preparing the next PLAY in the background (client update, file checks) */
+  background: boolean
 }
 
 /** latest = current client (auto-joins if enabled); previous = "Play on <old Minecraft>" (never auto-joins) */

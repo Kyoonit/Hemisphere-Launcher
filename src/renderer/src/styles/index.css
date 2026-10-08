@@ -198,3 +198,18 @@
 .home-title-compact {
   font-size: clamp(22px, calc(5vh - 8px), 32px);
 }
+
+/* News badge appearing */
+.animate-pop {
+  animation: pop 260ms var(--ease-hemi) both;
+}
+@keyframes pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

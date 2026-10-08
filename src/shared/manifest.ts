@@ -90,6 +90,8 @@ export const ClientManifestSchema = z
     loader: z.object({ type: z.literal('fabric'), version: z.string().regex(/^[0-9][0-9a-z.+\-]{0,31}$/) }),
     mods: z.array(ModEntrySchema).max(300),
     files: z.array(ExtraFileSchema).max(1000),
+    /** "What's new" lines shown once after this client is installed (optional; older launchers ignore it) */
+    changelog: z.array(LocalizedSchema).max(30).optional(),
   })
   .superRefine((m, ctx) => {
     const ids = new Set<string>()

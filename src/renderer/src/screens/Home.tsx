@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
-import { BookOpen, Clock, Globe, Map, TriangleAlert, Upload, WifiOff, X } from 'lucide-react'
+import { BookOpen, Clock, Globe, Map, TriangleAlert, Upload, WifiOff, X, HardDrive, MemoryStick, Sparkles } from 'lucide-react'
 import type { LinkKey } from '@shared/ipc'
 import { restartState } from '@shared/restart'
 import DiscordIcon from '../components/DiscordIcon'
@@ -9,7 +9,9 @@ import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
 import PlayZone, { useGameState } from '../components/PlayZone'
 import { useClient } from './Mods'
-import { useFeed, useNow, usePlaytime, useServerStatus } from '../hooks'
+import { useFeed, useNow, usePlaytime, useServerStatus, useSettings } from '../hooks'
+import type { ClientSummary } from '@shared/client'
+import type { PreflightWarning } from '@shared/settings'
 import type { Feed } from '@shared/feed'
 import { localize } from '@shared/manifest'
 import { useAccounts } from '../accounts'
@@ -27,13 +29,14 @@ export default function Home({ onOpenNews, onRepair, onImport }: { onOpenNews():
   const { active } = useAccounts()
   const game = useGameState()
   // Reload client info whenever a launch/repair finishes (an update may have just been installed).
-  const client = useClient(game?.phase === 'preparing' ? 'busy' : game?.phase)
+  const client = useClient(game?.phase === 'preparing' ? 'busy' : `${game?.phase}-${game?.background}`)
   const crashed = game?.error?.code === 'crashed'
 
   return (
     <div className="home-pad relative flex h-full flex-col items-center px-7">
       <PlaytimeCard key={active?.id} />
       <ImportPrompt onImport={onImport} />
+      <WhatsNew client={client ?? null} />
       <ServerPanel status={status} feed={feed} />
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
@@ -51,6 +54,7 @@ export default function Home({ onOpenNews, onRepair, onImport }: { onOpenNews():
           <PlayZone client={client ?? null} onRepair={onRepair} />
           <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
             <ServerNotice offline={status?.online === false} feed={feed} />
+            {!crashed && <PreflightHints />}
             {feed?.maintenance.active && <MaintenanceBanner feed={feed} />}
           </div>
         </div>
@@ -96,6 +100,59 @@ function ExpiredBanner() {
         {t('auth.signInAgain')}
       </button>
     </div>
+  )
+}
+
+/** "What's new in Hemisphere Client x": once after a client update, until closed. */
+function WhatsNew({ client }: { client: ClientSummary | null }) {
+  const { t, i18n } = useTranslation()
+  const [settings, update] = useSettings()
+  const installed = client?.installedVersion ?? null
+  useEffect(() => {
+    // First run with this feature (or a brand-new player): remember the current version without showing anything.
+    if (settings && installed && settings.seenChangelog === null) void update({ seenChangelog: installed })
+  }, [settings, installed])
+  if (!client || !settings || !installed || installed !== client.clientVersion) return null
+  if (settings.seenChangelog === null || settings.seenChangelog === installed || client.changelog.length === 0) return null
+  return (
+    <aside className="glass animate-rise absolute top-[232px] left-6 w-[210px] px-4 py-3.5 [animation-delay:450ms]">
+      <button
+        onClick={() => void update({ seenChangelog: installed })}
+        aria-label={t('whatsNew.close')}
+        className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white"
+      >
+        <X size={14} />
+      </button>
+      <p className="flex items-center gap-1.5 pr-4 text-[13px] font-semibold text-white">
+        <Sparkles size={14} className="text-green-400" /> {t('whatsNew.title', { version: installed })}
+      </p>
+      <ul className="mt-1.5 max-h-[150px] space-y-1 overflow-y-auto pr-1 text-xs text-gray-300">
+        {client.changelog.map((line, i) => (
+          <li key={i} className="flex gap-1.5">
+            <span className="text-green-400">•</span>
+            {localize(line, i18n.language)}
+          </li>
+        ))}
+      </ul>
+    </aside>
+  )
+}
+
+/** Low disk space / little RAM: worth knowing before PLAY, never blocking. */
+function PreflightHints() {
+  const { t } = useTranslation()
+  const [hints, setHints] = useState<PreflightWarning[]>([])
+  useEffect(() => {
+    window.hemisphere.system.preflight().then(setHints)
+  }, [])
+  return (
+    <>
+      {hints.map((h) => (
+        <Line key={h.code} icon={h.code === 'lowDisk' ? <HardDrive size={14} /> : <MemoryStick size={14} />} className="text-amber-400">
+          {t(`preflight.${h.code}`, { value: h.value })}
+        </Line>
+      ))}
+    </>
   )
 }
 

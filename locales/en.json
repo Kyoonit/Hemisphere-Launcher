@@ -23,7 +23,8 @@
     "restartingNow": "Server is restarting — back in a few minutes",
     "serverOffline": "Hemisphere is offline right now",
     "clientUnknown": "Hemisphere Client",
-    "maintenanceUntil": "Back around {{time}}."
+    "maintenanceUntil": "Back around {{time}}.",
+    "preparingBackground": "Getting the next game ready…"
   },
   "links": {
     "discord": "Discord",
@@ -112,7 +113,14 @@
     "gameLogs": "Game logs",
     "launcherLogs": "Launcher logs",
     "copyDiagnostics": "Copy diagnostics",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "highPerformanceGpu": "Use the high-performance graphics card",
+    "highPerformanceGpuHint": "This PC has two graphics chips ({{gpus}}): Minecraft runs on the stronger one",
+    "backgroundUpdates": "Prepare updates in the background",
+    "backgroundUpdatesHint": "Installs Hemisphere updates while the launcher is open, so PLAY starts right away",
+    "devTools": "Developer tools",
+    "devToolsHint": "Only in development builds",
+    "markNewsUnread": "Mark all news as unread"
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -157,7 +165,9 @@
       "event": "Event",
       "server": "Server",
       "community": "Community"
-    }
+    },
+    "unseen_one": "{{count}} new",
+    "unseen_other": "{{count}} new"
   },
   "auth": {
     "intro": "Sign in with the Microsoft account that owns Minecraft: Java Edition.",
@@ -428,5 +438,13 @@
     "upToDate": "Up to date (checked at {{time}})",
     "error": "Couldn't check for updates",
     "devBuild": "Updates are only available in the installed launcher"
+  },
+  "whatsNew": {
+    "title": "What's new in {{version}}",
+    "close": "Close"
+  },
+  "preflight": {
+    "lowDisk": "Low disk space: {{value}} GB free",
+    "lowRam": "This PC has {{value}} GB of RAM: close other programs for smoother play"
   }
 }

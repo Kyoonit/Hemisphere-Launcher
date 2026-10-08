@@ -1,6 +1,25 @@
 import { useEffect, useState } from 'react'
 import type { PlaytimeSummary, ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
+import type { Settings } from '@shared/settings'
+
+/** Live launcher settings + an update function that returns an error message or null. */
+export function useSettings(): [Settings | null, (patch: Partial<Settings>) => Promise<string | null>] {
+  const [settings, setSettings] = useState<Settings | null>(null)
+  useEffect(() => {
+    window.hemisphere.settings.get().then(setSettings)
+    return window.hemisphere.settings.onChange(setSettings)
+  }, [])
+  const update = async (patch: Partial<Settings>) => {
+    try {
+      setSettings(await window.hemisphere.settings.set(patch))
+      return null
+    } catch (err) {
+      return String(err)
+    }
+  }
+  return [settings, update]
+}
 
 /** Window height in CSS pixels, updated on resize. */
 export function useWindowHeight(): number {

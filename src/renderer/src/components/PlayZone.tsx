@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, RotateCcw, TriangleAlert, Wrench } from 'lucide-react'
+import { Check, RotateCcw, TriangleAlert, Wrench, Loader2 } from 'lucide-react'
 import type { GameState } from '@shared/game'
 import type { ClientSummary } from '@shared/client'
 import { useAccounts } from '../accounts'
@@ -76,8 +76,17 @@ export default function PlayZone({ client, onRepair }: { client: ClientSummary |
         <ErrorLine code={game.error.code} onRepair={onRepair} />
       ) : (
         <p className="mt-3 flex items-center gap-1.5 text-[13px] text-gray-400">
-          <Check size={14} className="text-green-400" />
-          <b className="font-semibold text-green-400">{t('home.ready')}</b>
+          {game.background ? (
+            <>
+              <Loader2 size={14} className="animate-spin text-gray-300" />
+              <span className="text-gray-300">{t('home.preparingBackground')}</span>
+            </>
+          ) : (
+            <>
+              <Check size={14} className="text-green-400" />
+              <b className="font-semibold text-green-400">{t('home.ready')}</b>
+            </>
+          )}
           {' · '}
           {client ? t('home.clientVersion', { version: client.clientVersion, minecraft: client.minecraft }) : t('home.clientUnknown')}
         </p>

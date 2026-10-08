@@ -23,7 +23,8 @@
     "restartingNow": "Le serveur redémarre — de retour dans quelques minutes",
     "serverOffline": "Hemisphere est hors ligne pour le moment",
     "clientUnknown": "Client Hemisphere",
-    "maintenanceUntil": "Retour vers {{time}}."
+    "maintenanceUntil": "Retour vers {{time}}.",
+    "preparingBackground": "Préparation de la prochaine partie…"
   },
   "links": {
     "discord": "Discord",
@@ -112,7 +113,14 @@
     "gameLogs": "Journaux du jeu",
     "launcherLogs": "Journaux du launcher",
     "copyDiagnostics": "Copier le diagnostic",
-    "copied": "Copié !"
+    "copied": "Copié !",
+    "highPerformanceGpu": "Utiliser la carte graphique performante",
+    "highPerformanceGpuHint": "Ce PC a deux puces graphiques ({{gpus}}) : Minecraft utilise la plus puissante",
+    "backgroundUpdates": "Préparer les mises à jour en arrière-plan",
+    "backgroundUpdatesHint": "Installe les mises à jour Hemisphere pendant que le launcher est ouvert, pour que JOUER démarre tout de suite",
+    "devTools": "Outils de développement",
+    "devToolsHint": "Uniquement dans les versions de développement",
+    "markNewsUnread": "Marquer toutes les actus comme non lues"
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -157,7 +165,10 @@
       "event": "Événement",
       "server": "Serveur",
       "community": "Communauté"
-    }
+    },
+    "unseen_one": "{{count}} nouvelle",
+    "unseen_other": "{{count}} nouvelles",
+    "unseen_many": "{{count}} nouvelles"
   },
   "auth": {
     "intro": "Connecte-toi avec le compte Microsoft qui possède Minecraft : Java Edition.",
@@ -436,5 +447,13 @@
     "upToDate": "À jour (vérifié à {{time}})",
     "error": "Impossible de vérifier les mises à jour",
     "devBuild": "Les mises à jour ne concernent que le launcher installé"
+  },
+  "whatsNew": {
+    "title": "Nouveautés de la {{version}}",
+    "close": "Fermer"
+  },
+  "preflight": {
+    "lowDisk": "Peu d’espace disque : {{value}} Go libres",
+    "lowRam": "Ce PC a {{value}} Go de RAM : ferme les autres programmes pour un jeu plus fluide"
   }
 }

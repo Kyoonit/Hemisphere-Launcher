@@ -16,13 +16,14 @@ import { getSettings } from '../settings/settings'
 import { parseJvmArgs } from '@shared/settings'
 import { inspectJava } from './java'
 import { physicalPath } from '../system/redirect'
+import { applyGpuPreference } from '../system/gpu'
 import { disableAllPlayerMods } from '../importer/importer'
 import { readInstanceState } from '../sync/sync'
 import { endSession, startSession } from '../playtime/playtimeStore'
 import { cleanStore, syncClient } from '../sync/sync'
 import { GameError, toGameError } from './util'
 
-let state: GameState = { phase: 'idle', activity: null, progress: null, runningAccounts: [], error: null }
+let state: GameState = { phase: 'idle', activity: null, progress: null, runningAccounts: [], error: null, background: false }
 let onState: (s: GameState) => void = () => {}
 
 /** Window behaviour + UI refresh hooks, set by the main process. */
@@ -56,6 +57,43 @@ function progressReporter() {
 }
 
 /** Recommended memory for this PC (used when the player hasn't chosen one). */
+// ------------------------------------------------------------------------------ background preparation
+let backgroundJob: Promise<void> | null = null
+
+async function waitForBackground(): Promise<void> {
+  await backgroundJob?.catch(() => {})
+}
+
+/**
+ * Prepares the next PLAY while the launcher is open: installs a client update for the same Minecraft version and
+ * checks Minecraft, Java and Fabric. It never switches to a new Minecraft version (that stays the player's choice:
+ * "Update to …"), and never runs during a game, a launch or a repair. PLAY started meanwhile simply waits for it
+ * (showing its progress) and then has nothing left to do.
+ */
+export function prepareInBackground(): Promise<void> {
+  if (backgroundJob) return backgroundJob
+  if (state.phase !== 'idle' || state.runningAccounts.length || !getSettings().backgroundUpdates) return Promise.resolve()
+  set({ background: true })
+  backgroundJob = (async () => {
+    const started = Date.now()
+    try {
+      const { manifest } = await getContent(true)
+      const installed = await readInstanceState()
+      if (installed.minecraft && installed.minecraft !== manifest.minecraft) return // new Minecraft version: player decides
+      const report = progressReporter()
+      await ensureGameInstalled({ minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }, report)
+      const synced = await syncClient(manifest, report('mods'))
+      console.log(`[background] client ${manifest.clientVersion} ready (${synced.downloaded} downloaded, ${synced.placed} placed) in ${Math.round((Date.now() - started) / 1000)} s`)
+    } catch (err) {
+      console.warn('[background] skipped:', toGameError(err).message)
+    } finally {
+      backgroundJob = null
+      set({ background: false, ...(state.phase === 'idle' ? { progress: null } : {}) })
+    }
+  })()
+  return backgroundJob
+}
+
 /** xmcl's launch precheck errors for missing/corrupt version json, client jar or libraries. */
 function isMissingGameFiles(err: unknown): boolean {
   const code = (err as { error?: unknown } | null)?.error
@@ -85,6 +123,7 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
   set({ phase: 'preparing', activity: 'play', progress: null, error: null })
 
   try {
+    await waitForBackground() // its progress shows while we wait; afterwards the steps below have nothing left to do
     const report = progressReporter()
 
     if (opts.withoutPlayerMods) {
@@ -127,11 +166,17 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     // Pass the physical paths: if Windows redirects the folder (app containers, sync or security tools), Java sees
     // the real location and Fabric would otherwise treat its own loader as two different files and crash.
     const real = (p: string) => physicalPath(p, app.getPath('userData'))
+    // Java to run, with Windows' "High performance" graphics preference on PCs with two graphics chips.
+    const javaFor = async (installed: string) => {
+      const exe = real(await chooseJava(installed))
+      await applyGpuPreference(exe, settings.highPerformanceGpu).catch((err) => console.warn('[gpu] preference not applied:', err))
+      return exe
+    }
     const start = async () =>
       launch({
         gamePath: real(paths.instance),
         resourcePath: real(paths.minecraft),
-        javaPath: real(await chooseJava(javaPath)),
+        javaPath: await javaFor(javaPath),
         version: versionId,
         gameProfile: { name: creds.name, id: creds.uuid },
         accessToken: creds.accessToken,
@@ -182,6 +227,7 @@ export async function repair(mode: RepairMode): Promise<RepairReport | { error: 
   const started = Date.now()
   set({ phase: 'preparing', activity: 'repair', progress: null, error: null })
   try {
+    await waitForBackground()
     const report = progressReporter()
     const { manifest } = await getContent(true).catch((err) => {
       throw new GameError('content', String(err))

@@ -24,6 +24,14 @@ export interface Settings {
   startWithWindows: boolean
   /** The "coming from another launcher?" card on Home was dismissed */
   importPromptDismissed: boolean
+  /** News ids the player has already seen (opening the News page marks them) */
+  seenNews: string[]
+  /** Client version whose "What's new" was shown or dismissed */
+  seenChangelog: string | null
+  /** Install client updates and check files while the launcher is open, so PLAY starts right away */
+  backgroundUpdates: boolean
+  /** On PCs with two graphics chips: run Minecraft on the high-performance one */
+  highPerformanceGpu: boolean
 }
 
 export const RESOLUTIONS = ['auto', '1280x720', '1600x900', '1920x1080', '2560x1440', 'fullscreen'] as const
@@ -40,6 +48,10 @@ export const DEFAULT_SETTINGS: Settings = {
   jvmArgs: '',
   startWithWindows: false,
   importPromptDismissed: false,
+  seenNews: [],
+  seenChangelog: null,
+  backgroundUpdates: true,
+  highPerformanceGpu: true,
 }
 
 /**
@@ -54,6 +66,12 @@ export function parseJvmArgs(text: string): { args: string[]; invalid: string[] 
 }
 
 /** Extra info the Settings screen needs about this PC. */
+/** Non-blocking hints shown under PLAY. value = free GB (lowDisk) or installed GB (lowRam). */
+export interface PreflightWarning {
+  code: 'lowDisk' | 'lowRam'
+  value: number
+}
+
 export interface SystemInfo {
   totalMemoryMb: number
   recommendedMemoryMb: number
@@ -61,4 +79,7 @@ export interface SystemInfo {
   defaultGameDir: string
   gameDir: string
   packaged: boolean
+  /** Two or more graphics chips (built-in + gaming card) */
+  hybridGpu: boolean
+  gpuNames: string[]
 }

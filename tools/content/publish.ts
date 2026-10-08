@@ -44,6 +44,8 @@ const SourceSchema = z.object({
     }),
   ),
   files: z.array(z.object({ path: z.string().refine(isSafeRelativePath, 'unsafe path'), policy: z.enum(['enforced', 'default']) })),
+  /** "What's new" lines for players, e.g. { "en": "…", "fr": "…" } */
+  changelog: z.array(z.object({ en: z.string() }).catchall(z.string())).max(30).optional(),
 })
 const src = SourceSchema.parse(JSON.parse(readFileSync(join(SRC, 'client.json'), 'utf8')))
 
@@ -146,6 +148,7 @@ const manifest: ClientManifest = ClientManifestSchema.parse({
   loader: { type: 'fabric', version: src.fabricLoader },
   mods: [...mods.values()],
   files,
+  ...(src.changelog?.length ? { changelog: src.changelog } : {}),
 } satisfies ClientManifest)
 
 // ---------- report ----------

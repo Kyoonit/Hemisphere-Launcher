@@ -77,3 +77,17 @@ export const FeedSchema = z
     }
   })
 export type Feed = z.infer<typeof FeedSchema>
+
+/** How many news items the player hasn't seen yet. */
+export function unseenNewsCount(news: { id: string }[], seen: readonly string[]): number {
+  const s = new Set(seen)
+  return news.filter((n) => !s.has(n.id)).length
+}
+
+/** Text of the red badge on News: nothing at 0, "9+" above 9. */
+export const newsBadgeLabel = (count: number): string | null => (count <= 0 ? null : count > 9 ? '9+' : String(count))
+
+/** Seen ids after opening News: the current ones first, older remembered ones after, capped (settings limit). */
+export function markNewsSeen(news: { id: string }[], seen: readonly string[], max = 500): string[] {
+  return [...new Set([...news.map((n) => n.id), ...seen])].slice(0, max)
+}

@@ -25,4 +25,8 @@ export interface ClientSummary {
   mods: ModSummary[]
   /** What PLAY should offer (update / play previous) */
   update: UpdateDecision
+  /** Client version currently installed (null = nothing installed yet) */
+  installedVersion: string | null
+  /** "What's new" in the latest client */
+  changelog: Localized[]
 }

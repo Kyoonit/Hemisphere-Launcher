@@ -1,7 +1,7 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport } from './game'
-import type { Settings, SystemInfo } from './settings'
+import type { PreflightWarning, Settings, SystemInfo } from './settings'
 import type { Feed } from './feed'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from './importer'
 import type { ClientSummary } from './client'
@@ -47,6 +47,7 @@ export const IPC = {
   feedChanged: 'feed:changed',
   feedOpenLink: 'feed:open-link',
   systemInfo: 'system:info',
+  systemPreflight: 'system:preflight',
   systemOpenFolder: 'system:open-folder',
   systemDiagnostics: 'system:diagnostics',
   systemMoveGameDir: 'system:move-game-dir',
@@ -115,6 +116,8 @@ export interface HemisphereApi {
   }
   system: {
     info(): Promise<SystemInfo>
+    /** Low disk space / little RAM hints for the PLAY screen */
+    preflight(): Promise<PreflightWarning[]>
     openFolder(kind: 'game' | 'mods' | 'screenshots' | 'gameLogs' | 'crashReports' | 'launcherLogs'): void
     /** Builds the support report and copies it to the clipboard */
     copyDiagnostics(): Promise<string>

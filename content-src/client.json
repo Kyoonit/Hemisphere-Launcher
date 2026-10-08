@@ -1,9 +1,23 @@
 {
   "$comment": "Hemisphere client definition. Edit, then run: npm run content:publish  (see docs/CONTENT.md)",
-  "clientVersion": "1.0.1",
+  "clientVersion": "1.0.2",
   "minecraft": "26.3",
   "fabricLoader": "0.19.5",
   "previousCanJoin": true,
+  "changelog": [
+    {
+      "en": "The launcher now prepares updates in the background: PLAY starts right away",
+      "fr": "Le launcher prépare les mises à jour en arrière-plan : JOUER démarre tout de suite"
+    },
+    {
+      "en": "Laptops with two graphics cards now play on the faster one",
+      "fr": "Les PC portables à deux cartes graphiques jouent sur la plus rapide"
+    },
+    {
+      "en": "A red badge on News shows the articles you missed",
+      "fr": "Un badge rouge sur Actus indique les articles manqués"
+    }
+  ],
   "mods": [
     {
       "modrinth": "fabric-api",

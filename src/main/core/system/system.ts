@@ -1,9 +1,9 @@
 import { app, clipboard, shell } from 'electron'
 import { cpus, release, totalmem } from 'node:os'
 import { existsSync, readFileSync } from 'node:fs'
-import { copyFile, cp, mkdir, readdir, rename, rm, stat, utimes, writeFile } from 'node:fs/promises'
-import { isAbsolute, join, normalize, relative, resolve } from 'node:path'
-import { parseJvmArgs, type SystemInfo } from '@shared/settings'
+import { copyFile, cp, mkdir, readdir, rename, rm, stat, statfs, utimes, writeFile } from 'node:fs/promises'
+import { dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path'
+import { parseJvmArgs, type PreflightWarning, type SystemInfo } from '@shared/settings'
 import { defaultGameDir, gamePaths } from '../game/target'
 import { recommendedMemoryMb } from '../game/gameService'
 import { inspectJava } from '../game/java'
@@ -12,6 +12,7 @@ import { getSettings, updateSettings } from '../settings/settings'
 import { readInstanceState } from '../sync/sync'
 import { launcherLogDir, launcherLogPath, redact } from '../logging/logger'
 import { getAccountsState } from '../auth/accounts'
+import { gpuSummary } from './gpu'
 
 export function systemInfo(): SystemInfo {
   const totalMemoryMb = Math.round(totalmem() / 1024 / 1024)
@@ -23,8 +24,28 @@ export function systemInfo(): SystemInfo {
     defaultGameDir: defaultGameDir(),
     gameDir: gamePaths().root,
     packaged: app.isPackaged,
+    hybridGpu: gpuSummary().hybrid,
+    gpuNames: gpuSummary().names,
   }
 }
+
+/** Things worth telling the player before PLAY (never blocking). */
+export async function preflightWarnings(): Promise<PreflightWarning[]> {
+  const out: PreflightWarning[] = []
+  // free space on the drive of the game folder (or its nearest existing parent)
+  let dir = gamePaths().root
+  while (!existsSync(dir) && dirname(dir) !== dir) dir = dirname(dir)
+  const fsStats = await statfs(dir).catch(() => null)
+  if (fsStats) {
+    const freeGb = (fsStats.bavail * fsStats.bsize) / 1024 ** 3
+    if (freeGb < LOW_DISK_GB) out.push({ code: 'lowDisk', value: Math.round(freeGb * 10) / 10 })
+  }
+  const totalGb = totalmem() / 1024 ** 3
+  if (totalGb < LOW_RAM_GB) out.push({ code: 'lowRam', value: Math.round(totalGb) })
+  return out
+}
+const LOW_DISK_GB = 2
+const LOW_RAM_GB = 6
 
 export type FolderKind = 'game' | 'mods' | 'screenshots' | 'gameLogs' | 'crashReports' | 'launcherLogs'
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Gamepad2, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
 import { useLauncherUpdate } from '../launcherUpdate'
+import { useSettings } from '../hooks'
 import type { JavaRuntimeInfo } from '@shared/game'
 import { RESOLUTIONS, parseJvmArgs, type Settings, type SystemInfo } from '@shared/settings'
 import { LANGUAGES, systemLanguage } from '../i18n'
@@ -55,22 +56,6 @@ export default function Settings({ initialSection, onAddAccount, onRepair, onImp
   )
 }
 
-function useSettings(): [Settings | null, (patch: Partial<Settings>) => Promise<string | null>] {
-  const [settings, setSettings] = useState<Settings | null>(null)
-  useEffect(() => {
-    window.hemisphere.settings.get().then(setSettings)
-    return window.hemisphere.settings.onChange(setSettings)
-  }, [])
-  const update = async (patch: Partial<Settings>) => {
-    try {
-      setSettings(await window.hemisphere.settings.set(patch))
-      return null
-    } catch (err) {
-      return String(err)
-    }
-  }
-  return [settings, update]
-}
 
 function useSystemInfo(): [SystemInfo | null, () => void] {
   const [info, setInfo] = useState<SystemInfo | null>(null)
@@ -132,6 +117,11 @@ function GameSettings() {
       <Row title={t('settings.autoJoin')} hint={t('settings.autoJoinHint')}>
         <Toggle on={settings.autoJoin} onChange={(autoJoin) => update({ autoJoin })} label={t('settings.autoJoin')} />
       </Row>
+      {info.hybridGpu && (
+        <Row title={t('settings.highPerformanceGpu')} hint={t('settings.highPerformanceGpuHint', { gpus: info.gpuNames.join(' + ') })}>
+          <Toggle on={settings.highPerformanceGpu} onChange={(highPerformanceGpu) => update({ highPerformanceGpu })} label={t('settings.highPerformanceGpu')} />
+        </Row>
+      )}
     </div>
   )
 }
@@ -173,6 +163,9 @@ function LauncherSettings() {
       </Row>
       <Row title={t('settings.startWithWindows')} hint={info.packaged ? t('settings.startWithWindowsHint') : t('settings.startWithWindowsDev')}>
         <Toggle on={settings.startWithWindows} onChange={(startWithWindows) => update({ startWithWindows })} label={t('settings.startWithWindows')} />
+      </Row>
+      <Row title={t('settings.backgroundUpdates')} hint={t('settings.backgroundUpdatesHint')}>
+        <Toggle on={settings.backgroundUpdates} onChange={(backgroundUpdates) => update({ backgroundUpdates })} label={t('settings.backgroundUpdates')} />
       </Row>
       <LauncherVersionRow version={version} />
     </div>
@@ -342,6 +335,7 @@ function AdvancedSettings() {
   const [javaMsg, setJavaMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [args, setArgs] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [info] = useSystemInfo()
   useEffect(() => {
     window.hemisphere.game.javaInfo().then(setJava)
   }, [])
@@ -415,6 +409,14 @@ function AdvancedSettings() {
           </button>
         </div>
       </Row>
+
+      {!info?.packaged && (
+        <Row title={t('settings.devTools')} hint={t('settings.devToolsHint')}>
+          <button onClick={() => update({ seenNews: [] })} className={buttonClass}>
+            {t('settings.markNewsUnread')}
+          </button>
+        </Row>
+      )}
 
       <b className="mt-5 block font-semibold text-white">{t('settings.java.title')}</b>
       <p className="text-[12.5px] text-gray-400">{t('settings.java.hint')}</p>
