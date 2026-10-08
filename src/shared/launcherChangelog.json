@@ -3,6 +3,12 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "1.0.16",
+        "area": "launcher",
+        "en": "Hidden browser shortcuts (like reloading the page) are turned off in the installed launcher.",
+        "fr": "Les raccourcis cachés du navigateur (comme recharger la page) sont désactivés dans le launcher installé."
+      },
+      {
         "version": "1.0.15",
         "area": "launcher",
         "en": "Better protection of the launcher’s private settings.",

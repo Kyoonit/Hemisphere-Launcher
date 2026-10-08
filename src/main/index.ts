@@ -1,5 +1,5 @@
 
-import { app, BrowserWindow, clipboard, dialog, nativeImage, screen, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, Menu, nativeImage, screen, shell } from 'electron'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { gamePaths } from './core/game/target'
@@ -161,6 +161,10 @@ function createWindow(startHidden = false): void {
     }
   })
   win.webContents.on('did-finish-load', applyTextSize)
+  // Chromium's developer tools: development builds and staff only (Developer tab); closed right away for players
+  win.webContents.on('devtools-opened', () => {
+    if (!devEnabled()) win?.webContents.closeDevTools()
+  })
   win.on('maximize', () => toWindow(IPC.windowMaximizedChanged, true))
   win.on('unmaximize', () => toWindow(IPC.windowMaximizedChanged, false))
   win.on('closed', () => (win = null))
@@ -822,6 +826,9 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(async () => {
     installFileLogger()
     hardenApp()
+    // no default menu in the installed launcher: its hidden shortcuts (Ctrl+Shift+I developer tools, Ctrl+R reload…)
+    // would otherwise work even though the window shows no menu
+    if (app.isPackaged) Menu.setApplicationMenu(null)
     serveScreenshots()
     app.setAppUserModelId('club.hemispheresurvival.launcher')
     await loadAccounts()
