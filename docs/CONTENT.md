@@ -156,8 +156,12 @@ optional (the event then counts as "live" for 2 hours). Events disappear by them
 Discord" (Settings → Launcher; off by default, only while the game runs). It needs a Discord application:
 1. https://discord.com/developers/applications → **New Application** → name it **Hemisphere SMP** (that name is what
    Discord shows: "Playing Hemisphere SMP").
-2. **Rich Presence → Art Assets**: upload the server logo with the name **`logo`**.
-3. Copy the **Application ID** into `"discordAppId"` and publish the feed. Until then the option is greyed out.
+2. **General Information → App Icon** and **Rich Presence → Art Assets**: upload
+   [`docs/discord/hemisphere-logo-512.png`](discord/hemisphere-logo-512.png) (512 × 512, Discord's minimum). As an art
+   asset its name must be exactly **`logo`** (the launcher asks for that name). New assets can take a few minutes to show.
+3. Test it before publishing: Settings → Developer → Discord → paste the **Application ID** → Save (the launcher checks
+   it with Discord) → "Show Discord status now", with the Discord desktop app open.
+4. Copy the **Application ID** into `"discordAppId"` and publish the feed. Until then the option is greyed out.
 
 ## Staff testing (Developer tab)
 

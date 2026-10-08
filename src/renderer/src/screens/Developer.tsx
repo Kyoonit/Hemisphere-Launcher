@@ -27,6 +27,8 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
   const act = async (action: DevAction) => {
     setBusy(action)
     setResult(null)
+    // the id typed in the field counts even if Save wasn't clicked
+    if (action === 'discord:test' && appId !== state.discordAppId) await set({ discordAppId: appId })
     setResult(await window.hemisphere.dev.action(action).catch(() => 'failed'))
     setBusy(null)
   }

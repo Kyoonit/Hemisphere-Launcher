@@ -3,6 +3,12 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "1.0.9",
+        "area": "community",
+        "en": "Hemisphere SMP now has its own Discord application, with the server logo and banner, for the “Playing on Hemisphere SMP” status.",
+        "fr": "Hemisphere SMP a maintenant sa propre application Discord, avec le logo et la bannière du serveur, pour le statut « Joue sur Hemisphere SMP »."
+      },
+      {
         "version": "1.0.8",
         "area": "launcher",
         "en": "A page that couldn’t load (for example right after an update) reloads by itself instead of staying blank.",
