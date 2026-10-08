@@ -3,7 +3,7 @@ import { scrypt, timingSafeEqual } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { DEFAULT_DEV, STAFF_CODE, STAFF_CODE_SCRYPT, type DevAction, type DevState, type DevUnlockResult } from '@shared/dev'
+import { DEFAULT_DEV, STAFF_CODE, STAFF_CODE_SCRYPT, UNLOCK_WAITS, type DevAction, type DevState, type DevUnlockResult } from '@shared/dev'
 import type { HemisphereEvent } from '@shared/events'
 import type { Feed, NewsItem } from '@shared/feed'
 import type { GameState } from '@shared/game'
@@ -23,9 +23,16 @@ export const devUnlocked = () => unlocked
 const file = () => join(app.getPath('userData'), 'dev-tools.json')
 let state: DevState = { ...DEFAULT_DEV }
 let sampleShots: string[] = []
+/** wrong staff codes in a row, and when the next try is allowed: kept on disk, so restarting doesn't reset them */
+let failures = 0
+let waitUntil = 0
+let lastFailure = 0
 try {
   if (existsSync(file())) {
-    const saved = JSON.parse(readFileSync(file(), 'utf8')) as { state?: Partial<DevState>; sampleShots?: string[]; unlocked?: boolean }
+    const saved = JSON.parse(readFileSync(file(), 'utf8')) as { state?: Partial<DevState>; sampleShots?: string[]; unlocked?: boolean; tries?: { failures?: number; waitUntil?: number; lastFailure?: number } }
+    failures = Math.max(0, Number(saved.tries?.failures) || 0)
+    waitUntil = Number(saved.tries?.waitUntil) || 0
+    lastFailure = Number(saved.tries?.lastFailure) || 0
     unlocked = saved.unlocked === true
     state = { ...DEFAULT_DEV, ...saved.state }
     sampleShots = saved.sampleShots ?? []
@@ -33,18 +40,19 @@ try {
 } catch {
   /* fresh */
 }
-const save = () => writeFile(file(), JSON.stringify({ state, sampleShots, unlocked }, null, 2)).catch(() => {})
+const save = () => writeFile(file(), JSON.stringify({ state, sampleShots, unlocked, tries: { failures, waitUntil, lastFailure } }, null, 2)).catch(() => {})
 
 export const getDevState = (): DevState => state
 
 // ------------------------------------------------------------------------------ staff code
 
-let failures = 0
-let waitUntil = 0
+/** Seconds before the next code can be tried (0 = now). */
+export const unlockWait = () => Math.max(0, Math.ceil((waitUntil - Date.now()) / 1000))
 
 /** Unlocks the tab on this PC when the code matches (the feed's staff code if staff set one, else the built-in one). */
 export async function unlockDev(code: unknown, feedCode?: { salt: string; hash: string }): Promise<DevUnlockResult> {
-  if (Date.now() < waitUntil) return { ok: false, reason: 'wait', seconds: Math.ceil((waitUntil - Date.now()) / 1000) }
+  // like Windows' sign-in: no try at all until the wait is over (the code isn't even checked)
+  if (unlockWait() > 0) return { ok: false, reason: 'wait', seconds: unlockWait() }
   const target = feedCode ?? STAFF_CODE
   const typed = typeof code === 'string' ? code.trim().toUpperCase().slice(0, 64) : ''
   const derived = await new Promise<Buffer>((resolve, reject) =>
@@ -53,16 +61,19 @@ export async function unlockDev(code: unknown, feedCode?: { salt: string; hash: 
   if (typed && timingSafeEqual(derived, Buffer.from(target.hash, 'hex'))) {
     unlocked = true
     failures = 0
+    waitUntil = 0
     await save()
     console.log('[dev] Developer tab unlocked on this PC')
     return { ok: true }
   }
+  // each wrong code waits longer: 3 s, 5 s, 10 s, 30 s, 1 min, 2 min, then 5 min each (a quiet day starts over)
+  if (Date.now() - lastFailure > 24 * 60 * 60_000) failures = 0
   failures++
-  if (failures >= 5) {
-    waitUntil = Date.now() + 30_000 * 2 ** Math.min(4, failures - 5) // 30 s, then longer
-    return { ok: false, reason: 'wait', seconds: Math.ceil((waitUntil - Date.now()) / 1000) }
-  }
-  return { ok: false, reason: 'wrong' }
+  lastFailure = Date.now()
+  waitUntil = Date.now() + UNLOCK_WAITS[Math.min(failures, UNLOCK_WAITS.length) - 1] * 1000
+  await save()
+  console.warn(`[dev] wrong staff code (${failures} in a row): next try in ${unlockWait()} s`)
+  return { ok: false, reason: 'wrong', seconds: unlockWait() }
 }
 
 /** Locks the tab again on this PC (installed launcher) and switches every pretend situation off. */

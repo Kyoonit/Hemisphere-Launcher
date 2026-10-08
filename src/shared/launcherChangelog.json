@@ -3,6 +3,12 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "1.0.15",
+        "area": "launcher",
+        "en": "Better protection of the launcher’s private settings.",
+        "fr": "Meilleure protection des réglages privés du launcher."
+      },
+      {
         "version": "1.0.14",
         "area": "launcher",
         "en": "Sign-in screen: clearer field names.",

@@ -79,6 +79,7 @@ const api: HemisphereApi = {
   dev: {
     get: () => ipcRenderer.invoke(IPC.devGet),
     unlock: (code) => ipcRenderer.invoke(IPC.devUnlock, code),
+    unlockWait: () => ipcRenderer.invoke(IPC.devUnlockWait),
     checkDiscord: (id) => ipcRenderer.invoke(IPC.devCheckDiscord, id),
     lock: () => ipcRenderer.invoke(IPC.devLock),
     perf: () => ipcRenderer.invoke(IPC.devPerf),

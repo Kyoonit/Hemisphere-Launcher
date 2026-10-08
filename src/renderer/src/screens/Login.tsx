@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Lock, TriangleAlert } from 'lucide-react'
 import type { AuthErrorCode } from '@shared/auth'
@@ -131,29 +131,45 @@ export default function Login({ onBack }: { onBack?: () => void }) {
 function StaffCode({ onClose }: { onClose(ok: boolean): void }) {
   const { t } = useTranslation()
   const [code, setCode] = useState('')
-  const [message, setMessage] = useState<string | null>(null)
+  const [wrong, setWrong] = useState(false)
+  // like Windows' sign-in: after a wrong code the field stays locked for a few seconds (longer each time)
+  const [wait, setWait] = useState(0)
+  const input = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    window.hemisphere.dev.unlockWait().then(setWait)
+  }, [])
+  useEffect(() => {
+    if (wait <= 0) return void input.current?.focus()
+    const timer = setTimeout(() => setWait((s) => s - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [wait])
+  const locked = wait > 0
   return (
     <form
       className="animate-fade mt-4 flex gap-2"
       onSubmit={async (e) => {
         e.preventDefault()
+        if (locked) return
         const r = await window.hemisphere.dev.unlock(code)
         if (r.ok) return onClose(true)
         setCode('')
-        setMessage(r.reason === 'wait' ? t('auth.staff.wait', { seconds: r.seconds ?? 30 }) : t('auth.staff.wrong'))
+        setWrong(r.reason === 'wrong' || wrong)
+        setWait(r.seconds)
       }}
     >
       <input
+        ref={input}
         autoFocus
+        disabled={locked}
         type="password"
         value={code}
         onChange={(e) => setCode(e.target.value)}
         onKeyDown={(e) => e.key === 'Escape' && onClose(false)}
-        placeholder={message ?? t('auth.staff.placeholder')}
+        placeholder={locked ? t(wrong ? 'auth.staff.wrongWait' : 'auth.staff.wait', { seconds: wait }) : t('auth.staff.placeholder')}
         aria-label={t('auth.staff.placeholder')}
-        className={`min-w-0 flex-1 rounded-lg border bg-gray-900 px-3 py-1.5 text-sm text-white ${message ? 'border-red-500/60 placeholder:text-red-300' : 'border-gray-700'}`}
+        className={`min-w-0 flex-1 rounded-lg border bg-gray-900 px-3 py-1.5 text-sm text-white ${locked ? 'border-red-500/60 placeholder:text-red-300 disabled:opacity-80' : 'border-gray-700'}`}
       />
-      <button disabled={!code} className="rounded-lg bg-gray-700 px-3 text-sm font-semibold text-white hover:bg-gray-600 disabled:opacity-40">
+      <button disabled={!code || locked} className="rounded-lg bg-gray-700 px-3 text-sm font-semibold text-white hover:bg-gray-600 disabled:opacity-40">
         OK
       </button>
     </form>

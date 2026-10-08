@@ -702,7 +702,8 @@ function StaffAccess({ dev, onChanged, onOpen }: { dev: DevAccess | null; onChan
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  if (!dev) return null
+  // hidden from players: the code is only typed on the sign-in screen (Ctrl+Shift+S)
+  if (!dev || (!dev.devBuild && !dev.unlocked)) return null
   const unlock = async () => {
     setBusy(true)
     setMsg(null)
@@ -712,7 +713,7 @@ function StaffAccess({ dev, onChanged, onOpen }: { dev: DevAccess | null; onChan
       setCode('')
       setMsg({ ok: true, text: t('dev.unlocked') })
       onChanged()
-    } else setMsg({ ok: false, text: r && r.reason === 'wait' ? t('dev.wait', { seconds: r.seconds }) : t('dev.wrong') })
+    } else setMsg({ ok: false, text: r ? t(r.reason === 'wait' ? 'dev.wait' : 'auth.staff.wrongWait', { seconds: r.seconds }) : t('dev.wrong') })
   }
   return (
     <>

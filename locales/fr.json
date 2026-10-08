@@ -306,8 +306,8 @@
     },
     "staff": {
       "placeholder": "Code",
-      "wrong": "Code incorrect",
-      "wait": "Trop d’essais : attends {{seconds}} s"
+      "wait": "Réessaie dans {{seconds}} s",
+      "wrongWait": "Code incorrect · réessaie dans {{seconds}} s"
     }
   },
   "game": {

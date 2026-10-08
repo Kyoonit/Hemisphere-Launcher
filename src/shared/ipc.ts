@@ -94,6 +94,7 @@ export const IPC = {
   devSet: 'dev:set',
   devAction: 'dev:action',
   devUnlock: 'dev:unlock',
+  devUnlockWait: 'dev:unlockWait',
   devCheckDiscord: 'dev:checkDiscord',
   devLock: 'dev:lock',
   devPerf: 'dev:perf',
@@ -250,6 +251,8 @@ export interface HemisphereApi {
   dev: {
     get(): Promise<DevAccess>
     unlock(code: string): Promise<DevUnlockResult>
+    /** seconds before the next staff code can be tried */
+    unlockWait(): Promise<number>
     /** is it a Discord application id? (its name) */
     checkDiscord(id: string): Promise<{ ok: true; name: string } | { ok: false; reason: 'notApp' | 'network' }>
     lock(): Promise<boolean>

@@ -54,7 +54,7 @@ import { buildReport, lastReportZip, prepareReport } from './core/support/report
 import { devDiscord, devNotify, keepInTrayOnClose, notificationsBlocked, setLauncherReleased, slotWatched, watchForSlot, onCommunitySettings, onGameExited, onGameLaunched, onRestartLive, onRestartMoment, onServerStatus, startCommunity } from './core/community/community'
 import { startRestartWatch } from './core/status/restartWatch'
 import { nextRestart, type LiveRestart } from '@shared/restart'
-import { checkDiscordAppId, devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, runDevAction, setDevState, unlockDev } from './core/dev/devTools'
+import { checkDiscordAppId, devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, runDevAction, setDevState, unlockDev, unlockWait } from './core/dev/devTools'
 import { DEV_ACTIONS, DEFAULT_DEV, type DevAction, type DevState } from '@shared/dev'
 import { eventIcs } from '@shared/events'
 import { writeFile } from 'node:fs/promises'
@@ -637,6 +637,7 @@ function registerIpc(): void {
   handle(IPC.devGet, () => ({ devBuild: !app.isPackaged, unlocked: devUnlocked(), state: devEnabled() ? getDevState() : null }))
   handle(IPC.devPerf, async () => (devEnabled() ? perfSnapshot(!!win && !win.isDestroyed()) : null))
   handle(IPC.devCheckDiscord, async (_e, id: unknown) => (devEnabled() && typeof id === 'string' ? checkDiscordAppId(id) : { ok: false, reason: 'notApp' }))
+  handle(IPC.devUnlockWait, () => unlockWait())
   handle(IPC.devUnlock, async (_e, code: unknown) => {
     const result = await unlockDev(code, getFeed().staffCode)
     if (result.ok) {

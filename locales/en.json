@@ -305,8 +305,8 @@
     },
     "staff": {
       "placeholder": "Code",
-      "wrong": "Wrong code",
-      "wait": "Too many tries: wait {{seconds}} s"
+      "wait": "Try again in {{seconds}} s",
+      "wrongWait": "Wrong code · try again in {{seconds}} s"
     }
   },
   "game": {

@@ -19,7 +19,11 @@ export interface DevAccess {
   unlocked: boolean
   state: DevState | null
 }
-export type DevUnlockResult = { ok: true } | { ok: false; reason: 'wrong' | 'wait'; seconds?: number }
+/** seconds = how long before the next try is allowed (like Windows' sign-in: each wrong code waits longer) */
+export type DevUnlockResult = { ok: true } | { ok: false; reason: 'wrong' | 'wait'; seconds: number }
+
+/** Wait after the 1st, 2nd… wrong code, in seconds (the last one repeats). */
+export const UNLOCK_WAITS = [3, 5, 10, 30, 60, 120, 300]
 
 export interface DevState {
   /** a live event, one starting in 16 minutes (its reminder fires about a minute later), one in 3 days */

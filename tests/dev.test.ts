@@ -24,10 +24,21 @@ describe('Developer tab in the installed launcher', () => {
     expect(dev.devStatus(null)).toBeNull()
   })
 
-  test('a wrong code is refused, five in a row make it wait', async () => {
-    for (let i = 0; i < 4; i++) expect(await dev.unlockDev('nope', feedCode)).toEqual({ ok: false, reason: 'wrong' })
-    expect(await dev.unlockDev('nope', feedCode)).toMatchObject({ ok: false, reason: 'wait' })
+  test('like Windows: each wrong code waits longer, and nothing is tried while waiting', async () => {
+    vi.useFakeTimers({ now: Date.now() })
+    expect(await dev.unlockDev('nope', feedCode)).toEqual({ ok: false, reason: 'wrong', seconds: 3 })
     expect(await dev.unlockDev(testCode, feedCode)).toMatchObject({ ok: false, reason: 'wait' }) // even the right one, while waiting
+    expect(dev.unlockWait()).toBe(3)
+    vi.advanceTimersByTime(3000)
+    expect(await dev.unlockDev('nope', feedCode)).toEqual({ ok: false, reason: 'wrong', seconds: 5 })
+    vi.advanceTimersByTime(5000)
+    expect(await dev.unlockDev('nope', feedCode)).toEqual({ ok: false, reason: 'wrong', seconds: 10 })
+    vi.advanceTimersByTime(10_000)
+    for (const s of [30, 60, 120, 300, 300]) {
+      expect(await dev.unlockDev('nope', feedCode)).toEqual({ ok: false, reason: 'wrong', seconds: s })
+      vi.advanceTimersByTime(s * 1000)
+    }
+    vi.useRealTimers()
     expect(dev.devEnabled()).toBe(false)
   })
 
