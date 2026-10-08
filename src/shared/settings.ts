@@ -37,6 +37,8 @@ export interface Settings {
   downloadLimit: 0 | 2 | 5 | 10
   /** On a metered connection (phone hotspot, 4G), nothing is downloaded in the background */
   saveDataOnMetered: boolean
+  /** Bigger text and buttons: the whole interface is zoomed (100, 110 or 125 %) */
+  textSize: 100 | 110 | 125
   /** Install client updates and check files while the launcher is open, so PLAY starts right away */
   backgroundUpdates: boolean
   /** On PCs with two graphics chips: run Minecraft on the high-performance one */
@@ -75,6 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lightMode: 'auto',
   downloadLimit: 5,
   saveDataOnMetered: true,
+  textSize: 100,
   backgroundUpdates: true,
   highPerformanceGpu: true,
   reportDiscord: '',

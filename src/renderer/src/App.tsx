@@ -85,6 +85,7 @@ export default function App() {
                     setNewsTab('server')
                     setScreen('news')
                   }}
+                  onOpenScreenshots={() => setScreen('screenshots')}
                   onOpenLauncherNews={() => {
                     setNewsTab('launcher')
                     setScreen('news')

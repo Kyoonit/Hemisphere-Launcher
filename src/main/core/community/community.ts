@@ -31,6 +31,8 @@ const TEXT = {
     maintenance: 'Maintenance',
     backTitle: 'Hemisphere is back online',
     backBody: 'The server is up again: you can join.',
+    slotTitle: 'A place is free on Hemisphere',
+    slotBody: (n: number, max: number) => `${n}/${max} players: you can join now.`,
     eventSoon: (min: number) => `Starts in ${min} min`,
     eventNow: 'Starting now',
     playing: 'Playing on Hemisphere SMP',
@@ -55,6 +57,8 @@ const TEXT = {
     maintenance: 'Maintenance',
     backTitle: 'Hemisphere est de retour',
     backBody: 'Le serveur est de nouveau en ligne : tu peux rejoindre.',
+    slotTitle: 'Une place est libre sur Hemisphere',
+    slotBody: (n: number, max: number) => `${n}/${max} joueurs : tu peux rejoindre maintenant.`,
     eventSoon: (min: number) => `Commence dans ${min} min`,
     eventNow: 'Ça commence',
     playing: 'Joue sur Hemisphere SMP',
@@ -215,8 +219,20 @@ export function keepInTrayOnClose(win: BrowserWindow, toTray: () => void): void 
 // ------------------------------------------------------------------------------ notifications
 
 /** Server status from the poller: tray text, and "back online" after a restart or maintenance (if asked for). */
+/** Server full: the player asked to be told once when a place frees up (one notification, then it's over). */
+let slotWatch = false
+export const slotWatched = () => slotWatch
+export function watchForSlot(on: boolean): boolean {
+  slotWatch = on
+  return slotWatch
+}
+
 export function onServerStatus(status: ServerStatus): void {
   lastStatus = status
+  if (slotWatch && status.online === true && status.playersOnline !== null && status.playersMax !== null && status.playersOnline < status.playersMax) {
+    slotWatch = false
+    notify(text().slotTitle, text().slotBody(status.playersOnline, status.playersMax))
+  }
   refreshTray()
   const down = status.online === false || hooks?.feed().maintenance.active === true
   if (down) {

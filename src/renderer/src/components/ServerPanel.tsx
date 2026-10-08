@@ -1,6 +1,6 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, Clock, Construction, Signal } from 'lucide-react'
+import { Bell, BellRing, CalendarDays, Clock, Construction, Signal } from 'lucide-react'
 import { eventPhase, upcomingEvents } from '@shared/events'
 import { localize } from '@shared/manifest'
 import { relativeTime } from './Events'
@@ -176,6 +176,7 @@ function PlayerList({ status }: { status: ServerStatus }) {
           </span>
         )}
       </div>
+      {status.playersMax !== null && status.playersOnline !== null && status.playersOnline >= status.playersMax && <SlotWatch />}
       {total === 0 ? (
         <p className="rounded-md bg-gray-900/50 px-3 py-2 text-[13px] text-gray-400">{t('server.nobody')}</p>
       ) : (
@@ -197,5 +198,24 @@ function PlayerList({ status }: { status: ServerStatus }) {
         <div className="mt-1.5 rounded-md bg-gray-900/50 py-1 text-center text-[13px] font-semibold text-gray-400">{t('server.more', { count: more })}</div>
       )}
     </>
+  )
+}
+
+/** Server full: "tell me when a place frees up" (one notification, then it's over). */
+function SlotWatch() {
+  const { t } = useTranslation()
+  const [on, setOn] = useState<boolean | null>(null)
+  useEffect(() => {
+    window.hemisphere.server.slotWatched().then(setOn)
+  }, [])
+  if (on === null) return null
+  return (
+    <button
+      onClick={() => window.hemisphere.server.watchSlot(!on).then(setOn)}
+      aria-pressed={on}
+      className={`mb-2 flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-[12.5px] font-semibold transition-colors ${on ? 'bg-green-900/50 text-green-200 hover:bg-green-900/70' : 'bg-amber-500/20 text-amber-100 hover:bg-amber-500/30'}`}
+    >
+      {on ? <BellRing size={14} /> : <Bell size={14} />} {on ? t('server.slotWatching') : t('server.slotWatch')}
+    </button>
   )
 }

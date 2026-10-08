@@ -136,7 +136,38 @@
     "downloadLimitValue": "{{value}} Mo/s",
     "saveDataOnMetered": "Économiser les données sur les connexions limitées",
     "saveDataOnMeteredHint": "En partage de connexion ou en 4G, les mises à jour se téléchargent seulement quand tu appuies sur JOUER.",
-    "saveDataOnMeteredNow": "Ta connexion est limitée en ce moment : les mises à jour se téléchargent seulement quand tu appuies sur JOUER."
+    "saveDataOnMeteredNow": "Ta connexion est limitée en ce moment : les mises à jour se téléchargent seulement quand tu appuies sur JOUER.",
+    "textSize": "Taille du texte",
+    "textSizeHint": "Texte et boutons plus grands partout dans le launcher.",
+    "textSizes": {
+      "100": "Normale",
+      "110": "Grande",
+      "125": "Très grande"
+    },
+    "cleanup": {
+      "title": "Libérer de l’espace",
+      "scanning": "Recherche de ce qui peut partir…",
+      "nothing": "Rien à nettoyer : les mondes, captures, mods et réglages ne sont jamais touchés.",
+      "logs": "anciens logs",
+      "crashes": "anciens rapports de crash",
+      "downloads": "téléchargements inachevés",
+      "versions": "versions de Minecraft inutilisées",
+      "run": "Libérer {{size}}",
+      "runEmpty": "Libérer",
+      "working": "Nettoyage…",
+      "done": "{{size}} libérés.",
+      "busy": "Pas pendant que le jeu tourne ou qu’une mise à jour se prépare."
+    },
+    "mic": {
+      "title": "Tester ton micro",
+      "hint": "Pour le chat vocal : vérifie que ton micro marche avant de rejoindre. Rien n’est enregistré.",
+      "speak": "Parle : la barre doit bouger. Choisis le même micro dans les réglages du chat vocal en jeu.",
+      "error": "Aucun micro trouvé, ou Windows le bloque (Paramètres > Confidentialité > Microphone).",
+      "test": "Tester",
+      "stop": "Arrêter",
+      "default": "Micro par défaut",
+      "unnamed": "Micro"
+    }
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -156,7 +187,9 @@
     "restartingLive": "Le serveur est vérifié en direct (il y a {{s}} s)",
     "backOnline": "De retour en ligne",
     "backAt": "Redémarrage terminé à {{time}}",
-    "restartingShort": "Redémarrage"
+    "restartingShort": "Redémarrage",
+    "slotWatch": "Me prévenir d’une place libre",
+    "slotWatching": "Tu seras prévenu d’une place libre"
   },
   "time": {
     "hm": "{{h}} h {{m}} min",
@@ -1190,7 +1223,8 @@
     "releaseTest": "Fermer la fenêtre maintenant (test)",
     "perfMetered": "connexion limitée",
     "perfSaved": "Pas retéléchargés : {{notModified}} fichiers inchangés ({{notModifiedSize}}), {{reused}} fichiers Minecraft d’un autre launcher ({{reusedSize}})",
-    "crashMemory": "Crash, mémoire pleine"
+    "crashMemory": "Crash, mémoire pleine",
+    "recapSample": "Résumé de session"
   },
   "launcherNews": {
     "intro": "Tout ce qui a changé dans le launcher, jour par jour : {{count}} changements sur {{days}} jours.",
@@ -1211,5 +1245,14 @@
       "launcher": "Launcher"
     },
     "versions": "Versions {{version}}"
+  },
+  "recap": {
+    "played": "Session terminée : {{time}} de jeu",
+    "hours": "{{h}} h {{m}}",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "screenshots_one": "{{count}} capture",
+    "screenshots_other": "{{count}} captures",
+    "close": "Fermer"
   }
 }

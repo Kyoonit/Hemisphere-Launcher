@@ -78,6 +78,7 @@ export const DEV_ACTIONS = [
   'window:1600x900',
   'open:data',
   'release:test',
+  'recap:sample',
   'ui:reload',
   'ui:devtools',
   'zoom:0.9',

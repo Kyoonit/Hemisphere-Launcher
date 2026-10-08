@@ -6,7 +6,7 @@ import type { ChildProcess } from 'node:child_process'
 import { readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { launch } from '@xmcl/core'
-import type { GameProgress, GameStage, GameState, PlayOptions, RepairMode, RepairReport } from '@shared/game'
+import type { GameProgress, GameStage, GameState, PlayOptions, RepairMode, RepairReport, SessionRecap } from '@shared/game'
 import { SERVER } from '@shared/server'
 import { getLaunchCredentials } from '../auth/accounts'
 import { AuthError } from '../auth/errors'
@@ -334,6 +334,7 @@ function watch(proc: ChildProcess, accountId: string): void {
   const startedAt = Date.now()
   const memoryMb = getSettings().memoryMb ?? autoMemoryMb(recommendedMemoryMb(), Math.round(freemem() / 1024 ** 2))
   proc.once('exit', (code) => {
+    if (code === 0) rememberSession(startedAt)
     void endSession(accountId).then((recorded) => recorded && gameEvents.onPlaytimeChanged())
     const runningAccounts = state.runningAccounts.filter((id) => id !== accountId)
     // Exit code 0 = player quit normally. Anything else is a crash.
@@ -406,6 +407,32 @@ function ranOutOfMemory(since: number): boolean {
       return false
     }
   })
+}
+
+// ------------------------------------------------------------------------------ session recap
+
+let recap: SessionRecap | null = null
+/** The game closed normally: how long it ran and how many screenshots were taken (sessions of 2 minutes or more). */
+function rememberSession(startedAt: number): void {
+  const durationMs = Date.now() - startedAt
+  if (durationMs < 2 * 60_000) return
+  let screenshots = 0
+  try {
+    const dir = join(gamePaths().instance, 'screenshots')
+    screenshots = readdirSync(dir).filter((n) => /\.png$/i.test(n) && statSync(join(dir, n)).mtimeMs >= startedAt).length
+  } catch {
+    /* no screenshots folder */
+  }
+  recap = { endedAt: Date.now(), durationMs, screenshots }
+}
+/** Shown on Home for 2 hours after the game, until closed. */
+export const getSessionRecap = (): SessionRecap | null => (recap && Date.now() - recap.endedAt < 2 * 60 * 60_000 ? recap : null)
+export function dismissSessionRecap(): void {
+  recap = null
+}
+/** Developer tab: a pretend recap. */
+export function sampleSessionRecap(): void {
+  recap = { endedAt: Date.now(), durationMs: 83 * 60_000, screenshots: 4 }
 }
 
 /** The crash report Minecraft wrote during this session, if any. */

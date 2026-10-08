@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '../i18n'
-import { Activity, Bell, BellRing, Bug, MemoryStick, Code, Languages, ZoomIn, CalendarDays, Construction, FlaskConical, FolderOpen, Gauge, Image, Info, LoaderCircle, Lock, Monitor, Newspaper, RefreshCw, RotateCcw, Server, Trash2, type LucideIcon } from 'lucide-react'
+import { Activity, Clock3, Bell, BellRing, Bug, MemoryStick, Code, Languages, ZoomIn, CalendarDays, Construction, FlaskConical, FolderOpen, Gauge, Image, Info, LoaderCircle, Lock, Monitor, Newspaper, RefreshCw, RotateCcw, Server, Trash2, type LucideIcon } from 'lucide-react'
 import type { DevAccess, DevAction, DevState } from '@shared/dev'
 import type { PerfSnapshot } from '@shared/performance'
 import Toggle from '../components/Toggle'
@@ -134,6 +134,7 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
           <Action action="notify:back" icon={Bell} label={t('dev.notifyBack')} />
           <Action action="notify:event" icon={CalendarDays} label={t('dev.notifyEvent')} />
           <Action action="notify:all" icon={BellRing} label={t('dev.notifyAll')} />
+          <Action action="recap:sample" icon={Clock3} label={t('dev.recapSample')} />
         </div>
         <Line label={t('dev.discordId')} hint={t('dev.discordIdHint')}>
           <span className="flex gap-1.5">

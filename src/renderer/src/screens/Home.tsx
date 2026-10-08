@@ -19,6 +19,7 @@ import { dayLabel, relativeDay } from '../components/LauncherUpdates'
 import type { Feed } from '@shared/feed'
 import { localize } from '@shared/manifest'
 import { useAccounts } from '../accounts'
+import type { SessionRecap } from '@shared/game'
 
 const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
   { key: 'website', icon: <Globe size={18} /> },
@@ -29,6 +30,7 @@ const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
 export default function Home({
   onOpenNews,
   onOpenLauncherNews,
+  onOpenScreenshots,
   onRepair,
   onImport,
   onOpenMods,
@@ -37,6 +39,7 @@ export default function Home({
   onOpenNews(): void
   /** News > Launcher: the launcher's whole history */
   onOpenLauncherNews(): void
+  onOpenScreenshots(): void
   onRepair(): void
   onImport(): void
   onOpenMods(): void
@@ -73,6 +76,7 @@ export default function Home({
           <PlayZone client={client ?? null} onRepair={onRepair} onOpenMods={onOpenMods} onReport={onReport} />
           <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
             <ServerNotice offline={status?.online === false} feed={feed} />
+            {!crashed && <SessionRecapLine onOpenScreenshots={onOpenScreenshots} />}
             {!crashed && <PreflightHints />}
             {feed?.maintenance.active && <MaintenanceBanner feed={feed} />}
           </div>
@@ -189,6 +193,42 @@ function WhatsNew({ client, onSeeMore }: { client: ClientSummary | null; onSeeMo
         </button>
       )}
     </aside>
+  )
+}
+
+/** "Session over: 1 h 23 min · 4 screenshots": a small recap after the game closed, until closed (or 2 hours). */
+function SessionRecapLine({ onOpenScreenshots }: { onOpenScreenshots(): void }) {
+  const { t } = useTranslation()
+  const [recap, setRecap] = useState<SessionRecap | null>(null)
+  const game = useGameState()
+  useEffect(() => {
+    window.hemisphere.game.recap().then(setRecap)
+  }, [game])
+  if (!recap) return null
+  const minutes = Math.round(recap.durationMs / 60_000)
+  const time = minutes >= 60 ? t('recap.hours', { h: Math.floor(minutes / 60), m: String(minutes % 60).padStart(2, '0') }) : t('recap.minutes', { count: minutes })
+  return (
+    <Line icon={<Clock size={14} className="text-green-400" />} className="text-gray-300">
+      {t('recap.played', { time })}
+      {recap.screenshots > 0 && (
+        <>
+          {' · '}
+          <button onClick={onOpenScreenshots} className="font-semibold text-green-400 hover:underline">
+            {t('recap.screenshots', { count: recap.screenshots })}
+          </button>
+        </>
+      )}
+      <button
+        onClick={() => {
+          window.hemisphere.game.dismissRecap()
+          setRecap(null)
+        }}
+        aria-label={t('recap.close')}
+        className="ml-1 rounded p-0.5 text-gray-500 hover:bg-gray-700 hover:text-white"
+      >
+        <X size={12} />
+      </button>
+    </Line>
   )
 }
 

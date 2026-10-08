@@ -1,5 +1,40 @@
 [
   {
+    "date": "2026-10-09",
+    "changes": [
+      {
+        "version": "1.0.7",
+        "area": "settings",
+        "en": "Free up space (Settings > Installation): old logs and crash reports, unfinished downloads and unused Minecraft versions, in one click. Worlds, screenshots, mods and settings are never touched.",
+        "fr": "Libérer de l’espace (Paramètres > Installation) : anciens logs et rapports de crash, téléchargements inachevés et versions de Minecraft inutilisées, en un clic. Les mondes, captures, mods et réglages ne sont jamais touchés."
+      },
+      {
+        "version": "1.0.7",
+        "area": "community",
+        "en": "Server full? Ask to be told when a place frees up: one notification, then it’s over.",
+        "fr": "Serveur plein ? Demande à être prévenu quand une place se libère : une seule notification, et c’est tout."
+      },
+      {
+        "version": "1.0.7",
+        "area": "settings",
+        "en": "Test your microphone for voice chat before joining (Settings > Game). Nothing is recorded.",
+        "fr": "Teste ton micro pour le chat vocal avant de rejoindre (Paramètres > Jeu). Rien n’est enregistré."
+      },
+      {
+        "version": "1.0.7",
+        "area": "settings",
+        "en": "Text size: bigger text and buttons everywhere in the launcher (Settings > Launcher).",
+        "fr": "Taille du texte : texte et boutons plus grands partout dans le launcher (Paramètres > Launcher)."
+      },
+      {
+        "version": "1.0.7",
+        "area": "home",
+        "en": "After playing, Home shows how long you played and the screenshots you took.",
+        "fr": "Après une partie, l’accueil montre combien de temps tu as joué et les captures que tu as prises."
+      }
+    ]
+  },
+  {
     "date": "2026-10-08",
     "changes": [
       {

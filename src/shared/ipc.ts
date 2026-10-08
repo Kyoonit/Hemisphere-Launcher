@@ -1,6 +1,6 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
-import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport } from './game'
+import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport, SessionRecap } from './game'
 import type { PreflightWarning, Settings, SystemInfo } from './settings'
 import type { Feed } from './feed'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from './importer'
@@ -15,6 +15,7 @@ import type { ModHistoryItem, ModSetInfo, ModSetsState, SetImportResult, SetShar
 import type { RestorePointInfo, RestorePreview, RestoreResult, SetupExportResult, SetupImportResult, SetupPick } from './restorePoints'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
 import type { LowEndInfo, PerfSnapshot } from './performance'
+import type { CleanupScan } from './cleanup'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -43,6 +44,12 @@ export const IPC = {
   gameStateChanged: 'game:state-changed',
   gamePlay: 'game:play',
   gameDismissError: 'game:dismiss-error',
+  gameRecap: 'game:recap',
+  gameDismissRecap: 'game:dismissRecap',
+  serverWatchSlot: 'server:watchSlot',
+  serverSlotWatched: 'server:slotWatched',
+  systemCleanupScan: 'system:cleanupScan',
+  systemCleanupRun: 'system:cleanupRun',
   gameJava: 'game:java',
   gameRepair: 'game:repair',
   clientGet: 'client:get',
@@ -281,6 +288,9 @@ export interface HemisphereApi {
   server: {
     getStatus(): Promise<ServerStatus>
     onStatus(cb: (status: ServerStatus) => void): () => void
+    /** server full: one notification when a place frees up (on/off); returns whether it's on */
+    watchSlot(on: boolean): Promise<boolean>
+    slotWatched(): Promise<boolean>
   }
   playtime: {
     /** Playtime of the active account */
@@ -301,6 +311,10 @@ export interface HemisphereApi {
     preflight(): Promise<PreflightWarning[]>
     /** a modest PC? (the light interface turns on by itself) */
     lowEnd(): Promise<LowEndInfo>
+    /** Free up space: what can go (logs, old crash reports, unfinished downloads, unused Minecraft versions) */
+    cleanupScan(): Promise<CleanupScan>
+    /** removes it; bytes freed, or why not now */
+    cleanupRun(): Promise<{ ok: true; freed: number } | { ok: false; reason: 'busy' }>
     /** Windows says this connection is metered (phone hotspot, 4G) */
     metered(): Promise<boolean>
     /** Windows notifications are turned off (for all apps or this launcher): no alert can show */
@@ -347,6 +361,9 @@ export interface HemisphereApi {
     play(opts?: PlayOptions): void
     /** Close the error / crash card */
     dismissError(): void
+    /** the last session (time played, screenshots), shortly after the game closed */
+    recap(): Promise<SessionRecap | null>
+    dismissRecap(): void
     /** Managed runtime (if installed) + Java found on this PC */
     javaInfo(): Promise<JavaRuntimeInfo[]>
     /** Verify and fix the installation (progress arrives through onState) */

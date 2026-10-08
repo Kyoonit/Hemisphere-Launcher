@@ -4,14 +4,16 @@ import { join } from 'node:path'
 
 /**
  * Process-wide hardening (Electron security checklist):
- * - no web permissions (camera, microphone, notifications, geolocation…): the UI needs none
+ * - no web permissions (camera, notifications, geolocation…), except the microphone for the launcher's own page
+ *   (Settings > Game > test your microphone for voice chat): audio only, never video
  * - no new windows, navigation or <webview> in any web contents, not just the main window
  * - IPC is only answered for the launcher's own page in its main window
  */
 export function hardenApp(): void {
   const ses = session.defaultSession
-  ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false))
-  ses.setPermissionCheckHandler(() => false)
+  const micOnly = (permission: string, mediaTypes: string[] | undefined, url: string) => permission === 'media' && isLauncherUrl(url) && (mediaTypes ?? []).every((t) => t === 'audio')
+  ses.setPermissionRequestHandler((wc, permission, callback, details) => callback(micOnly(permission, (details as { mediaTypes?: string[] }).mediaTypes, wc.getURL())))
+  ses.setPermissionCheckHandler((_wc, permission, origin, details) => micOnly(permission, details.mediaType ? [details.mediaType] : undefined, (details as { requestingUrl?: string }).requestingUrl ?? origin))
 
   app.on('web-contents-created', (_e, contents) => {
     contents.on('will-attach-webview', (e) => e.preventDefault())

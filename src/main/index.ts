@@ -1,5 +1,5 @@
 
-import { app, BrowserWindow, clipboard, dialog, nativeImage, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, nativeImage, screen, shell } from 'electron'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { gamePaths } from './core/game/target'
@@ -18,7 +18,7 @@ import {
   switchAccount,
 } from './core/auth/accounts'
 import { cancelSignIn } from './core/auth/oauth'
-import { dismissGameError, gameEvents, getGameState, onGameState, play, prepareInBackground, repair, simulateGameState, withModsHeld } from './core/game/gameService'
+import { dismissGameError, gameEvents, getGameState, onGameState, play, prepareInBackground, repair, simulateGameState, withModsHeld, dismissSessionRecap, getSessionRecap, sampleSessionRecap } from './core/game/gameService'
 import { getSettings, onSettingsChanged, updateSettings } from './core/settings/settings'
 import { AUTOSTART_ARG } from '@shared/settings'
 import { recoverSessions } from './core/playtime/playtimeStore'
@@ -50,7 +50,7 @@ import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePo
 import { checkPackUpdates, installPack, knownPackProjects, listPacks, moveResourcePack, packVersions, removePack, setPackActive, setPackLock, setPackVersion, shadersOff, updatePacks } from './core/packs/packs'
 import { PACK_TYPES, type PackType } from '@shared/packs'
 import { buildReport, lastReportZip, prepareReport } from './core/support/report'
-import { devDiscord, devNotify, keepInTrayOnClose, notificationsBlocked, setLauncherReleased, onCommunitySettings, onGameExited, onGameLaunched, onRestartLive, onRestartMoment, onServerStatus, startCommunity } from './core/community/community'
+import { devDiscord, devNotify, keepInTrayOnClose, notificationsBlocked, setLauncherReleased, slotWatched, watchForSlot, onCommunitySettings, onGameExited, onGameLaunched, onRestartLive, onRestartMoment, onServerStatus, startCommunity } from './core/community/community'
 import { startRestartWatch } from './core/status/restartWatch'
 import { nextRestart, type LiveRestart } from '@shared/restart'
 import { checkDiscordAppId, devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, runDevAction, setDevState, unlockDev } from './core/dev/devTools'
@@ -62,6 +62,7 @@ import { deleteSet, duplicateSet, importSetCode, isSetId, listSets, renameSet, s
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
 import { installNetMeter, lowEndInfo, perfSnapshot, trimChromium, trimGpuProcess } from './core/system/performance'
 import { isMetered } from './core/system/network'
+import { runCleanup, scanCleanup } from './core/system/cleanup'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
@@ -94,6 +95,17 @@ function toBackground(releaseAfterMs: number): void {
     win.destroy()
     setTimeout(trimGpuProcess, 2000)
   }, releaseAfterMs)
+}
+
+/** Settings > Launcher > Text size: the whole interface zoomed; the smallest window grows with it, as far as the screen allows. */
+function applyTextSize(): void {
+  if (!win || win.isDestroyed()) return
+  const area = screen.getDisplayMatching(win.getBounds()).workAreaSize
+  const zoom = Math.min(getSettings().textSize / 100, area.width / 960, area.height / 600)
+  win.setMinimumSize(Math.round(960 * zoom), Math.round(600 * zoom))
+  const [w, h] = win.getSize()
+  if (!win.isMaximized() && (w < 960 * zoom || h < 600 * zoom)) win.setSize(Math.max(w, Math.round(960 * zoom)), Math.max(h, Math.round(600 * zoom)))
+  win.webContents.setZoomFactor(zoom)
 }
 
 /** Shows the launcher window, opening it again if it was closed to free memory. */
@@ -147,6 +159,7 @@ function createWindow(startHidden = false): void {
       setLauncherReleased(false)
     }
   })
+  win.webContents.on('did-finish-load', applyTextSize)
   win.on('maximize', () => toWindow(IPC.windowMaximizedChanged, true))
   win.on('unmaximize', () => toWindow(IPC.windowMaximizedChanged, false))
   win.on('closed', () => (win = null))
@@ -195,6 +208,16 @@ function registerIpc(): void {
 
   handle(IPC.gameState, () => getGameState())
   on(IPC.gameDismissError, () => dismissGameError())
+  handle(IPC.gameRecap, () => getSessionRecap())
+  on(IPC.gameDismissRecap, () => dismissSessionRecap())
+  handle(IPC.serverWatchSlot, (_e, on: unknown) => watchForSlot(on === true))
+  handle(IPC.serverSlotWatched, () => slotWatched())
+  handle(IPC.systemCleanupScan, () => scanCleanup())
+  handle(IPC.systemCleanupRun, async () => {
+    const g = getGameState()
+    if (g.phase === 'preparing' || g.background || g.runningAccounts.length) return { ok: false, reason: 'busy' }
+    return { ok: true, freed: await runCleanup() }
+  })
   on(IPC.gamePlay, (_e, opts: unknown) => {
     const active = getAccountsState().activeId
     const o = (opts ?? {}) as { target?: unknown; withoutPlayerMods?: unknown }
@@ -639,6 +662,7 @@ function registerIpc(): void {
     return runDevAction(action as DevAction, {
       window: () => win,
       release: () => toBackground(0),
+      sampleRecap: sampleSessionRecap,
       gameState: simulateGameState,
       notify: devNotify,
       discord: devDiscord,
@@ -800,6 +824,7 @@ if (!app.requestSingleInstanceLock()) {
     onSettingsChanged((s) => {
       toWindow(IPC.settingsChanged, s)
       onCommunitySettings(s)
+      applyTextSize()
     })
     // Launcher window while playing: hide (default), keep, or close. It comes back when the game exits.
     gameEvents.onLaunched = () => {
@@ -853,7 +878,7 @@ if (!app.requestSingleInstanceLock()) {
       lastStatus = status
       toWindow(IPC.serverStatusUpdate, devStatus(status))
       onServerStatus(devStatus(status) ?? status)
-    }, () => (!win || !win.isVisible()) && !getSettings().notifyServerBack) // "back online" needs every minute
+    }, () => (!win || !win.isVisible()) && !getSettings().notifyServerBack && !slotWatched()) // "back online" needs every minute
     void refreshAccount() // renew the active session silently in the background
     startFeedPolling((feed) => toWindow(IPC.feedChanged, devFeed(feed)))
     onUpdateState((s) => toWindow(IPC.launcherUpdateChanged, devUpdate(s)))

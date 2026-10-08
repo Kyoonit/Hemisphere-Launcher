@@ -136,7 +136,38 @@
     "downloadLimitValue": "{{value}} MB/s",
     "saveDataOnMetered": "Save data on metered connections",
     "saveDataOnMeteredHint": "On a phone hotspot or 4G, updates download only when you press PLAY.",
-    "saveDataOnMeteredNow": "Your connection is metered right now: updates download only when you press PLAY."
+    "saveDataOnMeteredNow": "Your connection is metered right now: updates download only when you press PLAY.",
+    "textSize": "Text size",
+    "textSizeHint": "Bigger text and buttons everywhere in the launcher.",
+    "textSizes": {
+      "100": "Normal",
+      "110": "Large",
+      "125": "Larger"
+    },
+    "cleanup": {
+      "title": "Free up space",
+      "scanning": "Looking for what can go…",
+      "nothing": "Nothing to clean: worlds, screenshots, mods and settings are never touched.",
+      "logs": "old logs",
+      "crashes": "old crash reports",
+      "downloads": "unfinished downloads",
+      "versions": "unused Minecraft versions",
+      "run": "Free {{size}}",
+      "runEmpty": "Free up",
+      "working": "Cleaning…",
+      "done": "{{size}} freed.",
+      "busy": "Not while the game runs or an update is being prepared."
+    },
+    "mic": {
+      "title": "Test your microphone",
+      "hint": "For voice chat: check that your microphone works before joining. Nothing is recorded.",
+      "speak": "Speak: the bar should move. Pick the same microphone in voice chat’s settings in game.",
+      "error": "No microphone found, or Windows blocks it (Settings > Privacy > Microphone).",
+      "test": "Test",
+      "stop": "Stop",
+      "default": "Default microphone",
+      "unnamed": "Microphone"
+    }
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -156,7 +187,9 @@
     "restartingLive": "Checking the server live (last check {{s}} s ago)",
     "backOnline": "Back online",
     "backAt": "Restart over at {{time}}",
-    "restartingShort": "Restarting"
+    "restartingShort": "Restarting",
+    "slotWatch": "Tell me when a place frees up",
+    "slotWatching": "You’ll be notified when one frees up"
   },
   "time": {
     "hm": "{{h}}h {{m}}m",
@@ -1145,7 +1178,8 @@
     "releaseTest": "Close the window now (test)",
     "perfMetered": "metered connection",
     "perfSaved": "Not downloaded again: {{notModified}} unchanged files ({{notModifiedSize}}), {{reused}} Minecraft files from another launcher ({{reusedSize}})",
-    "crashMemory": "Crash, out of memory"
+    "crashMemory": "Crash, out of memory",
+    "recapSample": "Session recap"
   },
   "launcherNews": {
     "intro": "Everything that changed in the launcher, day by day: {{count}} changes over {{days}} days.",
@@ -1166,5 +1200,14 @@
       "launcher": "Launcher"
     },
     "versions": "Versions {{version}}"
+  },
+  "recap": {
+    "played": "Session over: {{time}} played",
+    "hours": "{{h}} h {{m}}",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "screenshots_one": "{{count}} screenshot",
+    "screenshots_other": "{{count}} screenshots",
+    "close": "Close"
   }
 }

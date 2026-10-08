@@ -109,6 +109,8 @@ const api: HemisphereApi = {
   },
   server: {
     getStatus: () => ipcRenderer.invoke(IPC.serverStatusGet),
+    watchSlot: (on) => ipcRenderer.invoke(IPC.serverWatchSlot, on),
+    slotWatched: () => ipcRenderer.invoke(IPC.serverSlotWatched),
     onStatus: (cb) => {
       const listener = (_e: unknown, status: ServerStatus): void => cb(status)
       ipcRenderer.on(IPC.serverStatusUpdate, listener)
@@ -136,6 +138,8 @@ const api: HemisphereApi = {
     info: () => ipcRenderer.invoke(IPC.systemInfo),
     preflight: () => ipcRenderer.invoke(IPC.systemPreflight),
     lowEnd: () => ipcRenderer.invoke(IPC.systemLowEnd),
+    cleanupScan: () => ipcRenderer.invoke(IPC.systemCleanupScan),
+    cleanupRun: () => ipcRenderer.invoke(IPC.systemCleanupRun),
     metered: () => ipcRenderer.invoke(IPC.systemMetered),
     notificationsBlocked: () => ipcRenderer.invoke(IPC.systemNotificationsBlocked),
     openNotificationSettings: () => ipcRenderer.send(IPC.systemOpenNotificationSettings),
@@ -190,6 +194,8 @@ const api: HemisphereApi = {
     },
     play: (opts) => ipcRenderer.send(IPC.gamePlay, opts),
     dismissError: () => ipcRenderer.send(IPC.gameDismissError),
+    recap: () => ipcRenderer.invoke(IPC.gameRecap),
+    dismissRecap: () => ipcRenderer.send(IPC.gameDismissRecap),
     javaInfo: () => ipcRenderer.invoke(IPC.gameJava),
     repair: (mode) => ipcRenderer.invoke(IPC.gameRepair, mode),
   },

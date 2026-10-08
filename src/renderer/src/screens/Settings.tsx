@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bell, Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, FlaskConical, Flag, Gamepad2, History, KeyRound, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon, BellOff } from 'lucide-react'
+import { Bell, Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, FlaskConical, Flag, Gamepad2, History, KeyRound, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon, BellOff, Trash2, Mic, MicOff } from 'lucide-react'
 import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
 import type { JavaRuntimeInfo } from '@shared/game'
@@ -12,6 +12,7 @@ import Backups from './Backups'
 import Developer from './Developer'
 import type { DevAccess } from '@shared/dev'
 import type { LowEndInfo } from '@shared/performance'
+import { CLEANUP_CATEGORIES, type CleanupScan } from '@shared/cleanup'
 
 export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'backups' | 'advanced' | 'developer'
 
@@ -147,6 +148,7 @@ function GameSettings() {
           ))}
         </select>
       </Row>
+      <MicTest />
       <Row title={t('settings.autoJoin')} hint={t('settings.autoJoinHint')}>
         <Toggle on={settings.autoJoin} onChange={(autoJoin) => update({ autoJoin })} label={t('settings.autoJoin')} />
       </Row>
@@ -156,6 +158,117 @@ function GameSettings() {
         </Row>
       )}
     </div>
+  )
+}
+
+/** Free up space: what can go, by kind, and one button. Worlds, screenshots, mods and settings are never touched. */
+function FreeUpSpace() {
+  const { t } = useTranslation()
+  const [scan, setScan] = useState<CleanupScan | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState<{ ok: boolean; text: string } | null>(null)
+  const load = () => void window.hemisphere.system.cleanupScan().then(setScan)
+  useEffect(load, [])
+  const mb = (b: number) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} ${t('settings.gb')}` : `${Math.max(1, Math.round(b / 1024 ** 2))} ${t('settings.mb')}`)
+  const parts = scan ? CLEANUP_CATEGORIES.filter((c) => scan.categories[c].items > 0).map((c) => `${t(`settings.cleanup.${c}`)} ${mb(scan.categories[c].bytes)}`) : []
+  return (
+    <>
+      <Row title={t('settings.cleanup.title')} hint={!scan ? t('settings.cleanup.scanning') : parts.length ? parts.join(' · ') : t('settings.cleanup.nothing')}>
+        <button
+          disabled={busy || !scan || scan.totalBytes === 0}
+          onClick={async () => {
+            setBusy(true)
+            setDone(null)
+            const r = await window.hemisphere.system.cleanupRun()
+            setBusy(false)
+            setDone(r.ok ? { ok: true, text: t('settings.cleanup.done', { size: mb(r.freed) }) } : { ok: false, text: t('settings.cleanup.busy') })
+            load()
+          }}
+          className={buttonClass}
+        >
+          <Trash2 size={16} /> {busy ? t('settings.cleanup.working') : scan && scan.totalBytes > 0 ? t('settings.cleanup.run', { size: mb(scan.totalBytes) }) : t('settings.cleanup.runEmpty')}
+        </button>
+      </Row>
+      {done && <Notice ok={done.ok}>{done.text}</Notice>}
+    </>
+  )
+}
+
+/** Voice chat: is the microphone working? A live level meter (nothing is recorded or sent). */
+function MicTest() {
+  const { t } = useTranslation()
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
+  const [deviceId, setDeviceId] = useState('')
+  const [level, setLevel] = useState<number | null>(null)
+  const [error, setError] = useState(false)
+  const stop = useRef<(() => void) | null>(null)
+  useEffect(() => () => stop.current?.(), [])
+  const start = async (id = deviceId) => {
+    stop.current?.()
+    setError(false)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: id ? { deviceId: { exact: id } } : true, video: false })
+      const ctx = new AudioContext()
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 512
+      ctx.createMediaStreamSource(stream).connect(analyser)
+      const data = new Uint8Array(analyser.fftSize)
+      let frame = 0
+      const tick = () => {
+        analyser.getByteTimeDomainData(data)
+        let peak = 0
+        for (const v of data) peak = Math.max(peak, Math.abs(v - 128) / 128)
+        setLevel(Math.min(1, peak * 1.6))
+        frame = requestAnimationFrame(tick)
+      }
+      tick()
+      stop.current = () => {
+        cancelAnimationFrame(frame)
+        stream.getTracks().forEach((tr) => tr.stop())
+        void ctx.close()
+        stop.current = null
+        setLevel(null)
+      }
+      setDevices((await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput'))
+    } catch {
+      setError(true)
+      setLevel(null)
+    }
+  }
+  return (
+    <Row title={t('settings.mic.title')} hint={error ? t('settings.mic.error') : level !== null ? t('settings.mic.speak') : t('settings.mic.hint')}>
+      <div className="flex items-center gap-2">
+        {level !== null && (
+          <>
+            {devices.length > 1 && (
+              <select
+                value={deviceId}
+                onChange={(e) => {
+                  setDeviceId(e.target.value)
+                  void start(e.target.value)
+                }}
+                className={`${selectClass} max-w-[200px]`}
+              >
+                <option value="">{t('settings.mic.default')}</option>
+                {devices
+                  .filter((d) => d.deviceId !== 'default' && d.deviceId !== 'communications')
+                  .map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || t('settings.mic.unnamed')}
+                    </option>
+                  ))}
+              </select>
+            )}
+            <span className="h-2.5 w-28 overflow-hidden rounded-full bg-gray-700" role="meter" aria-valuenow={Math.round(level * 100)} aria-valuemin={0} aria-valuemax={100} aria-label={t('settings.mic.title')}>
+              <i className={`block h-full rounded-full ${level > 0.85 ? 'bg-amber-400' : 'bg-green-400'}`} style={{ width: `${level * 100}%` }} />
+            </span>
+          </>
+        )}
+        <button onClick={() => (level !== null ? stop.current?.() : void start())} className={buttonClass}>
+          {level !== null ? <MicOff size={16} /> : <Mic size={16} />} {level !== null ? t('settings.mic.stop') : t('settings.mic.test')}
+        </button>
+      </div>
+    </Row>
   )
 }
 
@@ -251,6 +364,15 @@ function LauncherSettings() {
         </select>
       </Row>
       <LightModeRow lightMode={settings.lightMode} onChange={(lightMode) => update({ lightMode })} />
+      <Row title={t('settings.textSize')} hint={t('settings.textSizeHint')}>
+        <select value={settings.textSize} onChange={(e) => update({ textSize: Number(e.target.value) as Settings['textSize'] })} className={selectClass}>
+          {([100, 110, 125] as const).map((v) => (
+            <option key={v} value={v}>
+              {t(`settings.textSizes.${v}`)}
+            </option>
+          ))}
+        </select>
+      </Row>
       <Row title={t('settings.language')} hint={t('settings.languageHint')}>
         <select value={settings.language} onChange={(e) => changeLanguage(e.target.value)} className={selectClass}>
           <option value="auto">{t('settings.languageAuto')}</option>
@@ -442,6 +564,7 @@ function InstallationSettings({ onRepair, onImport, onReport }: { onRepair(): vo
           </button>
         </div>
       </Row>
+      <FreeUpSpace />
       <Row title={t('import.settingsTitle')} hint={t('import.settingsHint')}>
         <button onClick={onImport} className={buttonClass}>
           <Upload size={16} /> {t('import.settingsButton')}

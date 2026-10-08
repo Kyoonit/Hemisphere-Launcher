@@ -43,6 +43,14 @@ export interface GameState {
   background: boolean
 }
 
+/** The last game session, for the small recap on Home (shown for a while after the game closes). */
+export interface SessionRecap {
+  endedAt: number
+  durationMs: number
+  /** screenshots taken during the session */
+  screenshots: number
+}
+
 /** latest = current client (auto-joins if enabled); previous = "Play on <old Minecraft>" (never auto-joins) */
 export type PlayTarget = 'latest' | 'previous'
 
