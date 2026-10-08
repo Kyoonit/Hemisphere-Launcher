@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, Layers, LoaderCircle, Settings2 } from 'lucide-react'
 import type { ModSetsState } from '@shared/modSets'
+import { presetDetails } from '../presets'
 
 /** An action that couldn't reach the launcher's core: shown as an error, never silently ignored. */
 const failed = { ok: false, reason: 'failed' } as const
@@ -106,7 +107,7 @@ export default function SetSwitcher({ onManage }: { onManage(): void }) {
                       aria-checked={isActive}
                       onClick={() => switchTo(s.id)}
                       disabled={!!busy}
-                      title={t('sets.counts', { count: s.mods, on: s.enabled })}
+                      title={presetDetails(s, t)}
                       className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors disabled:cursor-wait ${isActive ? 'bg-green-900/30 text-white' : 'text-gray-200 hover:bg-gray-800'}`}
                     >
                       <span className="grid w-3.5 flex-none place-items-center">

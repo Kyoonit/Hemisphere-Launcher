@@ -1,6 +1,8 @@
 
 import { app, BrowserWindow, clipboard, dialog, shell } from 'electron'
+import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { gamePaths } from './core/game/target'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
 import { getServerStatus, startStatusPolling } from './core/status/serverStatus'
@@ -45,6 +47,8 @@ import { handle, hardenApp, on, trustWindow } from './security'
 import { copyScreenshot, deleteScreenshot, exportScreenshots, listScreenshots, registerScreenshotScheme, serveScreenshots, showScreenshotInFolder } from './core/system/screenshots'
 import { checkForUpdates, getUpdateState, installUpdateNow, onUpdateState, startUpdater } from './core/system/updater'
 import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePoints, previewRestore, restorePoint } from './core/backup/restorePoints'
+import { checkPackUpdates, installPack, knownPackProjects, listPacks, moveResourcePack, packVersions, removePack, setPackActive, setPackLock, setPackVersion, shadersOff, updatePacks } from './core/packs/packs'
+import { PACK_TYPES, type PackType } from '@shared/packs'
 import { deleteSet, duplicateSet, importSetCode, isSetId, listSets, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
 
@@ -151,7 +155,7 @@ function registerIpc(): void {
   })
   handle(IPC.systemPreflight, () => preflightWarnings())
   on(IPC.systemOpenFolder, (_e, kind: unknown) => {
-    const kinds: FolderKind[] = ['game', 'mods', 'screenshots', 'gameLogs', 'crashReports', 'launcherLogs']
+    const kinds: FolderKind[] = ['game', 'mods', 'resourcepacks', 'shaderpacks', 'screenshots', 'gameLogs', 'crashReports', 'launcherLogs']
     if (kinds.includes(kind as FolderKind)) void openFolder(kind as FolderKind)
   })
   handle(IPC.systemDiagnostics, () => copyDiagnostics())
@@ -396,6 +400,82 @@ function registerIpc(): void {
     if (typeof id !== 'string' || id.length > 40) return { ok: false, reason: 'notPossible' }
     if (modsBusy()) return { ok: false, reason: 'busy' }
     return withManifest({ ok: false, reason: 'network' }, (m) => undoHistory(id, m, getFeed().modPolicy))
+  })
+  // Resource packs and shaders. Changing them while the game runs is refused (Minecraft and Iris rewrite their
+  // settings when they close).
+  const isPackType = (t: unknown): t is PackType => PACK_TYPES.includes(t as PackType)
+  const isPackFile = (f: unknown): f is string => typeof f === 'string' && f.length > 0 && f.length <= 200 && !/[\\/:*?"<>|]/.test(f) && f !== '.' && f !== '..'
+  /** Iris installed and on: Hemisphere's Iris switched on (and not taken over), or the player's own Iris jar in mods/. */
+  const irisReady = async (manifest: ClientManifest) => {
+    const state = await readInstanceState()
+    const iris = manifest.mods.find((m) => m.source?.modrinth.projectId === 'YL57xq9U')
+    if (iris && !state.detached.includes(iris.id) && (await getEnabledMods(manifest)).includes(iris.id)) return true
+    const mods = join(gamePaths().instance, 'mods')
+    return existsSync(mods) && readdirSync(mods).some((f) => /^iris[-_].*\.jar$/i.test(f))
+  }
+  handle(IPC.packsList, async (_e, type: unknown) =>
+    isPackType(type) ? withManifest(null, async (m) => listPacks(type, m.minecraft, getFeed().modPolicy, type === 'shader' ? await irisReady(m) : false)) : null,
+  )
+  handle(IPC.packsSetActive, async (_e, type: unknown, file: unknown, on: unknown) =>
+    isPackType(type) && isPackFile(file) && typeof on === 'boolean' && !modsBusy() ? setPackActive(type, file, on) : false,
+  )
+  handle(IPC.packsShadersOff, async () => (modsBusy() ? false : shadersOff().then(() => true)))
+  handle(IPC.packsMove, async (_e, file: unknown, delta: unknown) => (isPackFile(file) && (delta === -1 || delta === 1) && !modsBusy() ? moveResourcePack(file, delta) : false))
+  handle(IPC.packsRemove, async (_e, type: unknown, file: unknown) => (isPackType(type) && isPackFile(file) && !modsBusy() ? removePack(type, file) : false))
+  handle(IPC.packsVersions, async (_e, type: unknown, file: unknown) =>
+    isPackType(type) && isPackFile(file) ? withManifest<ModVersionChoice[] | null>(null, (m) => packVersions(type, file, m.minecraft)) : null,
+  )
+  handle(IPC.packsSetVersion, async (_e, type: unknown, file: unknown, versionId: unknown, lock: unknown) => {
+    if (!isPackType(type) || !isPackFile(file) || typeof versionId !== 'string' || !MODRINTH_ID.test(versionId)) return { ok: false, reason: 'notFound' }
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    return withManifest({ ok: false, reason: 'network' }, (m) => setPackVersion(type, file, versionId, m.minecraft, lock === true))
+  })
+  handle(IPC.packsSetLock, async (_e, type: unknown, file: unknown, locked: unknown) =>
+    isPackType(type) && isPackFile(file) && typeof locked === 'boolean' && !modsBusy() ? withManifest(false, (m) => setPackLock(type, file, locked, m.minecraft)) : false,
+  )
+  handle(IPC.packsCheckUpdates, async (_e, type: unknown) => (isPackType(type) ? withManifest<UpdateCheck | null>(null, (m) => checkPackUpdates(type, m.minecraft)) : null))
+  handle(IPC.packsUpdateAll, async (_e, type: unknown) => (isPackType(type) && !modsBusy() ? withManifest<UpdateApplied | null>(null, (m) => updatePacks(type, m.minecraft)) : null))
+  handle(IPC.packsSearch, async (_e, type: unknown, query: unknown, offset: unknown): Promise<ModSearchResult | null> => {
+    if (!isPackType(type) || typeof query !== 'string' || typeof offset !== 'number' || !Number.isInteger(offset) || offset < 0 || offset > 10_000) return null
+    try {
+      const { manifest } = await getContent()
+      const res = await searchMods(query, manifest.minecraft, offset, [], 20, type)
+      const mine = knownPackProjects(type)
+      const policy = getFeed().modPolicy
+      return {
+        minecraft: manifest.minecraft,
+        total: res.total_hits,
+        offset: res.offset,
+        hits: res.hits.map((h) => ({
+          projectId: h.project_id,
+          slug: h.slug,
+          title: h.title,
+          description: h.description.slice(0, 300),
+          author: h.author,
+          icon: safeIcon(h.icon_url),
+          downloads: h.downloads,
+          ...policyFor(policy, h.project_id),
+          state: mine.has(h.project_id) ? 'installed' : 'available',
+        })),
+      }
+    } catch (err) {
+      console.warn('[packs] search failed:', err)
+      return null
+    }
+  })
+  handle(IPC.packsProjectVersions, async (_e, type: unknown, projectId: unknown): Promise<ModVersionChoice[] | null> => {
+    if (!isPackType(type) || typeof projectId !== 'string' || !MODRINTH_ID.test(projectId)) return null
+    return withManifest<ModVersionChoice[] | null>(null, async (m) => {
+      const versions = (await projectVersions(projectId, m.minecraft, type)).sort((a, b) => b.date_published.localeCompare(a.date_published))
+      const latest = pickVersion(versions)
+      return versions.slice(0, 60).map((v) => ({ id: v.id, versionNumber: v.version_number, name: v.name, type: v.version_type, published: v.date_published, current: false, latest: v.id === latest?.id, locked: false }))
+    })
+  })
+  handle(IPC.packsInstall, async (_e, type: unknown, projectId: unknown, confirmed: unknown, versionId: unknown): Promise<InstallResult> => {
+    if (!isPackType(type) || typeof projectId !== 'string' || !MODRINTH_ID.test(projectId)) return { ok: false, reason: 'notCompatible' }
+    if (versionId !== null && versionId !== undefined && (typeof versionId !== 'string' || !MODRINTH_ID.test(versionId))) return { ok: false, reason: 'notCompatible' }
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    return withManifest<InstallResult>({ ok: false, reason: 'network' }, (m) => installPack(type, projectId, confirmed === true, m.minecraft, getFeed().modPolicy, (versionId as string | null) ?? null))
   })
   handle(IPC.feedGet, () => getFeed())
   on(IPC.feedOpenLink, (_e, id: unknown) => {

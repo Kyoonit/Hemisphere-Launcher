@@ -183,7 +183,7 @@ export async function importFrom(source: ImportSource, opts: ImportOptions, mani
         const old = known[hash]
         const v = compatible[hash]
         const file = v ? primaryFile(v) : undefined
-        if (!v || !file) {
+        if (!v || !file || !isSafeModFileName(file.filename)) {
           report.modsUnavailable.push(title(old))
           continue
         }

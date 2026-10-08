@@ -6,7 +6,7 @@ import AccountMenu from './components/AccountMenu'
 import Home from './screens/Home'
 import Login from './screens/Login'
 import News from './screens/News'
-import Mods from './screens/Mods'
+import Content, { type BrowseKind, type ContentTab } from './screens/Content'
 import Repair from './screens/Repair'
 import Import from './screens/Import'
 import ModBrowser from './screens/ModBrowser'
@@ -23,6 +23,9 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [settingsSection, setSettingsSection] = useState<Section>('game')
   const [addingAccount, setAddingAccount] = useState(false)
+  // Content: which tab, and what Find searches (back from Find or History lands on the same tab)
+  const [contentTab, setContentTab] = useState<ContentTab>('mods')
+  const [browseKind, setBrowseKind] = useState<BrowseKind>('mod')
 
   // Opening News (or news arriving while it's open) marks every item as seen: the red badge goes away.
   const feed = useFeed()
@@ -59,11 +62,30 @@ export default function App() {
             <Login onBack={needsLogin ? undefined : () => setAddingAccount(false)} />
           ) : (
             <>
-              {screen === 'home' && <Home onOpenNews={() => setScreen('news')} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} onOpenMods={() => setScreen('mods')} />}
+              {screen === 'home' && <Home
+                  onOpenNews={() => setScreen('news')}
+                  onRepair={() => setScreen('repair')}
+                  onImport={() => setScreen('import')}
+                  onOpenMods={() => {
+                    setContentTab('mods')
+                    setScreen('mods')
+                  }}
+                />}
               {screen === 'news' && <News />}
-              {screen === 'mods' && <Mods onImport={() => setScreen('import')} onBrowse={() => setScreen('browse')} onHistory={() => setScreen('modHistory')} />}
+              {screen === 'mods' && (
+                <Content
+                  tab={contentTab}
+                  onTab={setContentTab}
+                  onBrowse={(kind) => {
+                    setBrowseKind(kind)
+                    setScreen('browse')
+                  }}
+                  onHistory={() => setScreen('modHistory')}
+                  onImport={() => setScreen('import')}
+                />
+              )}
               {screen === 'modHistory' && <ModHistory onBack={() => setScreen('mods')} />}
-              {screen === 'browse' && <ModBrowser onBack={() => setScreen('mods')} />}
+              {screen === 'browse' && <ModBrowser kind={browseKind} onBack={() => setScreen('mods')} />}
               {screen === 'screenshots' && <Screenshots />}
               {screen === 'settings' && <Settings initialSection={settingsSection} onAddAccount={() => setAddingAccount(true)} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} />}
               {screen === 'import' && <Import onClose={() => setScreen('home')} />}

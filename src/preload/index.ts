@@ -52,6 +52,21 @@ const api: HemisphereApi = {
     list: () => ipcRenderer.invoke(IPC.historyList),
     undo: (id) => ipcRenderer.invoke(IPC.historyUndo, id),
   },
+  packs: {
+    list: (type) => ipcRenderer.invoke(IPC.packsList, type),
+    setActive: (type, file, on) => ipcRenderer.invoke(IPC.packsSetActive, type, file, on),
+    shadersOff: () => ipcRenderer.invoke(IPC.packsShadersOff),
+    move: (file, delta) => ipcRenderer.invoke(IPC.packsMove, file, delta),
+    remove: (type, file) => ipcRenderer.invoke(IPC.packsRemove, type, file),
+    versions: (type, file) => ipcRenderer.invoke(IPC.packsVersions, type, file),
+    setVersion: (type, file, versionId, lock) => ipcRenderer.invoke(IPC.packsSetVersion, type, file, versionId, lock),
+    setLock: (type, file, locked) => ipcRenderer.invoke(IPC.packsSetLock, type, file, locked),
+    checkUpdates: (type) => ipcRenderer.invoke(IPC.packsCheckUpdates, type),
+    updateAll: (type) => ipcRenderer.invoke(IPC.packsUpdateAll, type),
+    search: (type, query, offset) => ipcRenderer.invoke(IPC.packsSearch, type, query, offset),
+    projectVersions: (type, projectId) => ipcRenderer.invoke(IPC.packsProjectVersions, type, projectId),
+    install: (type, projectId, confirmed, versionId) => ipcRenderer.invoke(IPC.packsInstall, type, projectId, confirmed, versionId ?? null),
+  },
   launcherUpdate: {
     get: () => ipcRenderer.invoke(IPC.launcherUpdateGet),
     onChange: (cb) => {

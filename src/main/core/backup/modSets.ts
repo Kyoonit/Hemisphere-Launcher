@@ -12,6 +12,8 @@ import { record } from '../modrinth/history'
 import { readPlayerRegistry, registryKey, withPlayerMods, type PlayerModRecord } from '../modrinth/playerMods'
 import { blobPath, downloadToStore } from '../sync/download'
 import { readInstanceState } from '../sync/sync'
+import { packEntries } from '../packs/packs'
+import { readResourcePacks, readShaders, writeResourcePacks, writeShaders } from '../packs/gameSettings'
 import { applyPlan, cleanJars, currentMods, jarPath, setsDir, storeJar, withJarStore, type PointMod } from './restorePoints'
 
 /**
@@ -32,6 +34,8 @@ interface ModSet {
   detached: string[]
   mods: PointMod[]
   registry: Record<string, PlayerModRecord>
+  /** resource packs that are on (top first) and the shader in use; missing in sets saved before packs (left as is) */
+  packs?: { resource: string[]; shader: { pack: string; on: boolean } }
 }
 
 export const isSetId = (id: unknown): id is string => typeof id === 'string' && /^s[0-9a-z]{8,12}-[0-9a-f]{4}$/.test(id)
@@ -67,7 +71,15 @@ async function activeId(): Promise<string | null> {
 }
 const setActive = (id: string | null) => writeJson(activeFile(), { id })
 const newId = () => `s${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`
-const info = (s: ModSet): ModSetInfo => ({ id: s.id, name: s.name, mods: s.mods.length, enabled: s.mods.filter((m) => m.enabled).length, updatedAt: s.updatedAt })
+const info = (s: ModSet): ModSetInfo => ({
+  id: s.id,
+  name: s.name,
+  mods: s.mods.length,
+  enabled: s.mods.filter((m) => m.enabled).length,
+  packs: s.packs?.resource.length ?? null,
+  shader: s.packs ? (s.packs.shader.on && s.packs.shader.pack ? s.packs.shader.pack.replace(/\.zip$/i, '') : '') : null,
+  updatedAt: s.updatedAt,
+})
 const uniqueName = (name: string, sets: ModSet[], except?: string) => {
   const taken = new Set(sets.filter((s) => s.id !== except).map((s) => s.name.toLowerCase()))
   let out = name
@@ -106,7 +118,7 @@ export const listSets = (): Promise<ModSetsState> =>
   })
 
 /** The mods as they are now (their files kept), ready to be saved in a set. */
-async function capture(): Promise<Pick<ModSet, 'choices' | 'detached' | 'mods' | 'registry'>> {
+async function capture(): Promise<Pick<ModSet, 'choices' | 'detached' | 'mods' | 'registry' | 'packs'>> {
   const state = await readInstanceState()
   const { mods, reg } = await withPlayerMods(async () => {
     const reg = readPlayerRegistry()
@@ -120,6 +132,8 @@ async function capture(): Promise<Pick<ModSet, 'choices' | 'detached' | 'mods' |
     detached: state.detached,
     mods: mods.map(({ path: _p, ...m }) => m),
     registry: Object.fromEntries(mods.flatMap((m) => (reg[registryKey(m.file)] ? [[registryKey(m.file), reg[registryKey(m.file)]]] : []))),
+    // packs: only which are on (and the order) and the shader; the files stay in their folders for every preset
+    packs: { resource: (await readResourcePacks()).active, shader: await readShaders() },
   }
 }
 
@@ -207,6 +221,13 @@ export const switchSet = (id: string, manifest: ClientManifest | null, fallbackN
         },
         manifest,
       )
+      if (target.packs) {
+        const resource = new Set(packEntries('resourcepack').map((e) => e.file))
+        const shaders = new Set(packEntries('shader').map((e) => e.file))
+        await writeResourcePacks(target.packs.resource.filter((f) => resource.has(f)))
+        const { pack, on } = target.packs.shader
+        await writeShaders(shaders.has(pack) ? { pack, on } : { pack: '', on: false })
+      }
       await setActive(id)
       void record({ kind: 'setSwitch', name: target.name })
       console.log(`[mod-sets] switched to "${target.name}" (${target.mods.length} mods)${missing.length ? `, missing: ${missing.join(', ')}` : ''}`)

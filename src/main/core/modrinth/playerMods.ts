@@ -234,6 +234,7 @@ export const hemisphereProjects = (manifest: ClientManifest) => new Set(manifest
 /** Downloads one version's file (hash-verified) into mods/. Returns the file name. */
 async function placeVersion(v: ModrinthVersion, dir = modsDir()): Promise<string> {
   const f = primaryFile(v)
+  if (!isSafeModFileName(f.filename)) throw new Error(`not a mod file: ${f.filename}`)
   const store = join(gamePaths().root, 'store')
   await downloadToStore(store, { url: f.url, sha512: f.hashes.sha512, size: f.size }, () => {})
   await mkdir(dir, { recursive: true })

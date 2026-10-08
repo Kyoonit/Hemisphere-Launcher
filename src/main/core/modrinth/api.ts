@@ -12,6 +12,12 @@ const headers = () => ({ 'User-Agent': `Kyoonit/Hemisphere-Launcher/${app.getVer
 
 /** A plain .jar file name that is safe to create in mods/ (no folders, reserved names or odd characters). */
 export const isSafeModFileName = (f: string) => /\.jar$/i.test(f) && !f.startsWith('.') && !f.includes('/') && isSafeRelativePath(`mods/${f}`)
+/** A plain .zip file name that is safe to create in resourcepacks/ or shaderpacks/. */
+export const isSafePackFileName = (f: string) => /\.zip$/i.test(f) && !f.startsWith('.') && !f.includes('/') && isSafeRelativePath(`resourcepacks/${f}`)
+
+/** What Modrinth calls the kinds of content the launcher installs, and the loaders their versions are made for. */
+export type ProjectKind = 'mod' | 'resourcepack' | 'shader'
+export const LOADERS: Record<ProjectKind, string[]> = { mod: ['fabric'], resourcepack: ['minecraft'], shader: ['iris', 'optifine'] }
 
 const modrinthCdn = (u: string) => {
   try {
@@ -42,7 +48,8 @@ export const VersionSchema = z.object({
   files: z.array(
     z.object({
       url: z.string().refine(modrinthCdn, 'not on cdn.modrinth.com'),
-      filename: z.string().refine((n) => isSafeModFileName(n), 'unsafe file name'),
+      // a mod (.jar) or a pack (.zip); where it may go is checked again where it's placed
+      filename: z.string().refine((n) => isSafeModFileName(n) || isSafePackFileName(n), 'unsafe file name'),
       primary: z.boolean(),
       size: z.number().int().positive().max(512 * 1024 * 1024),
       hashes: z.object({ sha512: z.string().regex(/^[0-9a-f]{128}$/) }),
@@ -96,15 +103,17 @@ async function post(path: string, body: unknown): Promise<unknown> {
 export const safeIcon = (url: string | null | undefined) => (url && modrinthCdn(url) ? url : '')
 
 /** Fabric mods for one Minecraft version. Empty query = most downloaded. exclude = project ids left out. */
-export async function searchMods(query: string, minecraft: string, offset: number, exclude: string[] = [], limit = 20) {
-  const facets = JSON.stringify([['project_type:mod'], ['categories:fabric'], [`versions:${minecraft}`], ...exclude.map((id) => [`project_id!=${id}`])])
+export async function searchMods(query: string, minecraft: string, offset: number, exclude: string[] = [], limit = 20, kind: ProjectKind = 'mod') {
+  // shaders: the formats Iris reads (its own and OptiFine's)
+  const loader = kind === 'mod' ? [['categories:fabric']] : kind === 'shader' ? [['categories:iris', 'categories:optifine']] : []
+  const facets = JSON.stringify([[`project_type:${kind}`], ...loader, [`versions:${minecraft}`], ...exclude.map((id) => [`project_id!=${id}`])])
   const params = new URLSearchParams({ query: query.slice(0, 100), facets, offset: String(offset), limit: String(limit), index: query.trim() ? 'relevance' : 'downloads' })
   return SearchSchema.parse(await get(`/search?${params}`))
 }
 
-/** Versions of a project for Fabric + this Minecraft version, newest first (as Modrinth returns them). */
-export async function projectVersions(projectId: string, minecraft: string): Promise<ModrinthVersion[]> {
-  const params = new URLSearchParams({ loaders: JSON.stringify(['fabric']), game_versions: JSON.stringify([minecraft]) })
+/** Versions of a project for this Minecraft version (Fabric for mods), newest first (as Modrinth returns them). */
+export async function projectVersions(projectId: string, minecraft: string, kind: ProjectKind = 'mod'): Promise<ModrinthVersion[]> {
+  const params = new URLSearchParams({ loaders: JSON.stringify(LOADERS[kind]), game_versions: JSON.stringify([minecraft]) })
   const raw = await get(`/project/${encodeURIComponent(projectId)}/version?${params}`)
   // one broken version (odd file name…) must not hide the others
   return z.array(z.unknown()).parse(raw).flatMap((v) => {
@@ -160,9 +169,9 @@ export async function versionsByHash(hashes: string[]): Promise<Record<string, M
 }
 
 /** sha512 -> newest Fabric version of the same project for this Minecraft version (missing = none exists). */
-export async function latestByHash(hashes: string[], minecraft: string): Promise<Record<string, ModrinthVersion>> {
+export async function latestByHash(hashes: string[], minecraft: string, kind: ProjectKind = 'mod'): Promise<Record<string, ModrinthVersion>> {
   if (!hashes.length) return {}
-  return parseVersionMap(await post('/version_files/update', { hashes, algorithm: 'sha512', loaders: ['fabric'], game_versions: [minecraft] }))
+  return parseVersionMap(await post('/version_files/update', { hashes, algorithm: 'sha512', loaders: LOADERS[kind], game_versions: [minecraft] }))
 }
 
 /** Best version to install: newest release, else newest beta, else newest alpha. */
@@ -183,10 +192,10 @@ export const primaryFile = (v: ModrinthVersion) => v.files.find((f) => f.primary
  * used instead (betas/alphas only when the mod has no release at all), and never anything older than the current one.
  * null = nothing to update.
  */
-export async function updateTarget(projectId: string, currentVersionId: string, latest: ModrinthVersion, minecraft: string): Promise<ModrinthVersion | null> {
+export async function updateTarget(projectId: string, currentVersionId: string, latest: ModrinthVersion, minecraft: string, kind: ProjectKind = 'mod'): Promise<ModrinthVersion | null> {
   if (latest.project_id !== projectId) return null
   if (latest.version_type === 'release') return latest.id === currentVersionId ? null : latest
-  const all = await projectVersions(projectId, minecraft)
+  const all = await projectVersions(projectId, minecraft, kind)
   const best = pickVersion(all)
   if (!best || best.id === currentVersionId) return null
   const current = all.find((v) => v.id === currentVersionId)

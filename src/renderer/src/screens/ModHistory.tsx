@@ -98,7 +98,10 @@ export default function ModHistory({ onBack }: { onBack(): void }) {
                     <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-gray-800 text-green-400">
                       <Icon size={15} />
                     </span>
-                    <span className="min-w-0 flex-1 text-[13.5px] text-gray-200">{describe(e, t)}</span>
+                    <span className="min-w-0 flex-1 text-[13.5px] text-gray-200">
+                      {describe(e, t)}
+                      {e.type && e.type !== 'mod' && <span className="ml-2 rounded-full bg-gray-700/80 px-2 py-px text-[11px] font-semibold text-gray-300">{t(`history.types.${e.type}`)}</span>}
+                    </span>
                     <span className="flex-none text-xs text-gray-500 tabular-nums">{new Date(e.at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}</span>
                     {e.undo && (
                       <button

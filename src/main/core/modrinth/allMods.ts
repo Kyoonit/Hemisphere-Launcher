@@ -9,6 +9,7 @@ import { detachMod, readInstanceState, reattachMod } from '../sync/sync'
 import { latestByHash, pickVersion, projectVersions, updateTarget } from './api'
 import { createRestorePoint } from '../backup/restorePoints'
 import { readHistory, record } from './history'
+import { listPacks, packUndoFor } from '../packs/packs'
 import type { ModHistoryEntry, ModHistoryItem, UndoResult } from '@shared/modSets'
 import {
   checkPlayerModUpdates,
@@ -223,7 +224,7 @@ type Undo = (manifest: ClientManifest, policy: ModPolicy | null | undefined) => 
 
 /** How to undo a change, or null: only a mod's newest change, while the mod is still exactly as it left it. */
 function undoFor(e: ModHistoryEntry, items: ModItem[]): Undo | null {
-  if (!e.projectId) return null
+  if (!e.projectId || (e.type && e.type !== 'mod')) return null
   const mine = items.find((i) => !i.managed && i.projectId === e.projectId)
   const asLeft = !!mine && mine.versionNumber === e.to
   const done = (ok: boolean): UndoResult => (ok ? { ok: true } : { ok: false, reason: 'notPossible' })
@@ -257,12 +258,22 @@ function undoFor(e: ModHistoryEntry, items: ModItem[]): Undo | null {
 /** The mod history, newest first, with what can still be undone. */
 export async function listHistory(manifest: ClientManifest, policy: ModPolicy | null | undefined): Promise<ModHistoryItem[]> {
   const items = await listMods(manifest, policy)
+  const history = readHistory()
+  const packs = await packLists(history, manifest, policy)
   const seen = new Set<string>()
-  return readHistory().map((e) => {
+  return history.map((e) => {
     const newest = !!e.projectId && !seen.has(e.projectId)
     if (e.projectId) seen.add(e.projectId)
-    return { ...e, undo: newest && !!undoFor(e, items) }
+    const can = e.type && e.type !== 'mod' ? !!packUndoFor(e, packs[e.type] ?? [], manifest.minecraft, policy) : !!undoFor(e, items)
+    return { ...e, undo: newest && can }
   })
+}
+
+/** The packs as they are now, only for the kinds the history mentions. */
+async function packLists(history: ModHistoryEntry[], manifest: ClientManifest, policy: ModPolicy | null | undefined) {
+  const out: Partial<Record<'resourcepack' | 'shader', Awaited<ReturnType<typeof listPacks>>['items']>> = {}
+  for (const type of ['resourcepack', 'shader'] as const) if (history.some((e) => e.type === type)) out[type] = (await listPacks(type, manifest.minecraft, policy)).items
+  return out
 }
 
 export async function undoHistory(id: string, manifest: ClientManifest, policy: ModPolicy | null | undefined): Promise<UndoResult> {
@@ -270,6 +281,10 @@ export async function undoHistory(id: string, manifest: ClientManifest, policy: 
   if (!entry) return { ok: false, reason: 'notPossible' }
   const newer = readHistory().find((e) => e.projectId === entry.projectId)
   if (newer?.id !== id) return { ok: false, reason: 'notPossible' }
+  if (entry.type && entry.type !== 'mod') {
+    const undoPack = packUndoFor(entry, (await packLists([entry], manifest, policy))[entry.type] ?? [], manifest.minecraft, policy)
+    return undoPack && (await undoPack()) ? { ok: true } : { ok: false, reason: 'notPossible' }
+  }
   const undo = undoFor(entry, await listMods(manifest, policy))
   return undo ? undo(manifest, policy) : { ok: false, reason: 'notPossible' }
 }

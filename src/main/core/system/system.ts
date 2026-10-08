@@ -48,13 +48,15 @@ export async function preflightWarnings(): Promise<PreflightWarning[]> {
 const LOW_DISK_GB = 2
 const LOW_RAM_GB = 6
 
-export type FolderKind = 'game' | 'mods' | 'screenshots' | 'gameLogs' | 'crashReports' | 'launcherLogs'
+export type FolderKind = 'game' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'screenshots' | 'gameLogs' | 'crashReports' | 'launcherLogs'
 
 export async function openFolder(kind: FolderKind): Promise<void> {
   const p = gamePaths()
   const path = {
     game: p.instance,
     mods: join(p.instance, 'mods'),
+    resourcepacks: join(p.instance, 'resourcepacks'),
+    shaderpacks: join(p.instance, 'shaderpacks'),
     screenshots: join(p.instance, 'screenshots'),
     gameLogs: join(p.instance, 'logs'),
     crashReports: join(p.instance, 'crash-reports'),

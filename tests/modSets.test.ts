@@ -196,3 +196,28 @@ describe('duplicating a set', () => {
     expect(on()).not.toContain('litematica-1.0.jar')
   })
 })
+
+describe('presets with packs', () => {
+  test('a preset remembers which resource packs are on (in order) and the shader, and puts them back', async () => {
+    const { readFileSync } = await import('node:fs')
+    for (const f of ['A.zip', 'B.zip', 'C.zip']) put(`resourcepacks/${f}`, f)
+    mkdirSync(inst('shaderpacks/BSL/shaders'), { recursive: true })
+    put('options.txt', 'fov:0.5\nresourcePacks:["vanilla","file/A.zip","file/B.zip"]\n')
+    put('config/iris.properties', 'shaderPack=BSL\nenableShaders=true\n')
+    const survival = (await sets.saveSet('Survival'))!
+    expect(survival).toMatchObject({ packs: 2, shader: 'BSL' })
+
+    put('options.txt', 'fov:0.5\nresourcePacks:["vanilla","file/C.zip"]\n')
+    put('config/iris.properties', 'shaderPack=BSL\nenableShaders=false\n')
+    const building = (await sets.saveSet('Building'))!
+    expect(building).toMatchObject({ packs: 1, shader: '' })
+
+    await sets.switchSet(survival.id, manifest, 'My mods')
+    expect(readFileSync(inst('options.txt'), 'utf8')).toContain('resourcePacks:["vanilla","file/A.zip","file/B.zip"]')
+    expect(readFileSync(inst('options.txt'), 'utf8')).toContain('fov:0.5')
+    expect(readFileSync(inst('config/iris.properties'), 'utf8')).toContain('enableShaders=true')
+    await sets.switchSet(building.id, manifest, 'My mods')
+    expect(readFileSync(inst('options.txt'), 'utf8')).toContain('resourcePacks:["vanilla","file/C.zip"]')
+    expect(readFileSync(inst('config/iris.properties'), 'utf8')).toContain('enableShaders=false')
+  })
+})

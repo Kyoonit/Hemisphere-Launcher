@@ -7,6 +7,7 @@ import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from '
 import type { ClientSummary } from './client'
 import type { LauncherUpdateState } from './launcherUpdate'
 import type { ScreenshotExport, ScreenshotList } from './screenshots'
+import type { PackList, PackResult, PackType } from './packs'
 import type { ModHistoryItem, ModSetInfo, ModSetsState, SetImportResult, SetShareResult, SetSwitchResult, UndoResult } from './modSets'
 import type { RestorePointInfo, RestorePreview, RestoreResult, SetupExportResult, SetupImportResult, SetupPick } from './restorePoints'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
@@ -74,6 +75,19 @@ export const IPC = {
   setsImport: 'sets:import',
   historyList: 'history:list',
   historyUndo: 'history:undo',
+  packsList: 'packs:list',
+  packsSetActive: 'packs:setActive',
+  packsShadersOff: 'packs:shadersOff',
+  packsMove: 'packs:move',
+  packsRemove: 'packs:remove',
+  packsVersions: 'packs:versions',
+  packsSetVersion: 'packs:setVersion',
+  packsSetLock: 'packs:setLock',
+  packsCheckUpdates: 'packs:checkUpdates',
+  packsUpdateAll: 'packs:updateAll',
+  packsSearch: 'packs:search',
+  packsProjectVersions: 'packs:projectVersions',
+  packsInstall: 'packs:install',
   systemPreflight: 'system:preflight',
   systemOpenFolder: 'system:open-folder',
   systemDiagnostics: 'system:diagnostics',
@@ -172,6 +186,24 @@ export interface HemisphereApi {
     list(): Promise<ModHistoryItem[] | null>
     undo(id: string): Promise<UndoResult>
   }
+  /** Resource packs and shader packs (Content page) */
+  packs: {
+    list(type: PackType): Promise<PackList | null>
+    /** resource pack: on = on top of the others; shader: on = the one in use */
+    setActive(type: PackType, file: string, on: boolean): Promise<boolean>
+    shadersOff(): Promise<boolean>
+    /** resource pack that is on: -1 = up (wins over more), +1 = down */
+    move(file: string, delta: -1 | 1): Promise<boolean>
+    remove(type: PackType, file: string): Promise<boolean>
+    versions(type: PackType, file: string): Promise<ModVersionChoice[] | null>
+    setVersion(type: PackType, file: string, versionId: string, lock: boolean): Promise<PackResult & { versionNumber?: string }>
+    setLock(type: PackType, file: string, locked: boolean): Promise<boolean>
+    checkUpdates(type: PackType): Promise<UpdateCheck | null>
+    updateAll(type: PackType): Promise<UpdateApplied | null>
+    search(type: PackType, query: string, offset: number): Promise<ModSearchResult | null>
+    projectVersions(type: PackType, projectId: string): Promise<ModVersionChoice[] | null>
+    install(type: PackType, projectId: string, confirmed: boolean, versionId?: string | null): Promise<InstallResult>
+  }
   /** Updates of the launcher itself (GitHub releases) */
   launcherUpdate: {
     get(): Promise<LauncherUpdateState>
@@ -201,7 +233,7 @@ export interface HemisphereApi {
     info(): Promise<SystemInfo>
     /** Low disk space / little RAM hints for the PLAY screen */
     preflight(): Promise<PreflightWarning[]>
-    openFolder(kind: 'game' | 'mods' | 'screenshots' | 'gameLogs' | 'crashReports' | 'launcherLogs'): void
+    openFolder(kind: 'game' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'screenshots' | 'gameLogs' | 'crashReports' | 'launcherLogs'): void
     /** Builds the support report and copies it to the clipboard */
     copyDiagnostics(): Promise<string>
     /** Asks for a folder (Windows dialog) or uses 'default', then moves the game there */

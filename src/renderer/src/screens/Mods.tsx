@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, CloudOff, Download, FolderOpen, History, Info, Loader2, Lock, LockOpen, RefreshCw, RotateCcw, Search, Trash2, TriangleAlert, Upload } from 'lucide-react'
-import ModSetsMenu from '../components/ModSetsMenu'
+import { ChevronDown, CloudOff, Download, FolderOpen, History, Info, Loader2, Lock, LockOpen, RefreshCw, RotateCcw, Search, Trash2, TriangleAlert } from 'lucide-react'
 import type { ModItem, ModVersionChoice } from '@shared/modBrowser'
 import Toggle from '../components/Toggle'
 import type { ClientSummary } from '@shared/client'
@@ -12,10 +11,10 @@ type Sort = 'name' | 'recent'
 
 /** Same palette idea as the wireframe: a stable colour per mod for its letter tile. */
 const TILE = ['#2563eb', '#0d9488', '#b45309', '#7c3aed', '#16a34a', '#db2777', '#0891b2', '#ca8a04', '#dc2626', '#4f46e5']
-const tileColor = (id: string) => TILE[[...id].reduce((h, c) => h + c.charCodeAt(0), 0) % TILE.length]
+export const tileColor = (id: string) => TILE[[...id].reduce((h, c) => h + c.charCodeAt(0), 0) % TILE.length]
 
 /** 0.4 MB, or 38 KB for tiny files. */
-const fileSize = (bytes: number) => (bytes < 100 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`)
+export const fileSize = (bytes: number) => (bytes < 100 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`)
 
 /** Client info; pass a changing `refreshKey` to reload it (e.g. after an update finished). */
 export function useClient(refreshKey: unknown = null): ClientSummary | null | undefined {
@@ -29,9 +28,9 @@ export function useClient(refreshKey: unknown = null): ClientSummary | null | un
 /**
  * Every mod in one list, Hemisphere's and the player's, with the same tools for all: on/off, version picker with locks,
  * updates, remove. Changing a Hemisphere mod takes it over (it stops following Hemisphere's updates) until the player
- * goes back to Hemisphere's version.
+ * goes back to Hemisphere's version. The Mods tab of Content: `top` is the page's header (tabs, presets…).
  */
-export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): void; onBrowse(): void; onHistory(): void }) {
+export default function Mods({ top, onBrowse }: { top: React.ReactNode; onBrowse(): void }) {
   const { t, i18n } = useTranslation()
   const client = useClient()
   // which mods (All or one filter) and in which order: they combine, e.g. "Added by you" by "Last added"
@@ -63,9 +62,8 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
 
   if (client === undefined || mods === undefined)
     return (
-      <div className="h-full overflow-hidden px-8 py-6" aria-busy="true">
-        <div className="skeleton mb-2 h-3 w-48 rounded" />
-        <div className="skeleton mb-6 h-8 w-32 rounded" />
+      <div className="h-full overflow-hidden px-8 pt-5" aria-busy="true">
+        {top}
         <div className="skeleton mb-4 h-9 w-full rounded-lg" />
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="skeleton mb-2 h-[58px] rounded-lg" />
@@ -74,8 +72,9 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
     )
   if (client === null || mods === null)
     return (
-      <div className="grid h-full place-items-center text-gray-400">
-        <p className="flex items-center gap-2">
+      <div className="h-full px-8 pt-5">
+        {top}
+        <p className="mt-16 flex items-center justify-center gap-2 text-gray-400">
           <CloudOff size={18} /> {t('mods.unavailable')}
         </p>
       </div>
@@ -102,28 +101,7 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
     <div className="h-full overflow-auto">
       {/* Stays at the top while scrolling: search, find, updates, import, folder, filters. */}
       <div className="sticky top-0 z-10 border-b border-white/10 bg-gray-900 px-8 pt-5 pb-3 shadow-lg">
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-bold tracking-[0.08em] text-green-400 uppercase">{t('mods.subtitle', { version: client.clientVersion, minecraft: client.minecraft })}</p>
-            <h1 className="text-[30px] leading-tight font-bold text-white">{t('nav.mods').toUpperCase()}</h1>
-          </div>
-          {/* top right, under the window buttons: sets, history, import */}
-          <div className="flex flex-none items-center gap-1.5">
-            <ModSetsMenu
-              className={toolButton}
-              onSwitched={() => {
-                setNotice(null)
-                void reload()
-              }}
-            />
-            <button onClick={onHistory} className={toolButton}>
-              <History size={14} /> {t('history.title')}
-            </button>
-            <button onClick={onImport} className={toolButton}>
-              <Upload size={14} /> {t('import.settingsButton')}
-            </button>
-          </div>
-        </div>
+        {top}
 
         <div className="flex flex-wrap items-center gap-1.5">
           <label className="relative mr-1 w-[240px]">

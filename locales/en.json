@@ -5,7 +5,7 @@
   "nav": {
     "play": "Play",
     "news": "News",
-    "mods": "Mods",
+    "mods": "Content",
     "settings": "Settings",
     "screenshots": "Screenshots"
   },
@@ -515,7 +515,7 @@
   },
   "browse": {
     "open": "Find mods",
-    "back": "Mods",
+    "back": "Content",
     "title": "Find mods",
     "subtitle": "From Modrinth · Fabric · Minecraft {{minecraft}}",
     "search": "Search mods…",
@@ -545,7 +545,19 @@
       "network": "The download failed. Check your internet connection and try again."
     },
     "chooseVersion": "Choose the version to install (newest first).",
-    "chooseVersionButton": "Choose a version of {{mod}}"
+    "chooseVersionButton": "Choose a version of {{mod}}",
+    "subtitlePacks": "From Modrinth · Minecraft {{minecraft}}",
+    "rulesPacks": "Only packs made for this Minecraft version are shown. Staff can block some (for example x-ray packs).",
+    "titles": {
+      "mod": "Find mods",
+      "resourcepack": "Find resource packs",
+      "shader": "Find shaders"
+    },
+    "searchKinds": {
+      "mod": "Search mods…",
+      "resourcepack": "Search resource packs…",
+      "shader": "Search shaders…"
+    }
   },
   "shots": {
     "subtitle": "Your Hemisphere moments",
@@ -666,56 +678,60 @@
     "deleteConfirm": "Delete restore point"
   },
   "sets": {
-    "button": "Mod sets",
-    "title": "Mod sets",
-    "hint": "Switch between mod lists in one click. Before switching, your current mods are saved in the active set. Each set keeps exactly its own mods; nothing is ever deleted.",
-    "empty": "No sets yet. Save your mods as they are now to start, e.g. “Survival”, then make a “Building” set.",
-    "myMods": "My mods",
+    "button": "Presets",
+    "title": "Presets",
+    "hint": "Your mods, resource packs and shader, saved together: switch between them in one click. Before switching, the current ones are saved in the active preset. Nothing is ever deleted.",
+    "empty": "No presets yet. Save what you use now to start, e.g. “Survival”, then make a “Building” one.",
+    "myMods": "My setup",
     "active": "active",
-    "activeHint": "Your mods now. Changes you make are saved in this set when you switch.",
+    "activeHint": "What you use now. Changes are saved in this preset when you switch.",
     "switchTo": "Switch to “{{name}}”",
-    "counts_one": "{{count}} of your mods · {{on}} on",
-    "counts_other": "{{count}} of your mods · {{on}} on",
-    "share": "Share as a code",
+    "counts_one": "{{count}} mod · {{on}} on",
+    "counts_other": "{{count}} mods · {{on}} on",
+    "share": "Share as a code (mods)",
     "rename": "Rename",
-    "delete": "Delete this set",
-    "saveCurrent": "Save my mods as a set",
-    "namePlaceholder": "Set name (e.g. Building)",
+    "delete": "Delete this preset",
+    "saveCurrent": "Save as a preset",
+    "namePlaceholder": "Preset name (e.g. Building)",
     "saveButton": "Save",
-    "addFriend": "Add a friend’s set",
-    "codePlaceholder": "Paste the code of a set",
-    "addButton": "Add the set",
+    "addFriend": "Add a friend’s preset",
+    "codePlaceholder": "Paste the code of a preset",
+    "addButton": "Add the preset",
     "adding": "Downloading mods…",
-    "saved": "Set “{{name}}” saved: it’s now the active set.",
+    "saved": "Preset “{{name}}” saved: it’s now the active one.",
     "switched": "Switched to “{{name}}”. Hemisphere’s mods follow before your next game.",
-    "switchedSaved": "Switched to “{{name}}”. Your previous mods were saved as the set “{{saved}}”.",
+    "switchedSaved": "Switched to “{{name}}”. What you had was saved as the preset “{{saved}}”.",
     "missing": "Some mods were no longer available: {{names}}",
     "shared": "Code of “{{name}}” copied: paste it to a friend (Discord…).",
     "notShared": "Not in the code (not on Modrinth): {{names}}",
-    "imported_one": "Set “{{name}}” added ({{count}} mod). Switch to it from this list.",
-    "imported_other": "Set “{{name}}” added ({{count}} mods). Switch to it from this list.",
-    "deleted": "Set “{{name}}” deleted. Your mods stay as they are.",
-    "deleteTitle": "Delete this mod set?",
-    "deleteBody": "Only the set is deleted: the mods in your folder stay as they are now.",
-    "deleteConfirm": "Delete set",
+    "imported_one": "Preset “{{name}}” added ({{count}} mod). Switch to it from this list.",
+    "imported_other": "Preset “{{name}}” added ({{count}} mods). Switch to it from this list.",
+    "deleted": "Preset “{{name}}” deleted. Your mods and packs stay as they are.",
+    "deleteTitle": "Delete this preset?",
+    "deleteBody": "Only the preset is deleted: your mods and packs stay as they are now.",
+    "deleteConfirm": "Delete preset",
     "errors": {
       "busy": "Close Minecraft (and wait for the launcher to finish installing) first.",
-      "notFound": "This set no longer exists.",
+      "notFound": "This preset no longer exists.",
       "failed": "That didn’t work. Details are in the launcher logs.",
-      "empty": "This set has no Modrinth mods to share.",
-      "invalid": "This isn’t a valid set code."
+      "empty": "This preset has no Modrinth mods to share.",
+      "invalid": "This isn’t a valid preset code."
     },
-    "quickHint": "Mod set: switch in one click",
-    "manage": "Manage sets…",
-    "duplicate": "Duplicate (to make a new set from this one)",
-    "duplicated": "“{{name}}” duplicated as “{{copy}}”: rename it, then switch to it to change its mods.",
+    "quickHint": "Preset: switch in one click",
+    "manage": "Manage presets…",
+    "duplicate": "Duplicate (to make a new preset from this one)",
+    "duplicated": "“{{name}}” duplicated as “{{copy}}”: rename it, then switch to it to change it.",
     "onCount_one": "{{count}} on",
-    "onCount_other": "{{count}} on"
+    "onCount_other": "{{count}} on",
+    "packsPart_one": "{{count}} pack",
+    "packsPart_other": "{{count}} packs",
+    "shaderPart": "shader {{name}}",
+    "shaderNone": "no shader"
   },
   "history": {
     "title": "History",
-    "subtitle": "Your mod changes",
-    "hint": "Version changes, installs, removals, updates and locks, newest first. Undo is offered while the mod is still as the change left it. Big changes (client updates, imports, “Update all”) also get a restore point in Settings → Backups.",
+    "subtitle": "Your content changes",
+    "hint": "Version changes, installs, removals, updates and locks of mods and packs, newest first. Undo is offered while it’s still as the change left it. Big changes (client updates, imports, “Update all”) also get a restore point in Settings → Backups.",
     "empty": "No changes yet. Version changes, installs, removals and updates show up here.",
     "undo": "Undo",
     "undone": "Undone: {{name}}.",
@@ -727,14 +743,66 @@
       "lock": "{{name}} locked on {{to}}",
       "unlock": "{{name}} unlocked ({{to}})",
       "backToHemisphere": "{{name}} back to Hemisphere’s version ({{to}})",
-      "setSwitch": "Switched to the set “{{name}}”",
-      "setImport": "Added the set “{{name}}”"
+      "setSwitch": "Switched to the preset “{{name}}”",
+      "setImport": "Added the preset “{{name}}”"
     },
     "errors": {
       "busy": "Close Minecraft (and wait for the launcher to finish installing) first.",
       "notPossible": "This change can’t be undone any more.",
       "locked": "This mod is locked on its version: unlock it first.",
       "network": "Couldn’t reach Modrinth. Check your connection and try again."
+    },
+    "types": {
+      "resourcepack": "Resource pack",
+      "shader": "Shader"
+    }
+  },
+  "content": {
+    "tabs": {
+      "mods": "Mods",
+      "resourcepack": "Resource packs",
+      "shader": "Shaders"
+    }
+  },
+  "packs": {
+    "busy": "Close Minecraft first: it rewrites its settings when it closes.",
+    "removed": "{{name}} moved to the Recycle Bin.",
+    "activeTotal_one": "{{count}} pack on",
+    "activeTotal_other": "{{count}} packs on",
+    "shaderInUse": "Shader: {{name}}",
+    "shadersOff": "Shaders off",
+    "applyNext": "applied next time you start the game",
+    "needsIris": "Shaders need Iris, which is off. Turn it on to use a shader pack.",
+    "turnOnIris": "Turn on Iris",
+    "irisOn": "Iris is on: it’s installed with your next Play.",
+    "onTitle": "On · the top one wins",
+    "offTitle": "Off",
+    "folder": "folder",
+    "inUse": "In use",
+    "incompatible": "Other version",
+    "incompatibleHint": "Made for another Minecraft version: it may look wrong in places.",
+    "moveUp": "Move {{name}} up (wins over more packs)",
+    "moveDown": "Move {{name}} down",
+    "useHint": "Use this shader (one at a time)",
+    "updated_one": "{{count}} pack updated.",
+    "updated_other": "{{count}} packs updated.",
+    "updatesFound_one": "{{count}} update available.",
+    "updatesFound_other": "{{count}} updates available.",
+    "updateAll_one": "Update {{count}} pack",
+    "updateAll_other": "Update {{count}} packs",
+    "resourcepack": {
+      "search": "Search resource packs",
+      "find": "Find resource packs",
+      "emptyTitle": "No resource packs yet",
+      "emptyBody": "Find packs on Modrinth, or drop .zip packs in the folder: they show up here, ready to switch on and order.",
+      "hint": "Several packs can be on: the higher one wins where two change the same thing. Changes apply next time you start the game."
+    },
+    "shader": {
+      "search": "Search shaders",
+      "find": "Find shaders",
+      "emptyTitle": "No shader packs yet",
+      "emptyBody": "Find shaders on Modrinth (Iris and OptiFine formats work). Pick one to use; switch it off any time.",
+      "hint": "One shader at a time. Shaders need Iris and a good graphics card. Changes apply next time you start the game."
     }
   }
 }

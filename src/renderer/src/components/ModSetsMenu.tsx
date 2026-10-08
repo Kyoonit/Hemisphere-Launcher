@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, ClipboardPaste, Copy, Layers, LoaderCircle, Pencil, Plus, Share2, Trash2, TriangleAlert, X } from 'lucide-react'
 import { SET_NAME_MAX, type ModSetInfo, type ModSetsState } from '@shared/modSets'
 import ConfirmDialog from './ConfirmDialog'
+import { presetDetails } from '../presets'
 
 /** An action that couldn't reach the launcher's core: shown as an error, never silently ignored. */
 const failed = { ok: false, reason: 'failed' } as const
@@ -178,7 +179,7 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
                         <span className="min-w-0">
                           <b className="block truncate text-[13.5px] font-semibold text-white">{s.name}</b>
                           <span className="block text-[11.5px] text-gray-400">
-                            {t('sets.counts', { count: s.mods, on: s.enabled })}
+                            {presetDetails(s, t)}
                             {isActive && ` · ${t('sets.active')}`}
                           </span>
                         </span>
@@ -294,7 +295,7 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
         <ConfirmDialog title={t('sets.deleteTitle')} confirmLabel={t('sets.deleteConfirm')} onConfirm={() => remove(deleting)} onCancel={() => setDeleting(null)}>
           <p className="rounded-lg bg-gray-800/80 px-3 py-2.5">
             <b className="block text-white">“{deleting.name}”</b>
-            <span className="text-[12.5px] text-gray-400">{t('sets.counts', { count: deleting.mods, on: deleting.enabled })}</span>
+            <span className="text-[12.5px] text-gray-400">{presetDetails(deleting, t)}</span>
           </p>
           <p className="mt-3">{t('sets.deleteBody')}</p>
         </ConfirmDialog>

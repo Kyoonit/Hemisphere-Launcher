@@ -4,9 +4,13 @@ import { ArrowLeft, Ban, Check, ChevronDown, CloudOff, Download, Loader2, Packag
 import type { InstallResult, ModSearchHit, ModSearchResult, ModVersionChoice } from '@shared/modBrowser'
 import { VersionRow } from './Mods'
 import { localize } from '@shared/manifest'
+import type { BrowseKind } from './Content'
 
-/** Find mods: Modrinth search limited to Fabric + Hemisphere's Minecraft version, with the staff policy applied. */
-export default function ModBrowser({ onBack }: { onBack(): void }) {
+/**
+ * Find mods / resource packs / shaders: Modrinth search for Hemisphere's Minecraft version (Fabric mods; packs Iris
+ * can load), with the staff policy applied.
+ */
+export default function ModBrowser({ kind, onBack }: { kind: BrowseKind; onBack(): void }) {
   const { t, i18n } = useTranslation()
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<ModSearchResult | null | undefined>(undefined)
@@ -26,7 +30,7 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
     const id = ++searchId.current
     setResult(undefined)
     const timer = setTimeout(async () => {
-      const r = await window.hemisphere.client.search(query, 0)
+      const r = kind === 'mod' ? await window.hemisphere.client.search(query, 0) : await window.hemisphere.packs.search(kind, query, 0)
       if (id === searchId.current) setResult(r)
     }, 350)
     return () => clearTimeout(timer)
@@ -35,7 +39,8 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
   const loadMore = async () => {
     if (!result) return
     setLoadingMore(true)
-    const more = await window.hemisphere.client.search(query, result.offset + result.hits.length)
+    const offset = result.offset + result.hits.length
+    const more = kind === 'mod' ? await window.hemisphere.client.search(query, offset) : await window.hemisphere.packs.search(kind, query, offset)
     setLoadingMore(false)
     if (more) setResult({ ...more, hits: [...result.hits, ...more.hits], offset: result.offset })
   }
@@ -44,7 +49,8 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
     setConfirm(null)
     setBusy(hit.projectId)
     setNotice(null)
-    const res: InstallResult = await window.hemisphere.client.install(hit.projectId, confirmed, versionId)
+    const res: InstallResult =
+      kind === 'mod' ? await window.hemisphere.client.install(hit.projectId, confirmed, versionId) : await window.hemisphere.packs.install(kind, hit.projectId, confirmed, versionId)
     setBusy(null)
     if (!res.ok && res.reason === 'needsConfirm') return setConfirm({ hit, versionId })
     if (res.ok) {
@@ -61,8 +67,8 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
       </button>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-bold tracking-[0.08em] text-green-400 uppercase">{t('browse.subtitle', { minecraft: minecraft ?? '…' })}</p>
-          <h1 className="text-[30px] font-bold text-white uppercase">{t('browse.title')}</h1>
+          <p className="text-xs font-bold tracking-[0.08em] text-green-400 uppercase">{t(kind === 'mod' ? 'browse.subtitle' : 'browse.subtitlePacks', { minecraft: minecraft ?? '…' })}</p>
+          <h1 className="text-[30px] font-bold text-white uppercase">{t(`browse.titles.${kind}`)}</h1>
         </div>
         <label className="relative w-[320px] max-w-full">
           <Search size={15} className="absolute top-1/2 left-2.5 -translate-y-1/2 text-gray-400" />
@@ -70,8 +76,8 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('browse.search')}
-            aria-label={t('browse.search')}
+            placeholder={t(`browse.searchKinds.${kind}`)}
+            aria-label={t(`browse.searchKinds.${kind}`)}
             className="w-full rounded-lg border border-gray-700 bg-gray-900 py-2 pr-3 pl-8 text-sm text-white"
           />
         </label>
@@ -79,7 +85,7 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
 
       <p className="mb-4 flex items-start gap-2 rounded-lg bg-gray-900/55 px-3.5 py-2.5 text-[12.5px] text-gray-400">
         <ShieldAlert size={15} className="mt-0.5 flex-none text-green-400" />
-        {t('browse.rules')}
+        {t(kind === 'mod' ? 'browse.rules' : 'browse.rulesPacks')}
       </p>
 
       {notice && (
@@ -123,7 +129,7 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
         <>
           <div className="overflow-hidden rounded-lg bg-gray-900/55">
             {result.hits.map((hit) => (
-              <HitRow key={hit.projectId} hit={hit} busy={busy === hit.projectId} disabled={busy !== null} lang={i18n.language} onInstall={(versionId) => install(hit, false, versionId)} />
+              <HitRow key={hit.projectId} kind={kind} hit={hit} busy={busy === hit.projectId} disabled={busy !== null} lang={i18n.language} onInstall={(versionId) => install(hit, false, versionId)} />
             ))}
           </div>
           {result.offset + result.hits.length < result.total && (
@@ -142,14 +148,14 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
   )
 }
 
-function HitRow({ hit, busy, disabled, lang, onInstall }: { hit: ModSearchHit; busy: boolean; disabled: boolean; lang: string; onInstall(versionId: string | null): void }) {
+function HitRow({ kind, hit, busy, disabled, lang, onInstall }: { kind: BrowseKind; hit: ModSearchHit; busy: boolean; disabled: boolean; lang: string; onInstall(versionId: string | null): void }) {
   const { t, i18n } = useTranslation()
   const [choosing, setChoosing] = useState(false)
   const [versions, setVersions] = useState<ModVersionChoice[] | null | undefined>(undefined)
   const downloads = new Intl.NumberFormat(i18n.language, { notation: 'compact' }).format(hit.downloads)
   const openVersions = () => {
     setChoosing((c) => !c)
-    if (versions === undefined) window.hemisphere.client.projectVersions(hit.projectId).then(setVersions)
+    if (versions === undefined) (kind === 'mod' ? window.hemisphere.client.projectVersions(hit.projectId) : window.hemisphere.packs.projectVersions(kind, hit.projectId)).then(setVersions)
   }
   return (
     <div className="border-t border-white/5 first:border-t-0">

@@ -9,6 +9,10 @@ export interface ModSetInfo {
   /** the player's own mods in the set (and Hemisphere mods they took over) */
   mods: number
   enabled: number
+  /** resource packs on; null = saved before packs (switching leaves packs as they are) */
+  packs: number | null
+  /** shader in use ('' = none); null = saved before packs */
+  shader: string | null
   updatedAt: number
 }
 
@@ -32,8 +36,10 @@ export interface ModHistoryEntry {
   id: string
   at: number
   kind: 'version' | 'update' | 'install' | 'remove' | 'lock' | 'unlock' | 'backToHemisphere' | 'setSwitch' | 'setImport'
-  /** mod or set name */
+  /** mod, pack or preset name */
   name: string
+  /** what changed: a mod (also when missing, from before packs), a resource pack or a shader pack */
+  type?: 'mod' | 'resourcepack' | 'shader'
   projectId: string | null
   from: string | null
   to: string | null
