@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bell, Bug, CalendarDays, Construction, FlaskConical, FolderOpen, Gauge, Image, Info, LoaderCircle, Lock, Monitor, Newspaper, RefreshCw, RotateCcw, Server, Trash2, type LucideIcon } from 'lucide-react'
+import i18n from '../i18n'
+import { Bell, BellRing, Bug, Code, Languages, ZoomIn, CalendarDays, Construction, FlaskConical, FolderOpen, Gauge, Image, Info, LoaderCircle, Lock, Monitor, Newspaper, RefreshCw, RotateCcw, Server, Trash2, type LucideIcon } from 'lucide-react'
 import type { DevAccess, DevAction, DevState } from '@shared/dev'
 import Toggle from '../components/Toggle'
 
@@ -14,6 +15,7 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
   const [busy, setBusy] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [appId, setAppId] = useState(access.state?.discordAppId ?? '')
+  const [discordCheck, setDiscordCheck] = useState<{ ok: true; name: string } | { ok: false; reason: 'notApp' | 'network' } | null>(null)
   useEffect(() => setState(access.state), [access.state])
   if (!state) return null
 
@@ -94,7 +96,7 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
       <Group icon={Server} title={t('dev.groups.server')}>
         <Line label={t('dev.server')} hint={t('dev.serverHint')}>
           <select value={state.server} onChange={(e) => set({ server: e.target.value as DevState['server'] })} className={select}>
-            {(['real', 'busy', 'offline', 'unknown'] as const).map((v) => (
+            {(['real', 'few', 'busy', 'full', 'offline', 'unknown'] as const).map((v) => (
               <option key={v} value={v}>
                 {t(`dev.serverOptions.${v}`)}
               </option>
@@ -107,6 +109,7 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
         <p className="text-[12.5px] text-gray-400">{t('dev.gameHint')}</p>
         <div className="flex flex-wrap gap-2">
           <Action action="crash" icon={Bug} label={t('dev.crash')} />
+          <Action action="crash:many" icon={Bug} label={t('dev.crashMany')} />
           <Action action="progress" icon={Gauge} label={t('dev.progress')} />
           <Action action="background" icon={RefreshCw} label={t('dev.background')} />
           {(['error:network', 'error:java', 'error:disk', 'error:busy', 'error:sessionExpired', 'error:content'] as const).map((a) => (
@@ -120,6 +123,7 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
         <div className="flex flex-wrap gap-2">
           <Action action="notify:back" icon={Bell} label={t('dev.notifyBack')} />
           <Action action="notify:event" icon={CalendarDays} label={t('dev.notifyEvent')} />
+          <Action action="notify:all" icon={BellRing} label={t('dev.notifyAll')} />
         </div>
         <Line label={t('dev.discordId')} hint={t('dev.discordIdHint')}>
           <span className="flex gap-1.5">
@@ -129,11 +133,23 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
               placeholder="1234567890123456789"
               className="w-[190px] rounded-lg border border-gray-700 bg-gray-900 px-2.5 py-1.5 font-mono text-[12.5px] text-white"
             />
-            <button onClick={() => set({ discordAppId: appId })} className={btn}>
+            <button
+              onClick={async () => {
+                setDiscordCheck(null)
+                await set({ discordAppId: appId })
+                if (appId) setDiscordCheck(await window.hemisphere.dev.checkDiscord(appId))
+              }}
+              className={btn}
+            >
               {t('dev.save')}
             </button>
           </span>
         </Line>
+        {discordCheck && (
+          <p className={`rounded-md px-2.5 py-1.5 text-[12.5px] ${discordCheck.ok ? 'bg-green-900/40 text-green-200' : 'bg-red-900/40 text-red-200'}`}>
+            {discordCheck.ok ? t('dev.discordOk', { name: discordCheck.name }) : t(`dev.discordBad.${discordCheck.reason}`)}
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           <Action action="discord:test" icon={Monitor} label={t('dev.discordTest')} />
           <Action action="discord:clear" icon={Trash2} label={t('dev.discordClear')} />
@@ -168,6 +184,30 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
           <Action action="window:960x600" icon={Monitor} label={t('dev.windowMin')} />
           <Action action="window:1120x700" icon={Monitor} label={t('dev.windowDefault')} />
           <Action action="window:1600x900" icon={Monitor} label="1600 × 900" />
+        </div>
+        <Line label={t('dev.zoom')} hint={t('dev.zoomHint')}>
+          <span className="flex gap-1.5">
+            {(['zoom:0.9', 'zoom:1', 'zoom:1.1', 'zoom:1.25'] as const).map((a) => (
+              <Action key={a} action={a} icon={ZoomIn} label={`${Math.round(Number(a.slice(5)) * 100)} %`} />
+            ))}
+          </span>
+        </Line>
+        <Line label={t('dev.language')} hint={t('dev.languageHint')}>
+          <span className="flex gap-1.5">
+            {(['en', 'fr'] as const).map((l) => (
+              <button
+                key={l}
+                onClick={() => i18n.changeLanguage(l)}
+                className={`${btn} ${i18n.language.startsWith(l) ? 'ring-1 ring-violet-400' : ''}`}
+              >
+                <Languages size={14} /> {l.toUpperCase()}
+              </button>
+            ))}
+          </span>
+        </Line>
+        <div className="flex flex-wrap gap-2">
+          <Action action="ui:reload" icon={RotateCcw} label={t('dev.reload')} />
+          <Action action="ui:devtools" icon={Code} label={t('dev.devtools')} />
         </div>
       </Group>
     </div>

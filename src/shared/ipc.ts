@@ -86,6 +86,7 @@ export const IPC = {
   devSet: 'dev:set',
   devAction: 'dev:action',
   devUnlock: 'dev:unlock',
+  devCheckDiscord: 'dev:checkDiscord',
   devLock: 'dev:lock',
   eventsSetReminder: 'events:setReminder',
   reportBuild: 'report:build',
@@ -234,6 +235,8 @@ export interface HemisphereApi {
   dev: {
     get(): Promise<DevAccess>
     unlock(code: string): Promise<DevUnlockResult>
+    /** is it a Discord application id? (its name) */
+    checkDiscord(id: string): Promise<{ ok: true; name: string } | { ok: false; reason: 'notApp' | 'network' }>
     lock(): Promise<boolean>
     set(patch: Partial<DevState>): Promise<DevState | null>
     action(action: DevAction): Promise<string>

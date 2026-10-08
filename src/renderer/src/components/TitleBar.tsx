@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy, Minus, Newspaper, Package, Play, RefreshCw, Settings, Square, X, type LucideIcon, Images } from 'lucide-react'
+import { Copy, Minus, Newspaper, Package, Play, RefreshCw, Settings, Square, X, type LucideIcon, Images, Download, TriangleAlert } from 'lucide-react'
 import logo from '../assets/logo.png'
 import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
@@ -40,7 +40,7 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
         {t('app.name')}
       </div>
 
-      <nav className={`no-drag ml-3 flex gap-1 ${minimal ? 'invisible' : ''}`}>
+      <nav className={`no-drag ml-3 flex min-w-0 gap-1 ${minimal ? 'invisible' : ''}`}>
         {TABS.map(({ id, icon: Icon, label }) => {
           const active = screen === id || ((screen === 'repair' || screen === 'import' || screen === 'report') && id === 'settings') || ((screen === 'browse' || screen === 'modHistory') && id === 'mods')
           return (
@@ -70,9 +70,9 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
         })}
       </nav>
 
-      <div className="no-drag ml-auto flex h-full items-center">
-        <UpdateReady />
+      <div className="no-drag ml-auto flex h-full flex-none items-center">
         {!minimal && account}
+        <UpdateBadge />
         <WindowButton label={t('window.minimize')} onClick={() => window.hemisphere.window.minimize()}>
           <Minus size={15} />
         </WindowButton>
@@ -87,18 +87,55 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
   )
 }
 
-/** Shown once a launcher update has been downloaded; otherwise it installs itself when the launcher closes. */
-function UpdateReady() {
+/**
+ * The launcher's own update, right next to the window buttons: downloading (progress), ready (orange, urgent: restart
+ * to install it; it also installs itself when the launcher closes) or failed (click to try again). Shorter labels in a
+ * narrow window, so the title bar never changes size.
+ */
+function UpdateBadge() {
   const { t } = useTranslation()
   const update = useLauncherUpdate()
+  if (update?.phase === 'downloading') {
+    const percent = Math.round(update.ratio * 100)
+    return (
+      <span
+        title={t('launcherUpdate.downloading', { version: update.version, percent })}
+        className="animate-fade mx-1.5 flex items-center gap-2 rounded-lg bg-gray-800/90 px-2.5 py-[5px] text-[12.5px] font-semibold text-gray-300 tabular-nums"
+      >
+        <Download size={13} className="text-green-400" />
+        <span className="max-[1180px]:hidden">{t('launcherUpdate.badgeDownloading')}</span>
+        <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-700 max-[1060px]:hidden">
+          <i className="block h-full rounded-full bg-green-400 transition-[width] duration-500" style={{ width: `${percent}%` }} />
+        </span>
+        {percent} %
+      </span>
+    )
+  }
+  if (update?.phase === 'error')
+    return (
+      <button
+        onClick={() => window.hemisphere.launcherUpdate.check()}
+        title={t('launcherUpdate.errorHint')}
+        className="animate-fade mx-1.5 flex items-center gap-1.5 rounded-lg bg-red-950/70 px-2.5 py-[5px] text-[12.5px] font-semibold text-red-300 ring-1 ring-red-500/50 transition-colors hover:bg-red-900/70"
+      >
+        <TriangleAlert size={13} /> <span className="max-[1060px]:hidden">{t('launcherUpdate.badgeError')}</span>
+      </button>
+    )
   if (update?.phase !== 'ready') return null
   return (
     <button
       onClick={() => window.hemisphere.launcherUpdate.install()}
       title={t('launcherUpdate.readyHint', { version: update.version })}
-      className="animate-fade mr-2 flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-[5px] text-[13px] font-semibold text-white shadow-md transition-colors hover:bg-green-500"
+      aria-label={t('launcherUpdate.restart')}
+      className="animate-fade mx-1.5 flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-amber-400 to-orange-500 px-3 py-[5px] text-[13px] font-bold whitespace-nowrap text-gray-950 shadow-[0_0_14px_rgba(245,158,11,0.45)] ring-1 ring-amber-300/70 transition hover:brightness-110"
     >
-      <RefreshCw size={14} /> {t('launcherUpdate.restart')}
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/80" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+      </span>
+      <RefreshCw size={14} strokeWidth={2.5} />
+      <span className="max-[1180px]:hidden">{t('launcherUpdate.restart')}</span>
+      <span className="hidden max-[1180px]:inline max-[1060px]:hidden">{t('launcherUpdate.badgeShort')}</span>
     </button>
   )
 }

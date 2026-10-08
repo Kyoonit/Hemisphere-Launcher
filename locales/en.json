@@ -504,7 +504,12 @@
     "ready": "Version {{version}} is ready",
     "upToDate": "Up to date (checked at {{time}})",
     "error": "Couldn't check for updates",
-    "devBuild": "Updates are only available in the installed launcher"
+    "devBuild": "Updates are only available in the installed launcher",
+    "badgeDownloading": "Update",
+    "badgeError": "Update failed",
+    "errorHint": "The launcher update failed. Click to try again.",
+    "badgeShort": "Update",
+    "devInstall": "Developer tab: this pretend update can’t be installed. In the real launcher, the launcher would now close, update to {{version}} and reopen."
   },
   "whatsNew": {
     "title": "What's new in {{version}}",
@@ -1044,9 +1049,11 @@
     "serverHint": "What the launcher shows (the real server is untouched).",
     "serverOptions": {
       "real": "Real status",
-      "busy": "Online, 137 players",
+      "busy": "Online, 137 players (30 listed)",
       "offline": "Offline",
-      "unknown": "Status unknown"
+      "unknown": "Status unknown",
+      "few": "Online, 3 players",
+      "full": "Full, 420/420"
     },
     "gameHint": "Shown on Home, as if it happened (no game is started).",
     "crash": "Crash card",
@@ -1082,6 +1089,19 @@
     "openData": "Open the launcher’s data folder",
     "windowMin": "Smallest (960 × 600)",
     "windowDefault": "Default (1120 × 700)",
-    "simulateRestart": "Simulate a restart (warnings, down 25 s, back)"
+    "simulateRestart": "Simulate a restart (warnings, down 25 s, back)",
+    "discordOk": "✓ Discord application “{{name}}”: ready for “Show Discord status now”.",
+    "discordBad": {
+      "notApp": "✗ This isn’t a Discord application id. Copy the “Application ID” from discord.com/developers/applications (General Information).",
+      "network": "Couldn’t check with Discord (no connection). The id is saved anyway."
+    },
+    "crashMany": "Crash, many mods",
+    "notifyAll": "Every notification",
+    "zoom": "Interface zoom",
+    "zoomHint": "Until the launcher restarts.",
+    "language": "Language, quick",
+    "languageHint": "This window only, until reload (Settings keep yours).",
+    "reload": "Reload interface",
+    "devtools": "Open DevTools"
   }
 }

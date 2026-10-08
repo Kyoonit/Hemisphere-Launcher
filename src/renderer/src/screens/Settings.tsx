@@ -259,7 +259,7 @@ function LauncherVersionRow({ version }: { version: string }) {
   return (
     <Row title={t('settings.version')} hint={[version, status].filter(Boolean).join(' · ')}>
       {update?.phase === 'ready' ? (
-        <button onClick={() => window.hemisphere.launcherUpdate.install()} className={buttonClass.replace('bg-gray-700/85', 'bg-green-600').replace('hover:bg-gray-600', 'hover:bg-green-500')}>
+        <button onClick={() => window.hemisphere.launcherUpdate.install()} className="flex items-center gap-2 rounded-lg bg-gradient-to-b from-amber-400 to-orange-500 px-3.5 py-2 text-sm font-bold text-gray-950 shadow-md ring-1 ring-amber-300/70 hover:brightness-110">
           <RefreshCw size={15} /> {t('launcherUpdate.restart')}
         </button>
       ) : (

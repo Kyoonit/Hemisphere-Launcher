@@ -29,7 +29,8 @@ export interface DevState {
   restart: 'real' | 'soon' | 'now'
   /** extra unread news items (the red badge, "9+") */
   extraNews: number
-  server: 'real' | 'busy' | 'offline' | 'unknown'
+  /** few = 3 players, busy = 30 listed of 137, full = 420/420 */
+  server: 'real' | 'few' | 'busy' | 'full' | 'offline' | 'unknown'
   launcherUpdate: 'real' | 'downloading' | 'ready' | 'error'
   preflight: boolean
   /** your own Discord application id, to try the Discord status before staff publish theirs */
@@ -52,6 +53,7 @@ export const DEFAULT_DEV: DevState = {
 
 export const DEV_ACTIONS = [
   'crash',
+  'crash:many',
   'error:network',
   'error:java',
   'error:disk',
@@ -64,6 +66,7 @@ export const DEV_ACTIONS = [
   'notify:back',
   'restart:simulate',
   'notify:event',
+  'notify:all',
   'discord:test',
   'discord:clear',
   'shots:add',
@@ -73,5 +76,11 @@ export const DEV_ACTIONS = [
   'window:1120x700',
   'window:1600x900',
   'open:data',
+  'ui:reload',
+  'ui:devtools',
+  'zoom:0.9',
+  'zoom:1',
+  'zoom:1.1',
+  'zoom:1.25',
 ] as const
 export type DevAction = (typeof DEV_ACTIONS)[number]

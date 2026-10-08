@@ -518,7 +518,12 @@
     "ready": "La version {{version}} est prête",
     "upToDate": "À jour (vérifié à {{time}})",
     "error": "Impossible de vérifier les mises à jour",
-    "devBuild": "Les mises à jour ne concernent que le launcher installé"
+    "devBuild": "Les mises à jour ne concernent que le launcher installé",
+    "badgeDownloading": "Mise à jour",
+    "badgeError": "Échec de la mise à jour",
+    "errorHint": "La mise à jour du launcher a échoué. Clique pour réessayer.",
+    "badgeShort": "Mettre à jour",
+    "devInstall": "Menu Développeur : cette fausse mise à jour ne peut pas s’installer. Dans le vrai launcher, il se fermerait, passerait en {{version}} et se rouvrirait."
   },
   "whatsNew": {
     "title": "Nouveautés de la {{version}}",
@@ -1089,9 +1094,11 @@
     "serverHint": "Ce que le launcher affiche (le vrai serveur n’est pas touché).",
     "serverOptions": {
       "real": "Statut réel",
-      "busy": "En ligne, 137 joueurs",
+      "busy": "En ligne, 137 joueurs (30 listés)",
       "offline": "Hors ligne",
-      "unknown": "Statut inconnu"
+      "unknown": "Statut inconnu",
+      "few": "En ligne, 3 joueurs",
+      "full": "Plein, 420/420"
     },
     "gameHint": "Affiché sur l’accueil, comme si c’était arrivé (aucun jeu n’est lancé).",
     "crash": "Carte de crash",
@@ -1127,6 +1134,19 @@
     "openData": "Ouvrir le dossier de données du launcher",
     "windowMin": "La plus petite (960 × 600)",
     "windowDefault": "Par défaut (1120 × 700)",
-    "simulateRestart": "Simuler un redémarrage (alertes, coupure de 25 s, retour)"
+    "simulateRestart": "Simuler un redémarrage (alertes, coupure de 25 s, retour)",
+    "discordOk": "✓ Application Discord « {{name}} » : prête pour « Afficher le statut Discord maintenant ».",
+    "discordBad": {
+      "notApp": "✗ Ce n’est pas un ID d’application Discord. Copie l’« Application ID » sur discord.com/developers/applications (General Information).",
+      "network": "Impossible de vérifier auprès de Discord (pas de connexion). L’ID est quand même enregistré."
+    },
+    "crashMany": "Crash, beaucoup de mods",
+    "notifyAll": "Toutes les notifications",
+    "zoom": "Zoom de l’interface",
+    "zoomHint": "Jusqu’au redémarrage du launcher.",
+    "language": "Langue, rapide",
+    "languageHint": "Cette fenêtre seulement, jusqu’au rechargement (tes paramètres ne changent pas).",
+    "reload": "Recharger l’interface",
+    "devtools": "Ouvrir les DevTools"
   }
 }

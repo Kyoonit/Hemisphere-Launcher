@@ -138,8 +138,10 @@ export function devStatus(status: ServerStatus | null): ServerStatus | null {
   const base: ServerStatus = status ?? { online: null, playersOnline: null, playersMax: null, version: null, players: [], latencyMs: null, fetchedAt: Date.now() }
   if (state.server === 'offline') return { ...base, online: false, playersOnline: null, players: [], latencyMs: null, fetchedAt: Date.now() }
   if (state.server === 'unknown') return { ...base, online: null, playersOnline: null, players: [], latencyMs: null, fetchedAt: Date.now() }
-  const players = Array.from({ length: 12 }, (_, i) => ({ name: `${NAMES[i]}_${String(i * 7 + 3).padStart(2, '0')}`, uuid: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}` }))
-  return { ...base, online: true, playersOnline: 137, playersMax: 420, players, latencyMs: base.latencyMs ?? 42, version: base.version ?? '26.3', fetchedAt: Date.now() }
+  const listed = state.server === 'few' ? 3 : 30
+  const players = Array.from({ length: listed }, (_, i) => ({ name: `${NAMES[i % NAMES.length]}_${String(i * 7 + 3).padStart(2, '0')}`, uuid: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}` }))
+  const online = state.server === 'few' ? 3 : state.server === 'full' ? 420 : 137
+  return { ...base, online: true, playersOnline: online, playersMax: 420, players, latencyMs: base.latencyMs ?? 42, version: base.version ?? '26.3', fetchedAt: Date.now() }
 }
 
 export function devUpdate(s: LauncherUpdateState): LauncherUpdateState {
@@ -169,8 +171,8 @@ export const devPreflight = (w: PreflightWarning[]): PreflightWarning[] =>
 export interface DevActionHooks {
   window(): BrowserWindow | null
   gameState(patch: Partial<GameState>): void
-  notify(kind: 'back' | 'event'): void
-  discord(on: boolean): Promise<boolean>
+  notify(kind: 'back' | 'event' | 'warn15' | 'warn1' | 'start'): void
+  discord(on: boolean): Promise<'ok' | 'noAppId' | 'noDiscord' | 'invalidId' | 'failed'>
   resetSeen(): Promise<void>
   /** warn15 → warn1 → server down → back, over about 40 s (notifications follow the restart alerts settings) */
   simulateRestart(): Promise<void>
@@ -192,6 +194,17 @@ export async function runDevAction(action: DevAction, h: DevActionHooks): Promis
         },
       })
       return 'crash card shown on Home'
+    case 'crash:many':
+      h.gameState({
+        phase: 'idle',
+        error: {
+          code: 'crashed',
+          detail: 'Developer tab: pretend crash, many mods',
+          suspects: ['sodium', 'iris', 'lithium', 'modmenu', 'xaeros-minimap', 'voicechat'],
+          incompatible: ['Jade', 'Xaero’s Minimap', 'Simple Voice Chat', 'Mod Menu', 'Lithium', 'Entity Culling', 'Zoomify', 'AppleSkin'].map((name, i) => ({ name, version: `26.3.${i + 1}`, needs: i % 2 ? 'Fabric Loader 0.19' : 'Minecraft 26.4' })),
+        },
+      })
+      return 'crash card with 8 incompatible mods shown on Home'
     case 'clearError':
       h.gameState({ error: null, phase: 'idle', progress: null, activity: null, background: false })
       return 'cleared'
@@ -213,12 +226,32 @@ export async function runDevAction(action: DevAction, h: DevActionHooks): Promis
     case 'restart:simulate':
       void h.simulateRestart()
       return 'restart: 15 min and 1 min warnings now, server down for 25 s, then back (Home and notifications)'
+    case 'notify:all':
+      for (const kind of ['back', 'event', 'warn15', 'warn1', 'start'] as const) {
+        h.notify(kind)
+        await wait(2500)
+      }
+      return 'every notification sent, 2.5 s apart (restart ones follow your restart alerts settings)'
+    case 'ui:reload':
+      h.window()?.webContents.reloadIgnoringCache()
+      return 'reloaded'
+    case 'ui:devtools':
+      h.window()?.webContents.openDevTools({ mode: 'detach' })
+      return 'DevTools opened'
     case 'notify:back':
     case 'notify:event':
       h.notify(action === 'notify:back' ? 'back' : 'event')
       return 'notification sent'
-    case 'discord:test':
-      return (await h.discord(true)) ? 'Discord status set (look at your Discord profile)' : 'Discord not reachable: is the Discord app open, and the application id right?'
+    case 'discord:test': {
+      const r = await h.discord(true)
+      return {
+        ok: 'Discord status set: look at your profile in Discord (it shows while this launcher runs)',
+        noAppId: 'No Discord application id: enter yours above (or staff publish theirs in the feed)',
+        noDiscord: 'Discord isn’t running on this PC (the desktop app, not the browser): open it and try again',
+        invalidId: 'Discord says this isn’t an application id: copy the “Application ID” from discord.com/developers/applications',
+        failed: 'Discord didn’t accept the status (see the launcher log)',
+      }[r]
+    }
     case 'discord:clear':
       await h.discord(false)
       return 'Discord status cleared'
@@ -236,6 +269,10 @@ export async function runDevAction(action: DevAction, h: DevActionHooks): Promis
       if (action.startsWith('error:')) {
         h.gameState({ phase: 'idle', error: { code: action.slice(6) as never, detail: 'Developer tab: pretend error' } })
         return 'error shown on Home'
+      }
+      if (action.startsWith('zoom:')) {
+        h.window()?.webContents.setZoomFactor(Number(action.slice(5)))
+        return `interface zoom ${Math.round(Number(action.slice(5)) * 100)} %`
       }
       if (action.startsWith('window:')) {
         const [w, hgt] = action.slice(7).split('x').map(Number)
@@ -296,4 +333,18 @@ async function removeSampleShots(): Promise<string> {
   sampleShots = []
   await save()
   return `${n} sample screenshots removed`
+}
+
+/** Is this a Discord application id (with rich presence)? Discord's public endpoint gives its name. */
+export async function checkDiscordAppId(id: string): Promise<{ ok: true; name: string } | { ok: false; reason: 'notApp' | 'network' }> {
+  if (!/^\d{17,20}$/.test(id)) return { ok: false, reason: 'notApp' }
+  try {
+    const res = await fetch(`https://discord.com/api/v10/applications/${id}/rpc`, { signal: AbortSignal.timeout(8000) })
+    if (res.status === 404 || res.status === 400) return { ok: false, reason: 'notApp' }
+    if (!res.ok) return { ok: false, reason: 'network' }
+    const body = (await res.json()) as { name?: unknown }
+    return { ok: true, name: typeof body.name === 'string' ? body.name.slice(0, 64) : id }
+  } catch {
+    return { ok: false, reason: 'network' }
+  }
 }

@@ -53,7 +53,7 @@ import { buildReport, lastReportZip, prepareReport } from './core/support/report
 import { devDiscord, devNotify, keepInTrayOnClose, onCommunitySettings, onGameExited, onGameLaunched, onRestartLive, onRestartMoment, onServerStatus, startCommunity } from './core/community/community'
 import { startRestartWatch } from './core/status/restartWatch'
 import { nextRestart, type LiveRestart } from '@shared/restart'
-import { devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, runDevAction, setDevState, unlockDev } from './core/dev/devTools'
+import { checkDiscordAppId, devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, runDevAction, setDevState, unlockDev } from './core/dev/devTools'
 import { DEV_ACTIONS, DEFAULT_DEV, type DevAction, type DevState } from '@shared/dev'
 import { eventIcs } from '@shared/events'
 import { writeFile } from 'node:fs/promises'
@@ -564,6 +564,7 @@ function registerIpc(): void {
     if (lastStatus) onServerStatus(devStatus(lastStatus) ?? lastStatus)
   }
   handle(IPC.devGet, () => ({ devBuild: !app.isPackaged, unlocked: devUnlocked(), state: devEnabled() ? getDevState() : null }))
+  handle(IPC.devCheckDiscord, async (_e, id: unknown) => (devEnabled() && typeof id === 'string' ? checkDiscordAppId(id) : { ok: false, reason: 'notApp' }))
   handle(IPC.devUnlock, async (_e, code: unknown) => {
     const result = await unlockDev(code, getFeed().staffCode)
     if (result.ok) devRefresh()
@@ -695,7 +696,21 @@ function registerIpc(): void {
   handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))
   handle(IPC.launcherUpdateGet, () => devUpdate(getUpdateState()))
   handle(IPC.launcherUpdateCheck, () => checkForUpdates())
-  on(IPC.launcherUpdateInstall, () => installUpdateNow())
+  on(IPC.launcherUpdateInstall, () => {
+    // a pretend update (Developer tab) can't be installed: say what would happen
+    if (devEnabled() && getDevState().launcherUpdate === 'ready') {
+      const fr = (getSettings().language === 'auto' ? app.getLocale() : getSettings().language).startsWith('fr')
+      void dialog.showMessageBox(win!, {
+        type: 'info',
+        title: 'Hemisphere Launcher',
+        message: fr
+          ? 'Menu Développeur : cette fausse mise à jour ne peut pas s’installer. Dans le vrai launcher, il se fermerait, passerait en 9.9.9 et se rouvrirait.'
+          : 'Developer tab: this pretend update can’t be installed. The real launcher would now close, update to 9.9.9 and reopen.',
+      })
+      return
+    }
+    installUpdateNow()
+  })
 }
 
 // The installed launcher never accepts a remote debugger (it would give any local program control of the

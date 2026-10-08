@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CalendarDays, Clock, Construction, Signal } from 'lucide-react'
 import { eventPhase, upcomingEvents } from '@shared/events'
@@ -6,11 +7,25 @@ import { relativeTime } from './Events'
 import type { ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
 import { nextRestart, type LiveRestart, type RestartSchedule, type RestartState } from '@shared/restart'
-import { splitDuration, useLiveRestart, useNow, useWindowHeight } from '../hooks'
+import { splitDuration, useLiveRestart, useNow } from '../hooks'
 
-// Rows of heads (2 per row) grow with the window height, so the panel never reaches the news card:
-// 2 rows in the smallest window, one more row every 40 px, up to 5 rows.
-const headRows = (height: number) => Math.min(5, Math.max(2, 2 + Math.floor((height - 600) / 40)))
+/** The panel stops above Home's footer (news card, links): the player list scrolls in whatever room is left. */
+function useRoomAboveFooter() {
+  const ref = useRef<HTMLElement>(null)
+  const [max, setMax] = useState<number | undefined>(undefined)
+  useLayoutEffect(() => {
+    const parent = ref.current?.parentElement
+    const footer = parent?.querySelector(':scope > footer')
+    if (!parent || !(footer instanceof HTMLElement)) return
+    const measure = () => setMax(Math.max(160, footer.offsetTop - (ref.current?.offsetTop ?? 0) - 10))
+    const observer = new ResizeObserver(measure)
+    observer.observe(parent)
+    observer.observe(footer)
+    measure()
+    return () => observer.disconnect()
+  }, [])
+  return { ref, max }
+}
 
 export default function ServerPanel({ status, feed, onOpenNews }: { status: ServerStatus | null; feed: Feed | null; onOpenNews?: () => void }) {
   const { t, i18n } = useTranslation()
@@ -22,10 +37,11 @@ export default function ServerPanel({ status, feed, onOpenNews }: { status: Serv
   const restarting = live?.phase === 'restarting'
   const maintenance = feed?.maintenance.active === true
   const online = status?.online === true && !restarting && !maintenance
+  const room = useRoomAboveFooter()
   const next = upcomingEvents(feed?.events, now).find((e) => Date.parse(e.start) - now < 7 * 24 * 3600_000)
 
   return (
-    <aside className="glass animate-rise absolute top-5 right-6 w-[268px] p-4 [animation-delay:300ms]">
+    <aside ref={room.ref} style={{ maxHeight: room.max }} className="glass animate-rise absolute top-5 right-6 flex w-[268px] flex-col p-4 [animation-delay:300ms] [&>*]:flex-none">
       <p className="text-xs font-bold tracking-[0.08em] text-gray-400 uppercase">{t('server.name')}</p>
 
       <div className="mt-2 flex items-center justify-between">
@@ -68,7 +84,7 @@ export default function ServerPanel({ status, feed, onOpenNews }: { status: Serv
         </button>
       )}
 
-      {online && <PlayerList status={status} fewer={next ? 1 : 0} />}
+      {online && <PlayerList status={status} />}
     </aside>
   )
 }
@@ -142,10 +158,12 @@ function RestartBox({ restart, live }: { restart: RestartState; live: LiveRestar
   )
 }
 
-function PlayerList({ status, fewer = 0 }: { status: ServerStatus; fewer?: number }) {
+function PlayerList({ status }: { status: ServerStatus }) {
   const { t } = useTranslation()
-  const shown = status.players.slice(0, Math.max(1, headRows(useWindowHeight()) - fewer) * 2)
+  // up to 6 players visible (3 rows of 2; fewer when the window is short); the rest of the list scrolls
+  const shown = status.players
   const total = status.playersOnline ?? status.players.length
+  // the server only lists some of its players: the others are counted below the list
   const more = total - shown.length
 
   return (
@@ -161,7 +179,7 @@ function PlayerList({ status, fewer = 0 }: { status: ServerStatus; fewer?: numbe
       {total === 0 ? (
         <p className="rounded-md bg-gray-900/50 px-3 py-2 text-[13px] text-gray-400">{t('server.nobody')}</p>
       ) : (
-        <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+        <div className="grid max-h-[92px] min-h-[28px] shrink! grid-cols-2 gap-x-2 gap-y-1 overflow-y-auto pr-0.5 [scrollbar-color:var(--color-gray-600)_transparent] [scrollbar-width:thin]">
           {shown.map((p) => (
             <div key={p.uuid} title={p.name} className="flex min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-[13px] hover:bg-gray-700/60">
               <img
@@ -173,12 +191,10 @@ function PlayerList({ status, fewer = 0 }: { status: ServerStatus; fewer?: numbe
               <span className="truncate">{p.name}</span>
             </div>
           ))}
-          {more > 0 && (
-            <div className="col-span-2 mt-1 rounded-md bg-gray-900/50 py-1 text-center text-[13px] font-semibold text-gray-400">
-              {t('server.more', { count: more })}
-            </div>
-          )}
         </div>
+      )}
+      {total > 0 && more > 0 && (
+        <div className="mt-1.5 rounded-md bg-gray-900/50 py-1 text-center text-[13px] font-semibold text-gray-400">{t('server.more', { count: more })}</div>
       )}
     </>
   )

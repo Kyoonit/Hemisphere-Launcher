@@ -269,24 +269,26 @@ export function onRestartMoment(moment: 'warn15' | 'warn1' | 'start' | 'back', n
 // ------------------------------------------------------------------------------ Developer tab
 
 /** Developer tab: a notification now, as players would get it. */
-export function devNotify(kind: 'back' | 'event'): void {
+export function devNotify(kind: 'back' | 'event' | 'warn15' | 'warn1' | 'start'): void {
   const t = text()
+  if (kind === 'warn15' || kind === 'warn1' || kind === 'start') return onRestartMoment(kind, kind === 'start' ? null : Date.now() + (kind === 'warn15' ? 15 : 1) * 60_000)
   if (kind === 'back') notify(t.backTitle, t.backBody)
   else notify(lang() === 'fr' ? 'Course d’élytres' : 'Elytra race', `${t.eventSoon(15)} · /warp race`)
 }
 
-/** Developer tab: the Discord status right away (on) or cleared; false = Discord not reachable / no app id. */
-export async function devDiscord(on: boolean): Promise<boolean> {
+/** Developer tab: the Discord status right away (on) or cleared; why it failed otherwise. */
+export async function devDiscord(on: boolean): Promise<'ok' | 'noAppId' | 'noDiscord' | 'invalidId' | 'failed'> {
   const appId = hooks?.feed().discordAppId
-  if (!appId) return false
+  if (!appId) return 'noAppId'
   if (!on) {
     onGameExited(false)
-    return true
+    return 'ok'
   }
   presence?.close()
   presence = new DiscordPresence(appId)
   const t = text()
-  return presence.set({ details: t.playing, state: 'Minecraft 26.3', startedAt: Date.now(), largeImage: 'logo', largeText: 'Hemisphere SMP', buttons: [{ label: t.website, url: LINKS.website }] })
+  const ok = await presence.set({ details: t.playing, state: 'Minecraft 26.3', startedAt: Date.now(), largeImage: 'logo', largeText: 'Hemisphere SMP', buttons: [{ label: t.website, url: LINKS.website }] })
+  return ok ? 'ok' : (presence.lastError ?? 'failed')
 }
 
 // ------------------------------------------------------------------------------ start
