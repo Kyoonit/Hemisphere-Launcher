@@ -149,14 +149,9 @@ function WhatsNew({ client, onSeeMore }: { client: ClientSummary | null; onSeeMo
   const days = launcher.slice(0, 2)
   if (launcher.length === 0) return null
   const close = () => void update({ seenLauncherVersion: app.version, ...(installed ? { seenChangelog: installed } : {}) })
-  const Section = ({ title, sub, lines }: { title: string; sub?: string; lines: string[] }) => (
+  const Section = ({ sub, lines }: { sub: string; lines: string[] }) => (
     <>
-      {title && (
-        <p className="flex items-center gap-1.5 pr-4 text-[13px] font-semibold text-white">
-          <Sparkles size={14} className="flex-none text-green-400" /> {title}
-        </p>
-      )}
-      {sub && <p className="mt-1.5 text-[10.5px] font-bold tracking-[0.08em] text-green-400 uppercase">{sub}</p>}
+      <p className="mt-1.5 text-[10.5px] font-bold tracking-[0.08em] text-green-400 uppercase first:mt-0">{sub}</p>
       <ul className="mt-1 mb-2 space-y-1 text-xs text-gray-300 last:mb-0">
         {lines.map((line, i) => (
           <li key={i} className="flex gap-1.5">
@@ -169,15 +164,19 @@ function WhatsNew({ client, onSeeMore }: { client: ClientSummary | null; onSeeMo
   )
   return (
     <aside className="glass animate-rise absolute top-[232px] left-6 w-[210px] px-4 py-3.5 [animation-delay:450ms]">
-      <button onClick={close} aria-label={t('whatsNew.close')} className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white">
-        <X size={14} />
-      </button>
-      <div className="max-h-[170px] overflow-y-auto pr-1 [scrollbar-color:var(--color-gray-600)_transparent] [scrollbar-width:thin]">
-        {days.flatMap((d, i) =>
-          byVersion(d).map((v, j) => (
+      {/* title and close button above the scrolling list (its scrollbar never sits under the button) */}
+      <div className="mb-1.5 flex items-start gap-1.5">
+        <Sparkles size={14} className="mt-0.5 flex-none text-green-400" />
+        <p className="min-w-0 flex-1 text-[13px] font-semibold text-white">{t('whatsNew.launcherTitle', { version: byVersion(days[0])[0].version })}</p>
+        <button onClick={close} aria-label={t('whatsNew.close')} className="-mt-0.5 -mr-1.5 flex-none rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white">
+          <X size={14} />
+        </button>
+      </div>
+      <div className="max-h-[150px] overflow-y-auto pr-1 [scrollbar-color:var(--color-gray-600)_transparent] [scrollbar-width:thin]">
+        {days.flatMap((d) =>
+          byVersion(d).map((v) => (
             <Section
               key={v.version}
-              title={i === 0 && j === 0 ? t('whatsNew.launcherTitle', { version: v.version }) : ''}
               sub={`${relativeDay(d.date) ? t(`launcherNews.${relativeDay(d.date)}`) : dayLabel(d.date, i18n.language, 'short')} · ${v.version}`}
               lines={v.changes.map((c) => (fr ? c.fr : c.en))}
             />

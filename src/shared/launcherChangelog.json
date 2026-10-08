@@ -3,6 +3,12 @@
     "date": "2026-10-08",
     "changes": [
       {
+        "version": "1.0.6",
+        "area": "home",
+        "en": "What’s new: the close button no longer overlaps the scrollbar.",
+        "fr": "Nouveautés : le bouton de fermeture ne chevauche plus la barre de défilement."
+      },
+      {
         "version": "1.0.5",
         "area": "play",
         "en": "The launcher never changes your in-game settings: it only decides how much memory Minecraft gets and how Java runs.",
