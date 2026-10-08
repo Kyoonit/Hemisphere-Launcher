@@ -5,8 +5,9 @@ import { join } from 'node:path'
 import { ModPolicySchema, policyFor, type ModPolicy } from '../src/shared/modBrowser'
 import { FeedSchema } from '../src/shared/feed'
 
-vi.mock('electron', () => ({ app: { getVersion: () => '0.0.0-test', getPath: () => '.' } }))
+vi.mock('electron', () => ({ app: { getVersion: () => '0.0.0-test', getPath: () => '.' }, shell: { trashItem: async () => {} } }))
 const { VersionSchema, pickVersion, primaryFile, safeIcon } = await import('../src/main/core/modrinth/api')
+const { modKey, isDuplicate } = await import('../src/main/core/modrinth/playerMods')
 
 const policy: ModPolicy = {
   rules: [
@@ -74,5 +75,31 @@ describe('Modrinth versions', () => {
     expect(safeIcon('https://cdn.modrinth.com/data/AANobbMI/icon.png')).toBe('https://cdn.modrinth.com/data/AANobbMI/icon.png')
     expect(safeIcon('https://tracker.example/pixel.png')).toBe('')
     expect(safeIcon(null)).toBe('')
+  })
+})
+
+describe('duplicates of Hemisphere mods', () => {
+  const hemisphere = {
+    projects: new Set(['YL57xq9U']),
+    keys: new Set(['chatheads', 'irisshaders', 'iris', 'sodium', 'sodiumextra', 'modmenu', 'fabricapi'].map(modKey)),
+  }
+  test.each([
+    ['Chat Heads', 'chatheads'],
+    ['chat_heads-1.3.2.jar', 'chatheads'],
+    ['chat-heads-fabric-1.3.2+26.3.jar', 'chatheads'],
+    ['sodium-extra-fabric-0.9.4+mc26.3.jar', 'sodiumextra'],
+    ['Iris Shaders', 'irisshaders'],
+    ['3D Skin Layers', '3dskinlayers'],
+    ['3dskinlayers-fabric-1.6.jar', '3dskinlayers'],
+  ])('%s -> %s', (name, key) => expect(modKey(name)).toBe(key))
+  test('same Modrinth project, same title or same file name = duplicate', () => {
+    expect(isDuplicate({ file: 'whatever.jar', projectId: 'YL57xq9U', title: null }, hemisphere)).toBe(true)
+    expect(isDuplicate({ file: 'chat_heads-1.3.2.jar', projectId: 'zzzzzzzz', title: 'Chat Heads (fork)' }, hemisphere)).toBe(true)
+    expect(isDuplicate({ file: 'x.jar', projectId: null, title: 'Mod Menu' }, hemisphere)).toBe(true)
+  })
+  test('different mods with similar names are not duplicates', () => {
+    expect(isDuplicate({ file: 'sodium-extra-0.9.4.jar', projectId: null, title: null }, { projects: new Set(), keys: new Set(['sodium']) })).toBe(false)
+    expect(isDuplicate({ file: 'jade-26.3.5.jar', projectId: 'nvQzSEkH', title: 'Jade' }, hemisphere)).toBe(false)
+    expect(isDuplicate({ file: 'x.jar', projectId: null, title: null }, null)).toBe(false)
   })
 })

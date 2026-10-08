@@ -7,9 +7,8 @@ import Toggle from '../components/Toggle'
 import type { ClientSummary, ModSummary } from '@shared/client'
 import { localize } from '@shared/manifest'
 
-const GROUPS = ['performance', 'voice', 'visual', 'comfort'] as const
-type Filter = 'all' | (typeof GROUPS)[number] | 'yours'
-const FILTERS: Filter[] = ['all', ...GROUPS, 'yours']
+type Filter = 'all' | 'yours'
+const FILTERS: Filter[] = ['all', 'yours']
 
 /** Same palette idea as the wireframe: a stable colour per mod for its letter tile. */
 const TILE = ['#2563eb', '#0d9488', '#b45309', '#7c3aed', '#16a34a', '#db2777', '#0891b2', '#ca8a04', '#dc2626', '#4f46e5']
@@ -54,14 +53,11 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
       filter === 'yours'
         ? []
         : (client?.mods ?? [])
-            .filter((m) => m.category !== 'library' && (filter === 'all' || m.category === filter) && (!q || m.name.toLowerCase().includes(q)))
+            .filter((m) => m.category !== 'library' && (!q || m.name.toLowerCase().includes(q)))
             .map((mod) => ({ kind: 'hemisphere', name: mod.name, mod }))
-    const yours: ListItem[] =
-      filter === 'all' || filter === 'yours'
-        ? (own ?? [])
-            .filter((m) => !q || (m.title ?? '').toLowerCase().includes(q) || m.file.toLowerCase().includes(q))
-            .map((mod) => ({ kind: 'player', name: mod.title ?? mod.file, mod }))
-        : []
+    const yours: ListItem[] = (own ?? [])
+      .filter((m) => !q || (m.title ?? '').toLowerCase().includes(q) || m.file.toLowerCase().includes(q))
+      .map((mod) => ({ kind: 'player', name: mod.title ?? mod.file, mod }))
     return [...hemisphere, ...yours].sort((a, b) => a.name.localeCompare(b.name, i18n.language, { sensitivity: 'base' }))
   }, [client, own, filter, query, i18n.language])
   const libraries = client?.mods.filter((m) => m.category === 'library') ?? []
@@ -101,12 +97,6 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
             </p>
             <h1 className="text-[30px] leading-tight font-bold text-white">{t('nav.mods').toUpperCase()}</h1>
           </div>
-          <span className="text-right text-xs text-gray-400">
-            {client.source === 'cache' && <span className="mr-2 text-amber-400">{t('mods.offlineCopy')}</span>}
-            {t('mods.enabledTotal', { count: hemisphereOn + yoursOn })}
-            {' · '}
-            {t('mods.applyNext')}
-          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -148,9 +138,15 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
                 filter === f ? 'bg-green-600 text-white' : 'bg-gray-800/70 text-gray-300 hover:bg-gray-700 hover:text-white'
               }`}
             >
-              {f === 'yours' ? `${t('mods.yours')} (${own?.length ?? 0})` : t(`mods.groups.${f}`)}
+              {f === 'yours' ? `${t('mods.yours')} (${own?.length ?? 0})` : t('mods.groups.all')}
             </button>
           ))}
+          <span className="ml-2 self-center text-xs text-gray-400">
+            {client.source === 'cache' && <span className="mr-2 text-amber-400">{t('mods.offlineCopy')}</span>}
+            {t('mods.enabledTotal', { count: hemisphereOn + yoursOn })}
+            {' · '}
+            {t('mods.applyNext')}
+          </span>
         </div>
 
         {notice && (
@@ -286,6 +282,8 @@ function PlayerModRow({ mod, lang, onChanged }: { mod: PlayerModInfo; lang: stri
       <Toggle
         on={mod.enabled}
         label={name}
+        disabled={mod.inHemisphere && !mod.enabled}
+        title={mod.inHemisphere ? t('mods.duplicateLocked') : undefined}
         onChange={async (on) => {
           if (await window.hemisphere.client.setPlayerMod(mod.file, on)) onChanged()
         }}

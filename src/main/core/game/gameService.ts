@@ -18,7 +18,7 @@ import { inspectJava } from './java'
 import { physicalPath } from '../system/redirect'
 import { applyGpuPreference } from '../system/gpu'
 import { disableAllPlayerMods } from '../importer/importer'
-import { updatePlayerMods } from '../modrinth/playerMods'
+import { parkDuplicates, updatePlayerMods } from '../modrinth/playerMods'
 import { readInstanceState } from '../sync/sync'
 import { endSession, startSession } from '../playtime/playtimeStore'
 import { cleanStore, syncClient } from '../sync/sync'
@@ -150,6 +150,7 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     let { versionId, javaPath } = await ensureGameInstalled(target, report)
     const before = await readInstanceState()
     const synced = await syncClient(manifest, report('mods'))
+    await parkDuplicates(Object.keys((await readInstanceState()).owned), manifest).catch((err) => console.warn('[game] duplicate check failed:', err))
     if (before.minecraft && before.minecraft !== manifest.minecraft) {
       // New (or older) Minecraft version: the player's own mods follow; ones without a version yet are switched off.
       const moved = await updatePlayerMods(Object.keys((await readInstanceState()).owned), manifest.minecraft, true).catch((err) => {

@@ -318,7 +318,8 @@
     "enabledTotal_other": "{{count}} mods on",
     "yoursTag": "Added by you",
     "duplicate": "Duplicate",
-    "duplicateHint": "Hemisphere already includes this mod: remove this copy and use Hemisphere’s switch instead"
+    "duplicateHint": "Hemisphere already includes this mod: remove this copy and use Hemisphere’s switch instead",
+    "duplicateLocked": "Remove this copy to switch it on: Hemisphere already includes this mod"
   },
   "repair": {
     "title": "Repair installation",

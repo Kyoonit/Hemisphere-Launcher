@@ -14,6 +14,11 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
   const [confirm, setConfirm] = useState<ModSearchHit | null>(null)
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
   const searchId = useRef(0)
+  // The version doesn't change while typing: remember it from the first answer.
+  const [minecraft, setMinecraft] = useState<string | null>(null)
+  useEffect(() => {
+    if (result?.minecraft) setMinecraft(result.minecraft)
+  }, [result])
 
   // Debounced search; results of an older query never overwrite a newer one.
   useEffect(() => {
@@ -55,7 +60,7 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
       </button>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-bold tracking-[0.08em] text-green-400 uppercase">{t('browse.subtitle', { minecraft: result?.minecraft ?? '…' })}</p>
+          <p className="text-xs font-bold tracking-[0.08em] text-green-400 uppercase">{t('browse.subtitle', { minecraft: minecraft ?? '…' })}</p>
           <h1 className="text-[30px] font-bold text-white uppercase">{t('browse.title')}</h1>
         </div>
         <label className="relative w-[320px] max-w-full">

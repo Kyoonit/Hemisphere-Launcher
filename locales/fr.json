@@ -323,7 +323,8 @@
     "enabledTotal_many": "{{count}} mods activés",
     "yoursTag": "Ajouté par toi",
     "duplicate": "Doublon",
-    "duplicateHint": "Hemisphere inclut déjà ce mod : supprime cette copie et utilise l’interrupteur d’Hemisphere"
+    "duplicateHint": "Hemisphere inclut déjà ce mod : supprime cette copie et utilise l’interrupteur d’Hemisphere",
+    "duplicateLocked": "Supprime cette copie pour l’activer : Hemisphere inclut déjà ce mod"
   },
   "repair": {
     "title": "Réparer l’installation",

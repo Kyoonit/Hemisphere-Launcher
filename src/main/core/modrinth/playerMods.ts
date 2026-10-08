@@ -128,9 +128,62 @@ async function identify(owned: string[]): Promise<Registry> {
   return reg
 }
 
-export function listPlayerMods(owned: string[], policy: ModPolicy | null | undefined, hemisphere: Set<string> = new Set()): Promise<PlayerModInfo[]> {
+/**
+ * Comparable name: lower-case letters and digits only, without the version and loader words.
+ * "Chat Heads", "chat_heads-1.3.2.jar" and "chat-heads-fabric-1.3.2.jar" all give "chatheads".
+ */
+export function modKey(name: string): string {
+  let s = name.replace(/\.jar$/i, '').toLowerCase()
+  s = s.split(/[-_+ ]v?\d/)[0]
+  s = s.replace(/[^a-z0-9]/g, '')
+  while (s.length > 6 && /(fabric|quilt|neoforge|forge|mc)$/.test(s)) s = s.replace(/(fabric|quilt|neoforge|forge|mc)$/, '')
+  return s
+}
+
+/** What Hemisphere ships, for spotting a player's copy of the same mod (by Modrinth project or by name). */
+export interface HemisphereMods {
+  projects: Set<string>
+  keys: Set<string>
+}
+export function hemisphereMods(manifest: ClientManifest): HemisphereMods {
+  const keys = manifest.mods.flatMap((m) => [modKey(m.name), modKey(m.file.path.split('/').pop() ?? '')])
+  return { projects: hemisphereProjects(manifest), keys: new Set(keys.filter((k) => k.length >= 3)) }
+}
+export function isDuplicate(mod: { file: string; projectId: string | null; title: string | null }, h: HemisphereMods | null): boolean {
+  if (!h) return false
+  return (!!mod.projectId && h.projects.has(mod.projectId)) || h.keys.has(modKey(mod.file)) || (!!mod.title && h.keys.has(modKey(mod.title)))
+}
+
+/** Player copies of Hemisphere's own mods are kept switched off (two copies of a mod crash or double-load). */
+async function parkDuplicatesNow(owned: string[], reg: Registry, h: HemisphereMods): Promise<string[]> {
+  const parked: string[] = []
+  for (const f of playerFiles(owned)) {
+    const e = reg[key(f.file)]
+    if (!f.enabled || !isDuplicate({ file: f.file, projectId: e?.projectId ?? null, title: e?.title ?? null }, h)) continue
+    await mkdir(disabledDir(), { recursive: true })
+    if (existsSync(join(disabledDir(), f.file))) continue
+    await rename(join(f.dir, f.file), join(disabledDir(), f.file))
+    parked.push(f.file)
+  }
+  if (parked.length) console.log(`[player-mods] switched off duplicates of Hemisphere mods: ${parked.join(', ')}`)
+  return parked
+}
+
+/** Before PLAY: make sure no duplicate is enabled. */
+export function parkDuplicates(owned: string[], manifest: ClientManifest): Promise<string[]> {
+  return serial(async () => parkDuplicatesNow(owned, await identify(owned), hemisphereMods(manifest)))
+}
+
+/** Whether this player file may be switched on (not a duplicate of a Hemisphere mod). */
+export function canEnablePlayerMod(file: string, manifest: ClientManifest): boolean {
+  const e = readRegistry()[key(file)]
+  return !isDuplicate({ file, projectId: e?.projectId ?? null, title: e?.title ?? null }, hemisphereMods(manifest))
+}
+
+export function listPlayerMods(owned: string[], policy: ModPolicy | null | undefined, hemisphere: HemisphereMods | null = null): Promise<PlayerModInfo[]> {
   return serial(async () => {
     const reg = await identify(owned)
+    if (hemisphere) await parkDuplicatesNow(owned, reg, hemisphere)
     return playerFiles(owned)
       .map(({ file, enabled }) => {
         const e = reg[key(file)]
@@ -145,7 +198,7 @@ export function listPlayerMods(owned: string[], policy: ModPolicy | null | undef
           ...policyFor(policy, e?.projectId ?? null),
           update: e?.update ? { versionNumber: e.update.versionNumber } : null,
           incompatibleWith: e?.incompatibleWith ?? null,
-          inHemisphere: !!e?.projectId && hemisphere.has(e.projectId),
+          inHemisphere: isDuplicate({ file, projectId: e?.projectId ?? null, title: e?.title ?? null }, hemisphere),
         }
       })
       .sort((a, b) => (a.title ?? a.file).localeCompare(b.title ?? b.file))

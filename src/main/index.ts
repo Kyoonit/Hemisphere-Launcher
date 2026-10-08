@@ -33,7 +33,7 @@ import { installFileLogger } from './core/logging/logger'
 import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemInfo, type FolderKind } from './core/system/system'
 import { detectGpus } from './core/system/gpu'
 import { detectSources, importFrom, setPlayerModEnabled, sourceFromFolder } from './core/importer/importer'
-import { checkPlayerModUpdates, hemisphereProjects, installMod, knownPlayerProjects, listPlayerMods, removePlayerMod, updatePlayerMods } from './core/modrinth/playerMods'
+import { canEnablePlayerMod, checkPlayerModUpdates, hemisphereMods, hemisphereProjects, installMod, knownPlayerProjects, listPlayerMods, removePlayerMod, updatePlayerMods } from './core/modrinth/playerMods'
 import { safeIcon, searchMods } from './core/modrinth/api'
 import { MODRINTH_ID, policyFor, type InstallResult, type ModSearchResult } from '@shared/modBrowser'
 import type { ImportOptions, ImportSource } from '@shared/importer'
@@ -196,8 +196,8 @@ function registerIpc(): void {
   })
   handle(IPC.modsPlayer, async () => {
     const hemisphere = await getContent()
-      .then((c) => hemisphereProjects(c.manifest))
-      .catch(() => new Set<string>())
+      .then((c) => hemisphereMods(c.manifest))
+      .catch(() => null)
     return listPlayerMods(Object.keys((await readInstanceState()).owned), getFeed().modPolicy, hemisphere)
   })
   // Changing mods while the game runs (or while the launcher is installing) is refused.
@@ -267,6 +267,8 @@ function registerIpc(): void {
   handle(IPC.modsPlayerSet, async (_e, file: unknown, enabled: unknown) => {
     const g = getGameState()
     if (typeof file !== 'string' || typeof enabled !== 'boolean' || g.runningAccounts.length) return false
+    // A copy of a mod Hemisphere already ships stays off until it's removed.
+    if (enabled && !canEnablePlayerMod(file, (await getContent()).manifest)) return false
     return setPlayerModEnabled(file, enabled, Object.keys((await readInstanceState()).owned))
   })
   handle(IPC.feedGet, () => getFeed())
