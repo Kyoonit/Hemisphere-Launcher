@@ -121,9 +121,6 @@
     "highPerformanceGpuHint": "This PC has two graphics chips ({{gpus}}): Minecraft runs on the stronger one",
     "backgroundUpdates": "Prepare updates in the background",
     "backgroundUpdatesHint": "Installs Hemisphere updates while the launcher is open, so PLAY starts right away",
-    "devTools": "Developer tools",
-    "devToolsHint": "Only in development builds",
-    "markNewsUnread": "Mark all news as unread",
     "lightMode": "Light interface",
     "lightModeHint": "No blur, animations or changing backgrounds: smoother on modest PCs.",
     "lightModeOptions": {
@@ -139,20 +136,7 @@
     "downloadLimitValue": "{{value}} MB/s",
     "saveDataOnMetered": "Save data on metered connections",
     "saveDataOnMeteredHint": "On a phone hotspot or 4G, updates download only when you press PLAY.",
-    "saveDataOnMeteredNow": "Your connection is metered right now: updates download only when you press PLAY.",
-    "graphics": "Graphics",
-    "graphicsHint": "Best for this PC: {{preset}}. Only view distance, particles, clouds and shadows change.",
-    "graphicsApplied": "{{preset}} graphics saved: Minecraft uses them the next time it starts.",
-    "graphicsFailed": {
-      "running": "Close Minecraft first: it saves its own settings when it closes.",
-      "failed": "Couldn’t save the graphics settings."
-    },
-    "graphicsPresets": {
-      "low": "Low",
-      "balanced": "Balanced",
-      "high": "High"
-    },
-    "graphicsRecommended": "Best"
+    "saveDataOnMeteredNow": "Your connection is metered right now: updates download only when you press PLAY."
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -528,9 +512,9 @@
     "needs": "needs {{needs}}",
     "openMods": "Open Mods",
     "outOfMemory": "Minecraft ran out of memory ({{gb}} GB).",
-    "outOfMemoryHint": "Lighter graphics need much less memory. You can also close other programs before playing.",
-    "outOfMemoryLower": "Use lighter graphics",
-    "outOfMemoryDone": "Lighter graphics saved: press PLAY to try again."
+    "outOfMemoryHint": "Close other programs before playing (browser, video…), or give Minecraft more memory in Settings > Game.",
+    "outOfMemoryDone": "Recommended memory set: press PLAY to try again.",
+    "outOfMemoryRaise": "Use the recommended memory ({{gb}} GB)"
   },
   "launcherUpdate": {
     "restart": "Restart to update",

@@ -121,9 +121,6 @@
     "highPerformanceGpuHint": "Ce PC a deux puces graphiques ({{gpus}}) : Minecraft utilise la plus puissante",
     "backgroundUpdates": "Préparer les mises à jour en arrière-plan",
     "backgroundUpdatesHint": "Installe les mises à jour Hemisphere pendant que le launcher est ouvert, pour que JOUER démarre tout de suite",
-    "devTools": "Outils de développement",
-    "devToolsHint": "Uniquement dans les versions de développement",
-    "markNewsUnread": "Marquer toutes les actus comme non lues",
     "lightMode": "Interface légère",
     "lightModeHint": "Sans flou, animations ni changement de fond : plus fluide sur les PC modestes.",
     "lightModeOptions": {
@@ -139,20 +136,7 @@
     "downloadLimitValue": "{{value}} Mo/s",
     "saveDataOnMetered": "Économiser les données sur les connexions limitées",
     "saveDataOnMeteredHint": "En partage de connexion ou en 4G, les mises à jour se téléchargent seulement quand tu appuies sur JOUER.",
-    "saveDataOnMeteredNow": "Ta connexion est limitée en ce moment : les mises à jour se téléchargent seulement quand tu appuies sur JOUER.",
-    "graphics": "Graphismes",
-    "graphicsHint": "Conseillé pour ce PC : {{preset}}. Seuls la distance de vue, les particules, les nuages et les ombres changent.",
-    "graphicsApplied": "Graphismes {{preset}} enregistrés : Minecraft les utilise au prochain lancement.",
-    "graphicsFailed": {
-      "running": "Ferme d’abord Minecraft : il enregistre ses propres réglages en se fermant.",
-      "failed": "Impossible d’enregistrer les réglages graphiques."
-    },
-    "graphicsPresets": {
-      "low": "Faibles",
-      "balanced": "Équilibrés",
-      "high": "Élevés"
-    },
-    "graphicsRecommended": "Conseillé"
+    "saveDataOnMeteredNow": "Ta connexion est limitée en ce moment : les mises à jour se téléchargent seulement quand tu appuies sur JOUER."
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -542,9 +526,9 @@
     "needs": "demande {{needs}}",
     "openMods": "Ouvrir Mods",
     "outOfMemory": "Minecraft a manqué de mémoire ({{gb}} Go).",
-    "outOfMemoryHint": "Des graphismes plus légers demandent beaucoup moins de mémoire. Tu peux aussi fermer d’autres programmes avant de jouer.",
-    "outOfMemoryLower": "Passer en graphismes légers",
-    "outOfMemoryDone": "Graphismes légers enregistrés : appuie sur JOUER pour réessayer."
+    "outOfMemoryHint": "Ferme d’autres programmes avant de jouer (navigateur, vidéo…), ou donne plus de mémoire à Minecraft dans Paramètres > Jeu.",
+    "outOfMemoryDone": "Mémoire conseillée réglée : appuie sur JOUER pour réessayer.",
+    "outOfMemoryRaise": "Utiliser la mémoire conseillée ({{gb}} Go)"
   },
   "launcherUpdate": {
     "restart": "Redémarrer pour mettre à jour",

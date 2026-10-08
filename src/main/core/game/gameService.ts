@@ -1,6 +1,5 @@
 import { freemem, totalmem } from 'node:os'
-import { autoMemoryMb, withGcArgs } from '@shared/graphics'
-import { presetForNewPlayer } from './graphics'
+import { autoMemoryMb, withGcArgs } from '@shared/memory'
 import { existsSync, readFileSync } from 'node:fs'
 import { app } from 'electron'
 import type { ChildProcess } from 'node:child_process'
@@ -215,7 +214,6 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     // automatic memory adapts to what's free right now (other programs open): too much makes Windows swap
     const memory = settings.memoryMb ?? autoMemoryMb(recommendedMemoryMb(), Math.round(freemem() / 1024 ** 2))
     if (settings.memoryMb === null) console.log(`[game] memory: ${memory} MB (recommended ${recommendedMemoryMb()} MB, ${Math.round(freemem() / 1024 ** 2)} MB free)`)
-    await presetForNewPlayer().catch((err) => console.warn('[game] graphics preset not written:', err))
     const resolution =
       settings.resolution === 'fullscreen'
         ? { fullscreen: true }

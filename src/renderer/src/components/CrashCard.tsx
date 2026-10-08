@@ -21,7 +21,12 @@ export default function CrashCard({
   const { t } = useTranslation()
   const [ownMods, setOwnMods] = useState<number>(0)
   const [copied, setCopied] = useState(false)
-  const [lowered, setLowered] = useState(false)
+  const [raised, setRaised] = useState(false)
+  // memory recommended for this PC: offered when Minecraft had less and ran out
+  const [recommendedMb, setRecommendedMb] = useState<number | null>(null)
+  useEffect(() => {
+    if (outOfMemory) window.hemisphere.system.info().then((i) => setRecommendedMb(i.recommendedMemoryMb))
+  }, [outOfMemory])
   useEffect(() => {
     window.hemisphere.client.playerMods().then((m) => setOwnMods(m.filter((x) => x.enabled).length))
   }, [])
@@ -49,16 +54,16 @@ export default function CrashCard({
       </div>
 
       {outOfMemory ? (
-        // Minecraft ran out of memory: lighter graphics is the fix that always works
+        // Minecraft ran out of memory: the launcher can give it more (the game's own settings stay the player's)
         <div className="mt-3 rounded-lg border-l-[3px] border-amber-400 bg-gray-900/65 px-3 py-2 text-[13px] text-gray-300">
           <b className="block text-white">{t('crash.outOfMemory', { gb: Math.round((outOfMemory.memoryMb / 1024) * 10) / 10 })}</b>
-          <span className="text-xs text-gray-400">{lowered ? t('crash.outOfMemoryDone') : t('crash.outOfMemoryHint')}</span>
-          {!lowered && (
+          <span className="text-xs text-gray-400">{raised ? t('crash.outOfMemoryDone') : t('crash.outOfMemoryHint')}</span>
+          {!raised && recommendedMb !== null && outOfMemory.memoryMb < recommendedMb && (
             <button
-              onClick={() => window.hemisphere.game.applyGraphics('low').then((r) => r.ok && setLowered(true))}
+              onClick={() => window.hemisphere.settings.set({ memoryMb: null }).then(() => setRaised(true))}
               className="mt-1.5 block rounded-md bg-amber-400 px-2.5 py-1 text-xs font-bold text-gray-900 hover:bg-amber-300"
             >
-              {t('crash.outOfMemoryLower')}
+              {t('crash.outOfMemoryRaise', { gb: Math.round((recommendedMb / 1024) * 10) / 10 })}
             </button>
           )}
         </div>

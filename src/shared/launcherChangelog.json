@@ -3,10 +3,16 @@
     "date": "2026-10-08",
     "changes": [
       {
-        "version": "1.0.4",
+        "version": "1.0.5",
         "area": "play",
-        "en": "Graphics presets for your PC (Low, Balanced, High) in Settings > Game; a new player starts with the one that suits their PC.",
-        "fr": "Des préréglages graphiques adaptés à ton PC (Faibles, Équilibrés, Élevés) dans Paramètres > Jeu ; un nouveau joueur démarre avec celui qui convient à son PC."
+        "en": "The launcher never changes your in-game settings: it only decides how much memory Minecraft gets and how Java runs.",
+        "fr": "Le launcher ne change jamais tes réglages en jeu : il décide seulement de la mémoire donnée à Minecraft et du fonctionnement de Java."
+      },
+      {
+        "version": "1.0.5",
+        "area": "play",
+        "en": "If Minecraft runs out of memory, the crash card says so and can give it the recommended memory in one click.",
+        "fr": "Si Minecraft manque de mémoire, la carte de crash le dit et peut lui donner la mémoire conseillée en un clic."
       },
       {
         "version": "1.0.4",
@@ -19,12 +25,6 @@
         "area": "play",
         "en": "Smoother frame times: Minecraft gets the same Java memory settings as the official launcher.",
         "fr": "Des images plus régulières : Minecraft reçoit les mêmes réglages mémoire Java que le launcher officiel."
-      },
-      {
-        "version": "1.0.4",
-        "area": "play",
-        "en": "If Minecraft runs out of memory, the crash card says so and switches to lighter graphics in one click.",
-        "fr": "Si Minecraft manque de mémoire, la carte de crash le dit et passe en graphismes légers en un clic."
       },
       {
         "version": "1.0.4",
