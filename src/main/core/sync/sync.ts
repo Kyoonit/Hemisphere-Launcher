@@ -4,6 +4,7 @@ import type { ClientManifest } from '@shared/manifest'
 import { applyToggle, resolveEnabled } from '@shared/modSelection'
 import { gamePaths } from '../game/target'
 import { GameError, type ProgressFn } from '../game/util'
+import { placingNow } from './inFlight'
 import { blobPath, DownloadError, downloadToStore, hasBlob, sha512OfFile, tempNameFor } from './download'
 import { desiredFiles, emptyState, planSync, type DesiredFile, type InstanceState, type LocalInfo } from './plan'
 
@@ -174,6 +175,8 @@ export async function syncClient(manifest: ClientManifest, onProgress: ProgressF
   }
 
   // Place files, then remove the ones no longer wanted.
+  const inFlight = plan.place.map((f) => f.path.toLowerCase())
+  for (const p of inFlight) placingNow.add(p)
   try {
     for (const f of plan.place) {
       const info = await place(f)
@@ -191,6 +194,7 @@ export async function syncClient(manifest: ClientManifest, onProgress: ProgressF
     throw new GameError('disk', String(err))
   } finally {
     await writeInstanceState(state) // keep what succeeded, even if something failed
+    for (const p of inFlight) placingNow.delete(p)
   }
 
   state.clientVersion = manifest.clientVersion

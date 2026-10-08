@@ -7,6 +7,7 @@ import { policyFor, type InstallResult, type ModPolicy, type ModVersionChoice, t
 import { gamePaths } from '../game/target'
 import { blobPath, downloadToStore, sha512OfFile } from '../sync/download'
 import { record, type NewHistoryEntry } from './history'
+import { placingNow } from '../sync/inFlight'
 import { getProjects, isSafeModFileName, latestByHash, pickVersion, primaryFile, projectVersions, safeIcon, updateTarget, versionsByHash, type ModrinthVersion } from './api'
 
 /**
@@ -65,9 +66,9 @@ function serial<T>(job: () => Promise<T>): Promise<T> {
 
 const list = (dir: string) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.jar')) : [])
 
-/** Player jars on disk: [file, enabled]. Hemisphere's own files (owned, in mods/) are not the player's. */
+/** Player jars on disk: [file, enabled]. Hemisphere's own files (owned, or being placed by a sync, in mods/) are not the player's. */
 function playerFiles(owned: string[]): { file: string; enabled: boolean; dir: string }[] {
-  const mine = new Set(owned.map((p) => p.toLowerCase()))
+  const mine = new Set([...owned.map((p) => p.toLowerCase()), ...placingNow])
   return [
     ...list(modsDir())
       .filter((f) => !mine.has(`mods/${f}`.toLowerCase()))

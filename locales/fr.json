@@ -696,7 +696,7 @@
   "sets": {
     "button": "Ensembles de mods",
     "title": "Ensembles de mods",
-    "hint": "Passe d’une liste de mods à une autre en un clic. Avant de changer, tes mods sont enregistrés dans l’ensemble actif. Les mods absents d’un ensemble sont désactivés, jamais supprimés.",
+    "hint": "Passe d’une liste de mods à une autre en un clic. Avant de changer, tes mods actuels sont enregistrés dans l’ensemble actif. Chaque ensemble garde exactement ses mods ; rien n’est jamais supprimé.",
     "empty": "Pas encore d’ensemble. Enregistre tes mods actuels pour commencer, par exemple « Survie », puis crée un ensemble « Construction ».",
     "myMods": "Mes mods",
     "active": "actif",

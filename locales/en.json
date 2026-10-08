@@ -667,7 +667,7 @@
   "sets": {
     "button": "Mod sets",
     "title": "Mod sets",
-    "hint": "Switch between mod lists in one click. Before switching, your mods are saved in the active set. Mods a set doesn’t have are switched off, never deleted.",
+    "hint": "Switch between mod lists in one click. Before switching, your current mods are saved in the active set. Each set keeps exactly its own mods; nothing is ever deleted.",
     "empty": "No sets yet. Save your mods as they are now to start, e.g. “Survival”, then make a “Building” set.",
     "myMods": "My mods",
     "active": "active",

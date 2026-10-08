@@ -16,7 +16,7 @@ import {
   switchAccount,
 } from './core/auth/accounts'
 import { cancelSignIn } from './core/auth/oauth'
-import { dismissGameError, gameEvents, getGameState, onGameState, play, prepareInBackground, repair } from './core/game/gameService'
+import { dismissGameError, gameEvents, getGameState, onGameState, play, prepareInBackground, repair, withModsHeld } from './core/game/gameService'
 import { getSettings, onSettingsChanged, updateSettings } from './core/settings/settings'
 import { AUTOSTART_ARG } from '@shared/settings'
 import { recoverSessions } from './core/playtime/playtimeStore'
@@ -338,10 +338,9 @@ function registerIpc(): void {
   handle(IPC.backupsPreview, (_e, id: unknown) => (isRestorePointId(id) ? previewRestore(id) : null))
   handle(IPC.backupsRestore, async (_e, id: unknown) => {
     if (!isRestorePointId(id)) return { ok: false, reason: 'notFound' }
-    if (modsBusy()) return { ok: false, reason: 'busy' }
-    const result = await restorePoint(id, (await clientInfo()).manifest)
-    if (result.ok) void prepareInBackground() // Hemisphere's mods for the restored choices
-    return result
+    const manifest = (await clientInfo()).manifest
+    // waits for the background preparation; Hemisphere's mods for the restored choices are prepared right after
+    return (await withModsHeld(() => restorePoint(id, manifest))) ?? { ok: false, reason: 'busy' }
   })
   handle(IPC.backupsDelete, (_e, id: unknown) => (isRestorePointId(id) ? deleteRestorePoint(id) : false))
   handle(IPC.setupExport, async () => {
@@ -364,23 +363,19 @@ function registerIpc(): void {
     return { ok: true, token: rememberSetup(setup), summary: summarize(pick.filePaths[0], setup, manifest.minecraft) }
   })
   handle(IPC.setupImport, async (_e, token: unknown) => {
-    if (modsBusy()) return { ok: false, reason: 'busy' }
     const setup = takeSetup(token)
     const { manifest } = await clientInfo()
     if (!setup || !manifest) return { ok: false, reason: 'invalid' }
-    const result = await importSetup(setup, manifest, getFeed().modPolicy)
-    if (result.ok) void prepareInBackground()
-    return result
+    return (await withModsHeld(() => importSetup(setup, manifest, getFeed().modPolicy))) ?? { ok: false, reason: 'busy' }
   })
   // Mod sets and history. Switching, importing and undoing change mods: refused while the game runs or the launcher installs.
   handle(IPC.setsList, () => listSets())
   handle(IPC.setsSave, (_e, name: unknown) => saveSet(name))
   handle(IPC.setsSwitch, async (_e, id: unknown, fallbackName: unknown) => {
     if (!isSetId(id)) return { ok: false, reason: 'notFound' }
-    if (modsBusy()) return { ok: false, reason: 'busy' }
-    const result = await switchSet(id, (await clientInfo()).manifest, fallbackName)
-    if (result.ok) void prepareInBackground() // Hemisphere's mods for the set's choices
-    return result
+    const manifest = (await clientInfo()).manifest
+    // waits for the background preparation; Hemisphere's mods for the set's choices are prepared right after
+    return (await withModsHeld(() => switchSet(id, manifest, fallbackName))) ?? { ok: false, reason: 'busy' }
   })
   handle(IPC.setsRename, (_e, id: unknown, name: unknown) => (isSetId(id) ? renameSet(id, name) : false))
   handle(IPC.setsDelete, (_e, id: unknown) => (isSetId(id) ? deleteSet(id) : false))
@@ -392,7 +387,6 @@ function registerIpc(): void {
     return result
   })
   handle(IPC.setsImport, async (_e, code: unknown) => {
-    if (modsBusy()) return { ok: false, reason: 'busy' }
     const { manifest } = await clientInfo()
     return manifest ? importSetCode(code, manifest, getFeed().modPolicy) : { ok: false, reason: 'failed' }
   })

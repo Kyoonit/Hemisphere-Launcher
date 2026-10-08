@@ -9,7 +9,7 @@ import { MAX_SETS, SET_NAME_MAX, type ModSetInfo, type ModSetsState, type SetImp
 import { gamePaths } from '../game/target'
 import { getProjects, getVersions, isSafeModFileName, pickVersion, primaryFile, projectVersions, type ModrinthVersion } from '../modrinth/api'
 import { record } from '../modrinth/history'
-import { modKey, readPlayerRegistry, registryKey, withPlayerMods, type PlayerModRecord } from '../modrinth/playerMods'
+import { readPlayerRegistry, registryKey, withPlayerMods, type PlayerModRecord } from '../modrinth/playerMods'
 import { blobPath, downloadToStore } from '../sync/download'
 import { readInstanceState } from '../sync/sync'
 import { applyPlan, cleanJars, currentMods, jarPath, setsDir, storeJar, withJarStore, type PointMod } from './restorePoints'
@@ -19,8 +19,8 @@ import { applyPlan, cleanJars, currentMods, jarPath, setsDir, storeJar, withJarS
  * switched on or off) to switch between in one click: a building set, a light one for events…
  * instance/.hemisphere/mod-sets/<id>.json, active.json. Their files are kept with the restore points' (one copy each).
  *
- * Switching first saves the mods as they are now into the active set (or, the first time, into a new set), so
- * nothing is lost: mods the new set doesn't have are switched off, not deleted, and other versions stay kept.
+ * Switching first saves the mods as they are now into the active set (or, the first time, into a new set "My mods"),
+ * then puts exactly the new set's mods in place. Nothing is lost: every file stays kept for the set that has it.
  */
 interface ModSet {
   format: 1
@@ -137,13 +137,9 @@ export const deleteSet = (id: string): Promise<boolean> =>
     return true
   })
 
-/** Same mod as another (Modrinth project, else the name without version). */
-const sameMod = (a: PointMod, ra: PlayerModRecord | undefined, b: PointMod, rb: PlayerModRecord | undefined) =>
-  ra?.projectId && rb?.projectId ? ra.projectId === rb.projectId : modKey(a.title ?? a.file) === modKey(b.title ?? b.file)
-
 /**
  * Switches to a set. The mods as they are now are saved first into the active set, or, when there's none, into a new
- * set named `fallbackName` ("My mods"). Mods the target set doesn't have are switched off (never deleted).
+ * set named `fallbackName` ("My mods"); then the folders hold exactly the target set's mods.
  */
 export const switchSet = (id: string, manifest: ClientManifest | null, fallbackName: unknown): Promise<SetSwitchResult> =>
   serial(async () => {
@@ -164,17 +160,12 @@ export const switchSet = (id: string, manifest: ClientManifest | null, fallbackN
         savedAs = saved.name
       }
 
-      // the target's mods, plus everything else switched off (other versions of the target's mods are just kept)
-      const leftovers = now.mods.filter(
-        (m) => !target.mods.some((t) => t.sha512 === m.sha512) && !target.mods.some((t) => sameMod(t, target.registry[registryKey(t.file)], m, now.registry[registryKey(m.file)])),
-      )
+      // Exactly the target's mods. Everything else was just saved in the set being left (its files kept), so it
+      // comes back with that set and never piles up as extra "off" mods in this one.
       const missing = await applyPlan(
         {
           files: [],
-          mods: [
-            ...target.mods.map((m) => ({ ...m, from: jarPath(m.sha512), record: target.registry[registryKey(m.file)] })),
-            ...leftovers.map((m) => ({ ...m, enabled: false, from: jarPath(m.sha512), record: now.registry[registryKey(m.file)] })),
-          ],
+          mods: target.mods.map((m) => ({ ...m, from: jarPath(m.sha512), record: target.registry[registryKey(m.file)] })),
           choices: target.choices,
           detached: target.detached,
         },
@@ -182,7 +173,7 @@ export const switchSet = (id: string, manifest: ClientManifest | null, fallbackN
       )
       await setActive(id)
       void record({ kind: 'setSwitch', name: target.name })
-      console.log(`[mod-sets] switched to "${target.name}"${leftovers.length ? ` (${leftovers.length} other mods switched off)` : ''}${missing.length ? `, missing: ${missing.join(', ')}` : ''}`)
+      console.log(`[mod-sets] switched to "${target.name}" (${target.mods.length} mods)${missing.length ? `, missing: ${missing.join(', ')}` : ''}`)
       return { ok: true, missing, savedAs }
     } catch (err) {
       console.error('[mod-sets] switch failed:', err)
@@ -290,6 +281,9 @@ export async function importSetCode(code: unknown, manifest: ClientManifest, pol
     if (sets.length >= MAX_SETS) return { ok: false, reason: 'failed' } as const
     const now = Date.now()
     const known = new Set(manifest.mods.map((m) => m.id))
+    // the friend's own version of a Hemisphere mod: the set takes that mod over (else it's a duplicate, kept off)
+    const projects = new Set(Object.values(registry).map((r) => r.projectId))
+    const detached = manifest.mods.filter((m) => m.category !== 'library' && m.source && projects.has(m.source.modrinth.projectId)).map((m) => m.id)
     const set: ModSet = {
       format: 1,
       id: newId(),
@@ -297,7 +291,7 @@ export async function importSetCode(code: unknown, manifest: ClientManifest, pol
       createdAt: now,
       updatedAt: now,
       choices: Object.fromEntries(Object.entries(data.c).filter(([k]) => known.has(k))),
-      detached: [],
+      detached,
       mods,
       registry,
     }

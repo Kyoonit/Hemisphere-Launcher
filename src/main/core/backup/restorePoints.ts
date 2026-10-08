@@ -303,8 +303,9 @@ export async function applyPlan(plan: ApplyPlan, manifest: ClientManifest | null
   await withPlayerMods(async () => {
     const reg = readPlayerRegistry()
     const now = await currentMods(owned, reg)
-    const wanted = plan.mods.filter((m) => isSafeModFileName(m.file))
     const at = (m: { file: string; enabled: boolean }) => join(dirOf(m.enabled), m.file).toLowerCase()
+    // one file per place (a list saved twice never places a mod twice)
+    const wanted = plan.mods.filter((m, i) => isSafeModFileName(m.file) && plan.mods.findIndex((x) => at(x) === at(m)) === i)
     const kept = new Set<string>()
     for (const n of now) {
       const t = wanted.find((w) => at(w) === n.path.toLowerCase() && w.sha512 === n.sha512)
@@ -345,6 +346,16 @@ export async function applyPlan(plan: ApplyPlan, manifest: ClientManifest | null
       }
     }
     await writePlayerRegistry(next)
+
+    // Hemisphere mods the plan takes over (the player's own copy): Hemisphere's file must go, or the mod loads twice.
+    const placed = new Set(wanted.map(at))
+    for (const id of plan.detached) {
+      if (state.detached.includes(id)) continue
+      const path = manifest?.mods.find((m) => m.id === id)?.file.path
+      if (!path || !state.owned[path]) continue
+      const file = join(inst, ...path.split('/'))
+      if (!placed.has(file.toLowerCase())) await rm(file, { force: true })
+    }
   })
 
   for (const f of plan.files) {

@@ -74,8 +74,36 @@ async function waitForBackground(): Promise<void> {
  * "Update to …"), and never runs during a game, a launch or a repair. PLAY started meanwhile simply waits for it
  * (showing its progress) and then has nothing left to do.
  */
+/** A whole-mod-folder change (set switch, restore, setup import) is running: background preparation waits. */
+let modsHeld = 0
+/** The running held change, for PLAY and repair to wait for. */
+let heldJob: Promise<unknown> = Promise.resolve()
+const gameBusy = () => state.phase === 'preparing' || state.runningAccounts.length > 0
+
+/**
+ * Runs a change to the mods with the background preparation out of the way: waits for a running one, keeps a new one
+ * from starting meanwhile (its sync would save an older copy of the player's choices over the change), then prepares
+ * the result. Refused (null) while a game runs or PLAY/repair is preparing.
+ */
+export async function withModsHeld<T>(job: () => Promise<T>): Promise<T | null> {
+  if (gameBusy()) return null
+  modsHeld++
+  const run = (async () => {
+    await waitForBackground()
+    return gameBusy() ? null : job()
+  })()
+  heldJob = run.catch(() => {})
+  try {
+    return await run
+  } finally {
+    modsHeld--
+    if (!modsHeld) void prepareInBackground()
+  }
+}
+
 export function prepareInBackground(): Promise<void> {
   if (backgroundJob) return backgroundJob
+  if (modsHeld) return Promise.resolve()
   if (state.phase !== 'idle' || state.runningAccounts.length || !getSettings().backgroundUpdates) return Promise.resolve()
   set({ background: true })
   backgroundJob = (async () => {
@@ -134,6 +162,7 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
   set({ phase: 'preparing', activity: 'play', progress: null, error: null })
 
   try {
+    await heldJob // a set switch or restore in progress finishes first
     await waitForBackground() // its progress shows while we wait; afterwards the steps below have nothing left to do
     const report = progressReporter()
 
@@ -243,6 +272,7 @@ export async function repair(mode: RepairMode): Promise<RepairReport | { error: 
   const started = Date.now()
   set({ phase: 'preparing', activity: 'repair', progress: null, error: null })
   try {
+    await heldJob
     await waitForBackground()
     const report = progressReporter()
     const { manifest } = await getContent(true).catch((err) => {

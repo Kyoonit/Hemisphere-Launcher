@@ -28,7 +28,7 @@ beforeEach(() => {
 })
 
 describe('mod sets', () => {
-  test('switching keeps every mod: others are switched off, other versions kept aside', async () => {
+  test('switching keeps every mod: each set gets its own back, other versions kept aside', async () => {
     const survival = (await sets.saveSet('Survival'))!
     expect(survival).toMatchObject({ name: 'Survival', mods: 2, enabled: 2 })
 
@@ -41,7 +41,7 @@ describe('mod sets', () => {
 
     expect(await sets.switchSet(survival.id, manifest, 'My mods')).toMatchObject({ ok: true, missing: [] })
     expect(on()).toEqual(['jade-2.0.jar', 'sodium-1.0.jar'])
-    expect(off()).toEqual(['litematica-1.0.jar']) // not in Survival: off, not deleted
+    expect(off()).toEqual([]) // not in Survival: kept in Building, not in the folder
     expect((await sets.listSets()).active).toBe(survival.id)
 
     expect(await sets.switchSet(building.id, manifest, 'My mods')).toMatchObject({ ok: true, missing: [] })
@@ -54,7 +54,8 @@ describe('mod sets', () => {
     const b = (await sets.saveSet('B'))!
     put('mods/zoomify-1.0.jar', 'Z1') // added while B is active
     await sets.switchSet(a.id, manifest, 'My mods')
-    expect(off()).toEqual(['zoomify-1.0.jar'])
+    expect(on()).not.toContain('zoomify-1.0.jar')
+    expect(off()).toEqual([])
     await sets.switchSet(b.id, manifest, 'My mods')
     expect(on()).toContain('zoomify-1.0.jar')
   })
@@ -105,3 +106,59 @@ describe('mod history', () => {
   })
 })
 
+
+describe('switching sets (regressions)', () => {
+  test('a set holds exactly its own mods: no leftovers carried from set to set', async () => {
+    const a = (await sets.saveSet('A'))!
+    put('mods/litematica-1.0.jar', 'L1')
+    const b = (await sets.saveSet('B'))!
+    await sets.switchSet(a.id, manifest, 'My mods')
+    expect(on()).toEqual(['jade-2.0.jar', 'sodium-1.0.jar'])
+    expect(off()).toEqual([]) // Litematica isn't shown as an extra "off" mod in A
+    await sets.switchSet(b.id, manifest, 'My mods')
+    await sets.switchSet(a.id, manifest, 'My mods')
+    await sets.switchSet(b.id, manifest, 'My mods')
+    expect(on()).toEqual(['jade-2.0.jar', 'litematica-1.0.jar', 'sodium-1.0.jar'])
+    const list = (await sets.listSets()).sets
+    expect(list.find((s) => s.id === a.id)).toMatchObject({ mods: 2, enabled: 2 })
+    expect(list.find((s) => s.id === b.id)).toMatchObject({ mods: 3, enabled: 3 })
+  })
+
+  test('a mod taken over from Hemisphere never ends up twice in mods/', async () => {
+    const m = { clientVersion: '1.0.2', minecraft: '26.3', mods: [{ id: 'sodium', file: { path: 'mods/sodium-hemi.jar' } }] } as never
+    const managedState = (detached: string[], owned: Record<string, unknown>) =>
+      put('.hemisphere/state.json', JSON.stringify({ version: 1, clientVersion: '1.0.2', minecraft: '26.3', choices: { sodium: true }, owned, seeded: {}, detached }))
+    rmSync(inst('mods/sodium-1.0.jar'))
+    // A: Sodium managed by Hemisphere
+    put('mods/sodium-hemi.jar', 'SH')
+    managedState([], { 'mods/sodium-hemi.jar': { sha512: 'x', size: 2, mtimeMs: 0 } })
+    const a = (await sets.saveSet('Managed'))!
+    // B: the player took Sodium over with another version
+    rmSync(inst('mods/sodium-hemi.jar'))
+    put('mods/sodium-own.jar', 'SO')
+    managedState(['sodium'], {})
+    const b = (await sets.saveSet('Own'))!
+
+    await sets.switchSet(a.id, m, 'My mods')
+    expect(on()).toEqual(['jade-2.0.jar']) // Hemisphere puts its Sodium back on the next sync
+    // the sync places Hemisphere's file
+    put('mods/sodium-hemi.jar', 'SH')
+    managedState([], { 'mods/sodium-hemi.jar': { sha512: 'x', size: 2, mtimeMs: 0 } })
+
+    await sets.switchSet(b.id, m, 'My mods')
+    expect(on()).toEqual(['jade-2.0.jar', 'sodium-own.jar'])
+    expect(off()).toEqual([])
+  })
+})
+
+describe('Hemisphere files being placed', () => {
+  test('are never taken for the player’s own mods (nor parked as duplicates)', async () => {
+    const { placingNow } = await import('../src/main/core/sync/inFlight')
+    const { playerJars } = await import('../src/main/core/modrinth/playerMods')
+    put('mods/appleskin-hemi.jar', 'AH')
+    expect(playerJars([]).map((j) => j.file)).toContain('appleskin-hemi.jar')
+    placingNow.add('mods/appleskin-hemi.jar')
+    expect(playerJars([]).map((j) => j.file)).not.toContain('appleskin-hemi.jar')
+    placingNow.clear()
+  })
+})
