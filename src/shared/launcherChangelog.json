@@ -3,6 +3,12 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "1.0.10",
+        "area": "community",
+        "en": "Discord status is now available to everyone: Settings > Launcher > show “Playing on Hemisphere SMP” in Discord (off by default).",
+        "fr": "Le statut Discord est maintenant disponible pour tous : Paramètres > Launcher > afficher « Joue sur Hemisphere SMP » sur Discord (désactivé par défaut)."
+      },
+      {
         "version": "1.0.9",
         "area": "community",
         "en": "Hemisphere SMP now has its own Discord application, with the server logo and banner, for the “Playing on Hemisphere SMP” status.",
