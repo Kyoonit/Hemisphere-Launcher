@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "sequence": 4,
-  "updatedAt": "2026-10-08T04:44:31.960Z",
+  "sequence": 5,
+  "updatedAt": "2026-10-08T05:03:04.121Z",
   "maintenance": {
     "active": false,
     "message": {
@@ -83,51 +83,6 @@
         "reason": {
           "en": "X-ray shows ores through walls: it is cheating on Hemisphere.",
           "fr": "Le x-ray montre les minerais à travers les murs : c’est de la triche sur Hemisphere."
-        }
-      },
-      {
-        "project": "3llatzyE",
-        "name": "Litematica Printer",
-        "verdict": "blocked",
-        "reason": {
-          "en": "Places blocks automatically: not allowed on Hemisphere.",
-          "fr": "Pose des blocs automatiquement : interdit sur Hemisphere."
-        }
-      },
-      {
-        "project": "r8axuw4u",
-        "name": "Auto Clicker",
-        "verdict": "blocked",
-        "reason": {
-          "en": "Automated clicking is not allowed on Hemisphere.",
-          "fr": "Le clic automatique est interdit sur Hemisphere."
-        }
-      },
-      {
-        "project": "JAYD9vCA",
-        "name": "Auto Clicker",
-        "verdict": "blocked",
-        "reason": {
-          "en": "Automated clicking is not allowed on Hemisphere.",
-          "fr": "Le clic automatique est interdit sur Hemisphere."
-        }
-      },
-      {
-        "project": "2tqIzH5v",
-        "name": "Syncac (Synchronized Auto Clicker)",
-        "verdict": "blocked",
-        "reason": {
-          "en": "Automated clicking is not allowed on Hemisphere.",
-          "fr": "Le clic automatique est interdit sur Hemisphere."
-        }
-      },
-      {
-        "project": "XeEZ3fK2",
-        "name": "Freecam",
-        "verdict": "askStaff",
-        "reason": {
-          "en": "Freecam can see through walls. Ask the staff on Discord before using it.",
-          "fr": "Freecam permet de voir à travers les murs. Demande au staff sur Discord avant de l’utiliser."
         }
       }
     ]
