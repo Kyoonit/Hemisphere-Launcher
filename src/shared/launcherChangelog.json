@@ -3,6 +3,42 @@
     "date": "2026-10-08",
     "changes": [
       {
+        "version": "1.0.4",
+        "area": "play",
+        "en": "Graphics presets for your PC (Low, Balanced, High) in Settings > Game; a new player starts with the one that suits their PC.",
+        "fr": "Des préréglages graphiques adaptés à ton PC (Faibles, Équilibrés, Élevés) dans Paramètres > Jeu ; un nouveau joueur démarre avec celui qui convient à son PC."
+      },
+      {
+        "version": "1.0.4",
+        "area": "play",
+        "en": "Automatic memory adapts to what’s free when you press PLAY, so Windows doesn’t slow down when other programs are open.",
+        "fr": "La mémoire automatique s’adapte à ce qui est libre quand tu appuies sur JOUER, pour que Windows ne ralentisse pas quand d’autres programmes sont ouverts."
+      },
+      {
+        "version": "1.0.4",
+        "area": "play",
+        "en": "Smoother frame times: Minecraft gets the same Java memory settings as the official launcher.",
+        "fr": "Des images plus régulières : Minecraft reçoit les mêmes réglages mémoire Java que le launcher officiel."
+      },
+      {
+        "version": "1.0.4",
+        "area": "play",
+        "en": "If Minecraft runs out of memory, the crash card says so and switches to lighter graphics in one click.",
+        "fr": "Si Minecraft manque de mémoire, la carte de crash le dit et passe en graphismes légers en un clic."
+      },
+      {
+        "version": "1.0.4",
+        "area": "settings",
+        "en": "Downloads are limited to 5 MB/s by default, so the rest of your connection stays smooth (Settings > Launcher).",
+        "fr": "Les téléchargements sont limités à 5 Mo/s par défaut, pour que le reste de ta connexion reste fluide (Paramètres > Launcher)."
+      },
+      {
+        "version": "1.0.4",
+        "area": "home",
+        "en": "What’s new only shows the launcher’s own updates.",
+        "fr": "Les nouveautés ne montrent que les mises à jour du launcher."
+      },
+      {
         "version": "1.0.3",
         "area": "performance",
         "en": "News and the mod list are only downloaded again when they changed: much less data while the launcher is open.",

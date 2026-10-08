@@ -73,7 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   seenChangelog: null,
   seenLauncherVersion: null,
   lightMode: 'auto',
-  downloadLimit: 0,
+  downloadLimit: 5,
   saveDataOnMetered: true,
   backgroundUpdates: true,
   highPerformanceGpu: true,

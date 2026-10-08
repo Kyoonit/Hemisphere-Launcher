@@ -6,12 +6,14 @@ import { Check, ClipboardCopy, FileWarning, Flag, Package, PackageX, RotateCcw, 
 export default function CrashCard({
   suspects,
   incompatible,
+  outOfMemory,
   onRepair,
   onOpenMods,
   onReport,
 }: {
   suspects: string[]
   incompatible: { name: string; version: string; needs: string }[]
+  outOfMemory?: { memoryMb: number }
   onRepair(): void
   onOpenMods(): void
   onReport(): void
@@ -19,6 +21,7 @@ export default function CrashCard({
   const { t } = useTranslation()
   const [ownMods, setOwnMods] = useState<number>(0)
   const [copied, setCopied] = useState(false)
+  const [lowered, setLowered] = useState(false)
   useEffect(() => {
     window.hemisphere.client.playerMods().then((m) => setOwnMods(m.filter((x) => x.enabled).length))
   }, [])
@@ -45,7 +48,21 @@ export default function CrashCard({
         </button>
       </div>
 
-      {incompatible.length > 0 ? (
+      {outOfMemory ? (
+        // Minecraft ran out of memory: lighter graphics is the fix that always works
+        <div className="mt-3 rounded-lg border-l-[3px] border-amber-400 bg-gray-900/65 px-3 py-2 text-[13px] text-gray-300">
+          <b className="block text-white">{t('crash.outOfMemory', { gb: Math.round((outOfMemory.memoryMb / 1024) * 10) / 10 })}</b>
+          <span className="text-xs text-gray-400">{lowered ? t('crash.outOfMemoryDone') : t('crash.outOfMemoryHint')}</span>
+          {!lowered && (
+            <button
+              onClick={() => window.hemisphere.game.applyGraphics('low').then((r) => r.ok && setLowered(true))}
+              className="mt-1.5 block rounded-md bg-amber-400 px-2.5 py-1 text-xs font-bold text-gray-900 hover:bg-amber-300"
+            >
+              {t('crash.outOfMemoryLower')}
+            </button>
+          )}
+        </div>
+      ) : incompatible.length > 0 ? (
         // Fabric said exactly which mods don't fit: name them (updating is the player's choice, in Mods)
         <div className="mt-3 rounded-lg border-l-[3px] border-amber-400 bg-gray-900/65 px-3 py-2 text-[13px] text-gray-300">
           <b className="block text-white">{t('crash.incompatibleTitle', { count: incompatible.length })}</b>

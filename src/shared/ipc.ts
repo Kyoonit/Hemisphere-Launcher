@@ -15,6 +15,7 @@ import type { ModHistoryItem, ModSetInfo, ModSetsState, SetImportResult, SetShar
 import type { RestorePointInfo, RestorePreview, RestoreResult, SetupExportResult, SetupImportResult, SetupPick } from './restorePoints'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
 import type { LowEndInfo, PerfSnapshot } from './performance'
+import type { GraphicsPreset, PcProfile } from './graphics'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -43,6 +44,8 @@ export const IPC = {
   gameStateChanged: 'game:state-changed',
   gamePlay: 'game:play',
   gameDismissError: 'game:dismiss-error',
+  gameGraphics: 'game:graphics',
+  gameApplyGraphics: 'game:applyGraphics',
   gameJava: 'game:java',
   gameRepair: 'game:repair',
   clientGet: 'client:get',
@@ -347,6 +350,10 @@ export interface HemisphereApi {
     play(opts?: PlayOptions): void
     /** Close the error / crash card */
     dismissError(): void
+    /** this PC (RAM, threads, graphics) and the graphics preset recommended for it */
+    graphics(): Promise<PcProfile>
+    /** writes a graphics preset into Minecraft's options (not while the game runs) */
+    applyGraphics(preset: GraphicsPreset): Promise<{ ok: true } | { ok: false; reason: 'running' | 'failed' }>
     /** Managed runtime (if installed) + Java found on this PC */
     javaInfo(): Promise<JavaRuntimeInfo[]>
     /** Verify and fix the installation (progress arrives through onState) */

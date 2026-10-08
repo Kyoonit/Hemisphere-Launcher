@@ -27,7 +27,8 @@ export function isHybridGpu(devices: GpuDevice[]): boolean {
   return devices.filter((d) => !VIRTUAL_VENDORS.has(d.vendorId)).length >= 2
 }
 
-let detected: { hybrid: boolean; names: string[] } = { hybrid: false, names: [] }
+/** integratedOnly: only an Intel chip (built into the processor): slower graphics */
+let detected: { hybrid: boolean; names: string[]; integratedOnly: boolean } = { hybrid: false, names: [], integratedOnly: false }
 export const gpuSummary = () => detected
 
 export async function detectGpus(): Promise<void> {
@@ -35,7 +36,7 @@ export async function detectGpus(): Promise<void> {
     const info = (await app.getGPUInfo('complete')) as { gpuDevice?: { vendorId: number; deviceId: number; deviceString?: string; driverVendor?: string }[] }
     const devices: GpuDevice[] = (info.gpuDevice ?? []).map((d) => ({ vendorId: d.vendorId, deviceId: d.deviceId, name: d.deviceString || d.driverVendor }))
     const real = devices.filter((d) => !VIRTUAL_VENDORS.has(d.vendorId))
-    detected = { hybrid: isHybridGpu(devices), names: real.map((d) => d.name || VENDOR_NAMES[d.vendorId] || 'GPU') }
+    detected = { hybrid: isHybridGpu(devices), names: real.map((d) => d.name || VENDOR_NAMES[d.vendorId] || 'GPU'), integratedOnly: real.length > 0 && real.every((d) => d.vendorId === 0x8086) }
     console.log(`[gpu] ${real.length} graphics chip(s): ${detected.names.join(', ') || 'unknown'}`)
   } catch (err) {
     console.warn('[gpu] detection failed:', err)

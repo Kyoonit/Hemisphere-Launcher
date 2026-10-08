@@ -1,4 +1,6 @@
-import { totalmem } from 'node:os'
+import { freemem, totalmem } from 'node:os'
+import { autoMemoryMb, withGcArgs } from '@shared/graphics'
+import { presetForNewPlayer } from './graphics'
 import { existsSync, readFileSync } from 'node:fs'
 import { app } from 'electron'
 import type { ChildProcess } from 'node:child_process'
@@ -210,7 +212,10 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
 
     const paths = gamePaths()
     const settings = getSettings()
-    const memory = settings.memoryMb ?? recommendedMemoryMb()
+    // automatic memory adapts to what's free right now (other programs open): too much makes Windows swap
+    const memory = settings.memoryMb ?? autoMemoryMb(recommendedMemoryMb(), Math.round(freemem() / 1024 ** 2))
+    if (settings.memoryMb === null) console.log(`[game] memory: ${memory} MB (recommended ${recommendedMemoryMb()} MB, ${Math.round(freemem() / 1024 ** 2)} MB free)`)
+    await presetForNewPlayer().catch((err) => console.warn('[game] graphics preset not written:', err))
     const resolution =
       settings.resolution === 'fullscreen'
         ? { fullscreen: true }
@@ -240,7 +245,8 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
         minMemory: Math.min(1024, memory),
         maxMemory: memory,
         ...(resolution ? { resolution } : {}),
-        extraJVMArgs: parseJvmArgs(settings.jvmArgs).args,
+        // the official launcher's garbage collector settings (smoother frame times), unless the player chose their own
+        extraJVMArgs: withGcArgs(parseJvmArgs(settings.jvmArgs).args),
         // The game is fully independent of the launcher: its own process group, and no pipes. Minecraft writes its
         // own logs; if the launcher's end of a pipe closed (launcher closed while playing), the game would freeze.
         extraExecOption: { detached: true, windowsHide: true, stdio: 'ignore' },
@@ -328,6 +334,7 @@ async function chooseJava(managed: string): Promise<string> {
 
 function watch(proc: ChildProcess, accountId: string): void {
   const startedAt = Date.now()
+  const memoryMb = getSettings().memoryMb ?? autoMemoryMb(recommendedMemoryMb(), Math.round(freemem() / 1024 ** 2))
   proc.once('exit', (code) => {
     void endSession(accountId).then((recorded) => recorded && gameEvents.onPlaytimeChanged())
     const runningAccounts = state.runningAccounts.filter((id) => id !== accountId)
@@ -342,6 +349,7 @@ function watch(proc: ChildProcess, accountId: string): void {
             detail: newCrashReport(startedAt) ?? lastLogLines() ?? `exit code ${code} after ${Math.round((Date.now() - startedAt) / 1000)} s`,
             suspects: crashSuspects(startedAt),
             incompatible: incompatibleMods(startedAt),
+            ...(ranOutOfMemory(startedAt) ? { outOfMemory: { memoryMb } } : {}),
           }
         : state.error,
     })
@@ -382,6 +390,24 @@ function crashSuspects(since: number): string[] {
     for (const m of t.matchAll(/(?:provided by '|from mod |by mod )([a-z0-9_.-]{2,64})/g))
       if (!IGNORE.has(m[1])) counts.set(m[1], (counts.get(m[1]) ?? 0) + 1)
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id).slice(0, 5)
+}
+
+/** This session ended because memory ran out: in the crash report, the game log, or Java's own hs_err file. */
+function ranOutOfMemory(since: number): boolean {
+  const dir = gamePaths().instance
+  const files = [newCrashReport(since), instanceLogPath()]
+  try {
+    for (const name of readdirSync(dir)) if (/^hs_err_pid\d+\.log$/.test(name)) files.push(join(dir, name))
+  } catch {
+    /* no folder */
+  }
+  return files.some((p) => {
+    try {
+      return !!p && existsSync(p) && statSync(p).mtimeMs >= since - 2000 && /java\.lang\.OutOfMemoryError|insufficient memory for the Java Runtime/.test(readFileSync(p, 'utf8').slice(-300_000))
+    } catch {
+      return false
+    }
+  })
 }
 
 /** The crash report Minecraft wrote during this session, if any. */

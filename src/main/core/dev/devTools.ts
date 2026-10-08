@@ -196,6 +196,9 @@ export async function runDevAction(action: DevAction, h: DevActionHooks): Promis
         },
       })
       return 'crash card shown on Home'
+    case 'crash:memory':
+      h.gameState({ phase: 'idle', error: { code: 'crashed', detail: 'Developer tab: pretend out of memory', outOfMemory: { memoryMb: 4096 } } })
+      return 'out-of-memory crash card shown on Home'
     case 'crash:many':
       h.gameState({
         phase: 'idle',

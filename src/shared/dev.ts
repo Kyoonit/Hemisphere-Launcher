@@ -54,6 +54,7 @@ export const DEFAULT_DEV: DevState = {
 export const DEV_ACTIONS = [
   'crash',
   'crash:many',
+  'crash:memory',
   'error:network',
   'error:java',
   'error:disk',

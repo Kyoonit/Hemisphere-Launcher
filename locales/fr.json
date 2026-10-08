@@ -139,7 +139,20 @@
     "downloadLimitValue": "{{value}} Mo/s",
     "saveDataOnMetered": "Économiser les données sur les connexions limitées",
     "saveDataOnMeteredHint": "En partage de connexion ou en 4G, les mises à jour se téléchargent seulement quand tu appuies sur JOUER.",
-    "saveDataOnMeteredNow": "Ta connexion est limitée en ce moment : les mises à jour se téléchargent seulement quand tu appuies sur JOUER."
+    "saveDataOnMeteredNow": "Ta connexion est limitée en ce moment : les mises à jour se téléchargent seulement quand tu appuies sur JOUER.",
+    "graphics": "Graphismes",
+    "graphicsHint": "Conseillé pour ce PC : {{preset}}. Seuls la distance de vue, les particules, les nuages et les ombres changent.",
+    "graphicsApplied": "Graphismes {{preset}} enregistrés : Minecraft les utilise au prochain lancement.",
+    "graphicsFailed": {
+      "running": "Ferme d’abord Minecraft : il enregistre ses propres réglages en se fermant.",
+      "failed": "Impossible d’enregistrer les réglages graphiques."
+    },
+    "graphicsPresets": {
+      "low": "Faibles",
+      "balanced": "Équilibrés",
+      "high": "Élevés"
+    },
+    "graphicsRecommended": "Conseillé"
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -527,7 +540,11 @@
     "incompatibleTitle_other": "Ces mods ne fonctionnent pas avec cette version :",
     "incompatibleTitle_many": "Ces mods ne fonctionnent pas avec cette version :",
     "needs": "demande {{needs}}",
-    "openMods": "Ouvrir Mods"
+    "openMods": "Ouvrir Mods",
+    "outOfMemory": "Minecraft a manqué de mémoire ({{gb}} Go).",
+    "outOfMemoryHint": "Des graphismes plus légers demandent beaucoup moins de mémoire. Tu peux aussi fermer d’autres programmes avant de jouer.",
+    "outOfMemoryLower": "Passer en graphismes légers",
+    "outOfMemoryDone": "Graphismes légers enregistrés : appuie sur JOUER pour réessayer."
   },
   "launcherUpdate": {
     "restart": "Redémarrer pour mettre à jour",
@@ -1188,7 +1205,8 @@
     "releaseHint": "Comme au lancement de Minecraft : la fenêtre se ferme pour libérer sa mémoire, le launcher reste dans la zone de notification. Les notifications arrivent toujours et le rouvrent.",
     "releaseTest": "Fermer la fenêtre maintenant (test)",
     "perfMetered": "connexion limitée",
-    "perfSaved": "Pas retéléchargés : {{notModified}} fichiers inchangés ({{notModifiedSize}}), {{reused}} fichiers Minecraft d’un autre launcher ({{reusedSize}})"
+    "perfSaved": "Pas retéléchargés : {{notModified}} fichiers inchangés ({{notModifiedSize}}), {{reused}} fichiers Minecraft d’un autre launcher ({{reusedSize}})",
+    "crashMemory": "Crash, mémoire pleine"
   },
   "launcherNews": {
     "intro": "Tout ce qui a changé dans le launcher, jour par jour : {{count}} changements sur {{days}} jours.",

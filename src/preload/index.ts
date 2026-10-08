@@ -190,6 +190,8 @@ const api: HemisphereApi = {
     },
     play: (opts) => ipcRenderer.send(IPC.gamePlay, opts),
     dismissError: () => ipcRenderer.send(IPC.gameDismissError),
+    graphics: () => ipcRenderer.invoke(IPC.gameGraphics),
+    applyGraphics: (preset) => ipcRenderer.invoke(IPC.gameApplyGraphics, preset),
     javaInfo: () => ipcRenderer.invoke(IPC.gameJava),
     repair: (mode) => ipcRenderer.invoke(IPC.gameRepair, mode),
   },

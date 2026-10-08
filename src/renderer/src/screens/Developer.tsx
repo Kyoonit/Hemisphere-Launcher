@@ -119,6 +119,7 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
         <div className="flex flex-wrap gap-2">
           <Action action="crash" icon={Bug} label={t('dev.crash')} />
           <Action action="crash:many" icon={Bug} label={t('dev.crashMany')} />
+          <Action action="crash:memory" icon={Bug} label={t('dev.crashMemory')} />
           <Action action="progress" icon={Gauge} label={t('dev.progress')} />
           <Action action="background" icon={RefreshCw} label={t('dev.background')} />
           {(['error:network', 'error:java', 'error:disk', 'error:busy', 'error:sessionExpired', 'error:content'] as const).map((a) => (

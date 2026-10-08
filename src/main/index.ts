@@ -62,6 +62,8 @@ import { deleteSet, duplicateSet, importSetCode, isSetId, listSets, renameSet, s
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
 import { installNetMeter, lowEndInfo, perfSnapshot, trimChromium, trimGpuProcess } from './core/system/performance'
 import { isMetered } from './core/system/network'
+import { applyGraphicsPreset, pcProfile } from './core/game/graphics'
+import { GRAPHICS_PRESETS, type GraphicsPreset } from '@shared/graphics'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
@@ -195,6 +197,15 @@ function registerIpc(): void {
 
   handle(IPC.gameState, () => getGameState())
   on(IPC.gameDismissError, () => dismissGameError())
+  handle(IPC.gameGraphics, () => pcProfile())
+  handle(IPC.gameApplyGraphics, async (_e, preset: unknown) => {
+    if (!GRAPHICS_PRESETS.includes(preset as GraphicsPreset)) return { ok: false, reason: 'failed' }
+    if (getGameState().runningAccounts.length) return { ok: false, reason: 'running' }
+    return applyGraphicsPreset(preset as GraphicsPreset).then(
+      () => ({ ok: true }),
+      () => ({ ok: false, reason: 'failed' }),
+    )
+  })
   on(IPC.gamePlay, (_e, opts: unknown) => {
     const active = getAccountsState().activeId
     const o = (opts ?? {}) as { target?: unknown; withoutPlayerMods?: unknown }

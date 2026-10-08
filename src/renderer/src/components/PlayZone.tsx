@@ -82,7 +82,8 @@ export default function PlayZone({
       </button>
       {game.error?.code === 'crashed' ? (
         <div className="mt-3">
-          <CrashCard suspects={game.error.suspects ?? []} incompatible={game.error.incompatible ?? []} onRepair={onRepair} onOpenMods={onOpenMods} onReport={() => onReport('crash')} />
+          <CrashCard suspects={game.error.suspects ?? []} incompatible={game.error.incompatible ?? []}
+            outOfMemory={game.error.outOfMemory} onRepair={onRepair} onOpenMods={onOpenMods} onReport={() => onReport('crash')} />
         </div>
       ) : game.error ? (
         <ErrorLine code={game.error.code} onRepair={onRepair} onReport={() => onReport(game.error?.code === 'crashed' ? 'crash' : 'launcher')} />

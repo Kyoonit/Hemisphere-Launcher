@@ -12,6 +12,7 @@ import Backups from './Backups'
 import Developer from './Developer'
 import type { DevAccess } from '@shared/dev'
 import type { LowEndInfo } from '@shared/performance'
+import { GRAPHICS_PRESETS, type GraphicsPreset, type PcProfile } from '@shared/graphics'
 
 export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'backups' | 'advanced' | 'developer'
 
@@ -138,6 +139,7 @@ function GameSettings() {
           {tooHigh && <span className="text-xs text-amber-400">{t('settings.memoryTooHigh')}</span>}
         </div>
       </Row>
+      <GraphicsRow />
       <Row title={t('settings.resolution')} hint={t('settings.resolutionHint')}>
         <select value={settings.resolution} onChange={(e) => update({ resolution: e.target.value as Settings['resolution'] })} className={selectClass}>
           {RESOLUTIONS.map((r) => (
@@ -156,6 +158,46 @@ function GameSettings() {
         </Row>
       )}
     </div>
+  )
+}
+
+/** Graphics presets for Minecraft: the one recommended for this PC is marked. */
+function GraphicsRow() {
+  const { t } = useTranslation()
+  const [pc, setPc] = useState<PcProfile | null>(null)
+  const [result, setResult] = useState<{ preset: GraphicsPreset; ok: boolean; reason?: string } | null>(null)
+  useEffect(() => {
+    window.hemisphere.game.graphics().then(setPc)
+  }, [])
+  if (!pc) return null
+  const apply = async (preset: GraphicsPreset) => {
+    const r = await window.hemisphere.game.applyGraphics(preset)
+    setResult({ preset, ok: r.ok, reason: r.ok ? undefined : r.reason })
+  }
+  return (
+    <Row
+      title={t('settings.graphics')}
+      hint={
+        result
+          ? result.ok
+            ? t('settings.graphicsApplied', { preset: t(`settings.graphicsPresets.${result.preset}`) })
+            : t(`settings.graphicsFailed.${result.reason}`)
+          : t('settings.graphicsHint', { preset: t(`settings.graphicsPresets.${pc.recommended}`), ram: Math.round(pc.ramGb), threads: pc.threads })
+      }
+    >
+      <div className="flex gap-1.5">
+        {GRAPHICS_PRESETS.map((p) => (
+          <button
+            key={p}
+            onClick={() => apply(p)}
+            className={`relative rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors ${result?.ok && result.preset === p ? 'bg-green-600 text-white' : 'bg-gray-800/80 text-gray-200 hover:bg-gray-700 hover:text-white'}`}
+          >
+            {t(`settings.graphicsPresets.${p}`)}
+            {p === pc.recommended && <span className="absolute -top-2 -right-1.5 rounded bg-green-500 px-1 text-[9.5px] font-bold text-gray-950 uppercase">{t('settings.graphicsRecommended')}</span>}
+          </button>
+        ))}
+      </div>
+    </Row>
   )
 }
 

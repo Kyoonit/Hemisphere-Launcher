@@ -139,7 +139,20 @@
     "downloadLimitValue": "{{value}} MB/s",
     "saveDataOnMetered": "Save data on metered connections",
     "saveDataOnMeteredHint": "On a phone hotspot or 4G, updates download only when you press PLAY.",
-    "saveDataOnMeteredNow": "Your connection is metered right now: updates download only when you press PLAY."
+    "saveDataOnMeteredNow": "Your connection is metered right now: updates download only when you press PLAY.",
+    "graphics": "Graphics",
+    "graphicsHint": "Best for this PC: {{preset}}. Only view distance, particles, clouds and shadows change.",
+    "graphicsApplied": "{{preset}} graphics saved: Minecraft uses them the next time it starts.",
+    "graphicsFailed": {
+      "running": "Close Minecraft first: it saves its own settings when it closes.",
+      "failed": "Couldn’t save the graphics settings."
+    },
+    "graphicsPresets": {
+      "low": "Low",
+      "balanced": "Balanced",
+      "high": "High"
+    },
+    "graphicsRecommended": "Best"
   },
   "server": {
     "name": "Hemisphere Survival",
@@ -513,7 +526,11 @@
     "incompatibleTitle_one": "This mod doesn’t work with this version:",
     "incompatibleTitle_other": "These mods don’t work with this version:",
     "needs": "needs {{needs}}",
-    "openMods": "Open Mods"
+    "openMods": "Open Mods",
+    "outOfMemory": "Minecraft ran out of memory ({{gb}} GB).",
+    "outOfMemoryHint": "Lighter graphics need much less memory. You can also close other programs before playing.",
+    "outOfMemoryLower": "Use lighter graphics",
+    "outOfMemoryDone": "Lighter graphics saved: press PLAY to try again."
   },
   "launcherUpdate": {
     "restart": "Restart to update",
@@ -1143,7 +1160,8 @@
     "releaseHint": "As when Minecraft starts: the window closes to free its memory, the launcher stays in the tray. Notifications still arrive and reopen it.",
     "releaseTest": "Close the window now (test)",
     "perfMetered": "metered connection",
-    "perfSaved": "Not downloaded again: {{notModified}} unchanged files ({{notModifiedSize}}), {{reused}} Minecraft files from another launcher ({{reusedSize}})"
+    "perfSaved": "Not downloaded again: {{notModified}} unchanged files ({{notModifiedSize}}), {{reused}} Minecraft files from another launcher ({{reusedSize}})",
+    "crashMemory": "Crash, out of memory"
   },
   "launcherNews": {
     "intro": "Everything that changed in the launcher, day by day: {{count}} changes over {{days}} days.",

@@ -36,6 +36,8 @@ export interface GameState {
     suspects?: string[]
     /** mods Fabric refused because they don't fit this game version (name, version, what it needs) */
     incompatible?: { name: string; version: string; needs: string }[]
+    /** Minecraft ran out of memory (Java's OutOfMemoryError, or Windows couldn't give Java its memory): MB it had */
+    outOfMemory?: { memoryMb: number }
   } | null
   /** Preparing the next PLAY in the background (client update, file checks) */
   background: boolean
