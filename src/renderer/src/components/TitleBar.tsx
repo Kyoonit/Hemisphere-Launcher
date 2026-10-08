@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy, Minus, Newspaper, Package, Play, RefreshCw, Settings, Square, X, type LucideIcon } from 'lucide-react'
+import { Copy, Minus, Newspaper, Package, Play, RefreshCw, Settings, Square, X, type LucideIcon, Images } from 'lucide-react'
 import logo from '../assets/logo.png'
 import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
 import { newsBadgeLabel, unseenNewsCount } from '@shared/feed'
 
-export type Screen = 'home' | 'news' | 'mods' | 'settings' | 'repair' | 'import' | 'browse'
+export type Screen = 'home' | 'news' | 'mods' | 'screenshots' | 'settings' | 'repair' | 'import' | 'browse'
 
 const TABS: { id: Screen; icon: LucideIcon; label: string }[] = [
   { id: 'home', icon: Play, label: 'nav.play' },
   { id: 'news', icon: Newspaper, label: 'nav.news' },
   { id: 'mods', icon: Package, label: 'nav.mods' },
+  { id: 'screenshots', icon: Images, label: 'nav.screenshots' },
   { id: 'settings', icon: Settings, label: 'nav.settings' },
 ]
 
@@ -40,28 +41,33 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
       </div>
 
       <nav className={`no-drag ml-3 flex gap-1 ${minimal ? 'invisible' : ''}`}>
-        {TABS.map(({ id, icon: Icon, label }) => (
-          <button
-            key={id}
-            onClick={() => onNavigate(id)}
-            aria-current={screen === id ? 'page' : undefined}
-            aria-label={id === 'news' && badge ? `${t(label)} (${t('news.unseen', { count: unseen })})` : undefined}
-            className={`relative flex items-center gap-2 rounded-lg px-3.5 py-[7px] text-sm font-medium transition-all duration-300 ${
-              screen === id || ((screen === 'repair' || screen === 'import') && id === 'settings') || (screen === 'browse' && id === 'mods') ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-            }`}
-          >
-            <Icon size={16} strokeWidth={2} />
-            {t(label)}
-            {id === 'news' && badge && (
-              <span
-                aria-hidden
-                className="animate-pop absolute -top-1.5 -right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-red-600 px-1 text-[11px] leading-none font-bold text-white shadow-md ring-2 ring-gray-900"
-              >
-                {badge}
-              </span>
-            )}
-          </button>
-        ))}
+        {TABS.map(({ id, icon: Icon, label }) => {
+          const active = screen === id || ((screen === 'repair' || screen === 'import') && id === 'settings') || (screen === 'browse' && id === 'mods')
+          return (
+            <button
+              key={id}
+              onClick={() => onNavigate(id)}
+              aria-current={screen === id ? 'page' : undefined}
+              aria-label={id === 'news' && badge ? `${t(label)} (${t('news.unseen', { count: unseen })})` : t(label)}
+              title={t(label)}
+              className={`relative flex items-center gap-2 rounded-lg px-3.5 py-[7px] text-sm font-medium transition-all duration-300 ${
+                active ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 max-[1060px]:px-2.5 hover:text-white'
+              }`}
+            >
+              <Icon size={16} strokeWidth={2} />
+              {/* narrow window: inactive tabs keep only their icon (name in the tooltip) so the title bar never overflows */}
+              <span className={active ? '' : 'max-[1060px]:sr-only'}>{t(label)}</span>
+              {id === 'news' && badge && (
+                <span
+                  aria-hidden
+                  className="animate-pop absolute -top-1.5 -right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-red-600 px-1 text-[11px] leading-none font-bold text-white shadow-md ring-2 ring-gray-900"
+                >
+                  {badge}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </nav>
 
       <div className="no-drag ml-auto flex h-full items-center">
@@ -70,10 +76,7 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
         <WindowButton label={t('window.minimize')} onClick={() => window.hemisphere.window.minimize()}>
           <Minus size={15} />
         </WindowButton>
-        <WindowButton
-          label={t(maximized ? 'window.restore' : 'window.maximize')}
-          onClick={() => window.hemisphere.window.toggleMaximize()}
-        >
+        <WindowButton label={t(maximized ? 'window.restore' : 'window.maximize')} onClick={() => window.hemisphere.window.toggleMaximize()}>
           {maximized ? <Copy size={13} className="-scale-x-100" /> : <Square size={13} />}
         </WindowButton>
         <WindowButton label={t('window.close')} onClick={() => window.hemisphere.window.close()} danger>

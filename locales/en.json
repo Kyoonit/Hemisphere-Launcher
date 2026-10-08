@@ -6,7 +6,8 @@
     "play": "Play",
     "news": "News",
     "mods": "Mods",
-    "settings": "Settings"
+    "settings": "Settings",
+    "screenshots": "Screenshots"
   },
   "window": {
     "minimize": "Minimize",
@@ -541,5 +542,25 @@
     },
     "chooseVersion": "Choose the version to install (newest first).",
     "chooseVersionButton": "Choose a version of {{mod}}"
+  },
+  "shots": {
+    "subtitle": "Your Hemisphere moments",
+    "count_one": "{{count}} screenshot",
+    "count_other": "{{count}} screenshots",
+    "emptyTitle": "No screenshots yet",
+    "emptyBody": "Press F2 in Minecraft to take one. It shows up here, ready to share on Discord.",
+    "open": "Open screenshot from {{time}}",
+    "viewer": "Screenshot",
+    "copy": "Copy",
+    "copied": "Copied: paste it in Discord",
+    "showInFolder": "Show in folder",
+    "delete": "Delete",
+    "close": "Close (Esc)",
+    "previous": "Previous (←)",
+    "next": "Next (→)",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "copyFailed": "Couldn’t copy this screenshot.",
+    "deleteFailed": "Couldn’t delete this screenshot. Close Minecraft if it’s open, then try again."
   }
 }

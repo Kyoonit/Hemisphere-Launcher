@@ -6,7 +6,8 @@
     "play": "Jouer",
     "news": "Actus",
     "mods": "Mods",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "screenshots": "Captures"
   },
   "window": {
     "minimize": "Réduire",
@@ -555,5 +556,26 @@
     },
     "chooseVersion": "Choisis la version à installer (la plus récente en premier).",
     "chooseVersionButton": "Choisir une version de {{mod}}"
+  },
+  "shots": {
+    "subtitle": "Tes moments sur Hemisphere",
+    "count_one": "{{count}} capture",
+    "count_other": "{{count}} captures",
+    "count_many": "{{count}} captures",
+    "emptyTitle": "Pas encore de captures",
+    "emptyBody": "Appuie sur F2 dans Minecraft pour en prendre une. Elle apparaît ici, prête à partager sur Discord.",
+    "open": "Ouvrir la capture de {{time}}",
+    "viewer": "Capture",
+    "copy": "Copier",
+    "copied": "Copiée : colle-la dans Discord",
+    "showInFolder": "Afficher dans le dossier",
+    "delete": "Supprimer",
+    "close": "Fermer (Échap)",
+    "previous": "Précédente (←)",
+    "next": "Suivante (→)",
+    "today": "Aujourd’hui",
+    "yesterday": "Hier",
+    "copyFailed": "Impossible de copier cette capture.",
+    "deleteFailed": "Impossible de supprimer cette capture. Ferme Minecraft s’il est ouvert, puis réessaie."
   }
 }

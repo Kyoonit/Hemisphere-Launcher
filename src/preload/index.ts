@@ -21,6 +21,12 @@ const api: HemisphereApi = {
   },
   openLink: (key) => ipcRenderer.send(IPC.openLink, key),
   appInfo: () => ipcRenderer.invoke(IPC.appInfo),
+  screenshots: {
+    list: () => ipcRenderer.invoke(IPC.screenshotsList),
+    copy: (name) => ipcRenderer.invoke(IPC.screenshotsCopy, name),
+    showInFolder: (name) => ipcRenderer.send(IPC.screenshotsShow, name),
+    remove: (name) => ipcRenderer.invoke(IPC.screenshotsDelete, name),
+  },
   launcherUpdate: {
     get: () => ipcRenderer.invoke(IPC.launcherUpdateGet),
     onChange: (cb) => {

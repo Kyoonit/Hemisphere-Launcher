@@ -42,6 +42,7 @@ import type { ImportOptions, ImportSource } from '@shared/importer'
 import type { ClientSummary } from '@shared/client'
 import { loadWindowState, trackWindowState } from './core/system/windowState'
 import { handle, hardenApp, on, trustWindow } from './security'
+import { copyScreenshot, deleteScreenshot, listScreenshots, registerScreenshotScheme, serveScreenshots, showScreenshotInFolder } from './core/system/screenshots'
 import { checkForUpdates, getUpdateState, installUpdateNow, onUpdateState, startUpdater } from './core/system/updater'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
@@ -135,6 +136,10 @@ function registerIpc(): void {
     if (active) void play(active, { target: o.target === 'previous' ? 'previous' : 'latest', withoutPlayerMods: o.withoutPlayerMods === true })
   })
   handle(IPC.systemInfo, () => systemInfo())
+  handle(IPC.screenshotsList, () => listScreenshots())
+  handle(IPC.screenshotsCopy, (_e, name: unknown) => (typeof name === 'string' ? copyScreenshot(name) : false))
+  on(IPC.screenshotsShow, (_e, name: unknown) => typeof name === 'string' && showScreenshotInFolder(name))
+  handle(IPC.screenshotsDelete, (_e, name: unknown) => (typeof name === 'string' ? deleteScreenshot(name) : false))
   handle(IPC.systemPreflight, () => preflightWarnings())
   on(IPC.systemOpenFolder, (_e, kind: unknown) => {
     const kinds: FolderKind[] = ['game', 'mods', 'screenshots', 'gameLogs', 'crashReports', 'launcherLogs']
@@ -381,6 +386,9 @@ function syncLoginItem(): void {
   if (app.getLoginItemSettings({ args: [AUTOSTART_ARG] }).openAtLogin !== want) app.setLoginItemSettings({ openAtLogin: want, args: [AUTOSTART_ARG] })
 }
 
+// Screenshot images reach the page through hemi-shot:// (registered before the app is ready).
+registerScreenshotScheme()
+
 // One launcher at a time: a second start focuses the existing window.
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -396,6 +404,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(async () => {
     installFileLogger()
     hardenApp()
+    serveScreenshots()
     app.setAppUserModelId('club.hemispheresurvival.launcher')
     await loadAccounts()
     onAccountsChanged(() => win?.webContents.send(IPC.authChanged, getAccountsState()))
