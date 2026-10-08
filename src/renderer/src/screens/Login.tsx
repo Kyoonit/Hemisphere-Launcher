@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Lock, TriangleAlert } from 'lucide-react'
 import type { AuthErrorCode } from '@shared/auth'
@@ -14,6 +14,24 @@ const ERROR_ACTION: Partial<Record<AuthErrorCode, LinkKey>> = {
 }
 
 export default function Login({ onBack }: { onBack?: () => void }) {
+  // hidden staff access (see StaffCode)
+  const [staffOpen, setStaffOpen] = useState(false)
+  const taps = useRef<number[]>([])
+  const tapLock = () => {
+    const now = Date.now()
+    taps.current = [...taps.current.filter((t) => now - t < 3000), now]
+    if (taps.current.length >= 5) {
+      taps.current = []
+      setStaffOpen(true)
+    }
+  }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.code === 'KeyS') setStaffOpen((o) => !o)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   const { t, i18n } = useTranslation()
   const { state } = useAccounts()
   const [waiting, setWaiting] = useState(false)
@@ -87,7 +105,7 @@ export default function Login({ onBack }: { onBack?: () => void }) {
           )}
 
           <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-gray-400">
-            <Lock size={13} className="text-green-400" />
+            <Lock size={13} className="text-green-400" onClick={tapLock} />
             {t('auth.passwordNote')}
           </p>
 
@@ -98,6 +116,7 @@ export default function Login({ onBack }: { onBack?: () => void }) {
             </button>
           </div>
 
+          {staffOpen && !state?.devOfflineAllowed && !waiting && <StaffCode onClose={() => setStaffOpen(false)} />}
           {state?.devOfflineAllowed && !waiting && <DevOffline onDone={onBack} />}
         </div>
       </div>
@@ -105,7 +124,43 @@ export default function Login({ onBack }: { onBack?: () => void }) {
   )
 }
 
-/** Development builds only — lets us test the launcher before Microsoft approves the app. */
+/**
+ * Staff access, hidden on purpose: Ctrl+Shift+S, or 5 quick clicks on the padlock. The staff code (checked in the main
+ * process, slowed down after wrong tries) unlocks the offline test account below and the Developer tab, on this PC.
+ */
+function StaffCode({ onClose }: { onClose(): void }) {
+  const { t } = useTranslation()
+  const [code, setCode] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  return (
+    <form
+      className="animate-fade mt-4 flex gap-2"
+      onSubmit={async (e) => {
+        e.preventDefault()
+        const r = await window.hemisphere.dev.unlock(code)
+        if (r.ok) return onClose()
+        setCode('')
+        setMessage(r.reason === 'wait' ? t('auth.staff.wait', { seconds: r.seconds ?? 30 }) : t('auth.staff.wrong'))
+      }}
+    >
+      <input
+        autoFocus
+        type="password"
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        onKeyDown={(e) => e.key === 'Escape' && onClose()}
+        placeholder={message ?? t('auth.staff.placeholder')}
+        aria-label={t('auth.staff.placeholder')}
+        className={`min-w-0 flex-1 rounded-lg border bg-gray-900 px-3 py-1.5 text-sm text-white ${message ? 'border-red-500/60 placeholder:text-red-300' : 'border-gray-700'}`}
+      />
+      <button disabled={!code} className="rounded-lg bg-gray-700 px-3 text-sm font-semibold text-white hover:bg-gray-600 disabled:opacity-40">
+        OK
+      </button>
+    </form>
+  )
+}
+
+/** Development builds, or staff on this PC: an offline account to test the launcher before Microsoft approves the app. */
 function DevOffline({ onDone }: { onDone?: () => void }) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
@@ -120,6 +175,7 @@ function DevOffline({ onDone }: { onDone?: () => void }) {
       }}
     >
       <p className="mb-2 text-[11px] font-bold tracking-[0.08em] text-amber-400 uppercase">{t('auth.dev.title')}</p>
+      <p className="mb-2 text-[11.5px] text-amber-100/70">{t('auth.dev.hint')}</p>
       <div className="flex gap-2">
         <input
           value={name}

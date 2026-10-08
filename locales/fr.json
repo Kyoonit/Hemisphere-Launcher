@@ -249,10 +249,11 @@
     "expiredBanner": "Ta session Microsoft a expiré.",
     "signInAgain": "Se reconnecter",
     "dev": {
-      "title": "Mode test développeur",
+      "title": "Compte de test staff",
       "placeholder": "Pseudo hors ligne",
       "use": "Utiliser",
-      "badge": "Compte test hors ligne (dev uniquement)"
+      "badge": "Compte test hors ligne (dev uniquement)",
+      "hint": "Hors ligne : tout le launcher et le solo fonctionnent ; le serveur Hemisphere refuse les comptes hors ligne."
     },
     "errors": {
       "timeout": {
@@ -302,6 +303,11 @@
         "title": "Connexion annulée",
         "body": "Tu peux réessayer quand tu veux."
       }
+    },
+    "staff": {
+      "placeholder": "Code",
+      "wrong": "Code incorrect",
+      "wait": "Trop d’essais : attends {{seconds}} s"
     }
   },
   "game": {

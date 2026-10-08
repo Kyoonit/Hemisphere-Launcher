@@ -3,6 +3,12 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "1.0.11",
+        "area": "launcher",
+        "en": "Ready for the first release: the launcher can now be installed and tested by the staff.",
+        "fr": "Prêt pour la première version : le launcher peut maintenant être installé et testé par le staff."
+      },
+      {
         "version": "1.0.10",
         "area": "community",
         "en": "Discord status is now available to everyone: Settings > Launcher > show “Playing on Hemisphere SMP” in Discord (off by default).",

@@ -8,6 +8,7 @@ import { AuthError, toAuthCode } from './errors'
 import { refreshMsTokens, signInWithBrowser } from './oauth'
 import { minecraftSessionFromMs, type MinecraftSession } from './minecraft'
 import { offlineUuid } from './offlineUuid'
+import { devUnlocked } from '../dev/devTools'
 
 /**
  * Accounts on this PC. On disk (%APPDATA%/Hemisphere Launcher/accounts.json) we keep only the profile
@@ -29,7 +30,12 @@ const StoreSchema = z.object({
 type StoredAccount = z.infer<typeof StoredAccountSchema>
 
 const filePath = () => join(app.getPath('userData'), 'accounts.json')
-const devOfflineAllowed = () => !app.isPackaged
+/**
+ * Offline test accounts (no Microsoft sign-in; singleplayer only, the server refuses them): development builds, or the
+ * installed launcher once a staff member entered the staff code on this PC (sign-in screen, hidden). Lets staff test
+ * every feature before Microsoft/Mojang approve the launcher.
+ */
+const devOfflineAllowed = () => !app.isPackaged || devUnlocked()
 
 let store: z.infer<typeof StoreSchema> = { version: 1, activeId: null, accounts: [] }
 const sessions = new Map<string, MinecraftSession>()
@@ -49,7 +55,7 @@ export async function loadAccounts(): Promise<void> {
   } catch {
     /* first run */
   }
-  // Released builds never keep offline test accounts.
+  // Released builds keep offline test accounts only on a staff PC.
   if (!devOfflineAllowed()) store.accounts = store.accounts.filter((a) => a.kind === 'microsoft')
   if (store.activeId && !store.accounts.some((a) => a.id === store.activeId)) store.activeId = store.accounts[0]?.id ?? null
 }
@@ -59,6 +65,15 @@ async function save(): Promise<void> {
   await writeFile(tmp, JSON.stringify(store, null, 2), 'utf8')
   await rename(tmp, filePath())
   onChange()
+}
+
+/** The staff code was entered or removed: the sign-in screen shows (or hides) the offline test account. */
+export async function onStaffAccessChanged(): Promise<void> {
+  if (!devOfflineAllowed() && store.accounts.some((a) => a.kind === 'offline')) {
+    store.accounts = store.accounts.filter((a) => a.kind === 'microsoft')
+    if (store.activeId && !store.accounts.some((a) => a.id === store.activeId)) store.activeId = store.accounts[0]?.id ?? null
+    await save()
+  } else onChange()
 }
 
 export function getAccountsState(): AccountsState {
@@ -114,7 +129,7 @@ export async function signIn(language: string): Promise<AuthResult> {
   }
 }
 
-/** Dev builds only: an offline account to test the launcher before Microsoft approves the app. */
+/** Staff/dev only: an offline account to test the launcher before Microsoft approves the app. */
 export async function addDevOfflineAccount(name: string): Promise<AuthResult> {
   if (!devOfflineAllowed() || !/^[A-Za-z0-9_]{3,16}$/.test(name)) return { ok: false, code: 'unknown' }
   const entry: StoredAccount = { id: offlineUuid(name), name, kind: 'offline' }

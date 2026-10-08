@@ -16,6 +16,7 @@ import {
   signIn,
   signOut,
   switchAccount,
+  onStaffAccessChanged,
 } from './core/auth/accounts'
 import { cancelSignIn } from './core/auth/oauth'
 import { dismissGameError, gameEvents, getGameState, onGameState, play, prepareInBackground, repair, simulateGameState, withModsHeld, dismissSessionRecap, getSessionRecap, sampleSessionRecap } from './core/game/gameService'
@@ -638,12 +639,16 @@ function registerIpc(): void {
   handle(IPC.devCheckDiscord, async (_e, id: unknown) => (devEnabled() && typeof id === 'string' ? checkDiscordAppId(id) : { ok: false, reason: 'notApp' }))
   handle(IPC.devUnlock, async (_e, code: unknown) => {
     const result = await unlockDev(code, getFeed().staffCode)
-    if (result.ok) devRefresh()
+    if (result.ok) {
+      devRefresh()
+      await onStaffAccessChanged()
+    }
     return result
   })
   handle(IPC.devLock, async () => {
     await lockDev()
     devRefresh()
+    await onStaffAccessChanged()
     simulateGameState({ error: null })
     return true
   })

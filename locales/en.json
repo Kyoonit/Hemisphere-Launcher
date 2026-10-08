@@ -248,10 +248,11 @@
     "expiredBanner": "Your Microsoft session expired.",
     "signInAgain": "Sign in again",
     "dev": {
-      "title": "Developer test mode",
+      "title": "Staff test account",
       "placeholder": "Offline name",
       "use": "Use",
-      "badge": "Offline test account (dev only)"
+      "badge": "Offline test account (dev only)",
+      "hint": "Offline: everything in the launcher and singleplayer work; the Hemisphere server refuses offline accounts."
     },
     "errors": {
       "timeout": {
@@ -301,6 +302,11 @@
         "title": "Sign-in cancelled",
         "body": "You can try again anytime."
       }
+    },
+    "staff": {
+      "placeholder": "Code",
+      "wrong": "Wrong code",
+      "wait": "Too many tries: wait {{seconds}} s"
     }
   },
   "game": {
