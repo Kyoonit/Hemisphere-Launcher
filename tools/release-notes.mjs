@@ -42,5 +42,6 @@ if (!days.length) fail(`nothing new since ${last}: add the changes to ${file}`)
 
 const section = (lang) => days.map((d) => `### ${d.date}\n\n${d.changes.map((c) => `- ${c[lang]}`).join('\n')}`).join('\n\n')
 mkdirSync('dist', { recursive: true })
-writeFileSync('dist/release-notes.md', `## What's new since ${last}\n\n${section('en')}\n\n## Nouveautés depuis ${last}\n\n${section('fr')}\n`)
+const since = (fr) => (last === '0.0.0' ? '' : fr ? ` depuis ${last}` : ` since ${last}`) // the first release: everything so far
+writeFileSync('dist/release-notes.md', `## What's new${since(false)}\n\n${section('en')}\n\n## Nouveautés${since(true)}\n\n${section('fr')}\n`)
 console.log(`release-notes: ${version} ✓ (${days.reduce((n, d) => n + d.changes.length, 0)} changes since ${last})`)
