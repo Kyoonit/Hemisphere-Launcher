@@ -6,6 +6,7 @@ import type { GameState } from '@shared/game'
 import type { Settings } from '@shared/settings'
 import type { Feed } from '@shared/feed'
 import type { ImportProgress } from '@shared/importer'
+import type { LauncherUpdateState } from '../shared/launcherUpdate'
 
 const api: HemisphereApi = {
   window: {
@@ -20,6 +21,16 @@ const api: HemisphereApi = {
   },
   openLink: (key) => ipcRenderer.send(IPC.openLink, key),
   appInfo: () => ipcRenderer.invoke(IPC.appInfo),
+  launcherUpdate: {
+    get: () => ipcRenderer.invoke(IPC.launcherUpdateGet),
+    onChange: (cb) => {
+      const listener = (_e: unknown, state: LauncherUpdateState): void => cb(state)
+      ipcRenderer.on(IPC.launcherUpdateChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.launcherUpdateChanged, listener)
+    },
+    check: () => ipcRenderer.invoke(IPC.launcherUpdateCheck),
+    install: () => ipcRenderer.send(IPC.launcherUpdateInstall),
+  },
   server: {
     getStatus: () => ipcRenderer.invoke(IPC.serverStatusGet),
     onStatus: (cb) => {

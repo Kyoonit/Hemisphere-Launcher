@@ -5,6 +5,7 @@ import type { Settings, SystemInfo } from './settings'
 import type { Feed } from './feed'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from './importer'
 import type { ClientSummary } from './client'
+import type { LauncherUpdateState } from './launcherUpdate'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -15,6 +16,10 @@ export const IPC = {
   windowMaximizedChanged: 'window:maximized-changed',
   openLink: 'link:open',
   appInfo: 'app:info',
+  launcherUpdateGet: 'launcher-update:get',
+  launcherUpdateChanged: 'launcher-update:changed',
+  launcherUpdateCheck: 'launcher-update:check',
+  launcherUpdateInstall: 'launcher-update:install',
   serverStatusGet: 'server:status:get',
   serverStatusUpdate: 'server:status:update',
   playtimeGet: 'playtime:get',
@@ -83,6 +88,14 @@ export interface HemisphereApi {
   }
   openLink(key: LinkKey): void
   appInfo(): Promise<AppInfo>
+  /** Updates of the launcher itself (GitHub releases) */
+  launcherUpdate: {
+    get(): Promise<LauncherUpdateState>
+    onChange(cb: (state: LauncherUpdateState) => void): () => void
+    check(): Promise<LauncherUpdateState>
+    /** restart now and install the downloaded update */
+    install(): void
+  }
   server: {
     getStatus(): Promise<ServerStatus>
     onStatus(cb: (status: ServerStatus) => void): () => void

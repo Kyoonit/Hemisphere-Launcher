@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Gamepad2, Plus, RotateCcw, Rocket, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
+import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Gamepad2, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
+import { useLauncherUpdate } from '../launcherUpdate'
 import type { JavaRuntimeInfo } from '@shared/game'
 import { RESOLUTIONS, parseJvmArgs, type Settings, type SystemInfo } from '@shared/settings'
 import { LANGUAGES, systemLanguage } from '../i18n'
@@ -173,10 +174,51 @@ function LauncherSettings() {
       <Row title={t('settings.startWithWindows')} hint={info.packaged ? t('settings.startWithWindowsHint') : t('settings.startWithWindowsDev')}>
         <Toggle on={settings.startWithWindows} onChange={(startWithWindows) => update({ startWithWindows })} label={t('settings.startWithWindows')} />
       </Row>
-      <Row title={t('settings.version')} hint={version}>
-        <span />
-      </Row>
+      <LauncherVersionRow version={version} />
     </div>
+  )
+}
+
+/** Launcher version, update status and a manual "Check for updates". */
+function LauncherVersionRow({ version }: { version: string }) {
+  const { t, i18n } = useTranslation()
+  const update = useLauncherUpdate()
+  const status = (() => {
+    switch (update?.phase) {
+      case 'disabled':
+        return t('launcherUpdate.devBuild')
+      case 'checking':
+        return t('launcherUpdate.checking')
+      case 'downloading':
+        return t('launcherUpdate.downloading', { version: update.version, percent: Math.round(update.ratio * 100) })
+      case 'ready':
+        return t('launcherUpdate.ready', { version: update.version })
+      case 'error':
+        return t('launcherUpdate.error')
+      case 'idle':
+        return update.checkedAt
+          ? t('launcherUpdate.upToDate', { time: new Date(update.checkedAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }) })
+          : ''
+      default:
+        return ''
+    }
+  })()
+  return (
+    <Row title={t('settings.version')} hint={[version, status].filter(Boolean).join(' · ')}>
+      {update?.phase === 'ready' ? (
+        <button onClick={() => window.hemisphere.launcherUpdate.install()} className={buttonClass.replace('bg-gray-700/85', 'bg-green-600').replace('hover:bg-gray-600', 'hover:bg-green-500')}>
+          <RefreshCw size={15} /> {t('launcherUpdate.restart')}
+        </button>
+      ) : (
+        <button
+          onClick={() => window.hemisphere.launcherUpdate.check()}
+          disabled={!update || update.phase === 'disabled' || update.phase === 'checking' || update.phase === 'downloading'}
+          className={buttonClass}
+        >
+          <RefreshCw size={15} className={update?.phase === 'checking' ? 'animate-spin' : ''} /> {t('launcherUpdate.check')}
+        </button>
+      )}
+    </Row>
   )
 }
 

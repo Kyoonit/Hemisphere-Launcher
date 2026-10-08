@@ -3,6 +3,7 @@
   "productName": "Hemisphere Launcher",
   "version": "0.1.0",
   "description": "The official launcher for Hemisphere SMP",
+  "author": "Hemisphere SMP",
   "private": true,
   "main": "./out/main/index.js",
   "scripts": {
@@ -15,11 +16,14 @@
     "test": "vitest run",
     "content:keygen": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/keygen.ts",
     "content:publish": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/publish.ts",
-    "content:feed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/feed.ts"
+    "content:feed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/feed.ts",
+    "dist": "npm run build && electron-builder --win --publish never",
+    "release": "npm run build && electron-builder --win --publish always"
   },
   "dependencies": {
     "@xmcl/core": "2.15.1",
     "@xmcl/installer": "6.1.2",
+    "electron-updater": "6.8.9",
     "i18next": "26.4.2",
     "lucide-react": "1.52.0",
     "react": "19.3.0",
@@ -34,6 +38,7 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "5.2.0",
     "electron": "44.7.0",
+    "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",

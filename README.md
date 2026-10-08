@@ -15,7 +15,12 @@ npm install
 npm run dev        # development window with live reload
 npm run build      # typecheck + production build into out/
 npm start          # run the production build
+npm test           # unit tests
+npm run dist       # Windows installer into dist/
 ```
+
+Publishing a launcher update for players: [docs/RELEASE.md](docs/RELEASE.md).
+Updating mods, news or maintenance (no launcher release needed): [docs/CONTENT.md](docs/CONTENT.md).
 
 ## Translations
 
@@ -36,7 +41,8 @@ and give it a name in the `backgrounds` section of each language file.
 
 ```
 locales/              all UI text, one file per language
-resources/            app icon
+resources/            app icon (runtime)
+build/                installer icon
 src/main/             Electron main process (window, security, system access)
 src/preload/          the small, safe bridge between the UI and the main process
 src/shared/           types and IPC channel list used by both sides

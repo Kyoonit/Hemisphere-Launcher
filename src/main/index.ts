@@ -18,6 +18,7 @@ import {
 import { cancelSignIn } from './core/auth/oauth'
 import { dismissGameError, gameEvents, getGameState, onGameState, play, repair } from './core/game/gameService'
 import { getSettings, onSettingsChanged, updateSettings } from './core/settings/settings'
+import { AUTOSTART_ARG } from '@shared/settings'
 import { recoverSessions } from './core/playtime/playtimeStore'
 import { instanceLogPath } from './core/game/install'
 import { readInstanceState } from './core/sync/sync'
@@ -35,6 +36,7 @@ import type { ImportOptions, ImportSource } from '@shared/importer'
 import type { ClientSummary } from '@shared/client'
 import { loadWindowState, trackWindowState } from './core/system/windowState'
 import { handle, hardenApp, on, trustWindow } from './security'
+import { checkForUpdates, getUpdateState, installUpdateNow, onUpdateState, startUpdater } from './core/system/updater'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
@@ -70,7 +72,9 @@ function createWindow(): void {
   trackWindowState(win, saved)
   win.once('ready-to-show', () => {
     if (saved?.maximized) win?.maximize()
-    win?.show()
+    // Started with Windows: stay out of the way in the taskbar.
+    if (process.argv.includes(AUTOSTART_ARG)) win?.minimize()
+    else win?.show()
   })
   win.on('maximize', () => win?.webContents.send(IPC.windowMaximizedChanged, true))
   win.on('unmaximize', () => win?.webContents.send(IPC.windowMaximizedChanged, false))
@@ -246,6 +250,22 @@ function registerIpc(): void {
   })
 
   handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))
+  handle(IPC.launcherUpdateGet, () => getUpdateState())
+  handle(IPC.launcherUpdateCheck, () => checkForUpdates())
+  on(IPC.launcherUpdateInstall, () => installUpdateNow())
+}
+
+// The installed launcher never accepts a remote debugger (it would give any local program control of the
+// launcher and its Microsoft session). Development builds keep it for testing.
+if (app.isPackaged && (app.commandLine.hasSwitch('remote-debugging-port') || app.commandLine.hasSwitch('remote-debugging-pipe'))) {
+  app.exit(1)
+}
+
+/** Keeps the Windows startup entry in line with the setting (e.g. after reinstalling). */
+function syncLoginItem(): void {
+  if (!app.isPackaged) return
+  const want = getSettings().startWithWindows
+  if (app.getLoginItemSettings({ args: [AUTOSTART_ARG] }).openAtLogin !== want) app.setLoginItemSettings({ openAtLogin: want, args: [AUTOSTART_ARG] })
 }
 
 // One launcher at a time: a second start focuses the existing window.
@@ -255,6 +275,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => {
     if (win) {
       if (win.isMinimized()) win.restore()
+      if (!win.isVisible()) win.show()
       win.focus()
     }
   })
@@ -287,6 +308,9 @@ if (!app.requestSingleInstanceLock()) {
     })
     void refreshAccount() // renew the active session silently in the background
     startFeedPolling((feed) => win?.webContents.send(IPC.feedChanged, feed))
+    onUpdateState((s) => win?.webContents.send(IPC.launcherUpdateChanged, s))
+    startUpdater()
+    syncLoginItem()
   })
 
   app.on('window-all-closed', () => app.quit())

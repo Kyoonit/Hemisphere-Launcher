@@ -1,4 +1,8 @@
 /** Launcher settings shared by main and renderer. */
+
+/** Command-line flag of the Windows startup entry: the launcher then starts minimized. */
+export const AUTOSTART_ARG = '--autostart'
+
 export interface Settings {
   /** Connect to Hemisphere straight from the title screen (latest client only) */
   autoJoin: boolean

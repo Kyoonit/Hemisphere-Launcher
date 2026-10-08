@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy, Minus, Newspaper, Package, Play, Settings, Square, X, type LucideIcon } from 'lucide-react'
+import { Copy, Minus, Newspaper, Package, Play, RefreshCw, Settings, Square, X, type LucideIcon } from 'lucide-react'
 import logo from '../assets/logo.png'
+import { useLauncherUpdate } from '../launcherUpdate'
 
 export type Screen = 'home' | 'news' | 'mods' | 'settings' | 'repair' | 'import'
 
@@ -49,6 +50,7 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
       </nav>
 
       <div className="no-drag ml-auto flex h-full items-center">
+        <UpdateReady />
         {!minimal && account}
         <WindowButton label={t('window.minimize')} onClick={() => window.hemisphere.window.minimize()}>
           <Minus size={15} />
@@ -64,6 +66,22 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
         </WindowButton>
       </div>
     </header>
+  )
+}
+
+/** Shown once a launcher update has been downloaded; otherwise it installs itself when the launcher closes. */
+function UpdateReady() {
+  const { t } = useTranslation()
+  const update = useLauncherUpdate()
+  if (update?.phase !== 'ready') return null
+  return (
+    <button
+      onClick={() => window.hemisphere.launcherUpdate.install()}
+      title={t('launcherUpdate.readyHint', { version: update.version })}
+      className="animate-fade mr-2 flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-[5px] text-[13px] font-semibold text-white shadow-md transition-colors hover:bg-green-500"
+    >
+      <RefreshCw size={14} /> {t('launcherUpdate.restart')}
+    </button>
   )
 }
 

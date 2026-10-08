@@ -417,5 +417,16 @@
     "reports": "Crash reports",
     "help": "Get help",
     "close": "Close"
+  },
+  "launcherUpdate": {
+    "restart": "Restart to update",
+    "readyHint": "Launcher {{version}} is ready. It also installs itself the next time you close the launcher.",
+    "check": "Check for updates",
+    "checking": "Checking for updates…",
+    "downloading": "Downloading {{version}}… {{percent}}%",
+    "ready": "Version {{version}} is ready",
+    "upToDate": "Up to date (checked at {{time}})",
+    "error": "Couldn't check for updates",
+    "devBuild": "Updates are only available in the installed launcher"
   }
 }

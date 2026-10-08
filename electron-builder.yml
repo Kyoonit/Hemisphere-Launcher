@@ -1,0 +1,45 @@
+# Windows installer + auto-update (Phase 16). Build: npm run dist  ·  publish a release: npm run release
+appId: club.hemispheresurvival.launcher
+productName: Hemisphere Launcher
+copyright: Hemisphere SMP
+directories:
+  output: dist
+  buildResources: build
+
+# Only the built app goes into the package (sources, tools and content stay out).
+files:
+  - out/**
+  - resources/**
+  - package.json
+
+win:
+  target: nsis
+  icon: build/icon.png
+  artifactName: Hemisphere-Launcher-Setup-${version}.${ext}
+  # No code-signing certificate yet: Windows SmartScreen shows "unknown publisher" on first run.
+
+nsis:
+  # Per-user install, no admin prompt, one click like most game launchers.
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Hemisphere Launcher
+  # Keep accounts, settings and the game when the launcher is uninstalled (players reinstalling keep everything).
+  deleteAppDataOnUninstall: false
+
+# Launcher updates come from this repository's GitHub releases.
+publish:
+  provider: github
+  owner: Kyoonit
+  repo: Hemisphere-Launcher
+  releaseType: release
+
+# Electron fuses: no "run as Node", no --inspect / NODE_OPTIONS, app code only from the signed-integrity asar.
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true

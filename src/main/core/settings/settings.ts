@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { rename, writeFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 import { z } from 'zod'
-import { DEFAULT_SETTINGS, RESOLUTIONS, parseJvmArgs, type Settings } from '@shared/settings'
+import { AUTOSTART_ARG, DEFAULT_SETTINGS, RESOLUTIONS, parseJvmArgs, type Settings } from '@shared/settings'
 
 /** settings.json in the launcher's data folder. */
 
@@ -59,7 +59,7 @@ export function getSettings(): Settings {
 export async function updateSettings(patch: Partial<Settings>): Promise<Settings> {
   const next = UpdateSchema.parse({ ...getSettings(), ...patch })
   if (next.startWithWindows !== getSettings().startWithWindows && app.isPackaged) {
-    app.setLoginItemSettings({ openAtLogin: next.startWithWindows })
+    app.setLoginItemSettings({ openAtLogin: next.startWithWindows, args: [AUTOSTART_ARG] })
   }
   current = next
   const tmp = `${file()}.tmp`

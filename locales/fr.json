@@ -425,5 +425,16 @@
     "reports": "Rapports de crash",
     "help": "Demander de l’aide",
     "close": "Fermer"
+  },
+  "launcherUpdate": {
+    "restart": "Redémarrer pour mettre à jour",
+    "readyHint": "Le launcher {{version}} est prêt. Il s’installe aussi tout seul à la prochaine fermeture du launcher.",
+    "check": "Rechercher des mises à jour",
+    "checking": "Recherche de mises à jour…",
+    "downloading": "Téléchargement de la {{version}}… {{percent}} %",
+    "ready": "La version {{version}} est prête",
+    "upToDate": "À jour (vérifié à {{time}})",
+    "error": "Impossible de vérifier les mises à jour",
+    "devBuild": "Les mises à jour ne concernent que le launcher installé"
   }
 }
