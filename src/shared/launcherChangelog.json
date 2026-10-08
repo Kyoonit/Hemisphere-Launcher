@@ -1,5 +1,16 @@
 [
   {
+    "date": "2026-10-09",
+    "changes": [
+      {
+        "version": "1.0.7",
+        "area": "launcher",
+        "en": "The installer now shows a Hemisphere window with its progress, instead of the small Windows box.",
+        "fr": "L’installeur affiche maintenant une fenêtre Hemisphere avec sa progression, au lieu de la petite fenêtre Windows."
+      }
+    ]
+  },
+  {
     "date": "2026-10-08",
     "changes": [
       {
