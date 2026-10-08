@@ -739,7 +739,10 @@
     "quickHint": "Ensemble de mods : change en un clic",
     "manage": "Gérer les ensembles…",
     "duplicate": "Dupliquer (pour créer un ensemble à partir de celui-ci)",
-    "duplicated": "« {{name}} » dupliqué en « {{copy}} » : renomme-le, puis passe dessus pour changer ses mods."
+    "duplicated": "« {{name}} » dupliqué en « {{copy}} » : renomme-le, puis passe dessus pour changer ses mods.",
+    "onCount_one": "{{count}} activé",
+    "onCount_other": "{{count}} activés",
+    "onCount_many": "{{count}} activés"
   },
   "history": {
     "title": "Historique",

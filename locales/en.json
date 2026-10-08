@@ -708,7 +708,9 @@
     "quickHint": "Mod set: switch in one click",
     "manage": "Manage sets…",
     "duplicate": "Duplicate (to make a new set from this one)",
-    "duplicated": "“{{name}}” duplicated as “{{copy}}”: rename it, then switch to it to change its mods."
+    "duplicated": "“{{name}}” duplicated as “{{copy}}”: rename it, then switch to it to change its mods.",
+    "onCount_one": "{{count}} on",
+    "onCount_other": "{{count}} on"
   },
   "history": {
     "title": "History",
