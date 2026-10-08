@@ -1,12 +1,13 @@
-import { app } from 'electron'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { copyFile, cp, mkdir, readdir, rename, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { homedir } from 'node:os'
-import { z } from 'zod'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource, LauncherKind } from '@shared/importer'
-import { isSafeRelativePath, type ClientManifest } from '@shared/manifest'
+import type { ClientManifest } from '@shared/manifest'
 import { gamePaths } from '../game/target'
+import { getProjects, isSafeModFileName, latestByHash, primaryFile, versionsByHash } from '../modrinth/api'
+
+export { isSafeModFileName }
 import { blobPath, downloadToStore, sha512OfFile } from '../sync/download'
 
 /**
@@ -119,51 +120,6 @@ export function sourceFromFolder(dir: string): ImportSource | null {
 
 // ------------------------------------------------------------------------------------------------- import
 
-/** A plain .jar file name that is safe to create in mods/ (no folders, reserved names or odd characters). */
-export const isSafeModFileName = (f: string) => /\.jar$/i.test(f) && !f.startsWith('.') && !f.includes('/') && isSafeRelativePath(`mods/${f}`)
-
-const VersionSchema = z.object({
-  id: z.string(),
-  project_id: z.string(),
-  name: z.string(),
-  // Values from the API become file names and store paths: only a plain .jar name and a real sha512 are accepted.
-  files: z.array(
-    z.object({
-      url: z.string(),
-      filename: z.string().refine((n) => isSafeModFileName(n), 'unsafe file name'),
-      primary: z.boolean(),
-      size: z.number().int().positive().max(512 * 1024 * 1024),
-      hashes: z.object({ sha512: z.string().regex(/^[0-9a-f]{128}$/) }),
-    }),
-  ),
-})
-
-/** Project titles ("Litematica") for a list of Modrinth project ids. Falls back to nothing on error. */
-async function projectTitles(ids: string[]): Promise<Map<string, string>> {
-  if (!ids.length) return new Map()
-  try {
-    const res = await fetch(`https://api.modrinth.com/v2/projects?ids=${encodeURIComponent(JSON.stringify(ids))}`, {
-      headers: { 'User-Agent': `Kyoonit/Hemisphere-Launcher/${app.getVersion()}` },
-      signal: AbortSignal.timeout(15_000),
-    })
-    const list = z.array(z.object({ id: z.string(), title: z.string() })).parse(await res.json())
-    return new Map(list.map((p) => [p.id, p.title]))
-  } catch {
-    return new Map()
-  }
-}
-
-async function modrinth(path: string, body: unknown): Promise<Record<string, z.infer<typeof VersionSchema>>> {
-  const res = await fetch(`https://api.modrinth.com/v2${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'User-Agent': `Kyoonit/Hemisphere-Launcher/${app.getVersion()}` },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(20_000),
-  })
-  if (!res.ok) throw new Error(`Modrinth ${path}: HTTP ${res.status}`)
-  return z.record(z.string(), VersionSchema).parse(await res.json())
-}
-
 /** Copies a file or folder only if the destination doesn't exist yet. Returns how many top-level items were copied. */
 async function copyMissing(srcDir: string, destDir: string, filter: (name: string) => boolean = () => true): Promise<number> {
   if (!isDir(srcDir)) return 0
@@ -210,10 +166,10 @@ export async function importFrom(source: ImportSource, opts: ImportOptions, mani
     }
     if (hashes.size) {
       const all = [...hashes.keys()]
-      const known = await modrinth('/version_files', { hashes: all, algorithm: 'sha512' })
+      const known = await versionsByHash(all)
       const shipped = new Set(manifest.mods.flatMap((m) => (m.source ? [m.source.modrinth.projectId] : [])))
-      const titles = await projectTitles([...new Set(Object.values(known).map((v) => v.project_id))])
-      const title = (v: { project_id: string; name: string }) => titles.get(v.project_id) ?? v.name
+      const projects = await getProjects([...new Set(Object.values(known).map((v) => v.project_id))])
+      const title = (v: { project_id: string; name: string }) => projects.get(v.project_id)?.title ?? v.name
       const toUpdate: string[] = []
       for (const hash of all) {
         const v = known[hash]
@@ -221,14 +177,12 @@ export async function importFrom(source: ImportSource, opts: ImportOptions, mani
         else if (shipped.has(v.project_id)) report.modsIncluded.push(title(v))
         else toUpdate.push(hash)
       }
-      const compatible = toUpdate.length
-        ? await modrinth('/version_files/update', { hashes: toUpdate, algorithm: 'sha512', loaders: ['fabric'], game_versions: [manifest.minecraft] })
-        : {}
+      const compatible = await latestByHash(toUpdate, manifest.minecraft)
       const store = join(gamePaths().root, 'store')
       for (const [i, hash] of toUpdate.entries()) {
         const old = known[hash]
         const v = compatible[hash]
-        const file = v?.files.find((f) => f.primary) ?? v?.files[0]
+        const file = v ? primaryFile(v) : undefined
         if (!v || !file) {
           report.modsUnavailable.push(title(old))
           continue

@@ -6,7 +6,7 @@ import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
 import { newsBadgeLabel, unseenNewsCount } from '@shared/feed'
 
-export type Screen = 'home' | 'news' | 'mods' | 'settings' | 'repair' | 'import'
+export type Screen = 'home' | 'news' | 'mods' | 'settings' | 'repair' | 'import' | 'browse'
 
 const TABS: { id: Screen; icon: LucideIcon; label: string }[] = [
   { id: 'home', icon: Play, label: 'nav.play' },
@@ -47,7 +47,7 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
             aria-current={screen === id ? 'page' : undefined}
             aria-label={id === 'news' && badge ? `${t(label)} (${t('news.unseen', { count: unseen })})` : undefined}
             className={`relative flex items-center gap-2 rounded-lg px-3.5 py-[7px] text-sm font-medium transition-all duration-300 ${
-              screen === id || ((screen === 'repair' || screen === 'import') && id === 'settings') ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              screen === id || ((screen === 'repair' || screen === 'import') && id === 'settings') || (screen === 'browse' && id === 'mods') ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
           >
             <Icon size={16} strokeWidth={2} />

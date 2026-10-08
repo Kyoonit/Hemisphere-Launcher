@@ -119,6 +119,11 @@ const api: HemisphereApi = {
     setModEnabled: (id, on) => ipcRenderer.invoke(IPC.modsSet, id, on),
     playerMods: () => ipcRenderer.invoke(IPC.modsPlayer),
     setPlayerMod: (file, enabled) => ipcRenderer.invoke(IPC.modsPlayerSet, file, enabled),
+    search: (query, offset) => ipcRenderer.invoke(IPC.modsSearch, query, offset),
+    install: (projectId, confirmed) => ipcRenderer.invoke(IPC.modsInstall, projectId, confirmed),
+    removePlayerMod: (file) => ipcRenderer.invoke(IPC.modsPlayerRemove, file),
+    checkPlayerModUpdates: () => ipcRenderer.invoke(IPC.modsPlayerCheckUpdates),
+    updatePlayerMods: () => ipcRenderer.invoke(IPC.modsPlayerUpdate),
   },
 }
 

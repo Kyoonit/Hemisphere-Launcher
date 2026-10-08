@@ -9,6 +9,7 @@ import News from './screens/News'
 import Mods from './screens/Mods'
 import Repair from './screens/Repair'
 import Import from './screens/Import'
+import ModBrowser from './screens/ModBrowser'
 import Settings, { type Section } from './screens/Settings'
 import { useAccounts } from './accounts'
 import { useFeed, useSettings } from './hooks'
@@ -58,7 +59,8 @@ export default function App() {
             <>
               {screen === 'home' && <Home onOpenNews={() => setScreen('news')} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} />}
               {screen === 'news' && <News />}
-              {screen === 'mods' && <Mods onImport={() => setScreen('import')} />}
+              {screen === 'mods' && <Mods onImport={() => setScreen('import')} onBrowse={() => setScreen('browse')} />}
+              {screen === 'browse' && <ModBrowser onBack={() => setScreen('mods')} />}
               {screen === 'settings' && <Settings initialSection={settingsSection} onAddAccount={() => setAddingAccount(true)} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} />}
               {screen === 'import' && <Import onClose={() => setScreen('home')} />}
               {screen === 'repair' && <Repair onClose={() => openSettings('installation')} onDone={() => setScreen('home')} />}

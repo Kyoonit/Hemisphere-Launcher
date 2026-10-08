@@ -18,6 +18,7 @@ import { inspectJava } from './java'
 import { physicalPath } from '../system/redirect'
 import { applyGpuPreference } from '../system/gpu'
 import { disableAllPlayerMods } from '../importer/importer'
+import { updatePlayerMods } from '../modrinth/playerMods'
 import { readInstanceState } from '../sync/sync'
 import { endSession, startSession } from '../playtime/playtimeStore'
 import { cleanStore, syncClient } from '../sync/sync'
@@ -147,7 +148,16 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     // 3-5. Minecraft + Java + Fabric, then Hemisphere mods (only what changed).
     const target = { minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }
     let { versionId, javaPath } = await ensureGameInstalled(target, report)
+    const before = await readInstanceState()
     const synced = await syncClient(manifest, report('mods'))
+    if (before.minecraft && before.minecraft !== manifest.minecraft) {
+      // New (or older) Minecraft version: the player's own mods follow; ones without a version yet are switched off.
+      const moved = await updatePlayerMods(Object.keys((await readInstanceState()).owned), manifest.minecraft, true).catch((err) => {
+        console.warn('[game] player mods not updated:', err)
+        return null
+      })
+      if (moved) console.log(`[game] player mods for ${manifest.minecraft}: ${moved.updated.length} updated, ${moved.disabled.length} switched off`)
+    }
     console.log(`[game] client ${manifest.clientVersion} in sync: ${synced.downloaded} downloaded, ${synced.placed} placed, ${synced.removed} removed`)
 
     // 6. Launch (+ join Hemisphere directly when enabled; never from an older client).

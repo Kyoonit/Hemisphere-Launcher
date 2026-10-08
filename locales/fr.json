@@ -300,7 +300,24 @@
     "yours": "Ajoutés par toi",
     "yoursEmpty": "Pas encore de mods à toi. Importe-les, ou dépose des fichiers .jar dans le dossier mods.",
     "yoursHint": "Hemisphere ne les supprime jamais. Les mods désactivés sont gardés dans le dossier mods-disabled. Vérifie qu’ils respectent les règles du serveur.",
-    "openFolder": "Ouvrir le dossier"
+    "openFolder": "Ouvrir le dossier",
+    "checkUpdates": "Rechercher des mises à jour",
+    "updateAll_one": "Mettre à jour {{count}} mod",
+    "updateAll_other": "Mettre à jour {{count}} mods",
+    "updateAll_many": "Mettre à jour {{count}} mods",
+    "updatesFound_one": "{{count}} mise à jour disponible.",
+    "updatesFound_other": "{{count}} mises à jour disponibles.",
+    "updatesFound_many": "{{count}} mises à jour disponibles.",
+    "upToDate": "Tes mods sont à jour.",
+    "updated_one": "{{count}} mod mis à jour (ancien fichier dans la Corbeille).",
+    "updated_other": "{{count}} mods mis à jour (anciens fichiers dans la Corbeille).",
+    "updated_many": "{{count}} mods mis à jour (anciens fichiers dans la Corbeille).",
+    "updateFailed": "Impossible de joindre Modrinth. Réessaie plus tard.",
+    "updateAvailable": "MàJ {{version}}",
+    "incompatible": "Désactivé : pas encore de version pour Minecraft {{minecraft}}",
+    "notOnModrinth": "absent de Modrinth",
+    "remove": "Supprimer {{mod}}",
+    "removeConfirm": "Mettre à la Corbeille"
   },
   "repair": {
     "title": "Réparer l’installation",
@@ -458,5 +475,37 @@
   },
   "legal": {
     "disclaimer": "Produit Minecraft non officiel. Non approuvé par Mojang ou Microsoft et sans lien avec eux."
+  },
+  "browse": {
+    "open": "Trouver des mods",
+    "back": "Mods",
+    "title": "Trouver des mods",
+    "subtitle": "Depuis Modrinth · Fabric · Minecraft {{minecraft}}",
+    "search": "Rechercher des mods…",
+    "rules": "Seuls les mods faits pour cette version de Minecraft sont affichés. Les triches comme le x-ray sont bloquées par le staff ; pour le reste, respecte les règles du serveur.",
+    "by": "par {{author}}",
+    "downloads": "{{count}} téléchargements",
+    "install": "Installer",
+    "installedState": "Installé",
+    "inHemisphere": "Dans Hemisphere",
+    "notAllowed": "Interdit",
+    "askStaff": "Demander au staff",
+    "askStaffTitle": "{{mod}} nécessite l’accord du staff",
+    "installAnyway": "J’ai l’accord, installer",
+    "cancel": "Annuler",
+    "installed": "{{mod}} est installé. Il est activé et se chargera à ta prochaine partie.",
+    "installedWith": "{{mod}} est installé, avec {{deps}} (nécessaire pour le faire fonctionner).",
+    "more": "Afficher plus",
+    "offline": "Impossible de joindre Modrinth. Vérifie ta connexion internet et réessaie.",
+    "noResults": "Aucun mod trouvé pour cette version.",
+    "source": "Les mods sont téléchargés depuis Modrinth et vérifiés avec leurs sommes de contrôle publiées.",
+    "errors": {
+      "blocked": "{{mod}} n’est pas autorisé sur Hemisphere.",
+      "needsConfirm": "{{mod}} nécessite l’accord du staff.",
+      "notCompatible": "{{mod}} n’a pas encore de version pour cette version de Minecraft.",
+      "inHemisphere": "{{mod}} fait déjà partie d’Hemisphere : active-le dans la liste.",
+      "busy": "Ferme Minecraft (ou attends que le launcher ait fini) avant d’ajouter des mods.",
+      "network": "Le téléchargement a échoué. Vérifie ta connexion internet et réessaie."
+    }
   }
 }

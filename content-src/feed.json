@@ -1,5 +1,5 @@
 {
-  "$comment": "News, maintenance and restart time shown in the launcher. Edit, then: npm run content:feed (see docs/CONTENT.md)",
+  "$comment": "News, maintenance and restart time shown in the launcher. Edit, then: npm run content:feed (see docs/CONTENT.md) modPolicy: Modrinth project ids the mod browser blocks (verdict blocked) or warns about (askStaff); find an id on the mod's Modrinth page or with the search API.",
   "maintenance": {
     "active": false,
     "message": {
@@ -7,7 +7,11 @@
       "fr": "Hemisphere est en maintenance. On revient vite !"
     }
   },
-  "restart": { "time": "17:00", "timeZone": "Europe/Paris", "durationMin": 5 },
+  "restart": {
+    "time": "17:00",
+    "timeZone": "Europe/Paris",
+    "durationMin": 5
+  },
   "news": [
     {
       "id": "welcome-launcher",
@@ -24,7 +28,10 @@
       },
       "image": "https://hemispheresurvival.club/images/603aeb_168d4a74ad9b474eb5ea65e96590eaa3~mv2.avif",
       "link": {
-        "label": { "en": "Join the Discord", "fr": "Rejoindre le Discord" },
+        "label": {
+          "en": "Join the Discord",
+          "fr": "Rejoindre le Discord"
+        },
         "url": "https://discord.gg/m3FGGUF"
       }
     },
@@ -55,5 +62,72 @@
       },
       "image": "https://hemispheresurvival.club/images/603aeb_07e6cb00ad0040eaa25b5b4ede69bf7e~mv2.avif"
     }
-  ]
+  ],
+  "modPolicy": {
+    "rules": [
+      {
+        "project": "HbXXzLHU",
+        "name": "X to Xray",
+        "verdict": "blocked",
+        "reason": {
+          "en": "X-ray shows ores through walls: it is cheating on Hemisphere.",
+          "fr": "Le x-ray montre les minerais à travers les murs : c’est de la triche sur Hemisphere."
+        }
+      },
+      {
+        "project": "pHENEouD",
+        "name": "Xray -orevision",
+        "verdict": "blocked",
+        "reason": {
+          "en": "X-ray shows ores through walls: it is cheating on Hemisphere.",
+          "fr": "Le x-ray montre les minerais à travers les murs : c’est de la triche sur Hemisphere."
+        }
+      },
+      {
+        "project": "3llatzyE",
+        "name": "Litematica Printer",
+        "verdict": "blocked",
+        "reason": {
+          "en": "Places blocks automatically: not allowed on Hemisphere.",
+          "fr": "Pose des blocs automatiquement : interdit sur Hemisphere."
+        }
+      },
+      {
+        "project": "r8axuw4u",
+        "name": "Auto Clicker",
+        "verdict": "blocked",
+        "reason": {
+          "en": "Automated clicking is not allowed on Hemisphere.",
+          "fr": "Le clic automatique est interdit sur Hemisphere."
+        }
+      },
+      {
+        "project": "JAYD9vCA",
+        "name": "Auto Clicker",
+        "verdict": "blocked",
+        "reason": {
+          "en": "Automated clicking is not allowed on Hemisphere.",
+          "fr": "Le clic automatique est interdit sur Hemisphere."
+        }
+      },
+      {
+        "project": "2tqIzH5v",
+        "name": "Syncac (Synchronized Auto Clicker)",
+        "verdict": "blocked",
+        "reason": {
+          "en": "Automated clicking is not allowed on Hemisphere.",
+          "fr": "Le clic automatique est interdit sur Hemisphere."
+        }
+      },
+      {
+        "project": "XeEZ3fK2",
+        "name": "Freecam",
+        "verdict": "askStaff",
+        "reason": {
+          "en": "Freecam can see through walls. Ask the staff on Discord before using it.",
+          "fr": "Freecam permet de voir à travers les murs. Demande au staff sur Discord avant de l’utiliser."
+        }
+      }
+    ]
+  }
 }

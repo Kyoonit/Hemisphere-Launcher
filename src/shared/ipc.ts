@@ -6,6 +6,7 @@ import type { Feed } from './feed'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from './importer'
 import type { ClientSummary } from './client'
 import type { LauncherUpdateState } from './launcherUpdate'
+import type { InstallResult, ModSearchResult, PlayerModInfo, UpdateApplied, UpdateCheck } from './modBrowser'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -59,6 +60,11 @@ export const IPC = {
   importProgress: 'import:progress',
   modsPlayer: 'mods:player',
   modsPlayerSet: 'mods:player-set',
+  modsSearch: 'mods:search',
+  modsInstall: 'mods:install',
+  modsPlayerRemove: 'mods:player-remove',
+  modsPlayerCheckUpdates: 'mods:player-check-updates',
+  modsPlayerUpdate: 'mods:player-update',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -170,8 +176,16 @@ export interface HemisphereApi {
     enabledMods(): Promise<string[]>
     /** Toggle a mod; returns the new enabled set and other mods switched as a consequence */
     setModEnabled(id: string, on: boolean): Promise<{ enabled: string[]; alsoChanged: string[] }>
-    /** .jar files the player added themselves (enabled = in mods/, disabled = parked in mods-disabled/) */
-    playerMods(): Promise<{ file: string; size: number; enabled: boolean }[]>
+    /** .jar files the player added themselves, with their Modrinth identity and the staff policy */
+    playerMods(): Promise<PlayerModInfo[]>
+    /** Modrinth search: Fabric mods for Hemisphere's Minecraft version */
+    search(query: string, offset: number): Promise<ModSearchResult | null>
+    /** Installs a Modrinth project (+ required dependencies). confirmed = the player accepted an "ask staff" warning */
+    install(projectId: string, confirmed: boolean): Promise<InstallResult>
+    /** Moves one of the player's mods to the Recycle Bin */
+    removePlayerMod(file: string): Promise<boolean>
+    checkPlayerModUpdates(): Promise<UpdateCheck | null>
+    updatePlayerMods(): Promise<UpdateApplied | null>
     setPlayerMod(file: string, enabled: boolean): Promise<boolean>
   }
 }

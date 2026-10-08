@@ -299,7 +299,21 @@
     "yours": "Added by you",
     "yoursEmpty": "No mods of your own yet. Import them, or drop .jar files in the mods folder.",
     "yoursHint": "Hemisphere never deletes these. Turned-off mods are kept in the mods-disabled folder. Make sure they follow the server rules.",
-    "openFolder": "Open folder"
+    "openFolder": "Open folder",
+    "checkUpdates": "Check for updates",
+    "updateAll_one": "Update {{count}} mod",
+    "updateAll_other": "Update {{count}} mods",
+    "updatesFound_one": "{{count}} update available.",
+    "updatesFound_other": "{{count}} updates available.",
+    "upToDate": "Your mods are up to date.",
+    "updated_one": "{{count}} mod updated (old file moved to the Recycle Bin).",
+    "updated_other": "{{count}} mods updated (old files moved to the Recycle Bin).",
+    "updateFailed": "Couldn’t reach Modrinth. Try again later.",
+    "updateAvailable": "Update {{version}}",
+    "incompatible": "Switched off: no version for Minecraft {{minecraft}} yet",
+    "notOnModrinth": "not on Modrinth",
+    "remove": "Remove {{mod}}",
+    "removeConfirm": "Move to Recycle Bin"
   },
   "repair": {
     "title": "Repair installation",
@@ -449,5 +463,37 @@
   },
   "legal": {
     "disclaimer": "Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft."
+  },
+  "browse": {
+    "open": "Find mods",
+    "back": "Mods",
+    "title": "Find mods",
+    "subtitle": "From Modrinth · Fabric · Minecraft {{minecraft}}",
+    "search": "Search mods…",
+    "rules": "Only mods made for this Minecraft version are shown. Cheats like x-ray are blocked by the staff; follow the server rules for everything else.",
+    "by": "by {{author}}",
+    "downloads": "{{count}} downloads",
+    "install": "Install",
+    "installedState": "Installed",
+    "inHemisphere": "In Hemisphere",
+    "notAllowed": "Not allowed",
+    "askStaff": "Ask staff",
+    "askStaffTitle": "{{mod}} needs the staff’s permission",
+    "installAnyway": "I have permission, install",
+    "cancel": "Cancel",
+    "installed": "{{mod}} installed. It’s on in your mods and loads next time you play.",
+    "installedWith": "{{mod}} installed, with {{deps}} (needed to run it).",
+    "more": "Show more",
+    "offline": "Couldn’t reach Modrinth. Check your internet connection and try again.",
+    "noResults": "No mods found for this version.",
+    "source": "Mods are downloaded from Modrinth and checked against their published checksums.",
+    "errors": {
+      "blocked": "{{mod}} isn’t allowed on Hemisphere.",
+      "needsConfirm": "{{mod}} needs the staff’s permission.",
+      "notCompatible": "{{mod}} has no version for this Minecraft version yet.",
+      "inHemisphere": "{{mod}} is already part of Hemisphere: turn it on in the list.",
+      "busy": "Close Minecraft (or wait for the launcher to finish) before adding mods.",
+      "network": "The download failed. Check your internet connection and try again."
+    }
   }
 }

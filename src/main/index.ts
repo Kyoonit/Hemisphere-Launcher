@@ -32,7 +32,10 @@ import { getFeed, startFeedPolling } from './core/remote/feed'
 import { installFileLogger } from './core/logging/logger'
 import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemInfo, type FolderKind } from './core/system/system'
 import { detectGpus } from './core/system/gpu'
-import { detectSources, importFrom, playerMods, setPlayerModEnabled, sourceFromFolder } from './core/importer/importer'
+import { detectSources, importFrom, setPlayerModEnabled, sourceFromFolder } from './core/importer/importer'
+import { checkPlayerModUpdates, hemisphereProjects, installMod, knownPlayerProjects, listPlayerMods, removePlayerMod, updatePlayerMods } from './core/modrinth/playerMods'
+import { safeIcon, searchMods } from './core/modrinth/api'
+import { MODRINTH_ID, policyFor, type InstallResult, type ModSearchResult } from '@shared/modBrowser'
 import type { ImportOptions, ImportSource } from '@shared/importer'
 import type { ClientSummary } from '@shared/client'
 import { loadWindowState, trackWindowState } from './core/system/windowState'
@@ -191,7 +194,70 @@ function registerIpc(): void {
       return { ok: false, reason: 'failed', detail: String(err) }
     }
   })
-  handle(IPC.modsPlayer, async () => playerMods(Object.keys((await readInstanceState()).owned)))
+  handle(IPC.modsPlayer, async () => listPlayerMods(Object.keys((await readInstanceState()).owned), getFeed().modPolicy))
+  // Changing mods while the game runs (or while the launcher is installing) is refused.
+  const modsBusy = () => {
+    const g = getGameState()
+    return g.phase === 'preparing' || g.background || g.runningAccounts.length > 0
+  }
+  handle(IPC.modsSearch, async (_e, query: unknown, offset: unknown): Promise<ModSearchResult | null> => {
+    if (typeof query !== 'string' || typeof offset !== 'number' || !Number.isInteger(offset) || offset < 0 || offset > 10_000) return null
+    try {
+      const { manifest } = await getContent()
+      const res = await searchMods(query, manifest.minecraft, offset)
+      const hemisphere = hemisphereProjects(manifest)
+      const mine = knownPlayerProjects()
+      const policy = getFeed().modPolicy
+      return {
+        minecraft: manifest.minecraft,
+        total: res.total_hits,
+        offset: res.offset,
+        hits: res.hits.map((h) => ({
+          projectId: h.project_id,
+          slug: h.slug,
+          title: h.title,
+          description: h.description.slice(0, 300),
+          author: h.author,
+          icon: safeIcon(h.icon_url),
+          downloads: h.downloads,
+          ...policyFor(policy, h.project_id),
+          state: hemisphere.has(h.project_id) ? 'inHemisphere' : mine.has(h.project_id) ? 'installed' : 'available',
+        })),
+      }
+    } catch (err) {
+      console.warn('[mods] search failed:', err)
+      return null
+    }
+  })
+  handle(IPC.modsInstall, async (_e, projectId: unknown, confirmed: unknown): Promise<InstallResult> => {
+    if (typeof projectId !== 'string' || !MODRINTH_ID.test(projectId)) return { ok: false, reason: 'notCompatible' }
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    const { manifest } = await getContent()
+    return installMod(projectId, confirmed === true, manifest, Object.keys((await readInstanceState()).owned), getFeed().modPolicy)
+  })
+  handle(IPC.modsPlayerRemove, async (_e, file: unknown) => {
+    if (typeof file !== 'string' || modsBusy()) return false
+    return removePlayerMod(file, Object.keys((await readInstanceState()).owned))
+  })
+  handle(IPC.modsPlayerCheckUpdates, async () => {
+    try {
+      const { manifest } = await getContent()
+      return await checkPlayerModUpdates(Object.keys((await readInstanceState()).owned), manifest.minecraft)
+    } catch (err) {
+      console.warn('[mods] update check failed:', err)
+      return null
+    }
+  })
+  handle(IPC.modsPlayerUpdate, async () => {
+    if (modsBusy()) return null
+    try {
+      const { manifest } = await getContent()
+      return await updatePlayerMods(Object.keys((await readInstanceState()).owned), manifest.minecraft, false)
+    } catch (err) {
+      console.warn('[mods] update failed:', err)
+      return null
+    }
+  })
   handle(IPC.modsPlayerSet, async (_e, file: unknown, enabled: unknown) => {
     const g = getGameState()
     if (typeof file !== 'string' || typeof enabled !== 'boolean' || g.runningAccounts.length) return false

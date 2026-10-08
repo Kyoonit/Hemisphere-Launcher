@@ -4,6 +4,7 @@
  */
 import { z } from 'zod'
 import { CONTENT_BASE, LocalizedSchema } from './manifest.ts'
+import { ModPolicySchema } from './modBrowser.ts'
 
 /** News images: our own content folder or the Hemisphere website. */
 export function isAllowedImageUrl(url: string, contentBase = CONTENT_BASE): boolean {
@@ -61,6 +62,8 @@ export const FeedSchema = z
       })
       .nullable(),
     news: z.array(NewsItemSchema).max(100),
+    /** Staff mod policy for the mod browser and players' own mods (optional; older launchers ignore it) */
+    modPolicy: ModPolicySchema.optional(),
   })
   .superRefine((f, ctx) => {
     if (f.restart) {
