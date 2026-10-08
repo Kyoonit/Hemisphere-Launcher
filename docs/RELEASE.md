@@ -20,6 +20,8 @@ npm run dist
 
 This makes `dist/Hemisphere-Launcher-Setup-<version>.exe` (about 115 MB). Run it to install: no admin rights are needed. It installs for the current Windows user, with desktop and Start menu shortcuts. Uninstalling keeps accounts, settings and the game, so a reinstall is instant.
 
+While it installs, the Setup shows Hemisphere's own window (artwork, logo, green progress bar) instead of NSIS's small box: `build/installer.nsh` starts the `HemiSplash` plugin (`build/x86-unicode/HemiSplash.dll`, background `build/installerSplash.bmp`). Silent installs (launcher updates) show nothing. To change it, edit `tools/installer-splash/HemiSplash.c` and run `tools/installer-splash/build.sh` from WSL (needs ImageMagick and Zig: `python3 -m pip install ziglang`), then commit the rebuilt DLL and picture.
+
 ## Launcher history and "What's new" (required for every release)
 
 **Every push raises the launcher version** (`"version"` in `package.json`: 1.0.2, then 1.0.3…). The launcher's history

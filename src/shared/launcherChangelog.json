@@ -3,6 +3,12 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "1.0.17",
+        "area": "launcher",
+        "en": "The installer now shows a Hemisphere window with its progress, instead of the small Windows box.",
+        "fr": "L’installeur affiche maintenant une fenêtre Hemisphere avec sa progression, au lieu de la petite fenêtre Windows."
+      },
+      {
         "version": "1.0.16",
         "area": "launcher",
         "en": "Hidden browser shortcuts (like reloading the page) are turned off in the installed launcher.",
