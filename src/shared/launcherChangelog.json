@@ -3,6 +3,12 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "1.0.8",
+        "area": "launcher",
+        "en": "A page that couldn’t load (for example right after an update) reloads by itself instead of staying blank.",
+        "fr": "Une page qui n’a pas pu se charger (par exemple juste après une mise à jour) se recharge toute seule au lieu de rester vide."
+      },
+      {
         "version": "1.0.7",
         "area": "settings",
         "en": "Free up space (Settings > Installation): old logs and crash reports, unfinished downloads and unused Minecraft versions, in one click. Worlds, screenshots, mods and settings are never touched.",

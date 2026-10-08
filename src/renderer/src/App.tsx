@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy as reactLazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
 import TitleBar, { type Screen } from './components/TitleBar'
 import Background from './components/Background'
@@ -13,6 +13,15 @@ import { useAccounts } from './accounts'
 import { useFeed, useLightMode, useSettings } from './hooks'
 
 // Home and sign-in load with the launcher; the other screens load the first time they're opened (faster start, less memory).
+// If a screen's file can't be loaded (the launcher was rebuilt or updated underneath), reload instead of a blank page.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const lazy = <T extends ComponentType<any>>(load: () => Promise<{ default: T }>) =>
+  reactLazy(() =>
+    load().catch(() => {
+      location.reload()
+      return new Promise<never>(() => {})
+    }),
+  )
 const News = lazy(() => import('./screens/News'))
 const Content = lazy(() => import('./screens/Content'))
 const Repair = lazy(() => import('./screens/Repair'))
