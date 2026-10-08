@@ -185,9 +185,11 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
                     >
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => setDeleting(s)} title={t('sets.delete')} aria-label={t('sets.delete')} className={`${icon} hover:!text-red-400`}>
-                      <Trash2 size={14} />
-                    </button>
+                    {state.sets.length > 1 && (
+                      <button onClick={() => setDeleting(s)} title={t('sets.delete')} aria-label={t('sets.delete')} className={`${icon} hover:!text-red-400`}>
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </li>
                 )
               })}

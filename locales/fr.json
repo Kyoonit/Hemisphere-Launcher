@@ -728,14 +728,15 @@
     "deleteTitle": "Supprimer cet ensemble de mods ?",
     "deleteBody": "Seul l’ensemble est supprimé : les mods de ton dossier restent comme ils sont maintenant.",
     "deleteConfirm": "Supprimer l’ensemble",
-    "playHint": "Ensemble de mods actif (à changer dans Mods)",
     "errors": {
       "busy": "Ferme Minecraft (et attends que le launcher ait fini d’installer) d’abord.",
       "notFound": "Cet ensemble n’existe plus.",
       "failed": "Ça n’a pas marché. Les détails sont dans les journaux du launcher.",
       "empty": "Cet ensemble n’a aucun mod Modrinth à partager.",
       "invalid": "Ce n’est pas un code d’ensemble valide."
-    }
+    },
+    "quickHint": "Ensemble de mods : change en un clic",
+    "manage": "Gérer les ensembles…"
   },
   "history": {
     "title": "Historique",

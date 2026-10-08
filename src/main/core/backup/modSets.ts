@@ -83,7 +83,27 @@ function serial<T>(job: () => Promise<T>): Promise<T> {
   return run
 }
 
-export const listSets = (): Promise<ModSetsState> => serial(async () => ({ sets: (await allSets()).map(info), active: await activeId() }))
+/** Name of the set every player starts with. */
+export const DEFAULT_SET_NAME = 'Default'
+
+/**
+ * There's always at least one set: the first time (fresh install, or a launcher from before sets), the mods as they
+ * are become the active set "Default".
+ */
+async function ensureDefault(): Promise<void> {
+  if ((await allSets()).length) return
+  const now = Date.now()
+  const set: ModSet = { format: 1, id: newId(), name: DEFAULT_SET_NAME, createdAt: now, updatedAt: now, ...(await capture()) }
+  await writeJson(setFile(set.id), set)
+  await setActive(set.id)
+  console.log(`[mod-sets] created "${set.name}" (${set.mods.length} mods)`)
+}
+
+export const listSets = (): Promise<ModSetsState> =>
+  serial(async () => {
+    await ensureDefault()
+    return { sets: (await allSets()).map(info), active: await activeId() }
+  })
 
 /** The mods as they are now (their files kept), ready to be saved in a set. */
 async function capture(): Promise<Pick<ModSet, 'choices' | 'detached' | 'mods' | 'registry'>> {
@@ -127,10 +147,11 @@ export const renameSet = (id: string, name: unknown): Promise<boolean> =>
     return true
   })
 
-/** Deletes a set (the mods in the folder stay as they are). */
+/** Deletes a set (the mods in the folder stay as they are). The last one can't be deleted. */
 export const deleteSet = (id: string): Promise<boolean> =>
   serial(async () => {
-    if (!(await readSet(id))) return false
+    const sets = await allSets()
+    if (!sets.some((s) => s.id === id) || sets.length <= 1) return false // the last set stays
     await rm(setFile(id), { force: true })
     if ((await activeId()) === null) await setActive(null)
     await withJarStore(() => cleanJars())

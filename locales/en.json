@@ -697,14 +697,15 @@
     "deleteTitle": "Delete this mod set?",
     "deleteBody": "Only the set is deleted: the mods in your folder stay as they are now.",
     "deleteConfirm": "Delete set",
-    "playHint": "Active mod set (change it in Mods)",
     "errors": {
       "busy": "Close Minecraft (and wait for the launcher to finish installing) first.",
       "notFound": "This set no longer exists.",
       "failed": "That didn’t work. Details are in the launcher logs.",
       "empty": "This set has no Modrinth mods to share.",
       "invalid": "This isn’t a valid set code."
-    }
+    },
+    "quickHint": "Mod set: switch in one click",
+    "manage": "Manage sets…"
   },
   "history": {
     "title": "History",

@@ -162,3 +162,19 @@ describe('Hemisphere files being placed', () => {
     placingNow.clear()
   })
 })
+
+describe('the Default set', () => {
+  test('a fresh install starts with the active set "Default" holding the mods as they are', async () => {
+    const st = await sets.listSets()
+    expect(st.sets.map((s) => s.name)).toEqual(['Default'])
+    expect(st.active).toBe(st.sets[0].id)
+    expect(st.sets[0]).toMatchObject({ mods: 2, enabled: 2 })
+    expect((await sets.listSets()).sets).toHaveLength(1) // only once
+  })
+  test('the last set can’t be deleted', async () => {
+    const [d] = (await sets.listSets()).sets
+    expect(await sets.deleteSet(d.id)).toBe(false)
+    const other = (await sets.saveSet('Building'))!
+    expect(await sets.deleteSet(other.id)).toBe(true)
+  })
+})
