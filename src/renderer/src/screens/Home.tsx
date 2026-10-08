@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
-import { BookOpen, Clock, Globe, Map, TriangleAlert, Upload, WifiOff, X, HardDrive, MemoryStick, Sparkles } from 'lucide-react'
+import { BookOpen, Clock, Globe, Map, TriangleAlert, Upload, WifiOff, X, HardDrive, MemoryStick, Sparkles, ArrowRight } from 'lucide-react'
 import type { LinkKey } from '@shared/ipc'
 import { nextRestart } from '@shared/restart'
 import DiscordIcon from '../components/DiscordIcon'
@@ -15,6 +15,7 @@ import type { ClientSummary } from '@shared/client'
 import type { PreflightWarning, Settings } from '@shared/settings'
 import type { AppInfo } from '@shared/ipc'
 import { LAUNCHER_CHANGELOG, launcherNotesSince } from '@shared/launcherChangelog'
+import { dayLabel, relativeDay } from '../components/LauncherUpdates'
 import type { Feed } from '@shared/feed'
 import { localize } from '@shared/manifest'
 import { useAccounts } from '../accounts'
@@ -27,12 +28,15 @@ const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
 
 export default function Home({
   onOpenNews,
+  onOpenLauncherNews,
   onRepair,
   onImport,
   onOpenMods,
   onReport,
 }: {
   onOpenNews(): void
+  /** News > Launcher: the launcher's whole history */
+  onOpenLauncherNews(): void
   onRepair(): void
   onImport(): void
   onOpenMods(): void
@@ -51,7 +55,7 @@ export default function Home({
     <div className="home-pad relative flex h-full flex-col items-center px-7">
       <PlaytimeCard key={active?.id} />
       <ImportPrompt onImport={onImport} />
-      <WhatsNew client={client ?? null} />
+      <WhatsNew client={client ?? null} onSeeMore={onOpenLauncherNews} />
       <ServerPanel status={status} feed={feed} onOpenNews={onOpenNews} />
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center-safe text-center">
@@ -122,7 +126,7 @@ function ExpiredBanner() {
  * "What's new": once after the launcher updates itself (its notes come with each GitHub release) and once after a
  * Hemisphere Client update, until closed. Nothing on a first start.
  */
-function WhatsNew({ client }: { client: ClientSummary | null }) {
+function WhatsNew({ client, onSeeMore }: { client: ClientSummary | null; onSeeMore(): void }) {
   const { t, i18n } = useTranslation()
   const [settings, update] = useSettings()
   const [app, setApp] = useState<AppInfo | null>(null)
@@ -141,15 +145,20 @@ function WhatsNew({ client }: { client: ClientSummary | null }) {
   if (!settings || !app) return null
   const fr = i18n.language.startsWith('fr')
   const launcher = launcherNotesSince(LAUNCHER_CHANGELOG, settings.seenLauncherVersion, app.version, !app.packaged)
+  // only the last 2 days of changes here; the whole history (by area, easier to read) is in News > Launcher
+  const days = launcher.slice(0, 2)
   const clientNew = !!client && !!installed && installed === client.clientVersion && settings.seenChangelog !== null && settings.seenChangelog !== installed && client.changelog.length > 0
   if (launcher.length === 0 && !clientNew) return null
   const close = () => void update({ seenLauncherVersion: app.version, ...(installed ? { seenChangelog: installed } : {}) })
-  const Section = ({ title, lines }: { title: string; lines: string[] }) => (
+  const Section = ({ title, sub, lines }: { title: string; sub?: string; lines: string[] }) => (
     <>
-      <p className="flex items-center gap-1.5 pr-4 text-[13px] font-semibold text-white">
-        <Sparkles size={14} className="flex-none text-green-400" /> {title}
-      </p>
-      <ul className="mt-1.5 mb-2 space-y-1 text-xs text-gray-300 last:mb-0">
+      {title && (
+        <p className="flex items-center gap-1.5 pr-4 text-[13px] font-semibold text-white">
+          <Sparkles size={14} className="flex-none text-green-400" /> {title}
+        </p>
+      )}
+      {sub && <p className="mt-1.5 text-[10.5px] font-bold tracking-[0.08em] text-green-400 uppercase">{sub}</p>}
+      <ul className="mt-1 mb-2 space-y-1 text-xs text-gray-300 last:mb-0">
         {lines.map((line, i) => (
           <li key={i} className="flex gap-1.5">
             <span className="text-green-400">•</span>
@@ -165,9 +174,21 @@ function WhatsNew({ client }: { client: ClientSummary | null }) {
         <X size={14} />
       </button>
       <div className="max-h-[170px] overflow-y-auto pr-1 [scrollbar-color:var(--color-gray-600)_transparent] [scrollbar-width:thin]">
-        {launcher.length > 0 && <Section title={t('whatsNew.launcherTitle', { version: launcher[0].version })} lines={launcher.flatMap((r) => (fr ? r.fr : r.en))} />}
+        {days.map((d, i) => (
+          <Section
+            key={d.date}
+            title={i === 0 ? t('whatsNew.launcherTitle', { version: d.version }) : ''}
+            sub={relativeDay(d.date) ? t(`launcherNews.${relativeDay(d.date)}`) : dayLabel(d.date, i18n.language, 'short')}
+            lines={d.changes.map((c) => (fr ? c.fr : c.en))}
+          />
+        ))}
         {clientNew && <Section title={t('whatsNew.title', { version: installed })} lines={client.changelog.map((line) => localize(line, i18n.language))} />}
       </div>
+      {launcher.length > 0 && (
+        <button onClick={onSeeMore} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-gray-700/70 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-gray-600">
+          {t('whatsNew.seeMore')} <ArrowRight size={13} />
+        </button>
+      )}
     </aside>
   )
 }

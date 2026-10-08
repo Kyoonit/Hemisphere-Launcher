@@ -183,7 +183,11 @@
     },
     "unseen_one": "{{count}} nouvelle",
     "unseen_other": "{{count}} nouvelles",
-    "unseen_many": "{{count}} nouvelles"
+    "unseen_many": "{{count}} nouvelles",
+    "tabs": {
+      "server": "Actus du serveur",
+      "launcher": "Mises à jour du launcher"
+    }
   },
   "auth": {
     "intro": "Connecte-toi avec le compte Microsoft qui possède Minecraft : Java Edition.",
@@ -537,7 +541,8 @@
   "whatsNew": {
     "title": "Nouveautés de la {{version}}",
     "close": "Fermer",
-    "launcherTitle": "Nouveautés du launcher {{version}}"
+    "launcherTitle": "Nouveautés du launcher {{version}}",
+    "seeMore": "Voir plus"
   },
   "preflight": {
     "lowDisk": "Peu d’espace disque : {{value}} Go libres",
@@ -1175,5 +1180,25 @@
     "perfRequests_other": "{{count}} requêtes",
     "releaseHint": "Comme au lancement de Minecraft : la fenêtre se ferme pour libérer sa mémoire, le launcher reste dans la zone de notification. Les notifications arrivent toujours et le rouvrent.",
     "releaseTest": "Fermer la fenêtre maintenant (test)"
+  },
+  "launcherNews": {
+    "intro": "Tout ce qui a changé dans le launcher, jour par jour : {{count}} changements sur {{days}} jours.",
+    "empty": "Rien pour l’instant.",
+    "today": "Aujourd’hui",
+    "yesterday": "Hier",
+    "changes_one": "{{count}} changement",
+    "changes_other": "{{count}} changements",
+    "inDev": "Pas encore publié",
+    "version": "Version {{version}}",
+    "areas": {
+      "play": "Jouer",
+      "home": "Accueil",
+      "content": "Mods et contenu",
+      "screenshots": "Captures d’écran",
+      "community": "Communauté",
+      "settings": "Paramètres",
+      "performance": "Performances",
+      "launcher": "Launcher"
+    }
   }
 }

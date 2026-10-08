@@ -7,6 +7,7 @@ import Home from './screens/Home'
 import Login from './screens/Login'
 import type { BrowseKind, ContentTab } from './screens/Content'
 import type { ReportCategory } from '@shared/report'
+import type { NewsTab } from './screens/News'
 import type { Section } from './screens/Settings'
 import { useAccounts } from './accounts'
 import { useFeed, useLightMode, useSettings } from './hooks'
@@ -31,6 +32,7 @@ export default function App() {
   const [addingAccount, setAddingAccount] = useState(false)
   // Content: which tab, and what Find searches (back from Find or History lands on the same tab)
   const [contentTab, setContentTab] = useState<ContentTab>('mods')
+  const [newsTab, setNewsTab] = useState<NewsTab>('server')
   const [browseKind, setBrowseKind] = useState<BrowseKind>('mod')
   // Report a problem: what it's about, and where Back goes
   const [report, setReport] = useState<{ category: ReportCategory | null; from: Screen } | null>(null)
@@ -43,9 +45,9 @@ export default function App() {
   const feed = useFeed()
   const [settings, updateSettings] = useSettings()
   useEffect(() => {
-    if (screen === 'news' && feed && settings && unseenNewsCount(feed.news, settings.seenNews) > 0)
+    if (screen === 'news' && newsTab === 'server' && feed && settings && unseenNewsCount(feed.news, settings.seenNews) > 0)
       void updateSettings({ seenNews: markNewsSeen(feed.news, settings.seenNews) })
-  }, [screen, feed, settings])
+  }, [screen, newsTab, feed, settings])
 
   const light = useLightMode()
   useEffect(() => void document.documentElement.classList.toggle('lite', light), [light])
@@ -66,6 +68,7 @@ export default function App() {
         screen={screen}
         onNavigate={(s) => {
           if (s === 'settings') setSettingsSection('game')
+          if (s === 'news') setNewsTab('server')
           setScreen(s)
         }}
         minimal={showLogin}
@@ -78,7 +81,14 @@ export default function App() {
           ) : (
             <Suspense fallback={null}>
               {screen === 'home' && <Home
-                  onOpenNews={() => setScreen('news')}
+                  onOpenNews={() => {
+                    setNewsTab('server')
+                    setScreen('news')
+                  }}
+                  onOpenLauncherNews={() => {
+                    setNewsTab('launcher')
+                    setScreen('news')
+                  }}
                   onRepair={() => setScreen('repair')}
                   onImport={() => setScreen('import')}
                   onReport={openReport}
@@ -87,7 +97,7 @@ export default function App() {
                     setScreen('mods')
                   }}
                 />}
-              {screen === 'news' && <News />}
+              {screen === 'news' && <News tab={newsTab} onTab={setNewsTab} />}
               {screen === 'mods' && (
                 <Content
                   tab={contentTab}
