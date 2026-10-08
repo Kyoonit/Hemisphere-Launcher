@@ -737,7 +737,9 @@
       "invalid": "Ce n’est pas un code d’ensemble valide."
     },
     "quickHint": "Ensemble de mods : change en un clic",
-    "manage": "Gérer les ensembles…"
+    "manage": "Gérer les ensembles…",
+    "duplicate": "Dupliquer (pour créer un ensemble à partir de celui-ci)",
+    "duplicated": "« {{name}} » dupliqué en « {{copy}} » : renomme-le, puis passe dessus pour changer ses mods."
   },
   "history": {
     "title": "Historique",

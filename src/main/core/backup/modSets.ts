@@ -147,6 +147,21 @@ export const renameSet = (id: string, name: unknown): Promise<boolean> =>
     return true
   })
 
+/** A copy of a set ("Building (copy)"), to start a new one from it. Not switched to. */
+export const duplicateSet = (id: string): Promise<ModSetInfo | null> =>
+  serial(async () => {
+    const set = await readSet(id)
+    const sets = await allSets()
+    if (!set || sets.length >= MAX_SETS) return null
+    // the active set's saved copy may be behind: the copy takes the mods as they are now
+    const live = (await activeId()) === id ? await capture() : {}
+    const now = Date.now()
+    const copy: ModSet = { ...set, ...live, id: newId(), name: uniqueName(`${set.name.slice(0, SET_NAME_MAX - 7)} (copy)`, sets), createdAt: now, updatedAt: now }
+    await writeJson(setFile(copy.id), copy)
+    console.log(`[mod-sets] "${set.name}" duplicated as "${copy.name}"`)
+    return info(copy)
+  })
+
 /** Deletes a set (the mods in the folder stay as they are). The last one can't be deleted. */
 export const deleteSet = (id: string): Promise<boolean> =>
   serial(async () => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ChevronDown, ClipboardPaste, Layers, LoaderCircle, Pencil, Plus, Share2, Trash2, TriangleAlert, X } from 'lucide-react'
+import { Check, ChevronDown, ClipboardPaste, Copy, Layers, LoaderCircle, Pencil, Plus, Share2, Trash2, TriangleAlert, X } from 'lucide-react'
 import { SET_NAME_MAX, type ModSetInfo, type ModSetsState } from '@shared/modSets'
 import ConfirmDialog from './ConfirmDialog'
 
@@ -92,6 +92,17 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
     } else setMessage({ ok: false, text: t(`sets.errors.${r.reason}`) })
     void reload()
   }
+  const duplicate = async (s: ModSetInfo) => {
+    setMessage(null)
+    const copy = await window.hemisphere.modSets.duplicate(s.id)
+    await reload()
+    if (!copy) return setMessage({ ok: false, text: t('sets.errors.failed') })
+    setMessage({ ok: true, text: t('sets.duplicated', { name: s.name, copy: copy.name }) })
+    // straight into renaming the copy
+    setAdding(null)
+    setRenaming(copy.id)
+    setText(copy.name)
+  }
   const remove = async (s: ModSetInfo) => {
     setDeleting(null)
     await window.hemisphere.modSets.remove(s.id)
@@ -170,6 +181,9 @@ export default function ModSetsMenu({ className, onSwitched }: { className: stri
                         </span>
                       </button>
                     )}
+                    <button onClick={() => duplicate(s)} title={t('sets.duplicate')} aria-label={t('sets.duplicate')} className={icon}>
+                      <Copy size={14} />
+                    </button>
                     <button onClick={() => share(s)} title={t('sets.share')} aria-label={t('sets.share')} className={icon}>
                       <Share2 size={14} />
                     </button>

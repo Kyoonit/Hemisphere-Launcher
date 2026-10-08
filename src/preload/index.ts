@@ -44,6 +44,7 @@ const api: HemisphereApi = {
     switchTo: (id, fallbackName) => ipcRenderer.invoke(IPC.setsSwitch, id, fallbackName),
     rename: (id, name) => ipcRenderer.invoke(IPC.setsRename, id, name),
     remove: (id) => ipcRenderer.invoke(IPC.setsDelete, id),
+    duplicate: (id) => ipcRenderer.invoke(IPC.setsDuplicate, id),
     share: (id) => ipcRenderer.invoke(IPC.setsShare, id),
     importCode: (code) => ipcRenderer.invoke(IPC.setsImport, code),
   },

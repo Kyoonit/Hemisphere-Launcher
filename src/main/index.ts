@@ -45,7 +45,7 @@ import { handle, hardenApp, on, trustWindow } from './security'
 import { copyScreenshot, deleteScreenshot, exportScreenshots, listScreenshots, registerScreenshotScheme, serveScreenshots, showScreenshotInFolder } from './core/system/screenshots'
 import { checkForUpdates, getUpdateState, installUpdateNow, onUpdateState, startUpdater } from './core/system/updater'
 import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePoints, previewRestore, restorePoint } from './core/backup/restorePoints'
-import { deleteSet, importSetCode, isSetId, listSets, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
+import { deleteSet, duplicateSet, importSetCode, isSetId, listSets, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
@@ -379,6 +379,7 @@ function registerIpc(): void {
   })
   handle(IPC.setsRename, (_e, id: unknown, name: unknown) => (isSetId(id) ? renameSet(id, name) : false))
   handle(IPC.setsDelete, (_e, id: unknown) => (isSetId(id) ? deleteSet(id) : false))
+  handle(IPC.setsDuplicate, (_e, id: unknown) => (isSetId(id) ? duplicateSet(id) : null))
   handle(IPC.setsShare, async (_e, id: unknown) => {
     const { manifest } = await clientInfo()
     if (!isSetId(id) || !manifest) return { ok: false, reason: 'notFound' }

@@ -178,3 +178,21 @@ describe('the Default set', () => {
     expect(await sets.deleteSet(other.id)).toBe(true)
   })
 })
+
+describe('duplicating a set', () => {
+  test('makes an independent copy named "(copy)", with the mods as they are now for the active set', async () => {
+    const a = (await sets.saveSet('Building'))!
+    put('mods/litematica-1.0.jar', 'L1') // added while Building is active
+    const copy = (await sets.duplicateSet(a.id))!
+    expect(copy).toMatchObject({ name: 'Building (copy)', mods: 3 })
+    expect((await sets.duplicateSet(a.id))!.name).toBe('Building (copy) (2)')
+    expect((await sets.listSets()).active).toBe(a.id) // not switched to
+    // switching to the copy and back keeps both
+    await sets.switchSet(copy.id, manifest, 'My mods')
+    rmSync(inst('mods/litematica-1.0.jar'))
+    await sets.switchSet(a.id, manifest, 'My mods')
+    expect(on()).toContain('litematica-1.0.jar')
+    await sets.switchSet(copy.id, manifest, 'My mods')
+    expect(on()).not.toContain('litematica-1.0.jar')
+  })
+})

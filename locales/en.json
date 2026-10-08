@@ -706,7 +706,9 @@
       "invalid": "This isn’t a valid set code."
     },
     "quickHint": "Mod set: switch in one click",
-    "manage": "Manage sets…"
+    "manage": "Manage sets…",
+    "duplicate": "Duplicate (to make a new set from this one)",
+    "duplicated": "“{{name}}” duplicated as “{{copy}}”: rename it, then switch to it to change its mods."
   },
   "history": {
     "title": "History",

@@ -69,6 +69,7 @@ export const IPC = {
   setsSwitch: 'sets:switch',
   setsRename: 'sets:rename',
   setsDelete: 'sets:delete',
+  setsDuplicate: 'sets:duplicate',
   setsShare: 'sets:share',
   setsImport: 'sets:import',
   historyList: 'history:list',
@@ -159,6 +160,8 @@ export interface HemisphereApi {
     /** fallbackName: name for the mods as they are now when no set is active yet ("My mods") */
     switchTo(id: string, fallbackName: string): Promise<SetSwitchResult>
     rename(id: string, name: string): Promise<boolean>
+    /** a copy to customise ("<name> (copy)"), not switched to */
+    duplicate(id: string): Promise<ModSetInfo | null>
     remove(id: string): Promise<boolean>
     /** the code is also put on the clipboard */
     share(id: string): Promise<SetShareResult>

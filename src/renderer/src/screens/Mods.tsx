@@ -84,7 +84,7 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
   // "Updates" only appears when something can be updated (locked mods included: they're shown, never updated)
   const withUpdate = mods.filter((m) => m.update).length
   const disabledCount = mods.filter((m) => !m.enabled).length
-  // after the line: Added by you, Disabled, Updates (the last two only when there's something to show)
+  // next to All: Added by you, Disabled, Updates (the last two only when there's something to show); the order after the line
   const filters: [Filter, string][] = [
     ['yours', `${t('mods.yours')} (${mods.filter((m) => !m.fromHemisphere).length})`],
     ...(disabledCount ? [['disabled', `${t('mods.disabledFilter')} (${disabledCount})`] as [Filter, string]] : []),
@@ -156,6 +156,12 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
           <button onClick={() => setFilter('all')} aria-pressed={view === 'all'} className={chip(view === 'all')}>
             {t('mods.groups.all')}
           </button>
+          {filters.map(([f, label]) => (
+            <button key={f} onClick={() => setFilter(view === f ? 'all' : f)} aria-pressed={view === f} className={chip(view === f)}>
+              {label}
+            </button>
+          ))}
+          <span aria-hidden="true" className="mx-2.5 h-5 w-px bg-white/20" />
           {/* the order: a quieter highlight, it combines with All or a filter */}
           {sorts.map(([s, label]) => (
             <button
@@ -164,12 +170,6 @@ export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): vo
               aria-pressed={sort === s}
               className={`rounded-lg px-3 py-1 text-[13px] font-medium transition-colors ${sort === s ? 'bg-green-900/50 text-green-300 ring-1 ring-green-500/70' : 'bg-gray-800/70 text-gray-300 hover:bg-gray-700 hover:text-white'}`}
             >
-              {label}
-            </button>
-          ))}
-          <span aria-hidden="true" className="mx-2.5 h-5 w-px bg-white/20" />
-          {filters.map(([f, label]) => (
-            <button key={f} onClick={() => setFilter(view === f ? 'all' : f)} aria-pressed={view === f} className={chip(view === f)}>
               {label}
             </button>
           ))}
