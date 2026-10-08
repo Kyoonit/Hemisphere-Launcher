@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, RotateCcw, TriangleAlert, Wrench, Loader2 } from 'lucide-react'
+import { Check, Flag, RotateCcw, TriangleAlert, Wrench, Loader2 } from 'lucide-react'
 import type { GameState } from '@shared/game'
 import type { ClientSummary } from '@shared/client'
 import { useAccounts } from '../accounts'
 import CrashCard from './CrashCard'
+import type { ReportCategory } from '@shared/report'
 import SetSwitcher from './SetSwitcher'
 
 const STAGES = ['account', 'minecraft', 'java', 'fabric', 'mods', 'launching'] as const
@@ -20,7 +21,17 @@ export function useGameState(): GameState | null {
 }
 
 /** PLAY button and everything that replaces it: install progress, "playing", errors. */
-export default function PlayZone({ client, onRepair, onOpenMods }: { client: ClientSummary | null; onRepair(): void; onOpenMods(): void }) {
+export default function PlayZone({
+  client,
+  onRepair,
+  onOpenMods,
+  onReport,
+}: {
+  client: ClientSummary | null
+  onRepair(): void
+  onOpenMods(): void
+  onReport(category: ReportCategory | null): void
+}) {
   const { t } = useTranslation()
   const { active } = useAccounts()
   const game = useGameState()
@@ -59,7 +70,7 @@ export default function PlayZone({ client, onRepair, onOpenMods }: { client: Cli
             <p className="mt-1 text-[11.5px] text-gray-400">{t('update.previousHint')}</p>
           </>
         )}
-        {game.error && <ErrorLine code={game.error.code} onRepair={onRepair} />}
+        {game.error && <ErrorLine code={game.error.code} onRepair={onRepair} onReport={() => onReport(game.error?.code === 'crashed' ? 'crash' : 'launcher')} />}
       </div>
     )
   }
@@ -71,10 +82,10 @@ export default function PlayZone({ client, onRepair, onOpenMods }: { client: Cli
       </button>
       {game.error?.code === 'crashed' ? (
         <div className="mt-3">
-          <CrashCard suspects={game.error.suspects ?? []} incompatible={game.error.incompatible ?? []} onRepair={onRepair} onOpenMods={onOpenMods} />
+          <CrashCard suspects={game.error.suspects ?? []} incompatible={game.error.incompatible ?? []} onRepair={onRepair} onOpenMods={onOpenMods} onReport={() => onReport('crash')} />
         </div>
       ) : game.error ? (
-        <ErrorLine code={game.error.code} onRepair={onRepair} />
+        <ErrorLine code={game.error.code} onRepair={onRepair} onReport={() => onReport(game.error?.code === 'crashed' ? 'crash' : 'launcher')} />
       ) : (
         <div className="mt-3 flex items-center gap-1.5 text-[13px] text-gray-400">
           {game.background ? (
@@ -102,7 +113,7 @@ export default function PlayZone({ client, onRepair, onOpenMods }: { client: Cli
   )
 }
 
-function ErrorLine({ code, onRepair }: { code: string; onRepair(): void }) {
+function ErrorLine({ code, onRepair, onReport }: { code: string; onRepair(): void; onReport(): void }) {
   const { t } = useTranslation()
   return (
     <div className="animate-fade mt-3 flex max-w-[420px] items-start gap-2 text-left text-[13px]">
@@ -117,6 +128,9 @@ function ErrorLine({ code, onRepair }: { code: string; onRepair(): void }) {
             <Wrench size={12} /> {t('repair.short')}
           </button>
         )}
+        <button onClick={onReport} className="ml-2 inline-flex items-center gap-1 font-semibold text-green-400 hover:text-green-300">
+          <Flag size={12} /> {t('report.short')}
+        </button>
       </span>
     </div>
   )

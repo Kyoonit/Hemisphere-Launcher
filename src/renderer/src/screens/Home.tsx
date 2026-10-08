@@ -8,6 +8,7 @@ import ServerPanel from '../components/ServerPanel'
 import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
 import PlayZone, { useGameState } from '../components/PlayZone'
+import type { ReportCategory } from '@shared/report'
 import { useClient } from './Mods'
 import { useFeed, useNow, usePlaytime, useServerStatus, useSettings } from '../hooks'
 import type { ClientSummary } from '@shared/client'
@@ -22,7 +23,19 @@ const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
   { key: 'rules', icon: <BookOpen size={18} /> },
 ]
 
-export default function Home({ onOpenNews, onRepair, onImport, onOpenMods }: { onOpenNews(): void; onRepair(): void; onImport(): void; onOpenMods(): void }) {
+export default function Home({
+  onOpenNews,
+  onRepair,
+  onImport,
+  onOpenMods,
+  onReport,
+}: {
+  onOpenNews(): void
+  onRepair(): void
+  onImport(): void
+  onOpenMods(): void
+  onReport(category: ReportCategory | null): void
+}) {
   const { t } = useTranslation()
   const status = useServerStatus()
   const feed = useFeed()
@@ -51,7 +64,7 @@ export default function Home({ onOpenNews, onRepair, onImport, onOpenMods }: { o
         </h1>
 
         <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-2' : 'home-gap'}`}>
-          <PlayZone client={client ?? null} onRepair={onRepair} onOpenMods={onOpenMods} />
+          <PlayZone client={client ?? null} onRepair={onRepair} onOpenMods={onOpenMods} onReport={onReport} />
           <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
             <ServerNotice offline={status?.online === false} feed={feed} />
             {!crashed && <PreflightHints />}

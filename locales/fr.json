@@ -850,5 +850,168 @@
       "emptyBody": "Trouve des shaders sur Modrinth (formats Iris et OptiFine). Choisis-en un ; désactive-le quand tu veux.",
       "hint": "Un shader à la fois. Les shaders demandent Iris et une bonne carte graphique. Les changements s’appliquent au prochain lancement du jeu."
     }
+  },
+  "report": {
+    "back": "Retour",
+    "subtitle": "L’aide du staff",
+    "title": "Signaler un problème",
+    "intro": "Décris ce qui se passe : le launcher rassemble tout ce dont le staff a besoin pour comprendre (journaux, rapports de crash, tes mods et packs, changements récents), sans tes informations privées. Rien n’est envoyé tout seul : tu le postes dans un ticket sur Discord.",
+    "short": "Signaler",
+    "open": "Signaler un problème",
+    "thisCrash": "Signaler ce crash",
+    "settingsHint": "Un rapport complet pour le staff en un clic, prêt pour un ticket Discord.",
+    "lastCrash": "Minecraft a crashé à {{time}}",
+    "aboutCrash": "C’est à propos de ce crash",
+    "s1": "De quoi s’agit-il ?",
+    "s2": "Décris-le",
+    "s3": "Ce qu’il faut joindre",
+    "s3hint": "Ceux qui servent d’habitude pour ce type de problème sont activés. Tes informations privées sont retirées de chaque fichier.",
+    "s4": "Comment le staff peut te joindre",
+    "categories": {
+      "crash": {
+        "label": "Le jeu crashe",
+        "hint": "Se ferme, se fige ou ne démarre pas"
+      },
+      "launcher": {
+        "label": "Le launcher",
+        "hint": "Installation, mise à jour, un bouton, une erreur"
+      },
+      "connect": {
+        "label": "Impossible de rejoindre",
+        "hint": "Délai dépassé, expulsé, connexion perdue"
+      },
+      "mods": {
+        "label": "Mods ou packs",
+        "hint": "Un mod, pack de ressources ou shader pose problème"
+      },
+      "performance": {
+        "label": "Lag ou FPS bas",
+        "hint": "Lent, saccades, chargements trop longs"
+      },
+      "account": {
+        "label": "Compte ou connexion",
+        "hint": "Compte Microsoft, skin, mauvais joueur"
+      },
+      "server": {
+        "label": "Un souci sur le serveur",
+        "hint": "Un bug dans le monde, un plugin, une commande"
+      },
+      "other": {
+        "label": "Autre chose",
+        "hint": "Tout ce qui ne rentre pas au-dessus"
+      }
+    },
+    "fields": {
+      "title": "En une ligne",
+      "description": "Que s’est-il passé ?",
+      "expected": "À quoi t’attendais-tu ?",
+      "steps": "Comment le reproduire",
+      "when": "Quand ?",
+      "frequency": "À quelle fréquence ?",
+      "player": "Nom Minecraft",
+      "discord": "Nom Discord"
+    },
+    "optional": "(facultatif)",
+    "recommended": "(conseillé)",
+    "placeholders": {
+      "title": {
+        "crash": "ex. Le jeu crashe quand j’ouvre mon inventaire",
+        "launcher": "ex. La mise à jour s’arrête à 45 %",
+        "connect": "ex. « Connection timed out » en rejoignant",
+        "mods": "ex. Xaero’s Minimap n’affiche pas les points",
+        "performance": "ex. 20 FPS dans la ville principale",
+        "account": "ex. Mon skin ne change pas",
+        "server": "ex. /home dit que je n’ai pas de maison",
+        "other": "ex. Résumé court du problème"
+      },
+      "description": "Ce que tu faisais, ce que tu as vu (message d’erreur exact s’il y en a un), depuis quand…",
+      "expected": "ex. L’inventaire devrait juste s’ouvrir",
+      "steps": "1. Rejoindre le serveur  2. Ouvrir l’inventaire  3. …",
+      "discord": "ex. kyo_99"
+    },
+    "when": {
+      "now": "À l’instant",
+      "today": "Plus tôt aujourd’hui",
+      "earlier": "Avant aujourd’hui"
+    },
+    "frequency": {
+      "always": "À chaque fois",
+      "sometimes": "Parfois",
+      "once": "Une fois"
+    },
+    "parts": {
+      "system": {
+        "label": "PC et configuration",
+        "detail": "Windows, carte graphique, Java, mémoire"
+      },
+      "launcherLog": {
+        "label": "Journal du launcher",
+        "detail": "Installations, Jouer, erreurs · {{size}}"
+      },
+      "gameLog": {
+        "label": "Journal du jeu",
+        "detail": "La dernière partie · {{size}}"
+      },
+      "crashReports": {
+        "label": "Rapports de crash",
+        "detail_one": "{{count}} des 2 dernières semaines",
+        "detail_other": "{{count}} des 2 dernières semaines",
+        "detail_many": "{{count}} des 2 dernières semaines"
+      },
+      "mods": {
+        "label": "Liste des mods",
+        "detail_one": "{{count}} fichier de mod, versions, activés",
+        "detail_other": "{{count}} fichiers de mods, versions, activés",
+        "detail_many": "{{count}} fichiers de mods, versions, activés"
+      },
+      "packs": {
+        "label": "Packs de ressources et de shaders",
+        "detail_one": "{{count}} pack, ordre, shader utilisé",
+        "detail_other": "{{count}} packs, ordre, shader utilisé",
+        "detail_many": "{{count}} packs, ordre, shader utilisé"
+      },
+      "changes": {
+        "label": "Changements récents",
+        "detail_one": "{{count}} changement de mod ou pack, points de restauration",
+        "detail_other": "{{count}} derniers changements de mods et packs, points de restauration",
+        "detail_many": "{{count}} derniers changements de mods et packs, points de restauration"
+      },
+      "settings": {
+        "label": "Réglages",
+        "detail": "Réglages du launcher et de Minecraft (vidéo, touches, packs)"
+      },
+      "screenshots": {
+        "label": "Captures",
+        "detail": ""
+      }
+    },
+    "notAvailable": "Rien à joindre",
+    "removeChat": "Retirer les messages du chat du journal du jeu (les messages des autres joueurs restent privés)",
+    "screenshots": "Captures qui le montrent",
+    "screenshotsHint": "(5 max · {{count}} choisie(s))",
+    "privacy": "Retirés de chaque fichier : ton nom Windows et tes dossiers, les jetons de connexion, les adresses e-mail et IP, les autres comptes.",
+    "missing": "Il manque : {{fields}}",
+    "create": "Créer le rapport",
+    "creating": "Rassemblement en cours…",
+    "failed": "Le rapport n’a pas pu être créé. Les détails sont dans le journal du launcher.",
+    "ready": "Le rapport {{id}} est prêt",
+    "readyHint": "Trois étapes pour l’envoyer au staff :",
+    "another": "Nouveau rapport",
+    "step1": "Ouvre un ticket sur Discord",
+    "howTo": "Ouvre le Discord d’Hemisphere et crée un ticket de support (ou poste dans le salon d’aide).",
+    "openDiscord": "Ouvrir Discord",
+    "step2": "Colle le message",
+    "copied": "Le message est déjà copié : appuie juste sur Ctrl+V dans le ticket.",
+    "copyHint": "Copie le message, puis appuie sur Ctrl+V dans le ticket.",
+    "copyAgain": "Copier le message",
+    "step3": "Ajoute le fichier du rapport",
+    "dragHint": "Glisse-le dans Discord",
+    "showInFolder": "Afficher dans le dossier",
+    "messagePreview": "Le message",
+    "quickLook": "Ce que le launcher a remarqué",
+    "quickLookHint": "Le staff le voit en premier. C’est automatique : ta description compte le plus.",
+    "filesIncluded_one": "{{count}} fichier dans le rapport",
+    "filesIncluded_other": "{{count}} fichiers dans le rapport",
+    "filesIncluded_many": "{{count}} fichiers dans le rapport"
   }
 }

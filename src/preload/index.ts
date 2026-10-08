@@ -68,6 +68,14 @@ const api: HemisphereApi = {
     projectVersions: (type, projectId) => ipcRenderer.invoke(IPC.packsProjectVersions, type, projectId),
     install: (type, projectId, confirmed, versionId) => ipcRenderer.invoke(IPC.packsInstall, type, projectId, confirmed, versionId ?? null),
   },
+  report: {
+    prepare: () => ipcRenderer.invoke(IPC.reportPrepare),
+    build: (draft) => ipcRenderer.invoke(IPC.reportBuild, draft),
+    showInFolder: () => ipcRenderer.send(IPC.reportShow),
+    startDrag: () => ipcRenderer.send(IPC.reportDrag),
+    copyMessage: (message) => ipcRenderer.send(IPC.reportCopy, message),
+    openSupport: () => ipcRenderer.send(IPC.reportOpenSupport),
+  },
   launcherUpdate: {
     get: () => ipcRenderer.invoke(IPC.launcherUpdateGet),
     onChange: (cb) => {

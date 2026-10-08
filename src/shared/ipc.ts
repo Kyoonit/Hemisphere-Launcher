@@ -8,6 +8,7 @@ import type { ClientSummary } from './client'
 import type { LauncherUpdateState } from './launcherUpdate'
 import type { ScreenshotExport, ScreenshotList } from './screenshots'
 import type { PackList, PackResult, PackType } from './packs'
+import type { ReportDraft, ReportPrepare, ReportResult } from './report'
 import type { ModHistoryItem, ModSetInfo, ModSetsState, SetImportResult, SetShareResult, SetSwitchResult, UndoResult } from './modSets'
 import type { RestorePointInfo, RestorePreview, RestoreResult, SetupExportResult, SetupImportResult, SetupPick } from './restorePoints'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
@@ -75,6 +76,12 @@ export const IPC = {
   setsImport: 'sets:import',
   historyList: 'history:list',
   historyUndo: 'history:undo',
+  reportPrepare: 'report:prepare',
+  reportBuild: 'report:build',
+  reportShow: 'report:show',
+  reportDrag: 'report:drag',
+  reportCopy: 'report:copy',
+  reportOpenSupport: 'report:openSupport',
   packsList: 'packs:list',
   packsSetActive: 'packs:setActive',
   packsShadersOff: 'packs:shadersOff',
@@ -206,6 +213,18 @@ export interface HemisphereApi {
     search(type: PackType, query: string, offset: number): Promise<ModSearchResult | null>
     projectVersions(type: PackType, projectId: string): Promise<ModVersionChoice[] | null>
     install(type: PackType, projectId: string, confirmed: boolean, versionId?: string | null): Promise<InstallResult>
+  }
+  /** "Report a problem": a zip for staff + a message for the Discord ticket */
+  report: {
+    prepare(): Promise<ReportPrepare>
+    build(draft: ReportDraft): Promise<ReportResult>
+    /** the report zip in Explorer */
+    showInFolder(): void
+    /** starts dragging the report zip (drop it into Discord) */
+    startDrag(): void
+    copyMessage(message: string): void
+    /** the staff's ticket channel (signed feed), else the Discord invite */
+    openSupport(): void
   }
   /** Updates of the launcher itself (GitHub releases) */
   launcherUpdate: {

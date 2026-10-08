@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Gamepad2, History, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
+import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Flag, Gamepad2, History, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
 import { useLauncherUpdate } from '../launcherUpdate'
 import { useSettings } from '../hooks'
 import type { JavaRuntimeInfo } from '@shared/game'
@@ -25,7 +25,19 @@ const selectClass = 'rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 tex
 const buttonClass = 'flex items-center gap-2 rounded-lg bg-gray-700/85 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:opacity-50'
 const gb = (mb: number) => `${(mb / 1024).toFixed(mb % 1024 ? 1 : 0)} GB`
 
-export default function Settings({ initialSection, onAddAccount, onRepair, onImport }: { initialSection: Section; onAddAccount(): void; onRepair(): void; onImport(): void }) {
+export default function Settings({
+  initialSection,
+  onAddAccount,
+  onRepair,
+  onImport,
+  onReport,
+}: {
+  initialSection: Section
+  onAddAccount(): void
+  onRepair(): void
+  onImport(): void
+  onReport(): void
+}) {
   const { t } = useTranslation()
   const [section, setSection] = useState<Section>(initialSection)
 
@@ -51,7 +63,7 @@ export default function Settings({ initialSection, onAddAccount, onRepair, onImp
         {section === 'game' && <GameSettings />}
         {section === 'launcher' && <LauncherSettings />}
         {section === 'account' && <AccountSettings onAddAccount={onAddAccount} />}
-        {section === 'installation' && <InstallationSettings onRepair={onRepair} onImport={onImport} />}
+        {section === 'installation' && <InstallationSettings onRepair={onRepair} onImport={onImport} onReport={onReport} />}
         {section === 'backups' && <Backups />}
         {section === 'advanced' && <AdvancedSettings />}
       </section>
@@ -261,7 +273,7 @@ function AccountSettings({ onAddAccount }: { onAddAccount(): void }) {
 }
 
 // ---------------------------------------------------------------- Installation
-function InstallationSettings({ onRepair, onImport }: { onRepair(): void; onImport(): void }) {
+function InstallationSettings({ onRepair, onImport, onReport }: { onRepair(): void; onImport(): void; onReport(): void }) {
   const { t } = useTranslation()
   const [info, reload] = useSystemInfo()
   const [moving, setMoving] = useState(false)
@@ -324,6 +336,11 @@ function InstallationSettings({ onRepair, onImport }: { onRepair(): void; onImpo
       <Row title={t('repair.title')} hint={t('repair.settingsHint')}>
         <button onClick={onRepair} className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-green-500">
           <Wrench size={16} /> {t('repair.short')}
+        </button>
+      </Row>
+      <Row title={t('report.title')} hint={t('report.settingsHint')}>
+        <button onClick={onReport} className={buttonClass}>
+          <Flag size={16} /> {t('report.open')}
         </button>
       </Row>
     </div>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ClipboardCopy, FileWarning, Package, PackageX, RotateCcw, Wrench, X } from 'lucide-react'
-import DiscordIcon from './DiscordIcon'
+import { Check, ClipboardCopy, FileWarning, Flag, Package, PackageX, RotateCcw, Wrench, X } from 'lucide-react'
 
 /** "Minecraft couldn't start": likely cause + one-click fixes (approved Error wireframe). */
 export default function CrashCard({
@@ -9,11 +8,13 @@ export default function CrashCard({
   incompatible,
   onRepair,
   onOpenMods,
+  onReport,
 }: {
   suspects: string[]
   incompatible: { name: string; version: string; needs: string }[]
   onRepair(): void
   onOpenMods(): void
+  onReport(): void
 }) {
   const { t } = useTranslation()
   const [ownMods, setOwnMods] = useState<number>(0)
@@ -106,8 +107,8 @@ export default function CrashCard({
         >
           {copied ? t('settings.copied') : t('settings.copyDiagnostics')}
         </LinkButton>
-        <LinkButton onClick={() => window.hemisphere.openLink('discord')} icon={<DiscordIcon size={14} />}>
-          {t('crash.help')}
+        <LinkButton onClick={onReport} icon={<Flag size={14} />}>
+          {t('report.thisCrash')}
         </LinkButton>
       </div>
     </div>

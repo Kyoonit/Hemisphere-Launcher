@@ -6,7 +6,7 @@ import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
 import { newsBadgeLabel, unseenNewsCount } from '@shared/feed'
 
-export type Screen = 'home' | 'news' | 'mods' | 'screenshots' | 'settings' | 'repair' | 'import' | 'browse' | 'modHistory'
+export type Screen = 'home' | 'news' | 'mods' | 'screenshots' | 'settings' | 'repair' | 'import' | 'browse' | 'modHistory' | 'report'
 
 const TABS: { id: Screen; icon: LucideIcon; label: string }[] = [
   { id: 'home', icon: Play, label: 'nav.play' },
@@ -42,7 +42,7 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
 
       <nav className={`no-drag ml-3 flex gap-1 ${minimal ? 'invisible' : ''}`}>
         {TABS.map(({ id, icon: Icon, label }) => {
-          const active = screen === id || ((screen === 'repair' || screen === 'import') && id === 'settings') || ((screen === 'browse' || screen === 'modHistory') && id === 'mods')
+          const active = screen === id || ((screen === 'repair' || screen === 'import' || screen === 'report') && id === 'settings') || ((screen === 'browse' || screen === 'modHistory') && id === 'mods')
           return (
             <button
               key={id}

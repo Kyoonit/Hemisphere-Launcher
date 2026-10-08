@@ -22,6 +22,7 @@ const fields = {
   seenChangelog: z.string().regex(/^\d+\.\d+\.\d+$/).nullable(),
   backgroundUpdates: z.boolean(),
   highPerformanceGpu: z.boolean(),
+  reportDiscord: z.string().max(40).refine((v) => !/[\u0000-\u001f]/.test(v), 'no control characters'),
 }
 
 /** Loading: a bad or unknown value falls back to its default, field by field (never breaks the launcher). */
@@ -41,6 +42,7 @@ const LoadSchema = z.object({
   seenChangelog: fields.seenChangelog.catch(D.seenChangelog),
   backgroundUpdates: fields.backgroundUpdates.catch(D.backgroundUpdates),
   highPerformanceGpu: fields.highPerformanceGpu.catch(D.highPerformanceGpu),
+  reportDiscord: fields.reportDiscord.catch(D.reportDiscord),
 })
 /** Updating: invalid values are rejected with an error the UI can show. */
 const UpdateSchema = z.object(fields)

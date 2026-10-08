@@ -12,6 +12,8 @@ import Import from './screens/Import'
 import ModBrowser from './screens/ModBrowser'
 import ModHistory from './screens/ModHistory'
 import Screenshots from './screens/Screenshots'
+import Report from './screens/Report'
+import type { ReportCategory } from '@shared/report'
 import Settings, { type Section } from './screens/Settings'
 import { useAccounts } from './accounts'
 import { useFeed, useSettings } from './hooks'
@@ -26,6 +28,12 @@ export default function App() {
   // Content: which tab, and what Find searches (back from Find or History lands on the same tab)
   const [contentTab, setContentTab] = useState<ContentTab>('mods')
   const [browseKind, setBrowseKind] = useState<BrowseKind>('mod')
+  // Report a problem: what it's about, and where Back goes
+  const [report, setReport] = useState<{ category: ReportCategory | null; from: Screen } | null>(null)
+  const openReport = (category: ReportCategory | null) => {
+    setReport({ category, from: screen })
+    setScreen('report')
+  }
 
   // Opening News (or news arriving while it's open) marks every item as seen: the red badge goes away.
   const feed = useFeed()
@@ -66,6 +74,7 @@ export default function App() {
                   onOpenNews={() => setScreen('news')}
                   onRepair={() => setScreen('repair')}
                   onImport={() => setScreen('import')}
+                  onReport={openReport}
                   onOpenMods={() => {
                     setContentTab('mods')
                     setScreen('mods')
@@ -87,7 +96,10 @@ export default function App() {
               {screen === 'modHistory' && <ModHistory onBack={() => setScreen('mods')} />}
               {screen === 'browse' && <ModBrowser kind={browseKind} onBack={() => setScreen('mods')} />}
               {screen === 'screenshots' && <Screenshots />}
-              {screen === 'settings' && <Settings initialSection={settingsSection} onAddAccount={() => setAddingAccount(true)} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} />}
+              {screen === 'settings' && (
+                <Settings initialSection={settingsSection} onAddAccount={() => setAddingAccount(true)} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} onReport={() => openReport(null)} />
+              )}
+              {screen === 'report' && <Report initialCategory={report?.category ?? null} onBack={() => setScreen(report?.from && report.from !== 'report' ? report.from : 'home')} />}
               {screen === 'import' && <Import onClose={() => setScreen('home')} />}
               {screen === 'repair' && <Repair onClose={() => openSettings('installation')} onDone={() => setScreen('home')} />}
             </>

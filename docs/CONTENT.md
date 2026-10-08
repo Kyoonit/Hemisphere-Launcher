@@ -91,3 +91,40 @@ Launchers check for a new feed every **10 minutes** (plus GitHub's ~5-minute cac
   "durationMin": 5 }`. Use `null` for no daily restart.
 
 The feed is signed like the client: a modified or older feed is refused, and the last good one is kept.
+
+## Problem reports (support)
+
+Players use **Report a problem** (Settings → Installation, the crash card, the error line under PLAY). The launcher
+builds `Hemisphere report HR-XXXXXX.zip` in their Downloads, copies a short message for the ticket, and its
+**Open Discord** button takes them to your support place. Nothing is sent automatically.
+
+Choose where that button goes in `content-src/feed.json` (optional; without it, it opens the Discord invite):
+
+```json
+"support": {
+  "url": "https://discord.com/channels/<server id>/<ticket channel id>",
+  "howTo": { "en": "Click “Create ticket” in #support, then paste the message and drop the zip.", "fr": "Clique « Créer un ticket » dans #support, puis colle le message et dépose le zip." }
+}
+```
+
+Only `discord.com` / `discord.gg` links are accepted. Publish with `npm run content:feed` as usual.
+
+**Reading a report** — open the zip and start with `README.txt`: the player's words, then the **Quick look**
+(automatic: crash cause, out of memory, mods Fabric refused, mods named in the crash, mixin errors, low memory or disk,
+custom Java, mods changed in the last 24 h, preset switches, graphics chip setting, server reachability). Then:
+
+| File | What's in it |
+| --- | --- |
+| `system.txt` | Windows, CPU, RAM, graphics, Java, memory and launcher settings |
+| `mods.txt` | every mod: on/off, version, Hemisphere / player / taken over, locks, updates, file |
+| `packs.txt` | resource packs in order (top wins), shaders, Iris |
+| `recent-changes.txt` | mod/pack changes (newest first) and restore points |
+| `settings/` | launcher settings, `options.txt`, Iris settings |
+| `logs/` | `launcher.log` (+ previous), `latest.log` (the last game) |
+| `crash-reports/`, `jvm/` | Minecraft crash reports and Java crash files of the last 2 weeks |
+| `screenshots/` | the ones the player chose |
+| `report.json` | the same, machine-readable |
+
+The report ID (`HR-…`) is in the message, the zip name and the README, so ticket and file always match. Private
+details are removed before anything is written: Windows user name and folders, sign-in tokens, e-mail addresses,
+IP addresses in network lines, other accounts' names, and (by default) chat lines of the game log.

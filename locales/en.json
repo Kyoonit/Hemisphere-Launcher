@@ -810,5 +810,163 @@
       "emptyBody": "Find shaders on Modrinth (Iris and OptiFine formats work). Pick one to use; switch it off any time.",
       "hint": "One shader at a time. Shaders need Iris and a good graphics card. Changes apply next time you start the game."
     }
+  },
+  "report": {
+    "back": "Back",
+    "subtitle": "Help from the staff",
+    "title": "Report a problem",
+    "intro": "Describe what happens: the launcher gathers everything staff need to understand it (logs, crash reports, your mods and packs, recent changes), with private details removed. Nothing is sent by itself: you post it in a ticket on Discord.",
+    "short": "Report",
+    "open": "Report a problem",
+    "thisCrash": "Report this crash",
+    "settingsHint": "A complete report for the staff in one click, ready for a Discord ticket.",
+    "lastCrash": "Minecraft crashed at {{time}}",
+    "aboutCrash": "It’s about this crash",
+    "s1": "What is it about?",
+    "s2": "Describe it",
+    "s3": "What to include",
+    "s3hint": "The usual ones for this kind of problem are on. Private details are removed from every file.",
+    "s4": "How staff can reach you",
+    "categories": {
+      "crash": {
+        "label": "The game crashes",
+        "hint": "Closes, freezes or won’t start"
+      },
+      "launcher": {
+        "label": "The launcher",
+        "hint": "Installing, updating, a button, an error"
+      },
+      "connect": {
+        "label": "Can’t join the server",
+        "hint": "Timed out, kicked, connection lost"
+      },
+      "mods": {
+        "label": "Mods or packs",
+        "hint": "A mod, resource pack or shader misbehaves"
+      },
+      "performance": {
+        "label": "Lag or low FPS",
+        "hint": "Slow, stutters, takes too long to load"
+      },
+      "account": {
+        "label": "Account or sign-in",
+        "hint": "Microsoft account, skin, wrong player"
+      },
+      "server": {
+        "label": "Something on the server",
+        "hint": "A bug in the world, a plugin, a command"
+      },
+      "other": {
+        "label": "Something else",
+        "hint": "Anything that doesn’t fit above"
+      }
+    },
+    "fields": {
+      "title": "In one line",
+      "description": "What happened?",
+      "expected": "What did you expect?",
+      "steps": "How to make it happen again",
+      "when": "When?",
+      "frequency": "How often?",
+      "player": "Minecraft name",
+      "discord": "Discord name"
+    },
+    "optional": "(optional)",
+    "recommended": "(recommended)",
+    "placeholders": {
+      "title": {
+        "crash": "e.g. The game crashes when I open my inventory",
+        "launcher": "e.g. The update stops at 45%",
+        "connect": "e.g. “Connection timed out” when joining",
+        "mods": "e.g. Xaero’s Minimap doesn’t show waypoints",
+        "performance": "e.g. 20 FPS in the main city",
+        "account": "e.g. My skin doesn’t change",
+        "server": "e.g. The /home command says I have no home",
+        "other": "e.g. Short summary of the problem"
+      },
+      "description": "What you were doing, what you saw (exact error message if any), since when…",
+      "expected": "e.g. The inventory should just open",
+      "steps": "1. Join the server  2. Open the inventory  3. …",
+      "discord": "e.g. kyo_99"
+    },
+    "when": {
+      "now": "Just now",
+      "today": "Earlier today",
+      "earlier": "Before today"
+    },
+    "frequency": {
+      "always": "Every time",
+      "sometimes": "Sometimes",
+      "once": "Once"
+    },
+    "parts": {
+      "system": {
+        "label": "PC and setup",
+        "detail": "Windows, graphics card, Java, memory"
+      },
+      "launcherLog": {
+        "label": "Launcher log",
+        "detail": "Installs, PLAY, errors · {{size}}"
+      },
+      "gameLog": {
+        "label": "Game log",
+        "detail": "The last game · {{size}}"
+      },
+      "crashReports": {
+        "label": "Crash reports",
+        "detail_one": "{{count}} from the last 2 weeks",
+        "detail_other": "{{count}} from the last 2 weeks"
+      },
+      "mods": {
+        "label": "Mod list",
+        "detail_one": "{{count}} mod file, versions, on/off",
+        "detail_other": "{{count}} mod files, versions, on/off"
+      },
+      "packs": {
+        "label": "Resource and shader packs",
+        "detail_one": "{{count}} pack, order, shader in use",
+        "detail_other": "{{count}} packs, order, shader in use"
+      },
+      "changes": {
+        "label": "Recent changes",
+        "detail_one": "{{count}} mod or pack change, restore points",
+        "detail_other": "Last {{count}} mod and pack changes, restore points"
+      },
+      "settings": {
+        "label": "Settings",
+        "detail": "Launcher and Minecraft settings (video, keys, packs)"
+      },
+      "screenshots": {
+        "label": "Screenshots",
+        "detail": ""
+      }
+    },
+    "notAvailable": "Nothing to include",
+    "removeChat": "Remove chat messages from the game log (other players’ messages stay private)",
+    "screenshots": "Screenshots that show it",
+    "screenshotsHint": "(up to 5 · {{count}} chosen)",
+    "privacy": "Removed from every file: your Windows name and folders, sign-in tokens, e-mail and IP addresses, other accounts.",
+    "missing": "Still needed: {{fields}}",
+    "create": "Create the report",
+    "creating": "Gathering everything…",
+    "failed": "The report couldn’t be created. Details are in the launcher log.",
+    "ready": "Report {{id}} is ready",
+    "readyHint": "Three steps to send it to the staff:",
+    "another": "New report",
+    "step1": "Open a ticket on Discord",
+    "howTo": "Open the Hemisphere Discord and create a support ticket (or post in the help channel).",
+    "openDiscord": "Open Discord",
+    "step2": "Paste the message",
+    "copied": "The message is already copied: just press Ctrl+V in the ticket.",
+    "copyHint": "Copy the message, then press Ctrl+V in the ticket.",
+    "copyAgain": "Copy the message",
+    "step3": "Add the report file",
+    "dragHint": "Drag it into Discord",
+    "showInFolder": "Show in folder",
+    "messagePreview": "The message",
+    "quickLook": "What the launcher noticed",
+    "quickLookHint": "Staff see this first. It’s automatic: your description matters most.",
+    "filesIncluded_one": "{{count}} file in the report",
+    "filesIncluded_other": "{{count}} files in the report"
   }
 }

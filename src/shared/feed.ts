@@ -64,6 +64,21 @@ export const FeedSchema = z
     news: z.array(NewsItemSchema).max(100),
     /** Staff mod policy for the mod browser and players' own mods (optional; older launchers ignore it) */
     modPolicy: ModPolicySchema.optional(),
+    /** Where players send problem reports: the Discord ticket channel (optional; else the Discord invite) */
+    support: z
+      .object({
+        url: z.string().refine((u) => {
+          try {
+            const x = new URL(u)
+            return x.protocol === 'https:' && ['discord.com', 'discord.gg', 'www.discord.com', 'ptb.discord.com', 'canary.discord.com'].includes(x.hostname)
+          } catch {
+            return false
+          }
+        }, 'must be a Discord link'),
+        /** e.g. "#support → Create ticket" */
+        howTo: LocalizedSchema.optional(),
+      })
+      .optional(),
   })
   .superRefine((f, ctx) => {
     if (f.restart) {

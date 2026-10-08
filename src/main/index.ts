@@ -1,5 +1,5 @@
 
-import { app, BrowserWindow, clipboard, dialog, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, nativeImage, shell } from 'electron'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { gamePaths } from './core/game/target'
@@ -49,6 +49,8 @@ import { checkForUpdates, getUpdateState, installUpdateNow, onUpdateState, start
 import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePoints, previewRestore, restorePoint } from './core/backup/restorePoints'
 import { checkPackUpdates, installPack, knownPackProjects, listPacks, moveResourcePack, packVersions, removePack, setPackActive, setPackLock, setPackVersion, shadersOff, updatePacks } from './core/packs/packs'
 import { PACK_TYPES, type PackType } from '@shared/packs'
+import { buildReport, lastReportZip, prepareReport } from './core/support/report'
+import { REPORT_CATEGORIES, REPORT_FREQUENCY, REPORT_PARTS, REPORT_WHEN, type ReportDraft } from '@shared/report'
 import { deleteSet, duplicateSet, importSetCode, isSetId, listSets, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
 
@@ -504,6 +506,43 @@ function registerIpc(): void {
     if (modsBusy()) return { ok: false, reason: 'busy' }
     return withManifest<InstallResult>({ ok: false, reason: 'network' }, (m) => installPack(type, projectId, confirmed === true, m.minecraft, getFeed().modPolicy, (versionId as string | null) ?? null))
   })
+  // Report a problem: the draft comes from the page, so every field is checked here.
+  handle(IPC.reportPrepare, () => prepareReport())
+  handle(IPC.reportBuild, async (_e, raw: unknown) => {
+    const d = (raw ?? {}) as Partial<ReportDraft>
+    const parts = (d.parts ?? {}) as Record<string, unknown>
+    const draft: ReportDraft = {
+      category: REPORT_CATEGORIES.includes(d.category as never) ? d.category! : 'other',
+      title: typeof d.title === 'string' ? d.title : '',
+      description: typeof d.description === 'string' ? d.description : '',
+      expected: typeof d.expected === 'string' ? d.expected : '',
+      steps: typeof d.steps === 'string' ? d.steps : '',
+      when: REPORT_WHEN.includes(d.when as never) ? d.when! : 'now',
+      frequency: REPORT_FREQUENCY.includes(d.frequency as never) ? d.frequency! : 'once',
+      discord: typeof d.discord === 'string' ? d.discord : '',
+      parts: Object.fromEntries(REPORT_PARTS.map((p) => [p, parts[p] !== false])) as ReportDraft['parts'],
+      removeChat: d.removeChat !== false,
+      screenshots: Array.isArray(d.screenshots) ? d.screenshots.filter((s): s is string => typeof s === 'string').slice(0, 5) : [],
+    }
+    const manifest = await getContent()
+      .then((c) => c.manifest)
+      .catch(() => null)
+    return buildReport(draft, manifest, getFeed().modPolicy, app.getVersion())
+  })
+  on(IPC.reportShow, () => {
+    const zip = lastReportZip()
+    if (zip) shell.showItemInFolder(zip)
+  })
+  on(IPC.reportDrag, (e) => {
+    const zip = lastReportZip()
+    if (!zip) return
+    const icon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.png')).resize({ width: 48, height: 48 })
+    e.sender.startDrag({ file: zip, icon })
+  })
+  on(IPC.reportCopy, (_e, message: unknown) => {
+    if (typeof message === 'string' && message.length <= 4000) clipboard.writeText(message)
+  })
+  on(IPC.reportOpenSupport, () => void shell.openExternal(getFeed().support?.url ?? LINKS.discord))
   handle(IPC.feedGet, () => getFeed())
   on(IPC.feedOpenLink, (_e, id: unknown) => {
     const url = getFeed().news.find((n) => n.id === id)?.link?.url

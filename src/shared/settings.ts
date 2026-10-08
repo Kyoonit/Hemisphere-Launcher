@@ -32,6 +32,8 @@ export interface Settings {
   backgroundUpdates: boolean
   /** On PCs with two graphics chips: run Minecraft on the high-performance one */
   highPerformanceGpu: boolean
+  /** Discord name given in the last problem report (filled in next time) */
+  reportDiscord: string
 }
 
 export const RESOLUTIONS = ['auto', '1280x720', '1600x900', '1920x1080', '2560x1440', 'fullscreen'] as const
@@ -52,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   seenChangelog: null,
   backgroundUpdates: true,
   highPerformanceGpu: true,
+  reportDiscord: '',
 }
 
 /**
