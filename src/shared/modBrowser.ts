@@ -128,7 +128,7 @@ export interface ModVersionChoice {
   locked: boolean
 }
 
-export type SetVersionResult = { ok: true; versionNumber: string; pinned: boolean } | { ok: false; reason: 'busy' | 'notFound' | 'network' }
+export type SetVersionResult = { ok: true; versionNumber: string; pinned: boolean } | { ok: false; reason: 'busy' | 'notFound' | 'network' | 'locked' }
 
 export interface UpdateCheck {
   checked: number

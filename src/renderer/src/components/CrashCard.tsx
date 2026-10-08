@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ClipboardCopy, FileWarning, PackageX, RotateCcw, Wrench, X } from 'lucide-react'
+import { Check, ClipboardCopy, FileWarning, Package, PackageX, RotateCcw, Wrench, X } from 'lucide-react'
 import DiscordIcon from './DiscordIcon'
 
 /** "Minecraft couldn't start": likely cause + one-click fixes (approved Error wireframe). */
-export default function CrashCard({ suspects, onRepair }: { suspects: string[]; onRepair(): void }) {
+export default function CrashCard({
+  suspects,
+  incompatible,
+  onRepair,
+  onOpenMods,
+}: {
+  suspects: string[]
+  incompatible: { name: string; version: string; needs: string }[]
+  onRepair(): void
+  onOpenMods(): void
+}) {
   const { t } = useTranslation()
   const [ownMods, setOwnMods] = useState<number>(0)
   const [copied, setCopied] = useState(false)
@@ -22,7 +32,7 @@ export default function CrashCard({ suspects, onRepair }: { suspects: string[]; 
         </span>
         <div className="min-w-0 flex-1">
           <b className="block text-white">{t('crash.title')}</b>
-          <span className="text-[13px] text-gray-400 @max-[400px]:hidden">{t('crash.subtitle')}</span>
+          <span className="text-[13px] text-gray-400 @max-[400px]:hidden short:hidden">{t('crash.subtitle')}</span>
         </div>
         <button
           onClick={() => window.hemisphere.game.dismissError()}
@@ -34,26 +44,50 @@ export default function CrashCard({ suspects, onRepair }: { suspects: string[]; 
         </button>
       </div>
 
-      {(ownMods > 0 || suspects.length > 0) && (
+      {incompatible.length > 0 ? (
+        // Fabric said exactly which mods don't fit: name them (updating is the player's choice, in Mods)
+        <div className="mt-3 rounded-lg border-l-[3px] border-amber-400 bg-gray-900/65 px-3 py-2 text-[13px] text-gray-300">
+          <b className="block text-white">{t('crash.incompatibleTitle', { count: incompatible.length })}</b>
+          <ul className="mt-1 max-h-[54px] space-y-0.5 overflow-y-auto">
+            {incompatible.map((m) => (
+              <li key={m.name} className="text-xs">
+                <span className="font-semibold text-gray-200">{m.name}</span> <span className="text-gray-400">{m.version}</span>
+                {m.needs && <span className="text-gray-400"> · {t('crash.needs', { needs: m.needs })}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (ownMods > 0 || suspects.length > 0) && (
         <p className="mt-3 rounded-lg border-l-[3px] border-amber-400 bg-gray-900/65 px-3 py-2 text-[13px] text-gray-300">
           {ownMods > 0 ? t('crash.causeOwnMods', { count: ownMods }) : t('crash.causeMods')}
           {suspects.length > 0 && <span className="mt-0.5 block text-xs text-gray-400">{t('crash.mentioned', { mods: suspects.join(', ') })}</span>}
         </p>
       )}
 
-      <div className="mt-3.5 flex flex-wrap gap-2">
+      <div className="mt-3.5 flex flex-wrap gap-2 @max-[400px]:mt-2.5 @max-[400px]:gap-1.5 short:mt-2.5 short:gap-1.5">
+        {incompatible.length > 0 && (
+          <button
+            onClick={onOpenMods}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-3.5 py-2 text-sm @max-[400px]:gap-1.5 @max-[400px]:px-2.5 @max-[400px]:py-1.5 @max-[400px]:text-[13px] short:gap-1.5 short:px-2.5 short:py-1.5 short:text-[13px] font-semibold text-white shadow-md transition-colors hover:bg-green-500"
+          >
+            <Package size={15} /> {t('crash.openMods')}
+          </button>
+        )}
         {ownMods > 0 && (
           <button
             onClick={() => window.hemisphere.game.play({ target: 'latest', withoutPlayerMods: true })}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-green-500"
+            className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm @max-[400px]:gap-1.5 @max-[400px]:px-2.5 @max-[400px]:py-1.5 @max-[400px]:text-[13px] short:gap-1.5 short:px-2.5 short:py-1.5 short:text-[13px] font-semibold text-white transition-colors ${incompatible.length ? 'bg-gray-700/85 hover:bg-gray-600' : 'bg-green-600 shadow-md hover:bg-green-500'}`}
           >
             <PackageX size={15} /> {t('crash.withoutMyMods')}
           </button>
         )}
-        <button onClick={onRepair} className="flex items-center gap-2 rounded-lg bg-gray-700/85 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600">
-          <Wrench size={15} /> {t('repair.short')}
-        </button>
-        <button onClick={() => window.hemisphere.game.play()} className="flex items-center gap-2 rounded-lg bg-gray-700/85 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600">
+        {/* Repair can't fix a mod made for another version: Open Mods is the way */}
+        {incompatible.length === 0 && (
+          <button onClick={onRepair} className="flex items-center gap-2 rounded-lg bg-gray-700/85 px-3.5 py-2 text-sm @max-[400px]:gap-1.5 @max-[400px]:px-2.5 @max-[400px]:py-1.5 @max-[400px]:text-[13px] short:gap-1.5 short:px-2.5 short:py-1.5 short:text-[13px] font-semibold text-white transition-colors hover:bg-gray-600">
+            <Wrench size={15} /> {t('repair.short')}
+          </button>
+        )}
+        <button onClick={() => window.hemisphere.game.play()} className="flex items-center gap-2 rounded-lg bg-gray-700/85 px-3.5 py-2 text-sm @max-[400px]:gap-1.5 @max-[400px]:px-2.5 @max-[400px]:py-1.5 @max-[400px]:text-[13px] short:gap-1.5 short:px-2.5 short:py-1.5 short:text-[13px] font-semibold text-white transition-colors hover:bg-gray-600">
           <RotateCcw size={15} /> {t('game.retry')}
         </button>
       </div>

@@ -18,7 +18,8 @@ import { inspectJava } from './java'
 import { physicalPath } from '../system/redirect'
 import { applyGpuPreference } from '../system/gpu'
 import { disableAllPlayerMods } from '../importer/importer'
-import { parkDuplicates, updatePlayerMods } from '../modrinth/playerMods'
+import { parkDuplicates } from '../modrinth/playerMods'
+import { parseIncompatibleMods } from '@shared/crash'
 import { readInstanceState } from '../sync/sync'
 import { endSession, startSession } from '../playtime/playtimeStore'
 import { cleanStore, syncClient } from '../sync/sync'
@@ -148,18 +149,11 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     // 3-5. Minecraft + Java + Fabric, then Hemisphere mods (only what changed).
     const target = { minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }
     let { versionId, javaPath } = await ensureGameInstalled(target, report)
-    const before = await readInstanceState()
+    // The player's own mods (and Hemisphere mods they took over) are never updated by PLAY: they choose when, in
+    // Mods. If one doesn't work with this version, the crash card names it.
     const synced = await syncClient(manifest, report('mods'))
     const afterSync = await readInstanceState()
     await parkDuplicates(Object.keys(afterSync.owned), manifest, new Set(afterSync.detached)).catch((err) => console.warn('[game] duplicate check failed:', err))
-    if (before.minecraft && before.minecraft !== manifest.minecraft) {
-      // New (or older) Minecraft version: the player's own mods follow; ones without a version yet are switched off.
-      const moved = await updatePlayerMods(Object.keys((await readInstanceState()).owned), manifest.minecraft, true).catch((err) => {
-        console.warn('[game] player mods not updated:', err)
-        return null
-      })
-      if (moved) console.log(`[game] player mods for ${manifest.minecraft}: ${moved.updated.length} updated, ${moved.disabled.length} switched off`)
-    }
     console.log(`[game] client ${manifest.clientVersion} in sync: ${synced.downloaded} downloaded, ${synced.placed} placed, ${synced.removed} removed`)
 
     // 6. Launch (+ join Hemisphere directly when enabled; never from an older client).
@@ -297,11 +291,29 @@ function watch(proc: ChildProcess, accountId: string): void {
             code: 'crashed',
             detail: newCrashReport(startedAt) ?? lastLogLines() ?? `exit code ${code} after ${Math.round((Date.now() - startedAt) / 1000)} s`,
             suspects: crashSuspects(startedAt),
+            incompatible: incompatibleMods(startedAt),
           }
         : state.error,
     })
     gameEvents.onExited({ accountId, crashed, anyRunning: runningAccounts.length > 0 })
   })
+}
+
+/**
+ * Mods Fabric refused to load because they don't fit this game (wrong Minecraft version, missing or too old a
+ * dependency), from its "Incompatible mods found!" report in the game log:
+ *   - Mod 'Jade' (jade) 26.3.5 requires version 26.4 of minecraft, but only the wrong version is present: 26.3!
+ *   - Replace mod 'Jade' (jade) 26.3.5 with any version that is compatible with: …
+ */
+function incompatibleMods(since: number): { name: string; version: string; needs: string }[] {
+  const log = instanceLogPath()
+  let text = ''
+  try {
+    if (existsSync(log) && statSync(log).mtimeMs >= since - 2000) text = readFileSync(log, 'utf8').slice(-200_000)
+  } catch {
+    return []
+  }
+  return parseIncompatibleMods(text)
 }
 
 /** Mod ids named in the crash output ("provided by 'x'", "from mod x"), most-mentioned first. */

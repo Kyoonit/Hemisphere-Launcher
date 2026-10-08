@@ -22,7 +22,7 @@ const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
   { key: 'rules', icon: <BookOpen size={18} /> },
 ]
 
-export default function Home({ onOpenNews, onRepair, onImport }: { onOpenNews(): void; onRepair(): void; onImport(): void }) {
+export default function Home({ onOpenNews, onRepair, onImport, onOpenMods }: { onOpenNews(): void; onRepair(): void; onImport(): void; onOpenMods(): void }) {
   const { t } = useTranslation()
   const status = useServerStatus()
   const feed = useFeed()
@@ -51,7 +51,7 @@ export default function Home({ onOpenNews, onRepair, onImport }: { onOpenNews():
         </h1>
 
         <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-2' : 'home-gap'}`}>
-          <PlayZone client={client ?? null} onRepair={onRepair} />
+          <PlayZone client={client ?? null} onRepair={onRepair} onOpenMods={onOpenMods} />
           <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
             <ServerNotice offline={status?.online === false} feed={feed} />
             {!crashed && <PreflightHints />}

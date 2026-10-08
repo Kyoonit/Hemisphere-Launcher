@@ -6,8 +6,7 @@ import Toggle from '../components/Toggle'
 import type { ClientSummary } from '@shared/client'
 import { localize } from '@shared/manifest'
 
-type Filter = 'all' | 'yours'
-const FILTERS: Filter[] = ['all', 'yours']
+type Filter = 'all' | 'yours' | 'updates'
 
 /** Same palette idea as the wireframe: a stable colour per mod for its letter tile. */
 const TILE = ['#2563eb', '#0d9488', '#b45309', '#7c3aed', '#16a34a', '#db2777', '#0891b2', '#ca8a04', '#dc2626', '#4f46e5']
@@ -37,17 +36,21 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
   const [query, setQuery] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [mods, setMods] = useState<ModItem[] | null | undefined>(undefined)
+  // which version panel is open, by Modrinth project: it stays open while the mod changes version or is taken over
+  const [openPicker, setOpenPicker] = useState<string | null>(null)
   const reload = () => window.hemisphere.client.list().then(setMods)
   useEffect(() => {
     void reload()
   }, [])
 
+  // nothing left to update: the Updates view falls back to All
+  const view: Filter = filter === 'updates' && !mods?.some((m) => m.update) ? 'all' : filter
   const items = useMemo(() => {
     const q = query.trim().toLowerCase()
     return (mods ?? [])
-      .filter((m) => (filter === 'all' || !m.fromHemisphere) && (!q || m.name.toLowerCase().includes(q) || (m.file ?? '').toLowerCase().includes(q)))
+      .filter((m) => (view === 'all' || (view === 'yours' ? !m.fromHemisphere : !!m.update)) && (!q || m.name.toLowerCase().includes(q) || (m.file ?? '').toLowerCase().includes(q)))
       .sort((a, b) => a.name.localeCompare(b.name, i18n.language, { sensitivity: 'base' }))
-  }, [mods, filter, query, i18n.language])
+  }, [mods, view, query, i18n.language])
   const libraries = client?.mods.filter((m) => m.category === 'library') ?? []
 
   if (client === undefined || mods === undefined)
@@ -70,6 +73,13 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
       </div>
     )
 
+  // "Updates" only appears when something can be updated (locked mods included: they're shown, never updated)
+  const withUpdate = mods.filter((m) => m.update).length
+  const filters: [Filter, string][] = [
+    ['all', t('mods.groups.all')],
+    ['yours', `${t('mods.yours')} (${mods.filter((m) => !m.fromHemisphere).length})`],
+    ...(withUpdate ? [['updates', `${t('mods.updatesFilter')} (${withUpdate})`] as [Filter, string]] : []),
+  ]
   const toolButton = 'flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-gray-300 transition-colors hover:bg-gray-700 hover:text-white'
 
   return (
@@ -112,13 +122,13 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
         </div>
 
         <div className="mt-2.5 flex flex-wrap gap-1.5">
-          {FILTERS.map((f) => (
+          {filters.map(([f, label]) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`rounded-lg px-3 py-1 text-[13px] font-medium transition-colors ${filter === f ? 'bg-green-600 text-white' : 'bg-gray-800/70 text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+              className={`rounded-lg px-3 py-1 text-[13px] font-medium transition-colors ${view === f ? 'bg-green-600 text-white' : 'bg-gray-800/70 text-gray-300 hover:bg-gray-700 hover:text-white'}`}
             >
-              {f === 'yours' ? `${t('mods.yours')} (${mods.filter((m) => !m.fromHemisphere).length})` : t('mods.groups.all')}
+              {label}
             </button>
           ))}
           <span className="ml-2 self-center text-xs text-gray-400">
@@ -141,11 +151,19 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
         {items.length ? (
           <div className="overflow-hidden rounded-lg bg-gray-900/55">
             {items.map((item) => (
-              <ModRow key={item.key} item={item} lang={i18n.language} onChanged={() => void reload()} onNotice={setNotice} />
+              <ModRow
+                key={item.key}
+                item={item}
+                lang={i18n.language}
+                picking={openPicker === (item.projectId ?? item.key)}
+                onTogglePicker={() => setOpenPicker((p) => (p === (item.projectId ?? item.key) ? null : (item.projectId ?? item.key)))}
+                onChanged={() => void reload()}
+                onNotice={setNotice}
+              />
             ))}
           </div>
         ) : (
-          <p className="py-4 text-gray-400">{filter === 'yours' && !query ? t('mods.yoursEmpty') : t('mods.noMatch')}</p>
+          <p className="py-4 text-gray-400">{view === 'yours' && !query ? t('mods.yoursEmpty') : t('mods.noMatch')}</p>
         )}
         <p className="mt-2 text-xs text-gray-400">{t('mods.yoursHint')}</p>
         <p className="mt-1.5 text-xs text-gray-400">{t('mods.libraries', { names: libraries.map((l) => l.name).join(', ') })}</p>
@@ -166,10 +184,23 @@ function ModIcon({ item }: { item: ModItem }) {
   )
 }
 
-function ModRow({ item, lang, onChanged, onNotice }: { item: ModItem; lang: string; onChanged(): void; onNotice(text: string): void }) {
+function ModRow({
+  item,
+  lang,
+  picking,
+  onTogglePicker,
+  onChanged,
+  onNotice,
+}: {
+  item: ModItem
+  lang: string
+  picking: boolean
+  onTogglePicker(): void
+  onChanged(): void
+  onNotice(text: string): void
+}) {
   const { t } = useTranslation()
   const [confirmRemove, setConfirmRemove] = useState(false)
-  const [picking, setPicking] = useState(false)
 
   const toggle = async (on: boolean) => {
     if (item.managed) {
@@ -198,7 +229,7 @@ function ModRow({ item, lang, onChanged, onNotice }: { item: ModItem; lang: stri
               {item.name}
             </b>
             {item.versionNumber && item.projectId ? (
-              <button onClick={() => setPicking((p) => !p)} className="inline-flex flex-none items-center gap-0.5 rounded text-xs text-gray-400 hover:text-white">
+              <button onClick={onTogglePicker} className="inline-flex flex-none items-center gap-0.5 rounded text-xs text-gray-400 hover:text-white">
                 {item.versionNumber}
                 <ChevronDown size={12} className={`transition-transform ${picking ? 'rotate-180' : ''}`} />
               </button>
@@ -218,7 +249,11 @@ function ModRow({ item, lang, onChanged, onNotice }: { item: ModItem; lang: stri
             {item.duplicate && <Badge tone="amber">{t('mods.duplicate')}</Badge>}
             {item.verdict === 'blocked' && <Badge tone="red">{t('browse.notAllowed')}</Badge>}
             {item.verdict === 'askStaff' && <Badge tone="amber">{t('browse.askStaff')}</Badge>}
-            {item.update && !item.locked && <Badge tone="green">{t('mods.updateAvailable', { version: item.update.versionNumber })}</Badge>}
+            {item.update && (
+              <span title={item.locked ? t('mods.updateLockedHint') : undefined} className="flex-none">
+                <Badge tone={item.locked ? 'gray' : 'green'}>{t('mods.updateAvailable', { version: item.update.versionNumber })}</Badge>
+              </span>
+            )}
           </p>
           <p className="truncate text-xs text-gray-400">
             {status ??
@@ -254,7 +289,7 @@ function ModRow({ item, lang, onChanged, onNotice }: { item: ModItem; lang: stri
           <>
             {item.projectId && (
               <button
-                onClick={() => setPicking((p) => !p)}
+                onClick={onTogglePicker}
                 aria-label={t('mods.versions', { mod: item.name })}
                 title={t('mods.versions', { mod: item.name })}
                 aria-expanded={picking}
@@ -285,7 +320,6 @@ function ModRow({ item, lang, onChanged, onNotice }: { item: ModItem; lang: stri
         <VersionPicker
           item={item}
           onDone={(text) => {
-            setPicking(false)
             onNotice(text)
             onChanged()
           }}
@@ -301,30 +335,41 @@ function VersionPicker({ item, onDone }: { item: ModItem; onDone(text: string): 
   const [versions, setVersions] = useState<ModVersionChoice[] | null | undefined>(undefined)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const load = () => window.hemisphere.client.versions(item.key).then(setVersions)
   useEffect(() => {
-    window.hemisphere.client.versions(item.key).then(setVersions)
-  }, [item.key])
+    void load()
+  }, [item.key, item.locked, item.versionNumber])
 
   const run = async (id: string, job: () => Promise<string | null>) => {
     setBusy(id)
     setError(null)
     const text = await job()
     setBusy(null)
-    if (text) onDone(text)
+    if (text) {
+      onDone(text) // the panel stays open: it refreshes with the new version / lock
+      void load()
+    }
+  }
+  /** A locked mod keeps its version: switching (or going back to Hemisphere's) needs an unlock first. */
+  const lockedOut = () => {
+    setError(t('mods.unlockFirst', { mod: item.name }))
+    return null
   }
   const choose = (v: ModVersionChoice, lock: boolean) =>
     run(v.id, async () => {
+      if (item.locked && !v.current) return lockedOut()
       if (v.current) {
         // the version stays: only the lock changes
         if (!(await window.hemisphere.client.setLock(item.key, lock))) return setError(t('mods.versionErrors.busy')), null
         return lock ? t('mods.lockedNow', { mod: item.name, version: v.versionNumber }) : t('mods.unlocked', { mod: item.name })
       }
       const r = await window.hemisphere.client.setVersion(item.key, v.id, lock)
-      if (!r.ok) return setError(t(`mods.versionErrors.${r.reason}`)), null
+      if (!r.ok) return r.reason === 'locked' ? lockedOut() : (setError(t(`mods.versionErrors.${r.reason}`)), null)
       return t(lock ? 'mods.versionLocked' : 'mods.versionSet', { mod: item.name, version: r.versionNumber })
     })
   const back = () =>
     run('back', async () => {
+      if (item.locked) return lockedOut()
       if (!(await window.hemisphere.client.backToHemisphere(item.key))) return setError(t('mods.versionErrors.busy')), null
       return t('mods.backDone', { mod: item.name, version: item.hemisphereVersion })
     })
@@ -344,7 +389,11 @@ function VersionPicker({ item, onDone }: { item: ModItem; onDone(text: string): 
           {busy === 'back' && <Loader2 size={13} className="ml-auto animate-spin" />}
         </button>
       )}
-      {error && <p className="px-1.5 pb-1.5 text-xs text-red-400">{error}</p>}
+      {error && (
+        <p role="alert" className="mb-1.5 flex items-center gap-1.5 rounded-md bg-amber-900/40 px-2 py-1.5 text-xs text-amber-200">
+          <Lock size={12} /> {error}
+        </p>
+      )}
       {versions === undefined ? (
         <div className="space-y-1">
           {Array.from({ length: 3 }, (_, i) => (

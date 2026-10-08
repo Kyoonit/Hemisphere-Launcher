@@ -57,7 +57,7 @@ export default function App() {
             <Login onBack={needsLogin ? undefined : () => setAddingAccount(false)} />
           ) : (
             <>
-              {screen === 'home' && <Home onOpenNews={() => setScreen('news')} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} />}
+              {screen === 'home' && <Home onOpenNews={() => setScreen('news')} onRepair={() => setScreen('repair')} onImport={() => setScreen('import')} onOpenMods={() => setScreen('mods')} />}
               {screen === 'news' && <News />}
               {screen === 'mods' && <Mods onImport={() => setScreen('import')} onBrowse={() => setScreen('browse')} />}
               {screen === 'browse' && <ModBrowser onBack={() => setScreen('mods')} />}

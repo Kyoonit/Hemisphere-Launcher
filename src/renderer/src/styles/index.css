@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Short window (under 640 px tall): a few blocks use their compact layout. */
+@custom-variant short (@media (max-height: 640px));
+
 
 /* Hemisphere design tokens (Phase 1). The website is built on Tailwind's default gray/green
    palette, so standard classes like bg-gray-900 or text-green-400 match it exactly. */

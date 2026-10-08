@@ -30,7 +30,13 @@ export interface GameState {
   /** Accounts with a running game (one game per account) */
   runningAccounts: string[]
   /** Last problem, cleared on next PLAY. suspects = mod ids named in the crash output */
-  error: { code: GameErrorCode; detail?: string; suspects?: string[] } | null
+  error: {
+    code: GameErrorCode
+    detail?: string
+    suspects?: string[]
+    /** mods Fabric refused because they don't fit this game version (name, version, what it needs) */
+    incompatible?: { name: string; version: string; needs: string }[]
+  } | null
   /** Preparing the next PLAY in the background (client update, file checks) */
   background: boolean
 }

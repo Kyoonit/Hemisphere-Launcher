@@ -10,6 +10,7 @@ import { latestByHash, pickVersion, projectVersions } from './api'
 import {
   checkPlayerModUpdates,
   hemisphereMods,
+  isLocked,
   listPlayerMods,
   modVersions,
   placeHemisphereFileAsPlayer,
@@ -154,6 +155,7 @@ export async function removeFor(manifest: ClientManifest, key: string): Promise<
 /** A taken-over Hemisphere mod goes back to Hemisphere's version and updates (the player's copy goes to the Recycle Bin). */
 export async function backToHemisphere(manifest: ClientManifest, key: string): Promise<boolean> {
   const file = fileOf(key)
+  if (file && isLocked(file, manifest.minecraft)) return false // unlock it first
   const state = await readInstanceState()
   const items = file ? await listMods(manifest, null) : []
   const item = items.find((i) => i.key === key)

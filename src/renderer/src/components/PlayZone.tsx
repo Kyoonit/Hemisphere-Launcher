@@ -19,7 +19,7 @@ export function useGameState(): GameState | null {
 }
 
 /** PLAY button and everything that replaces it: install progress, "playing", errors. */
-export default function PlayZone({ client, onRepair }: { client: ClientSummary | null; onRepair(): void }) {
+export default function PlayZone({ client, onRepair, onOpenMods }: { client: ClientSummary | null; onRepair(): void; onOpenMods(): void }) {
   const { t } = useTranslation()
   const { active } = useAccounts()
   const game = useGameState()
@@ -70,7 +70,7 @@ export default function PlayZone({ client, onRepair }: { client: ClientSummary |
       </button>
       {game.error?.code === 'crashed' ? (
         <div className="mt-3">
-          <CrashCard suspects={game.error.suspects ?? []} onRepair={onRepair} />
+          <CrashCard suspects={game.error.suspects ?? []} incompatible={game.error.incompatible ?? []} onRepair={onRepair} onOpenMods={onOpenMods} />
         </div>
       ) : game.error ? (
         <ErrorLine code={game.error.code} onRepair={onRepair} />

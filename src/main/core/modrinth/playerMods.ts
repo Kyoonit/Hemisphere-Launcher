@@ -315,7 +315,8 @@ export function removePlayerMod(file: string, owned: string[]): Promise<boolean>
 export function checkPlayerModUpdates(owned: string[], minecraft: string): Promise<UpdateCheck> {
   return serial(async () => {
     const reg = await identify(owned)
-    const known = Object.values(reg).filter((e) => e.projectId && e.versionId && e.pinned !== minecraft)
+    // locked mods are checked too: their update is shown (Updates filter), "Update all" just never applies it
+    const known = Object.values(reg).filter((e) => e.projectId && e.versionId)
     const latest = await latestByHash(
       known.map((e) => e.sha512),
       minecraft,
@@ -416,6 +417,7 @@ export function setModVersion(file: string, versionId: string, owned: string[], 
     }
     const v = versions.find((x) => x.id === versionId)
     if (!v) return { ok: false, reason: 'notFound' }
+    if (e.pinned === minecraft && v.id !== e.versionId) return { ok: false, reason: 'locked' } // unlock it first
     const pinned = lock
     if (v.id === e.versionId) {
       e.pinned = pinned ? minecraft : null
@@ -454,6 +456,11 @@ export function setModVersion(file: string, versionId: string, owned: string[], 
   })
 }
 
+/** Whether this player file is locked on its version (for this Minecraft version). */
+export function isLocked(file: string, minecraft: string): boolean {
+  return readRegistry()[key(file)]?.pinned === minecraft
+}
+
 /** Locks (or unlocks) the version a mod is on now, for this Minecraft version. */
 export function setLocked(file: string, locked: boolean, owned: string[], minecraft: string): Promise<boolean> {
   return serial(async () => {
@@ -461,7 +468,6 @@ export function setLocked(file: string, locked: boolean, owned: string[], minecr
     const e = reg[key(file)]
     if (!e) return false
     e.pinned = locked ? minecraft : null
-    if (locked) e.update = null
     await writeRegistry(reg)
     return true
   })
