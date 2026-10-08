@@ -44,7 +44,8 @@
   }
   body {
     @apply bg-gray-900 font-sans text-gray-200 antialiased select-none;
-    overflow: hidden;
+    /* clip, not hidden: hidden areas can still be scrolled by focus or scripts, shifting the whole window */
+    overflow: clip;
   }
   button {
     cursor: pointer;

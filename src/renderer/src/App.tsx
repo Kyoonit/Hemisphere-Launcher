@@ -40,7 +40,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative h-full overflow-hidden">
+    <div className="relative h-full overflow-clip">
       <Background dimmed={dimmed} />
       <TitleBar
         screen={screen}

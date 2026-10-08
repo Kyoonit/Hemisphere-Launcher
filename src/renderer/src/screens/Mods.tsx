@@ -223,6 +223,9 @@ function ModRow({ mod, lang, on, onToggle }: { mod: ModSummary; lang: string; on
   )
 }
 
+/** 0.4 MB, or 38 KB for tiny files. */
+const fileSize = (bytes: number) => (bytes < 100 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`)
+
 /** One of the player's own mods: name and icon from Modrinth, staff policy, update badge, on/off, remove. */
 function PlayerModRow({ mod, lang, onChanged }: { mod: PlayerModInfo; lang: string; onChanged(): void }) {
   const { t } = useTranslation()
@@ -245,7 +248,7 @@ function PlayerModRow({ mod, lang, onChanged }: { mod: PlayerModInfo; lang: stri
             ? t('mods.incompatible', { minecraft: mod.incompatibleWith })
             : mod.verdict !== 'allowed' && mod.reason
               ? localize(mod.reason, lang)
-              : [mod.versionNumber, mod.projectId ? null : t('mods.notOnModrinth'), `${(mod.size / 1024 / 1024).toFixed(1)} MB`].filter(Boolean).join(' · ')}
+              : [mod.versionNumber, mod.projectId ? null : t('mods.notOnModrinth'), fileSize(mod.size)].filter(Boolean).join(' · ')}
         </p>
       </div>
       {confirmRemove ? (

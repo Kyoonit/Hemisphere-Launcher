@@ -95,9 +95,9 @@ async function post(path: string, body: unknown): Promise<unknown> {
 /** Only an icon on Modrinth's CDN is passed to the interface. */
 export const safeIcon = (url: string | null | undefined) => (url && modrinthCdn(url) ? url : '')
 
-/** Fabric mods for one Minecraft version. Empty query = most downloaded. */
-export async function searchMods(query: string, minecraft: string, offset: number, limit = 20) {
-  const facets = JSON.stringify([['project_type:mod'], ['categories:fabric'], [`versions:${minecraft}`]])
+/** Fabric mods for one Minecraft version. Empty query = most downloaded. exclude = project ids left out. */
+export async function searchMods(query: string, minecraft: string, offset: number, exclude: string[] = [], limit = 20) {
+  const facets = JSON.stringify([['project_type:mod'], ['categories:fabric'], [`versions:${minecraft}`], ...exclude.map((id) => [`project_id!=${id}`])])
   const params = new URLSearchParams({ query: query.slice(0, 100), facets, offset: String(offset), limit: String(limit), index: query.trim() ? 'relevance' : 'downloads' })
   return SearchSchema.parse(await get(`/search?${params}`))
 }

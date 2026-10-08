@@ -204,8 +204,9 @@ function registerIpc(): void {
     if (typeof query !== 'string' || typeof offset !== 'number' || !Number.isInteger(offset) || offset < 0 || offset > 10_000) return null
     try {
       const { manifest } = await getContent()
-      const res = await searchMods(query, manifest.minecraft, offset)
       const hemisphere = hemisphereProjects(manifest)
+      // Browsing (no search text): leave out what Hemisphere already ships. A search by name still shows it, marked.
+      const res = await searchMods(query, manifest.minecraft, offset, query.trim() ? [] : [...hemisphere])
       const mine = knownPlayerProjects()
       const policy = getFeed().modPolicy
       return {
