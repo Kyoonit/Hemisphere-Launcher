@@ -90,7 +90,11 @@ export default function PlayZone({ client, onRepair, onOpenMods }: { client: Cli
           )}
           {' · '}
           {client ? t('home.clientVersion', { version: client.clientVersion, minecraft: client.minecraft }) : t('home.clientUnknown')}
-          {' · '}
+        </div>
+      )}
+      {/* its own line under the client version: the menu opens centred under PLAY, clear of the side panels */}
+      {!game.error && (
+        <div className="mt-1 text-[13px]">
           <SetSwitcher onManage={onOpenMods} />
         </div>
       )}
