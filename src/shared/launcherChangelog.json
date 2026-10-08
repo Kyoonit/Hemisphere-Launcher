@@ -3,6 +3,12 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "1.0.13",
+        "area": "launcher",
+        "en": "Sign-in screen tidied up for the first release.",
+        "fr": "Écran de connexion nettoyé pour la première version."
+      },
+      {
         "version": "1.0.12",
         "area": "launcher",
         "en": "First release notes on GitHub list everything the launcher can do.",

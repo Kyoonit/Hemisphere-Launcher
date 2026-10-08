@@ -8,7 +8,7 @@
  * The staff code's scrypt fingerprint (never the code itself). Staff can switch to another code without a launcher
  * update: "staffCode" in the signed feed (npm run staff-code).
  */
-export const STAFF_CODE = { salt: '2fb443460aff31bbbab159b124f90be5', hash: '0d5eab3761c7c39761f5d85a1cf786d5437c7b8919e078e866b8f56bb0a39572b66e83259431dd96c6cb8bbcd749ac7796f3ea4db0ffd5f6537d3ea09264ba49' }
+export const STAFF_CODE = { salt: '336346ae39989f4a89171f788028b588', hash: '7ae5e5f1d21abb2404b85d4a0464173ee4dbb33834555c66802f77986206ad92ec969ca3b7ad8cfbc92f25c7d053619a7b590ced3f83810c7320e2340241288d' }
 export const STAFF_CODE_SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64 }
 
 /** What the page needs to know about the tab. */

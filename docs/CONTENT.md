@@ -172,7 +172,7 @@ low disk/RAM warnings, sample screenshots, window sizes). Everything is local to
 the server or other players.
 
 **Staff sign-in without Microsoft** (until Microsoft/Mojang approve the launcher). On the sign-in screen, press
-**Ctrl+Shift+S** (or click the padlock under the Microsoft button 5 times quickly): a code field appears. Enter the staff
+**Ctrl+Shift+S** (the only way: nothing shows otherwise): a code field appears. Enter the staff
 code: a **Staff test account** appears below; pick a name and you're in, with the Developer tab unlocked. It's an
 offline account: every launcher feature and singleplayer work, the Hemisphere server refuses it. Nothing shows for
 players without the code (wrong tries are slowed down). Settings → Developer → Lock removes the access and the

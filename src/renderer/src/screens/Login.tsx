@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Lock, TriangleAlert } from 'lucide-react'
 import type { AuthErrorCode } from '@shared/auth'
@@ -14,17 +14,8 @@ const ERROR_ACTION: Partial<Record<AuthErrorCode, LinkKey>> = {
 }
 
 export default function Login({ onBack }: { onBack?: () => void }) {
-  // hidden staff access (see StaffCode)
+  // hidden staff access (see StaffCode): only the keyboard shortcut opens it
   const [staffOpen, setStaffOpen] = useState(false)
-  const taps = useRef<number[]>([])
-  const tapLock = () => {
-    const now = Date.now()
-    taps.current = [...taps.current.filter((t) => now - t < 3000), now]
-    if (taps.current.length >= 5) {
-      taps.current = []
-      setStaffOpen(true)
-    }
-  }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.code === 'KeyS') setStaffOpen((o) => !o)
@@ -105,7 +96,7 @@ export default function Login({ onBack }: { onBack?: () => void }) {
           )}
 
           <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-gray-400">
-            <Lock size={13} className="text-green-400" onClick={tapLock} />
+            <Lock size={13} className="text-green-400" />
             {t('auth.passwordNote')}
           </p>
 
@@ -125,7 +116,7 @@ export default function Login({ onBack }: { onBack?: () => void }) {
 }
 
 /**
- * Staff access, hidden on purpose: Ctrl+Shift+S, or 5 quick clicks on the padlock. The staff code (checked in the main
+ * Staff access, hidden on purpose: only Ctrl+Shift+S shows it (never visible when the launcher opens). The staff code (checked in the main
  * process, slowed down after wrong tries) unlocks the offline test account below and the Developer tab, on this PC.
  */
 function StaffCode({ onClose }: { onClose(): void }) {
