@@ -31,72 +31,75 @@ export default function Login({ onBack }: { onBack?: () => void }) {
   const action = error ? ERROR_ACTION[error] : undefined
 
   return (
-    <div className="grid h-full place-items-center p-6">
-      <div className="glass animate-rise relative w-[420px] px-9 pt-9 pb-7 text-center">
-        {onBack && !waiting && (
-          <button
-            onClick={onBack}
-            className="absolute top-4 left-4 flex items-center gap-1 rounded-md px-2 py-1 text-[13px] text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
-          >
-            <ArrowLeft size={14} /> {t('auth.back')}
-          </button>
-        )}
-        <img src={logo} alt="" className="mx-auto mb-3.5 h-16 w-16 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]" draggable={false} />
-        <p className="mb-1.5 text-xs font-bold tracking-[0.08em] text-green-400 uppercase">{t('home.welcomeTo')}</p>
-        <h1 className="text-[38px] leading-[1.05] font-bold text-green-400 uppercase drop-shadow-lg">{t('app.name')}</h1>
-        <p className="mt-3 text-gray-400">{t('auth.intro')}</p>
+    // Centred when it fits; scrolls when an error message makes it taller than a small window.
+    <div className="h-full overflow-x-hidden overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-6">
+        <div className="glass animate-rise relative w-[420px] px-9 pt-9 pb-7 text-center">
+          {onBack && !waiting && (
+            <button
+              onClick={onBack}
+              className="absolute top-4 left-4 flex items-center gap-1 rounded-md px-2 py-1 text-[13px] text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
+            >
+              <ArrowLeft size={14} /> {t('auth.back')}
+            </button>
+          )}
+          <img src={logo} alt="" className="mx-auto mb-3.5 h-16 w-16 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]" draggable={false} />
+          <p className="mb-1.5 text-xs font-bold tracking-[0.08em] text-green-400 uppercase">{t('home.welcomeTo')}</p>
+          <h1 className="text-[38px] leading-[1.05] font-bold text-green-400 uppercase drop-shadow-lg">{t('app.name')}</h1>
+          <p className="mt-3 text-gray-400">{t('auth.intro')}</p>
 
-        {error && (
-          <div className="animate-fade mt-5 flex gap-3 rounded-lg border-l-[3px] border-red-400 bg-red-900/35 px-3.5 py-3 text-left text-[13px]">
-            <TriangleAlert size={16} className="mt-0.5 flex-none text-red-400" />
-            <div>
-              <b className="block text-white">{t(`auth.errors.${error}.title`)}</b>
-              <span className="text-gray-300">{t(`auth.errors.${error}.body`)}</span>
-              {action && (
-                <button onClick={() => window.hemisphere.openLink(action)} className="mt-1 block font-semibold text-green-400 hover:text-green-300">
-                  {t(`auth.errors.${error}.action`)} ↗
-                </button>
-              )}
+          {error && (
+            <div className="animate-fade mt-5 flex gap-3 rounded-lg border-l-[3px] border-red-400 bg-red-900/35 px-3.5 py-3 text-left text-[13px]">
+              <TriangleAlert size={16} className="mt-0.5 flex-none text-red-400" />
+              <div>
+                <b className="block text-white">{t(`auth.errors.${error}.title`)}</b>
+                <span className="text-gray-300">{t(`auth.errors.${error}.body`)}</span>
+                {action && (
+                  <button onClick={() => window.hemisphere.openLink(action)} className="mt-1 block font-semibold text-green-400 hover:text-green-300">
+                    {t(`auth.errors.${error}.action`)} ↗
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {waiting ? (
-          <div className="mt-6">
-            <div className="flex w-full items-center justify-center gap-3 rounded-lg bg-gray-900/70 p-[13px] font-semibold text-white">
-              <span className="h-[18px] w-[18px] animate-spin rounded-full border-2 border-white/20 border-t-green-400" />
-              {t('auth.waiting')}
+          {waiting ? (
+            <div className="mt-6">
+              <div className="flex w-full items-center justify-center gap-3 rounded-lg bg-gray-900/70 p-[13px] font-semibold text-white">
+                <span className="h-[18px] w-[18px] animate-spin rounded-full border-2 border-white/20 border-t-green-400" />
+                {t('auth.waiting')}
+              </div>
+              <p className="mt-2.5 text-xs text-gray-400">{t('auth.waitingHint')}</p>
+              <button onClick={() => window.hemisphere.auth.cancel()} className="mt-2 text-[13px] text-gray-400 underline-offset-2 hover:text-white hover:underline">
+                {t('auth.cancel')}
+              </button>
             </div>
-            <p className="mt-2.5 text-xs text-gray-400">{t('auth.waitingHint')}</p>
-            <button onClick={() => window.hemisphere.auth.cancel()} className="mt-2 text-[13px] text-gray-400 underline-offset-2 hover:text-white hover:underline">
-              {t('auth.cancel')}
+          ) : (
+            <button
+              onClick={signIn}
+              disabled={!state?.microsoftConfigured}
+              title={state?.microsoftConfigured ? undefined : t('auth.notConfiguredHint')}
+              className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg bg-white p-[13px] text-[15px] font-semibold text-gray-800 transition-all duration-300 hover:-translate-y-px hover:bg-gray-100 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+            >
+              <MicrosoftLogo />
+              {t('auth.signIn')}
+            </button>
+          )}
+
+          <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-gray-400">
+            <Lock size={13} className="text-green-400" />
+            {t('auth.passwordNote')}
+          </p>
+
+          <div className="mt-5 border-t border-white/10 pt-4 text-xs text-gray-400">
+            {t('auth.noMinecraft')}{' '}
+            <button onClick={() => window.hemisphere.openLink('getMinecraft')} className="font-semibold text-green-400 hover:text-green-300">
+              {t('auth.getMinecraft')} ↗
             </button>
           </div>
-        ) : (
-          <button
-            onClick={signIn}
-            disabled={!state?.microsoftConfigured}
-            title={state?.microsoftConfigured ? undefined : t('auth.notConfiguredHint')}
-            className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg bg-white p-[13px] text-[15px] font-semibold text-gray-800 transition-all duration-300 hover:-translate-y-px hover:bg-gray-100 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-          >
-            <MicrosoftLogo />
-            {t('auth.signIn')}
-          </button>
-        )}
 
-        <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-gray-400">
-          <Lock size={13} className="text-green-400" />
-          {t('auth.passwordNote')}
-        </p>
-
-        <div className="mt-5 border-t border-white/10 pt-4 text-xs text-gray-400">
-          {t('auth.noMinecraft')}{' '}
-          <button onClick={() => window.hemisphere.openLink('getMinecraft')} className="font-semibold text-green-400 hover:text-green-300">
-            {t('auth.getMinecraft')} ↗
-          </button>
+          {state?.devOfflineAllowed && !waiting && <DevOffline onDone={onBack} />}
         </div>
-
-        {state?.devOfflineAllowed && !waiting && <DevOffline onDone={onBack} />}
       </div>
     </div>
   )

@@ -93,7 +93,7 @@ function GameSettings() {
               className="w-full accent-green-500"
               aria-label={t('settings.memory')}
             />
-            <output className="w-16 text-right font-bold text-white tabular-nums">{gb(value)}</output>
+            <output className="w-[84px] flex-none text-right font-bold whitespace-nowrap text-white tabular-nums">{gb(value)}</output>
           </div>
           {auto ? (
             <span className="text-xs text-green-400">{t('settings.memoryAuto')}</span>
