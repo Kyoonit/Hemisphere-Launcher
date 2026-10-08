@@ -71,6 +71,8 @@ export interface PlayerModInfo {
   reason?: Localized
   /** a newer version for the current Minecraft version (after "Check for updates") */
   update: { versionNumber: string } | null
+  /** when the file was installed (ms), for "Last added" */
+  addedAt: number
   /** the player chose this version on purpose: "Update all" leaves it alone (for this Minecraft version) */
   pinned: boolean
   /** Hemisphere ships this mod too: the player's copy is a duplicate */
@@ -112,6 +114,8 @@ export interface ModItem {
   incompatibleWith: string | null
   /** file name for the player's files, null for managed Hemisphere mods */
   file: string | null
+  /** when its file was installed (ms; 0 = not installed yet), for "Last added" */
+  addedAt: number
 }
 
 /** One Modrinth version of a mod, for the version picker. */

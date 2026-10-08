@@ -164,3 +164,19 @@ export function pickVersion(versions: ModrinthVersion[]): ModrinthVersion | null
 
 /** The file to download for a version: the primary one, else the first. */
 export const primaryFile = (v: ModrinthVersion) => v.files.find((f) => f.primary) ?? v.files[0]
+
+/**
+ * The version an update should go to. Modrinth's "latest" can be an alpha or beta: then the newest stable release is
+ * used instead (betas/alphas only when the mod has no release at all), and never anything older than the current one.
+ * null = nothing to update.
+ */
+export async function updateTarget(projectId: string, currentVersionId: string, latest: ModrinthVersion, minecraft: string): Promise<ModrinthVersion | null> {
+  if (latest.project_id !== projectId) return null
+  if (latest.version_type === 'release') return latest.id === currentVersionId ? null : latest
+  const all = await projectVersions(projectId, minecraft)
+  const best = pickVersion(all)
+  if (!best || best.id === currentVersionId) return null
+  const current = all.find((v) => v.id === currentVersionId)
+  if (current && best.date_published <= current.date_published) return null // would be a downgrade
+  return best
+}

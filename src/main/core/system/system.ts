@@ -13,6 +13,7 @@ import { readInstanceState } from '../sync/sync'
 import { launcherLogDir, launcherLogPath, redact } from '../logging/logger'
 import { getAccountsState } from '../auth/accounts'
 import { gpuSummary } from './gpu'
+import { physicalPath } from './redirect'
 
 export function systemInfo(): SystemInfo {
   const totalMemoryMb = Math.round(totalmem() / 1024 / 1024)
@@ -60,7 +61,8 @@ export async function openFolder(kind: FolderKind): Promise<void> {
     launcherLogs: launcherLogDir(),
   }[kind]
   await mkdir(path, { recursive: true })
-  await shell.openPath(path)
+  // the folder the files are really in (Windows can redirect AppData for packaged parents; Explorer would show another one)
+  await shell.openPath(physicalPath(path, app.getPath('userData')))
 }
 
 const tail = (file: string, lines: number) => {

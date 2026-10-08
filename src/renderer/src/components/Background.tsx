@@ -33,15 +33,12 @@ export default function Background({ dimmed }: { dimmed: boolean }) {
           style={{ backgroundImage: `url(${bg.src})` }}
         />
       ))}
+      {/* Gradient always there; the dark layer for other screens fades in/out the same way in both directions
+          (a gradient can't be animated into a plain colour: switching it directly gave a one-way fade). */}
+      <div className="absolute inset-0 bg-gradient-to-b from-gray-900/75 via-gray-800/60 to-gray-900/95" />
+      <div className={`absolute inset-0 bg-gray-900/95 transition-opacity duration-200 ${dimmed ? 'opacity-100' : 'opacity-0'}`} />
       <div
-        className={`absolute inset-0 transition-colors duration-700 ${
-          dimmed
-            ? 'bg-gray-900/95'
-            : 'bg-gradient-to-b from-gray-900/75 via-gray-800/60 to-gray-900/95'
-        }`}
-      />
-      <div
-        className={`absolute top-[66px] left-5 flex items-center gap-1.5 text-xs text-white/55 transition-opacity duration-500 ${
+        className={`absolute top-[66px] left-5 flex items-center gap-1.5 text-xs text-white/55 transition-opacity duration-200 ${
           dimmed ? 'opacity-0' : 'opacity-100'
         }`}
       >

@@ -354,7 +354,10 @@
     "removed": "{{mod}} a été mis à la Corbeille.",
     "updatesFilter": "Mises à jour",
     "unlockFirst": "{{mod}} est verrouillé sur cette version. Déverrouille-le d’abord (le cadenas bleu) pour changer de version.",
-    "updateLockedHint": "Verrouillé : cette mise à jour n’est pas installée tant que tu ne déverrouilles pas le mod"
+    "updateLockedHint": "Verrouillé : cette mise à jour n’est pas installée tant que tu ne déverrouilles pas le mod",
+    "lastAdded": "Derniers ajouts",
+    "addedOn": "Ajouté le {{date}}",
+    "notInstalledYet": "Pas encore installé (prochain Jouer)"
   },
   "repair": {
     "title": "Réparer l’installation",

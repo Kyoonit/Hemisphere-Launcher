@@ -6,7 +6,7 @@ import type { ClientManifest } from '@shared/manifest'
 import { policyFor, type InstallResult, type ModPolicy, type ModVersionChoice, type PlayerModInfo, type SetVersionResult, type UpdateApplied, type UpdateCheck } from '@shared/modBrowser'
 import { gamePaths } from '../game/target'
 import { blobPath, downloadToStore, sha512OfFile } from '../sync/download'
-import { getProjects, isSafeModFileName, latestByHash, pickVersion, primaryFile, projectVersions, safeIcon, versionsByHash, type ModrinthVersion } from './api'
+import { getProjects, isSafeModFileName, latestByHash, pickVersion, primaryFile, projectVersions, safeIcon, updateTarget, versionsByHash, type ModrinthVersion } from './api'
 
 /**
  * The player's own mods (mods/ and mods-disabled/, minus Hemisphere's files): what they are on Modrinth, the staff
@@ -18,6 +18,8 @@ interface Entry {
   file: string
   size: number
   mtimeMs: number
+  /** when the file arrived in the instance (creation time: Windows keeps the old modified time when copying) */
+  addedAt?: number
   sha512: string
   /** false when the Modrinth lookup failed (offline): retried next time */
   lookedUp: boolean
@@ -86,6 +88,7 @@ async function identify(owned: string[]): Promise<Registry> {
     if (!st) continue
     const old = reg[key(file)]
     if (old && old.size === st.size && old.mtimeMs === st.mtimeMs) {
+      old.addedAt ??= st.birthtimeMs || st.mtimeMs // records from before "Last added" existed
       if (!old.lookedUp) fresh.push(old)
       continue
     }
@@ -93,6 +96,7 @@ async function identify(owned: string[]): Promise<Registry> {
       file,
       size: st.size,
       mtimeMs: st.mtimeMs,
+      addedAt: st.birthtimeMs || st.mtimeMs,
       sha512: await sha512OfFile(join(dir, file)),
       lookedUp: false,
       projectId: null,
@@ -208,6 +212,7 @@ export function listPlayerMods(
           ...policyFor(policy, e?.projectId ?? null),
           update: e?.update ? { versionNumber: e.update.versionNumber } : null,
           incompatibleWith: e?.incompatibleWith ?? null,
+          addedAt: e?.addedAt ?? e?.mtimeMs ?? 0,
           pinned: !!minecraft && e?.pinned === minecraft,
           inHemisphere: isDuplicate({ file, projectId: e?.projectId ?? null, title: e?.title ?? null }, hemisphere),
         }
@@ -323,8 +328,9 @@ export function checkPlayerModUpdates(owned: string[], minecraft: string): Promi
     )
     let updates = 0
     for (const e of known) {
-      const v = latest[e.sha512]
-      e.update = v && v.id !== e.versionId && v.project_id === e.projectId ? { versionId: v.id, versionNumber: v.version_number } : null
+      const found = latest[e.sha512]
+      const v = found ? await updateTarget(e.projectId!, e.versionId!, found, minecraft).catch(() => null) : null
+      e.update = v ? { versionId: v.id, versionNumber: v.version_number } : null
       if (e.update) updates++
     }
     await writeRegistry(reg)
@@ -350,10 +356,11 @@ export function updatePlayerMods(owned: string[], minecraft: string, disableInco
     const disabled: string[] = []
     for (const e of known) {
       const loc = files.get(key(e.file))!
-      const v = latest[e.sha512]
-      if (v && v.project_id === e.projectId) {
+      const found = latest[e.sha512]
+      if (found && found.project_id === e.projectId) {
         e.incompatibleWith = null
-        if (v.id === e.versionId) continue
+        const v = await updateTarget(e.projectId!, e.versionId!, found, minecraft).catch(() => null)
+        if (!v) continue
         try {
           const newFile = await placeVersion(v, loc.dir)
           if (newFile.toLowerCase() !== e.file.toLowerCase()) {
@@ -442,6 +449,7 @@ export function setModVersion(file: string, versionId: string, owned: string[], 
       file: f.filename,
       size: st.size,
       mtimeMs: st.mtimeMs,
+      addedAt: st.birthtimeMs || st.mtimeMs,
       sha512: f.hashes.sha512,
       lookedUp: true,
       versionId: v.id,

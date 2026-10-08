@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ClientManifest, ModEntry } from '@shared/manifest'
 import { resolveEnabled } from '@shared/modSelection'
@@ -6,7 +6,7 @@ import { type ModItem, type ModPolicy, type ModVersionChoice, type SetVersionRes
 import { gamePaths } from '../game/target'
 import { getModIcons } from '../remote/modIcons'
 import { detachMod, readInstanceState, reattachMod } from '../sync/sync'
-import { latestByHash, pickVersion, projectVersions } from './api'
+import { latestByHash, pickVersion, projectVersions, updateTarget } from './api'
 import {
   checkPlayerModUpdates,
   hemisphereMods,
@@ -30,6 +30,16 @@ import {
  */
 const owned = async () => Object.keys((await readInstanceState()).owned)
 const editable = (m: ModEntry) => m.category !== 'library'
+
+/** When a Hemisphere file arrived in the instance (creation time), 0 when not placed yet. */
+function installedAt(path: string): number {
+  try {
+    const st = statSync(join(gamePaths().instance, ...path.split('/')))
+    return st.birthtimeMs || st.mtimeMs
+  } catch {
+    return 0
+  }
+}
 
 /** Newer Modrinth versions of managed Hemisphere mods, from the last "Check for updates" (mod id -> version). */
 const managedUpdates = new Map<string, { versionId: string; versionNumber: string }>()
@@ -64,6 +74,7 @@ export async function listMods(manifest: ClientManifest, policy: ModPolicy | nul
       duplicate: false,
       incompatibleWith: null,
       file: null,
+      addedAt: installedAt(m.file.path),
     }))
   const own: ModItem[] = players.map((p) => {
     const h = p.projectId ? byProject.get(p.projectId) : undefined
@@ -89,6 +100,7 @@ export async function listMods(manifest: ClientManifest, policy: ModPolicy | nul
       duplicate: p.inHemisphere,
       incompatibleWith: p.incompatibleWith,
       file: p.file,
+      addedAt: p.addedAt,
     }
   })
   return [...managed, ...own]
@@ -177,8 +189,9 @@ export async function checkAllUpdates(manifest: ClientManifest): Promise<UpdateC
   )
   managedUpdates.clear()
   for (const m of managed) {
-    const v = latest[m.file.sha512]
-    if (v && v.project_id === m.source!.modrinth.projectId && v.id !== m.source!.modrinth.versionId) managedUpdates.set(m.id, { versionId: v.id, versionNumber: v.version_number })
+    const found = latest[m.file.sha512]
+    const v = found ? await updateTarget(m.source!.modrinth.projectId, m.source!.modrinth.versionId, found, manifest.minecraft).catch(() => null) : null
+    if (v) managedUpdates.set(m.id, { versionId: v.id, versionNumber: v.version_number })
   }
   return { checked: mine.checked + managed.length, updates: mine.updates + managedUpdates.size }
 }

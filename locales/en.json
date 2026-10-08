@@ -349,7 +349,10 @@
     "removed": "{{mod}} was moved to the Recycle Bin.",
     "updatesFilter": "Updates",
     "unlockFirst": "{{mod}} is locked on this version. Unlock it first (the blue lock) to switch versions.",
-    "updateLockedHint": "Locked: this update is not installed until you unlock the mod"
+    "updateLockedHint": "Locked: this update is not installed until you unlock the mod",
+    "lastAdded": "Last added",
+    "addedOn": "Added {{date}}",
+    "notInstalledYet": "Not installed yet (next Play)"
   },
   "repair": {
     "title": "Repair installation",

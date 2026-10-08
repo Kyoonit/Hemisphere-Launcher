@@ -6,7 +6,7 @@ import { ModPolicySchema, policyFor, type ModPolicy } from '../src/shared/modBro
 import { FeedSchema } from '../src/shared/feed'
 
 vi.mock('electron', () => ({ app: { getVersion: () => '0.0.0-test', getPath: () => '.' }, shell: { trashItem: async () => {} } }))
-const { VersionSchema, pickVersion, primaryFile, safeIcon } = await import('../src/main/core/modrinth/api')
+const { VersionSchema, pickVersion, primaryFile, safeIcon, updateTarget } = await import('../src/main/core/modrinth/api')
 const { modKey, isDuplicate, hemisphereMods } = await import('../src/main/core/modrinth/playerMods')
 
 const policy: ModPolicy = {
@@ -116,5 +116,27 @@ describe('taken-over Hemisphere mods', () => {
     expect(isDuplicate(copy, hemisphereMods(manifest))).toBe(true)
     expect(isDuplicate(copy, hemisphereMods(manifest, new Set(['iris'])))).toBe(false)
     expect(isDuplicate({ file: 'sodium-0.9.3.jar', projectId: 'AANobbMI', title: 'Sodium' }, hemisphereMods(manifest, new Set(['iris'])))).toBe(true)
+  })
+})
+
+describe('updates prefer stable releases', () => {
+  const v = (id: string, type: 'release' | 'beta' | 'alpha', date: string) => VersionSchema.parse(version(id, type, date))
+  const serve = (list: unknown[]) => vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(list), { status: 200 })))
+
+  test('a newer alpha is not offered when a stable release exists (Sodium case)', async () => {
+    const release = v('rel00001', 'release', '2026-09-01')
+    const alpha = v('alp00001', 'alpha', '2026-10-01')
+    serve([alpha, release].map((x) => ({ ...version(x.id, x.version_type, x.date_published) })))
+    expect(await updateTarget('AANobbMI', 'rel00001', alpha, '26.3')).toBeNull()
+  })
+  test('a newer release is offered', async () => {
+    const latest = v('rel00002', 'release', '2026-10-02')
+    expect((await updateTarget('AANobbMI', 'rel00001', latest, '26.3'))?.id).toBe('rel00002')
+  })
+  test('from an alpha, the newer stable release is offered; never an older one', async () => {
+    serve([version('alp00001', 'alpha', '2026-10-01'), version('rel00003', 'release', '2026-10-05'), version('rel00001', 'release', '2026-09-01')])
+    expect((await updateTarget('AANobbMI', 'alp00001', v('alp00002', 'alpha', '2026-10-06'), '26.3'))?.id).toBe('rel00003')
+    serve([version('alp00001', 'alpha', '2026-10-01'), version('rel00001', 'release', '2026-09-01')])
+    expect(await updateTarget('AANobbMI', 'alp00001', v('alp00002', 'alpha', '2026-10-06'), '26.3')).toBeNull()
   })
 })

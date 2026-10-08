@@ -6,7 +6,7 @@ import Toggle from '../components/Toggle'
 import type { ClientSummary } from '@shared/client'
 import { localize } from '@shared/manifest'
 
-type Filter = 'all' | 'yours' | 'updates'
+type Filter = 'all' | 'yours' | 'updates' | 'recent'
 
 /** Same palette idea as the wireframe: a stable colour per mod for its letter tile. */
 const TILE = ['#2563eb', '#0d9488', '#b45309', '#7c3aed', '#16a34a', '#db2777', '#0891b2', '#ca8a04', '#dc2626', '#4f46e5']
@@ -48,8 +48,9 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
   const items = useMemo(() => {
     const q = query.trim().toLowerCase()
     return (mods ?? [])
-      .filter((m) => (view === 'all' || (view === 'yours' ? !m.fromHemisphere : !!m.update)) && (!q || m.name.toLowerCase().includes(q) || (m.file ?? '').toLowerCase().includes(q)))
-      .sort((a, b) => a.name.localeCompare(b.name, i18n.language, { sensitivity: 'base' }))
+      .filter((m) => (view === 'all' || view === 'recent' || (view === 'yours' ? !m.fromHemisphere : !!m.update)) && (!q || m.name.toLowerCase().includes(q) || (m.file ?? '').toLowerCase().includes(q)))
+      // Last added: newest install first (mods not installed yet go last); otherwise alphabetical
+      .sort((a, b) => (view === 'recent' ? b.addedAt - a.addedAt : 0) || a.name.localeCompare(b.name, i18n.language, { sensitivity: 'base' }))
   }, [mods, view, query, i18n.language])
   const libraries = client?.mods.filter((m) => m.category === 'library') ?? []
 
@@ -79,6 +80,7 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
     ['all', t('mods.groups.all')],
     ['yours', `${t('mods.yours')} (${mods.filter((m) => !m.fromHemisphere).length})`],
     ...(withUpdate ? [['updates', `${t('mods.updatesFilter')} (${withUpdate})`] as [Filter, string]] : []),
+    ['recent', t('mods.lastAdded')],
   ]
   const toolButton = 'flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-gray-300 transition-colors hover:bg-gray-700 hover:text-white'
 
@@ -155,6 +157,7 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
                 key={item.key}
                 item={item}
                 lang={i18n.language}
+                showAdded={view === 'recent'}
                 picking={openPicker === (item.projectId ?? item.key)}
                 onTogglePicker={() => setOpenPicker((p) => (p === (item.projectId ?? item.key) ? null : (item.projectId ?? item.key)))}
                 onChanged={() => void reload()}
@@ -187,6 +190,7 @@ function ModIcon({ item }: { item: ModItem }) {
 function ModRow({
   item,
   lang,
+  showAdded,
   picking,
   onTogglePicker,
   onChanged,
@@ -194,6 +198,7 @@ function ModRow({
 }: {
   item: ModItem
   lang: string
+  showAdded: boolean
   picking: boolean
   onTogglePicker(): void
   onChanged(): void
@@ -257,7 +262,13 @@ function ModRow({
           </p>
           <p className="truncate text-xs text-gray-400">
             {status ??
-              [item.description ? localize(item.description, lang) : null, item.fromHemisphere && !item.managed ? t('mods.takenOver') : null, fileSize(item.size)]
+              [
+                showAdded
+                  ? item.addedAt
+                    ? t('mods.addedOn', { date: new Date(item.addedAt).toLocaleDateString(lang, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) })
+                    : t('mods.notInstalledYet')
+                  : null,
+                item.description ? localize(item.description, lang) : null, item.fromHemisphere && !item.managed ? t('mods.takenOver') : null, fileSize(item.size)]
                 .filter(Boolean)
                 .join(' · ')}
           </p>
