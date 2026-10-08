@@ -10,6 +10,7 @@ import type { ScreenshotExport, ScreenshotList } from './screenshots'
 import type { PackList, PackResult, PackType } from './packs'
 import type { ReportDraft, ReportPrepare, ReportResult } from './report'
 import type { DevAccess, DevAction, DevState, DevUnlockResult } from './dev'
+import type { LiveRestart } from './restart'
 import type { ModHistoryItem, ModSetInfo, ModSetsState, SetImportResult, SetShareResult, SetSwitchResult, UndoResult } from './modSets'
 import type { RestorePointInfo, RestorePreview, RestoreResult, SetupExportResult, SetupImportResult, SetupPick } from './restorePoints'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
@@ -80,6 +81,8 @@ export const IPC = {
   reportPrepare: 'report:prepare',
   eventsAddToCalendar: 'events:addToCalendar',
   devGet: 'dev:get',
+  restartLiveGet: 'restart:live',
+  restartLiveChanged: 'restart:live-changed',
   devSet: 'dev:set',
   devAction: 'dev:action',
   devUnlock: 'dev:unlock',
@@ -221,6 +224,11 @@ export interface HemisphereApi {
     search(type: PackType, query: string, offset: number): Promise<ModSearchResult | null>
     projectVersions(type: PackType, projectId: string): Promise<ModVersionChoice[] | null>
     install(type: PackType, projectId: string, confirmed: boolean, versionId?: string | null): Promise<InstallResult>
+  }
+  /** The daily restart as seen live (checked on the server itself around the restart) */
+  restart: {
+    live(): Promise<LiveRestart>
+    onChange(cb: (live: LiveRestart) => void): () => void
   }
   /** Developer tab (development builds, or the installed launcher with the staff code) */
   dev: {

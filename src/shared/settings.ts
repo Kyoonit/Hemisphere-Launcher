@@ -1,4 +1,5 @@
 /** Launcher settings shared by main and renderer. */
+import type { RestartAlerts } from './restart'
 
 /** Command-line flag of the Windows startup entry: the launcher then starts minimized. */
 export const AUTOSTART_ARG = '--autostart'
@@ -42,6 +43,8 @@ export interface Settings {
   notifyServerBack: boolean
   /** Events the player asked to be reminded of (one notification shortly before each) */
   eventReminders: string[]
+  /** Notifications around the daily restart (each opt-in) */
+  restartAlerts: RestartAlerts
 }
 
 export const RESOLUTIONS = ['auto', '1280x720', '1600x900', '1920x1080', '2560x1440', 'fullscreen'] as const
@@ -67,6 +70,7 @@ export const DEFAULT_SETTINGS: Settings = {
   discordStatus: false,
   notifyServerBack: false,
   eventReminders: [],
+  restartAlerts: { before15: false, before1: false, start: false, back: false },
 }
 
 /**

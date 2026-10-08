@@ -74,6 +74,9 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
             ))}
           </select>
         </Line>
+        <div className="flex flex-wrap gap-2">
+          <Action action="restart:simulate" icon={RefreshCw} label={t('dev.simulateRestart')} />
+        </div>
         <Line label={t('dev.extraNews')} hint={t('dev.extraNewsHint')}>
           <select value={state.extraNews} onChange={(e) => set({ extraNews: Number(e.target.value) })} className={select}>
             {[0, 1, 3, 9, 12].map((n) => (

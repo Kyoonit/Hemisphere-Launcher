@@ -62,6 +62,7 @@ export const DEV_ACTIONS = [
   'background',
   'clearError',
   'notify:back',
+  'restart:simulate',
   'notify:event',
   'discord:test',
   'discord:clear',

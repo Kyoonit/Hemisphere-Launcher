@@ -172,6 +172,8 @@ export interface DevActionHooks {
   notify(kind: 'back' | 'event'): void
   discord(on: boolean): Promise<boolean>
   resetSeen(): Promise<void>
+  /** warn15 → warn1 → server down → back, over about 40 s (notifications follow the restart alerts settings) */
+  simulateRestart(): Promise<void>
 }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -208,6 +210,9 @@ export async function runDevAction(action: DevAction, h: DevActionHooks): Promis
       await wait(6000)
       h.gameState({ background: false, progress: null })
       return 'background preparation shown'
+    case 'restart:simulate':
+      void h.simulateRestart()
+      return 'restart: 15 min and 1 min warnings now, server down for 25 s, then back (Home and notifications)'
     case 'notify:back':
     case 'notify:event':
       h.notify(action === 'notify:back' ? 'back' : 'event')

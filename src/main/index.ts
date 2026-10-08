@@ -50,7 +50,9 @@ import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePo
 import { checkPackUpdates, installPack, knownPackProjects, listPacks, moveResourcePack, packVersions, removePack, setPackActive, setPackLock, setPackVersion, shadersOff, updatePacks } from './core/packs/packs'
 import { PACK_TYPES, type PackType } from '@shared/packs'
 import { buildReport, lastReportZip, prepareReport } from './core/support/report'
-import { devDiscord, devNotify, keepInTrayOnClose, onCommunitySettings, onGameExited, onGameLaunched, onServerStatus, startCommunity } from './core/community/community'
+import { devDiscord, devNotify, keepInTrayOnClose, onCommunitySettings, onGameExited, onGameLaunched, onRestartLive, onRestartMoment, onServerStatus, startCommunity } from './core/community/community'
+import { startRestartWatch } from './core/status/restartWatch'
+import { nextRestart, type LiveRestart } from '@shared/restart'
 import { devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, runDevAction, setDevState, unlockDev } from './core/dev/devTools'
 import { DEV_ACTIONS, DEFAULT_DEV, type DevAction, type DevState } from '@shared/dev'
 import { eventIcs } from '@shared/events'
@@ -63,6 +65,8 @@ const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32
 
 let win: BrowserWindow | null = null
 let lastStatus: ServerStatus | null = null
+/** the daily restart, live (checked on the server itself around the restart) */
+let liveRestart: LiveRestart = null
 /** Sources the player may import from: only ones the launcher found or the player picked in the dialog. */
 const importSources = new Map<string, ImportSource>()
 
@@ -126,6 +130,7 @@ function registerIpc(): void {
     }
   })
 
+  handle(IPC.restartLiveGet, () => liveRestart)
   handle(IPC.serverStatusGet, async () => devStatus(lastStatus ?? (lastStatus = await getServerStatus())))
   handle(IPC.playtimeGet, () => getPlaytime(getAccountsState().activeId ?? 'none'))
 
@@ -590,6 +595,28 @@ function registerIpc(): void {
       resetSeen: async () => {
         await updateSettings({ seenNews: [], seenChangelog: null, importPromptDismissed: false })
       },
+      simulateRestart: async () => {
+        const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+        const setLive = (live: LiveRestart) => {
+          liveRestart = live
+          win?.webContents.send(IPC.restartLiveChanged, live)
+          onRestartLive(live?.phase ?? null)
+        }
+        onRestartMoment('warn15', Date.now() + 15 * 60_000)
+        await wait(4000)
+        onRestartMoment('warn1', Date.now() + 60_000)
+        await wait(4000)
+        const since = Date.now()
+        onRestartMoment('start', null)
+        for (let i = 0; i < 5; i++) {
+          setLive({ phase: 'restarting', since, checkedAt: Date.now() })
+          await wait(5000)
+        }
+        onRestartMoment('back', null)
+        setLive({ phase: 'back', at: Date.now() })
+        await wait(2 * 60_000)
+        setLive(null)
+      },
     })
   })
   // Events: "Add to calendar" opens a calendar file in the player's calendar app; reminders are one per event.
@@ -737,6 +764,26 @@ if (!app.requestSingleInstanceLock()) {
         if (!active || g.phase === 'preparing' || g.runningAccounts.includes(active)) return false
         void play(active, { target: 'latest' })
         return true
+      },
+    })
+    startRestartWatch({
+      // no restart tracking during maintenance (the server is down on purpose)
+      schedule: () => {
+        const feed = devFeed(getFeed())
+        return feed.maintenance.active ? null : feed.restart
+      },
+      onChange: (live) => {
+        liveRestart = live
+        win?.webContents.send(IPC.restartLiveChanged, live)
+        onRestartLive(live?.phase ?? null)
+        if (live?.phase === 'back') void getServerStatus().then((s) => {
+          lastStatus = s
+          win?.webContents.send(IPC.serverStatusUpdate, devStatus(s))
+        })
+      },
+      onMoment: (moment, at) => {
+        const schedule = devFeed(getFeed()).restart
+        onRestartMoment(moment, schedule ? nextRestart(at - 2 * 60_000, schedule).next : null)
       },
     })
     startStatusPolling((status) => {

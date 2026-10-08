@@ -21,7 +21,7 @@
     "play": "Play",
     "ready": "Ready",
     "clientVersion": "Hemisphere Client {{version}} · Minecraft {{minecraft}}",
-    "restartingNow": "Server is restarting — back in a few minutes",
+    "restartingNow": "Server is restarting: checked live, you’ll see when it’s back",
     "serverOffline": "Hemisphere is offline right now",
     "clientUnknown": "Hemisphere Client",
     "maintenanceUntil": "Back around {{time}}.",
@@ -134,13 +134,16 @@
     "latency": "Latency from your PC",
     "restartIn": "Restart in {{time}}",
     "restarting": "Restarting…",
-    "backIn": "Back in about {{min}} min",
     "dailyAt": "Daily at {{time}} your time",
     "onlineNow": "Online now",
     "nobody": "Nobody online right now — be the first!",
     "more": "+ {{count}} more",
     "maintenance": "Maintenance",
-    "maintenanceShort": "Server closed for maintenance"
+    "maintenanceShort": "Server closed for maintenance",
+    "restartingLive": "Checking the server live (last check {{s}} s ago)",
+    "backOnline": "Back online",
+    "backAt": "Restart over at {{time}}",
+    "restartingShort": "Restarting"
   },
   "time": {
     "hm": "{{h}}h {{m}}m",
@@ -985,11 +988,19 @@
     "title": "Community",
     "tray": "Keep in the system tray",
     "trayHint": "Closing the window keeps the launcher next to the clock, with the server status. Quit from there.",
-    "serverBack": "Tell me when the server is back",
-    "serverBackHint": "One notification when Hemisphere is online again after a restart or maintenance.",
+    "serverBack": "Tell me when the server is back after maintenance",
+    "serverBackHint": "One notification when Hemisphere is online again after maintenance or an outage.",
     "discord": "Show “Playing on Hemisphere SMP” in Discord",
     "discordHint": "In your Discord status, only while the game runs.",
-    "discordNotReady": "Not available yet: the staff haven’t set it up."
+    "discordNotReady": "Not available yet: the staff haven’t set it up.",
+    "restartAlerts": "Restart alerts",
+    "restartAlertsHint": "Notifications around the daily restart, the ones you pick.",
+    "restartAlert": {
+      "before15": "15 min before",
+      "before1": "1 min before",
+      "start": "When it starts",
+      "back": "When it’s back"
+    }
   },
   "dev": {
     "staffAccess": "Staff access",
@@ -1070,6 +1081,7 @@
     "shotsRemove": "Remove the sample screenshots",
     "openData": "Open the launcher’s data folder",
     "windowMin": "Smallest (960 × 600)",
-    "windowDefault": "Default (1120 × 700)"
+    "windowDefault": "Default (1120 × 700)",
+    "simulateRestart": "Simulate a restart (warnings, down 25 s, back)"
   }
 }

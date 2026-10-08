@@ -1,3 +1,4 @@
+import type { LiveRestart } from '@shared/restart'
 import { useEffect, useState } from 'react'
 import type { PlaytimeSummary, ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
@@ -81,4 +82,14 @@ export function usePlaytime(): PlaytimeSummary | null {
 export function splitDuration(ms: number): { h: number; m: number } {
   const totalMin = Math.floor(ms / 60_000)
   return { h: Math.floor(totalMin / 60), m: totalMin % 60 }
+}
+
+/** The daily restart as the launcher sees it live (restarting until the server answers again, then back). */
+export function useLiveRestart(): LiveRestart {
+  const [live, setLive] = useState<LiveRestart>(null)
+  useEffect(() => {
+    void window.hemisphere.restart.live().then(setLive)
+    return window.hemisphere.restart.onChange(setLive)
+  }, [])
+  return live
 }

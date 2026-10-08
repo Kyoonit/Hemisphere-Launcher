@@ -27,6 +27,7 @@ const fields = {
   discordStatus: z.boolean(),
   notifyServerBack: z.boolean(),
   eventReminders: z.array(z.string().regex(/^[a-z0-9-]{1,64}$/)).max(50),
+  restartAlerts: z.object({ before15: z.boolean(), before1: z.boolean(), start: z.boolean(), back: z.boolean() }),
 }
 
 /** Loading: a bad or unknown value falls back to its default, field by field (never breaks the launcher). */
@@ -51,6 +52,7 @@ const LoadSchema = z.object({
   discordStatus: fields.discordStatus.catch(D.discordStatus),
   notifyServerBack: fields.notifyServerBack.catch(D.notifyServerBack),
   eventReminders: fields.eventReminders.catch(D.eventReminders),
+  restartAlerts: fields.restartAlerts.catch(D.restartAlerts),
 })
 /** Updating: invalid values are rejected with an error the UI can show. */
 const UpdateSchema = z.object(fields)

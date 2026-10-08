@@ -58,3 +58,35 @@ export function restartState(now: number, s: RestartSchedule): RestartState {
   /* unreachable: a restart exists within the next two days */
   return { phase: 'normal', next: now, msLeft: 0 }
 }
+
+/** The next restart (always in the future), with "soon" in its last 15 minutes. */
+export function nextRestart(now: number, s: RestartSchedule): RestartState {
+  for (let day = -1; day <= 2; day++) {
+    const at = restartAt(now, s, day)
+    if (at > now) return { phase: at - now <= SOON_MS ? 'soon' : 'normal', next: at, msLeft: at - now }
+  }
+  return { phase: 'normal', next: now, msLeft: 0 }
+}
+
+/** The last scheduled restart at or before `now`. */
+export function previousRestart(now: number, s: RestartSchedule): number {
+  for (let day = 1; day >= -2; day--) {
+    const at = restartAt(now, s, day)
+    if (at <= now) return at
+  }
+  return restartAt(now, s, -1)
+}
+
+/**
+ * The restart as the launcher sees it live, from the server itself (checked every few seconds around the restart):
+ * restarting = from the scheduled time until the server answers again; back = it just did (shown a little while).
+ */
+export type LiveRestart = { phase: 'restarting'; since: number; checkedAt: number } | { phase: 'back'; at: number } | null
+
+/** Restart alerts (each one opt-in). */
+export interface RestartAlerts {
+  before15: boolean
+  before1: boolean
+  start: boolean
+  back: boolean
+}

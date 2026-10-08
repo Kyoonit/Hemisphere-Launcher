@@ -21,7 +21,7 @@
     "play": "Jouer",
     "ready": "Prêt",
     "clientVersion": "Client Hemisphere {{version}} · Minecraft {{minecraft}}",
-    "restartingNow": "Le serveur redémarre — de retour dans quelques minutes",
+    "restartingNow": "Le serveur redémarre : vérifié en direct, tu verras quand il revient",
     "serverOffline": "Hemisphere est hors ligne pour le moment",
     "clientUnknown": "Client Hemisphere",
     "maintenanceUntil": "Retour vers {{time}}.",
@@ -134,13 +134,16 @@
     "latency": "Latence depuis ton PC",
     "restartIn": "Redémarrage dans {{time}}",
     "restarting": "Redémarrage…",
-    "backIn": "De retour dans environ {{min}} min",
     "dailyAt": "Tous les jours à {{time}} (ton heure)",
     "onlineNow": "En ligne",
     "nobody": "Personne en ligne — sois le premier !",
     "more": "+ {{count}} autres",
     "maintenance": "Maintenance",
-    "maintenanceShort": "Serveur fermé pour maintenance"
+    "maintenanceShort": "Serveur fermé pour maintenance",
+    "restartingLive": "Le serveur est vérifié en direct (il y a {{s}} s)",
+    "backOnline": "De retour en ligne",
+    "backAt": "Redémarrage terminé à {{time}}",
+    "restartingShort": "Redémarrage"
   },
   "time": {
     "hm": "{{h}} h {{m}} min",
@@ -1030,11 +1033,19 @@
     "title": "Communauté",
     "tray": "Garder dans la barre des tâches (zone de notification)",
     "trayHint": "Fermer la fenêtre garde le launcher près de l’horloge, avec le statut du serveur. Quitte depuis là.",
-    "serverBack": "Me prévenir quand le serveur revient",
-    "serverBackHint": "Une notification quand Hemisphere est de nouveau en ligne après un redémarrage ou une maintenance.",
+    "serverBack": "Me prévenir quand le serveur revient après une maintenance",
+    "serverBackHint": "Une notification quand Hemisphere est de nouveau en ligne après une maintenance ou une panne.",
     "discord": "Afficher « Joue sur Hemisphere SMP » dans Discord",
     "discordHint": "Dans ton statut Discord, seulement pendant que le jeu tourne.",
-    "discordNotReady": "Pas encore disponible : le staff ne l’a pas configuré."
+    "discordNotReady": "Pas encore disponible : le staff ne l’a pas configuré.",
+    "restartAlerts": "Alertes de redémarrage",
+    "restartAlertsHint": "Des notifications autour du redémarrage quotidien, celles que tu choisis.",
+    "restartAlert": {
+      "before15": "15 min avant",
+      "before1": "1 min avant",
+      "start": "Au début",
+      "back": "Quand il revient"
+    }
   },
   "dev": {
     "staffAccess": "Accès staff",
@@ -1115,6 +1126,7 @@
     "shotsRemove": "Retirer les captures d’exemple",
     "openData": "Ouvrir le dossier de données du launcher",
     "windowMin": "La plus petite (960 × 600)",
-    "windowDefault": "Par défaut (1120 × 700)"
+    "windowDefault": "Par défaut (1120 × 700)",
+    "simulateRestart": "Simuler un redémarrage (alertes, coupure de 25 s, retour)"
   }
 }

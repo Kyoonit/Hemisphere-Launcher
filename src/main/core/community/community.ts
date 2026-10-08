@@ -33,6 +33,14 @@ const TEXT = {
     playing: 'Playing on Hemisphere SMP',
     website: 'Hemisphere SMP',
     discord: 'Join the Discord',
+    restarting: 'Restarting',
+    warn15Title: 'Server restart in 15 minutes',
+    warn1Title: 'Server restart in 1 minute',
+    warnBody: (time: string) => `Hemisphere restarts at ${time} (your time).`,
+    startTitle: 'Hemisphere is restarting',
+    startBody: 'You’ll be told as soon as it’s back.',
+    startBodyPlain: 'It’ll be back in a few minutes.',
+    restartBackBody: 'The restart is over: you can join.',
   },
   fr: {
     open: 'Ouvrir le launcher',
@@ -49,6 +57,14 @@ const TEXT = {
     playing: 'Joue sur Hemisphere SMP',
     website: 'Hemisphere SMP',
     discord: 'Rejoindre le Discord',
+    restarting: 'Redémarrage en cours',
+    warn15Title: 'Redémarrage du serveur dans 15 minutes',
+    warn1Title: 'Redémarrage du serveur dans 1 minute',
+    warnBody: (time: string) => `Hemisphere redémarre à ${time} (ton heure).`,
+    startTitle: 'Hemisphere redémarre',
+    startBody: 'Tu seras prévenu dès qu’il est de retour.',
+    startBodyPlain: 'Il revient dans quelques minutes.',
+    restartBackBody: 'Le redémarrage est terminé : tu peux rejoindre.',
   },
 }
 const lang = () => {
@@ -73,6 +89,9 @@ let lastStatus: ServerStatus | null = null
 /** when the server went down (offline, restart or maintenance), null = up or unknown */
 let downSince: number | null = null
 let presence: DiscordPresence | null = null
+let restarting = false
+/** when a "back online" notification was last sent (the restart one and the general one never both) */
+let lastBackNotice = 0
 
 function show(): void {
   const win = hooks?.window()
@@ -94,6 +113,7 @@ function notify(title: string, body: string): void {
 function statusLine(): string {
   const t = text()
   if (hooks?.feed().maintenance.active) return `Hemisphere SMP · ${t.maintenance}`
+  if (restarting) return `Hemisphere SMP · ${t.restarting}`
   const s = lastStatus
   return `Hemisphere SMP · ${!s || s.online === null ? t.unknown : s.online ? t.online(s.playersOnline, s.playersMax) : t.offline}`
 }
@@ -161,7 +181,10 @@ export function onServerStatus(status: ServerStatus): void {
   }
   if (status.online !== true) return
   // only after a real outage (a missed status check isn't one), and only once
-  if (downSince !== null && Date.now() - downSince > 60_000 && getSettings().notifyServerBack) notify(text().backTitle, text().backBody)
+  if (downSince !== null && Date.now() - downSince > 60_000 && getSettings().notifyServerBack && Date.now() - lastBackNotice > 5 * 60_000) {
+    lastBackNotice = Date.now()
+    notify(text().backTitle, text().backBody)
+  }
   downSince = null
 }
 
@@ -219,6 +242,28 @@ export function onGameExited(anyRunning: boolean): void {
       presence?.close()
       presence = null
     })
+}
+
+// ------------------------------------------------------------------------------ daily restart
+
+/** The live restart changed (tray text). */
+export function onRestartLive(phase: 'restarting' | 'back' | null): void {
+  restarting = phase === 'restarting'
+  refreshTray()
+}
+
+/** A moment of the daily restart: a notification if the player asked for that one. */
+export function onRestartMoment(moment: 'warn15' | 'warn1' | 'start' | 'back', nextRestartAt: number | null): void {
+  const a = getSettings().restartAlerts
+  const t = text()
+  const time = nextRestartAt ? new Date(nextRestartAt).toLocaleTimeString(lang(), { hour: '2-digit', minute: '2-digit' }) : ''
+  if (moment === 'warn15' && a.before15) notify(t.warn15Title, t.warnBody(time))
+  else if (moment === 'warn1' && a.before1) notify(t.warn1Title, t.warnBody(time))
+  else if (moment === 'start' && a.start) notify(t.startTitle, a.back ? t.startBody : t.startBodyPlain)
+  else if (moment === 'back' && (a.back || getSettings().notifyServerBack)) {
+    lastBackNotice = Date.now()
+    notify(t.backTitle, t.restartBackBody)
+  }
 }
 
 // ------------------------------------------------------------------------------ Developer tab

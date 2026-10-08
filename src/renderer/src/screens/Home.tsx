@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useEffect, useState } from 'react'
 import { BookOpen, Clock, Globe, Map, TriangleAlert, Upload, WifiOff, X, HardDrive, MemoryStick, Sparkles } from 'lucide-react'
 import type { LinkKey } from '@shared/ipc'
-import { restartState } from '@shared/restart'
+import { nextRestart } from '@shared/restart'
 import DiscordIcon from '../components/DiscordIcon'
 import ServerPanel from '../components/ServerPanel'
 import PlaytimeCard from '../components/PlaytimeCard'
@@ -10,7 +10,7 @@ import NewsPeek from '../components/NewsPeek'
 import PlayZone, { useGameState } from '../components/PlayZone'
 import type { ReportCategory } from '@shared/report'
 import { useClient } from './Mods'
-import { useFeed, useNow, usePlaytime, useServerStatus, useSettings } from '../hooks'
+import { useFeed, useNow, usePlaytime, useServerStatus, useSettings, useLiveRestart } from '../hooks'
 import type { ClientSummary } from '@shared/client'
 import type { PreflightWarning } from '@shared/settings'
 import type { Feed } from '@shared/feed'
@@ -217,11 +217,13 @@ function MaintenanceBanner({ feed }: { feed: Feed }) {
 function ServerNotice({ offline, feed }: { offline: boolean; feed: Feed | null }) {
   const { t } = useTranslation()
   const now = useNow()
+  const live = useLiveRestart()
   if (!feed?.restart || feed.maintenance.active) return offline ? <Line icon={<WifiOff size={14} />} className="text-red-400">{t('home.serverOffline')}</Line> : null
-  const restart = restartState(now, feed.restart)
+  const restart = nextRestart(now, feed.restart)
 
-  if (restart.phase === 'restarting')
+  if (live?.phase === 'restarting')
     return <Line icon={<Clock size={14} />} className="text-red-400">{t('home.restartingNow')}</Line>
+  if (live?.phase === 'back') return <Line icon={<Clock size={14} />} className="text-green-400">{t('server.backOnline')}</Line>
   if (offline) return <Line icon={<WifiOff size={14} />} className="text-red-400">{t('home.serverOffline')}</Line>
   if (restart.phase === 'soon') {
     const s = Math.floor(restart.msLeft / 1000)

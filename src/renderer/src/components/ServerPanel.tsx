@@ -5,8 +5,8 @@ import { localize } from '@shared/manifest'
 import { relativeTime } from './Events'
 import type { ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
-import { restartState, type RestartSchedule, type RestartState } from '@shared/restart'
-import { splitDuration, useNow, useWindowHeight } from '../hooks'
+import { nextRestart, type LiveRestart, type RestartSchedule, type RestartState } from '@shared/restart'
+import { splitDuration, useLiveRestart, useNow, useWindowHeight } from '../hooks'
 
 // Rows of heads (2 per row) grow with the window height, so the panel never reaches the news card:
 // 2 rows in the smallest window, one more row every 40 px, up to 5 rows.
@@ -16,8 +16,10 @@ export default function ServerPanel({ status, feed, onOpenNews }: { status: Serv
   const { t, i18n } = useTranslation()
   const now = useNow()
   const schedule: RestartSchedule | null = feed ? feed.restart : null
-  const restart = schedule ? restartState(now, schedule) : null
-  const restarting = restart?.phase === 'restarting'
+  const restart = schedule ? nextRestart(now, schedule) : null
+  // restarting: from the scheduled time until the server answers again (checked live every few seconds)
+  const live = useLiveRestart()
+  const restarting = live?.phase === 'restarting'
   const maintenance = feed?.maintenance.active === true
   const online = status?.online === true && !restarting && !maintenance
   const next = upcomingEvents(feed?.events, now).find((e) => Date.parse(e.start) - now < 7 * 24 * 3600_000)
@@ -49,7 +51,7 @@ export default function ServerPanel({ status, feed, onOpenNews }: { status: Serv
           </span>
         </div>
       ) : (
-        restart && <RestartBox restart={restart} />
+        restart && <RestartBox restart={restart} live={live} />
       )}
 
       {next && (
@@ -76,7 +78,7 @@ function StatusPill({ status, restarting, maintenance }: { status: ServerStatus 
   const [tone, label] = maintenance
     ? (['text-amber-400', t('server.maintenance')] as const)
     : restarting
-    ? (['text-red-400', t('server.offline')] as const)
+    ? (['text-red-400', t('server.restartingShort')] as const)
     : status === null
       ? (['text-gray-400', t('server.checking')] as const)
       : status.online === true
@@ -94,15 +96,22 @@ function StatusPill({ status, restarting, maintenance }: { status: ServerStatus 
   )
 }
 
-function RestartBox({ restart }: { restart: RestartState }) {
+function RestartBox({ restart, live }: { restart: RestartState; live: LiveRestart }) {
   const { t, i18n } = useTranslation()
   const localTime = new Date(restart.next).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })
 
+  const now = useNow()
   let main: string
   let sub: string
-  if (restart.phase === 'restarting') {
+  let phase: 'restarting' | 'back' | 'soon' | 'normal' = restart.phase === 'soon' ? 'soon' : 'normal'
+  if (live?.phase === 'restarting') {
+    phase = 'restarting'
     main = t('server.restarting')
-    sub = t('server.backIn', { min: Math.max(1, Math.ceil(restart.msLeft / 60_000)) })
+    sub = t('server.restartingLive', { s: Math.max(0, Math.round((now - live.checkedAt) / 1000)) })
+  } else if (live?.phase === 'back') {
+    phase = 'back'
+    main = t('server.backOnline')
+    sub = t('server.backAt', { time: new Date(live.at).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' }) })
   } else if (restart.phase === 'soon') {
     const s = Math.floor(restart.msLeft / 1000)
     main = t('server.restartIn', { time: `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` })
@@ -114,15 +123,17 @@ function RestartBox({ restart }: { restart: RestartState }) {
   }
 
   const tone =
-    restart.phase === 'restarting'
+    phase === 'restarting'
       ? 'bg-red-900/45 shadow-[inset_3px_0_0_var(--color-red-400)] [&_.accent]:text-red-400'
-      : restart.phase === 'soon'
+      : phase === 'back'
+        ? 'bg-green-900/45 shadow-[inset_3px_0_0_var(--color-green-400)] [&_.accent]:text-green-400'
+        : phase === 'soon'
         ? 'bg-amber-900/50 shadow-[inset_3px_0_0_var(--color-amber-400)] [&_.accent]:text-amber-400'
         : 'bg-gray-900/60 [&_.accent]:text-white'
 
   return (
     <div className={`mt-3 flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-[13px] ${tone}`}>
-      <Clock size={16} className="accent mt-0.5 text-gray-400" />
+      {phase === 'restarting' ? <span className="accent mt-1 h-3 w-3 flex-none animate-pulse rounded-full bg-red-400" /> : <Clock size={16} className="accent mt-0.5 text-gray-400" />}
       <div>
         <div className="accent font-semibold tabular-nums">{main}</div>
         <div className="text-xs text-gray-400">{sub}</div>

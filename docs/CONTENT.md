@@ -178,3 +178,12 @@ npm run staff-code
 
 It prints the new code (share it privately) and a `"staffCode"` entry to paste into `content-src/feed.json`; publish
 with `npm run content:feed`. From then on only the new code works (PCs already unlocked stay unlocked).
+
+## Daily restart (live)
+
+The restart time comes from `restart` in the feed (`durationMin` is no longer shown to players). From 90 seconds
+before that time, launchers check the server itself every 5 seconds: the panel says **Restarting** from the scheduled
+time until the server answers again, then **Back online** for two minutes. If the server is never seen down within
+5 minutes (it restarted between two checks), the panel goes back to normal; down for more than 30 minutes counts as
+an outage. Players can pick restart notifications (15 min before, 1 min before, when it starts, when it's back) in
+Settings → Launcher → Community; all are off by default.

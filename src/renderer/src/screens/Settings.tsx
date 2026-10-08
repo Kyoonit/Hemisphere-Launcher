@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, FlaskConical, Flag, Gamepad2, History, KeyRound, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
+import { Bell, Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, FlaskConical, Flag, Gamepad2, History, KeyRound, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
 import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
 import type { JavaRuntimeInfo } from '@shared/game'
@@ -203,6 +203,23 @@ function LauncherSettings() {
       <h3 className="mt-6 mb-1 text-xs font-bold tracking-[0.08em] text-gray-400 uppercase">{t('community.title')}</h3>
       <Row title={t('community.tray')} hint={t('community.trayHint')}>
         <Toggle on={settings.closeToTray} onChange={(closeToTray) => update({ closeToTray })} label={t('community.tray')} />
+      </Row>
+      <Row title={t('community.restartAlerts')} hint={t('community.restartAlertsHint')}>
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {(['before15', 'before1', 'start', 'back'] as const).map((k) => {
+            const on = settings.restartAlerts[k]
+            return (
+              <button
+                key={k}
+                onClick={() => update({ restartAlerts: { ...settings.restartAlerts, [k]: !on } })}
+                aria-pressed={on}
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition-colors ${on ? 'bg-green-600 text-white' : 'bg-gray-800/80 text-gray-300 hover:bg-gray-700 hover:text-white'}`}
+              >
+                {on ? <Check size={13} /> : <Bell size={13} />} {t(`community.restartAlert.${k}`)}
+              </button>
+            )
+          })}
+        </div>
       </Row>
       <Row title={t('community.serverBack')} hint={t('community.serverBackHint')}>
         <Toggle on={settings.notifyServerBack} onChange={(notifyServerBack) => update({ notifyServerBack })} label={t('community.serverBack')} />

@@ -68,6 +68,14 @@ const api: HemisphereApi = {
     projectVersions: (type, projectId) => ipcRenderer.invoke(IPC.packsProjectVersions, type, projectId),
     install: (type, projectId, confirmed, versionId) => ipcRenderer.invoke(IPC.packsInstall, type, projectId, confirmed, versionId ?? null),
   },
+  restart: {
+    live: () => ipcRenderer.invoke(IPC.restartLiveGet),
+    onChange: (cb) => {
+      const listener = (_e: unknown, live: Parameters<typeof cb>[0]) => cb(live)
+      ipcRenderer.on(IPC.restartLiveChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.restartLiveChanged, listener)
+    },
+  },
   dev: {
     get: () => ipcRenderer.invoke(IPC.devGet),
     unlock: (code) => ipcRenderer.invoke(IPC.devUnlock, code),
