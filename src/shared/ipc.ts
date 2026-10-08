@@ -7,6 +7,7 @@ import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from '
 import type { ClientSummary } from './client'
 import type { LauncherUpdateState } from './launcherUpdate'
 import type { ScreenshotExport, ScreenshotList } from './screenshots'
+import type { RestorePointInfo, RestorePreview, RestoreResult, SetupExportResult, SetupImportResult, SetupPick } from './restorePoints'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
@@ -54,6 +55,14 @@ export const IPC = {
   screenshotsShow: 'screenshots:show',
   screenshotsDelete: 'screenshots:delete',
   screenshotsExport: 'screenshots:export',
+  backupsList: 'backups:list',
+  backupsCreate: 'backups:create',
+  backupsPreview: 'backups:preview',
+  backupsRestore: 'backups:restore',
+  backupsDelete: 'backups:delete',
+  setupExport: 'setup:export',
+  setupPick: 'setup:pick',
+  setupImport: 'setup:import',
   systemPreflight: 'system:preflight',
   systemOpenFolder: 'system:open-folder',
   systemDiagnostics: 'system:diagnostics',
@@ -117,6 +126,20 @@ export interface HemisphereApi {
     remove(name: string): Promise<boolean>
     /** copies them to a folder the player picks; null when the picker was cancelled */
     exportTo(names: string[]): Promise<ScreenshotExport | null>
+  }
+  /** Safety nets: restore points and moving a whole setup to another PC */
+  backups: {
+    list(): Promise<RestorePointInfo[]>
+    /** a restore point now; null when there's nothing to keep yet */
+    create(): Promise<{ ok: true; id: string | null } | { ok: false; reason: 'busy' | 'failed' }>
+    preview(id: string): Promise<RestorePreview | null>
+    restore(id: string): Promise<RestoreResult>
+    remove(id: string): Promise<boolean>
+    /** save dialog, then the file */
+    exportSetup(): Promise<SetupExportResult>
+    /** open dialog, then what the file contains */
+    pickSetup(): Promise<SetupPick>
+    importSetup(token: string): Promise<SetupImportResult>
   }
   /** Updates of the launcher itself (GitHub releases) */
   launcherUpdate: {

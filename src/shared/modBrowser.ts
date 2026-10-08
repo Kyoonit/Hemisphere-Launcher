@@ -143,4 +143,6 @@ export interface UpdateApplied {
   updated: string[]
   /** no version for this Minecraft version: switched off (kept in mods-disabled/) */
   disabled: string[]
+  /** restore point taken just before ("Undo") */
+  restorePoint?: string | null
 }

@@ -7,6 +7,7 @@ import { gamePaths } from '../game/target'
 import { getModIcons } from '../remote/modIcons'
 import { detachMod, readInstanceState, reattachMod } from '../sync/sync'
 import { latestByHash, pickVersion, projectVersions, updateTarget } from './api'
+import { createRestorePoint } from '../backup/restorePoints'
 import {
   checkPlayerModUpdates,
   hemisphereMods,
@@ -14,6 +15,8 @@ import {
   listPlayerMods,
   modVersions,
   placeHemisphereFileAsPlayer,
+  readPlayerRegistry,
+  registryKey,
   removePlayerMod,
   setLocked,
   setModVersion,
@@ -144,8 +147,12 @@ export async function versionsFor(manifest: ClientManifest, key: string): Promis
   return file ? modVersions(file, await owned(), manifest.minecraft) : null
 }
 
-export async function setVersionFor(manifest: ClientManifest, key: string, versionId: string, lock: boolean): Promise<SetVersionResult> {
+export async function setVersionFor(manifest: ClientManifest, key: string, versionId: string, lock: boolean, safetyPoint = true): Promise<SetVersionResult> {
   const h = hemisphereMod(manifest, key)
+  if (safetyPoint && !(fileOf(key) && isLocked(fileOf(key)!, manifest.minecraft))) {
+    const name = h?.name ?? readPlayerRegistry()[registryKey(fileOf(key) ?? '')]?.title ?? fileOf(key)?.replace(/.jar$/i, '') ?? key
+    await createRestorePoint({ kind: 'version', mod: name }, { clientVersion: manifest.clientVersion, minecraft: manifest.minecraft })
+  }
   const file = h ? await takeOver(manifest, h) : fileOf(key)
   if (!file) return { ok: false, reason: 'notFound' }
   return setModVersion(file, versionId, await owned(), manifest.minecraft, lock)
@@ -199,14 +206,15 @@ export async function checkAllUpdates(manifest: ClientManifest): Promise<UpdateC
 /** Updates every unlocked mod that has a newer version (Hemisphere mods are taken over to do it). */
 export async function updateAll(manifest: ClientManifest): Promise<UpdateApplied> {
   const updated: string[] = []
+  const restorePoint = await createRestorePoint({ kind: 'updateAll' }, { clientVersion: manifest.clientVersion, minecraft: manifest.minecraft })
   const state = await readInstanceState()
   const enabled = resolveEnabled(manifest.mods, state.choices)
   for (const [id, v] of [...managedUpdates]) {
     const mod = manifest.mods.find((m) => m.id === id)
     if (!mod || !enabled.has(id)) continue // switched off: nothing to update
-    const r = await setVersionFor(manifest, `h:${id}`, v.versionId, false)
+    const r = await setVersionFor(manifest, `h:${id}`, v.versionId, false, false)
     if (r.ok) updated.push(mod.name)
   }
   const mine = await updatePlayerMods(await owned(), manifest.minecraft, false)
-  return { updated: [...updated, ...mine.updated], disabled: mine.disabled }
+  return { updated: [...updated, ...mine.updated], disabled: mine.disabled, restorePoint }
 }

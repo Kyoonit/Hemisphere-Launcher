@@ -34,7 +34,9 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
   const client = useClient()
   const [filter, setFilter] = useState<Filter>('all')
   const [query, setQuery] = useState('')
-  const [notice, setNotice] = useState<string | null>(null)
+  // "undo": the restore point taken just before "Update all"
+  const [notice, setNotice] = useState<{ text: string; undo?: string } | null>(null)
+  const [undoing, setUndoing] = useState(false)
   const [mods, setMods] = useState<ModItem[] | null | undefined>(undefined)
   // which version panel is open, by Modrinth project: it stays open while the mod changes version or is taken over
   const [openPicker, setOpenPicker] = useState<string | null>(null)
@@ -113,8 +115,8 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
           <UpdatesButton
             mods={mods}
             className={toolButton}
-            onDone={(text) => {
-              setNotice(text)
+            onDone={(text, undo) => {
+              setNotice({ text, undo })
               void reload()
             }}
           />
@@ -147,7 +149,22 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
         {notice && (
           <div role="status" className="animate-fade mt-2.5 flex items-center gap-2 rounded-lg border-l-[3px] border-green-400 bg-gray-800/80 px-3.5 py-2 text-[13px] text-gray-200">
             <Info size={15} className="text-green-400" />
-            {notice}
+            {notice.text}
+            {notice.undo && (
+              <button
+                disabled={undoing}
+                onClick={async () => {
+                  setUndoing(true)
+                  const r = await window.hemisphere.backups.restore(notice.undo!)
+                  setUndoing(false)
+                  setNotice({ text: r.ok ? t('mods.undone') : t(`backups.errors.${r.reason}`) })
+                  void reload()
+                }}
+                className="ml-1 font-semibold text-green-400 underline-offset-2 hover:text-green-300 hover:underline disabled:opacity-50"
+              >
+                {undoing ? t('backups.restoring') : t('mods.undo')}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -164,7 +181,7 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
                 picking={openPicker === (item.projectId ?? item.key)}
                 onTogglePicker={() => setOpenPicker((p) => (p === (item.projectId ?? item.key) ? null : (item.projectId ?? item.key)))}
                 onChanged={() => void reload()}
-                onNotice={setNotice}
+                onNotice={(text) => setNotice({ text })}
               />
             ))}
           </div>
@@ -469,7 +486,7 @@ export function Badge({ tone, children }: { tone: 'red' | 'amber' | 'green' | 'g
 }
 
 /** "Check for updates" -> "Update N mods" (locked mods are never updated). */
-function UpdatesButton({ mods, onDone, className }: { mods: ModItem[]; onDone(notice: string): void; className: string }) {
+function UpdatesButton({ mods, onDone, className }: { mods: ModItem[]; onDone(notice: string, undo?: string): void; className: string }) {
   const { t } = useTranslation()
   const [busy, setBusy] = useState(false)
   const pending = mods.filter((m) => m.update && !m.locked).length
@@ -477,7 +494,7 @@ function UpdatesButton({ mods, onDone, className }: { mods: ModItem[]; onDone(no
     setBusy(true)
     if (pending) {
       const r = await window.hemisphere.client.updateAll()
-      onDone(r ? t('mods.updated', { count: r.updated.length }) : t('mods.updateFailed'))
+      onDone(r ? t('mods.updated', { count: r.updated.length }) : t('mods.updateFailed'), (r?.updated.length && r.restorePoint) || undefined)
     } else {
       const r = await window.hemisphere.client.checkUpdates()
       onDone(r ? (r.updates ? t('mods.updatesFound', { count: r.updates }) : t('mods.upToDate')) : t('mods.updateFailed'))

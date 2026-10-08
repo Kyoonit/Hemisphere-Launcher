@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Gamepad2, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
+import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Gamepad2, History, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
 import { useLauncherUpdate } from '../launcherUpdate'
 import { useSettings } from '../hooks'
 import type { JavaRuntimeInfo } from '@shared/game'
@@ -8,14 +8,16 @@ import { RESOLUTIONS, parseJvmArgs, type Settings, type SystemInfo } from '@shar
 import { LANGUAGES, systemLanguage } from '../i18n'
 import { headUrl, useAccounts } from '../accounts'
 import Toggle from '../components/Toggle'
+import Backups from './Backups'
 
-export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'advanced'
+export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'backups' | 'advanced'
 
 const SECTIONS: { id: Section; icon: LucideIcon }[] = [
   { id: 'game', icon: Gamepad2 },
   { id: 'launcher', icon: Rocket },
   { id: 'account', icon: User },
   { id: 'installation', icon: FolderOpen },
+  { id: 'backups', icon: History },
   { id: 'advanced', icon: Wrench },
 ]
 
@@ -50,6 +52,7 @@ export default function Settings({ initialSection, onAddAccount, onRepair, onImp
         {section === 'launcher' && <LauncherSettings />}
         {section === 'account' && <AccountSettings onAddAccount={onAddAccount} />}
         {section === 'installation' && <InstallationSettings onRepair={onRepair} onImport={onImport} />}
+        {section === 'backups' && <Backups />}
         {section === 'advanced' && <AdvancedSettings />}
       </section>
     </div>

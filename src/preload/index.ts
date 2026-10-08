@@ -28,6 +28,16 @@ const api: HemisphereApi = {
     remove: (name) => ipcRenderer.invoke(IPC.screenshotsDelete, name),
     exportTo: (names) => ipcRenderer.invoke(IPC.screenshotsExport, names),
   },
+  backups: {
+    list: () => ipcRenderer.invoke(IPC.backupsList),
+    create: () => ipcRenderer.invoke(IPC.backupsCreate),
+    preview: (id) => ipcRenderer.invoke(IPC.backupsPreview, id),
+    restore: (id) => ipcRenderer.invoke(IPC.backupsRestore, id),
+    remove: (id) => ipcRenderer.invoke(IPC.backupsDelete, id),
+    exportSetup: () => ipcRenderer.invoke(IPC.setupExport),
+    pickSetup: () => ipcRenderer.invoke(IPC.setupPick),
+    importSetup: (token) => ipcRenderer.invoke(IPC.setupImport, token),
+  },
   launcherUpdate: {
     get: () => ipcRenderer.invoke(IPC.launcherUpdateGet),
     onChange: (cb) => {

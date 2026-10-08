@@ -44,6 +44,8 @@ import { loadWindowState, trackWindowState } from './core/system/windowState'
 import { handle, hardenApp, on, trustWindow } from './security'
 import { copyScreenshot, deleteScreenshot, exportScreenshots, listScreenshots, registerScreenshotScheme, serveScreenshots, showScreenshotInFolder } from './core/system/screenshots'
 import { checkForUpdates, getUpdateState, installUpdateNow, onUpdateState, startUpdater } from './core/system/updater'
+import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePoints, previewRestore, restorePoint } from './core/backup/restorePoints'
+import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
@@ -200,6 +202,7 @@ function registerIpc(): void {
     const options: ImportOptions = { settings: !!o.settings, servers: !!o.servers, resourcepacks: !!o.resourcepacks, shaderpacks: !!o.shaderpacks, config: !!o.config, mods: !!o.mods }
     try {
       const { manifest } = await getContent()
+      await createRestorePoint({ kind: 'import' }, { clientVersion: manifest.clientVersion, minecraft: manifest.minecraft })
       const report = await importFrom(source, options, manifest, (p) => win?.webContents.send(IPC.importProgress, p))
       return { ok: true, report }
     } catch (err) {
@@ -314,6 +317,59 @@ function registerIpc(): void {
     // A copy of a mod Hemisphere still manages stays off until it's removed.
     if (enabled && !canEnablePlayerMod(file, (await getContent()).manifest, await detachedSet())) return false
     return setPlayerModEnabled(file, enabled, Object.keys((await readInstanceState()).owned))
+  })
+  // Safety nets. Restoring or importing changes mods and settings: refused while the game runs or the launcher installs.
+  const clientInfo = async () => {
+    const m = await getContent()
+      .then((c) => c.manifest)
+      .catch(() => null)
+    return m ? { manifest: m, client: { clientVersion: m.clientVersion, minecraft: m.minecraft } } : { manifest: null, client: null }
+  }
+  handle(IPC.backupsList, () => listRestorePoints())
+  handle(IPC.backupsCreate, async () => {
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    try {
+      return { ok: true, id: await createRestorePoint({ kind: 'manual' }, (await clientInfo()).client) }
+    } catch {
+      return { ok: false, reason: 'failed' }
+    }
+  })
+  handle(IPC.backupsPreview, (_e, id: unknown) => (isRestorePointId(id) ? previewRestore(id) : null))
+  handle(IPC.backupsRestore, async (_e, id: unknown) => {
+    if (!isRestorePointId(id)) return { ok: false, reason: 'notFound' }
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    const result = await restorePoint(id, (await clientInfo()).manifest)
+    if (result.ok) void prepareInBackground() // Hemisphere's mods for the restored choices
+    return result
+  })
+  handle(IPC.backupsDelete, (_e, id: unknown) => (isRestorePointId(id) ? deleteRestorePoint(id) : false))
+  handle(IPC.setupExport, async () => {
+    const d = new Date()
+    const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const pick = await dialog.showSaveDialog(win!, {
+      title: 'Hemisphere setup',
+      defaultPath: join(app.getPath('documents'), `Hemisphere setup ${stamp}.${SETUP_EXTENSION}`),
+      filters: [{ name: 'Hemisphere setup', extensions: [SETUP_EXTENSION] }],
+    })
+    if (pick.canceled || !pick.filePath) return { ok: false, reason: 'cancelled' }
+    return exportSetup(pick.filePath, app.getVersion(), (await clientInfo()).client)
+  })
+  handle(IPC.setupPick, async () => {
+    const pick = await dialog.showOpenDialog(win!, { properties: ['openFile'], title: 'Hemisphere setup', filters: [{ name: 'Hemisphere setup', extensions: [SETUP_EXTENSION] }] })
+    if (pick.canceled || !pick.filePaths[0]) return { ok: false, reason: 'cancelled' }
+    const { manifest } = await clientInfo()
+    const setup = await readSetup(pick.filePaths[0])
+    if (!setup || !manifest) return { ok: false, reason: 'invalid' }
+    return { ok: true, token: rememberSetup(setup), summary: summarize(pick.filePaths[0], setup, manifest.minecraft) }
+  })
+  handle(IPC.setupImport, async (_e, token: unknown) => {
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    const setup = takeSetup(token)
+    const { manifest } = await clientInfo()
+    if (!setup || !manifest) return { ok: false, reason: 'invalid' }
+    const result = await importSetup(setup, manifest, getFeed().modPolicy)
+    if (result.ok) void prepareInBackground()
+    return result
   })
   handle(IPC.feedGet, () => getFeed())
   on(IPC.feedOpenLink, (_e, id: unknown) => {

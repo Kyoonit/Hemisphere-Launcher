@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Camera, Check, CheckCheck, ChevronLeft, ChevronRight, ClipboardCopy, FolderInput, FolderOpen, SquareMousePointer, Trash2, X } from 'lucide-react'
 import { screenshotUrl, type Screenshot, type ScreenshotList } from '@shared/screenshots'
+import { formatBytes } from '../format'
 
 /** Minecraft screenshots (F2), newest first, grouped by day; viewer with copy / show in folder / delete; several can be selected to copy to a folder or delete at once. */
 export default function Screenshots() {
@@ -376,17 +377,6 @@ function NavButton({ side, disabled, onClick, label, children }: { side: 'left' 
 const timeOf = (s: Screenshot, lang: string) => new Date(s.takenAt).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' })
 const dateTimeOf = (s: Screenshot, lang: string) =>
   new Date(s.takenAt).toLocaleString(lang, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-
-function formatBytes(bytes: number, lang: string): string {
-  const units = lang.startsWith('fr') ? ['o', 'Ko', 'Mo', 'Go'] : ['B', 'KB', 'MB', 'GB']
-  let v = bytes
-  let i = 0
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024
-    i++
-  }
-  return `${new Intl.NumberFormat(lang, { maximumFractionDigits: v < 10 && i > 0 ? 1 : 0 }).format(v)} ${units[i]}`
-}
 
 /** Today / Yesterday / "Tuesday 6 October" (with the year when it isn't this year). */
 function groupByDay(shots: Screenshot[], lang: string, t: (k: string) => string) {

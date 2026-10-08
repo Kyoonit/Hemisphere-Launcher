@@ -295,3 +295,24 @@ export function reattachMod(id: string): Promise<void> {
   toggleQueue = run.catch(() => {})
   return run
 }
+
+/**
+ * Restore point / setup import: puts back the player's choices and which Hemisphere mods they took over. A mod taken
+ * over again stops being Hemisphere's file (so the next sync doesn't remove the player's copy); one given back is
+ * placed by the next sync.
+ */
+export function restoreModChoices(manifest: ClientManifest | null, choices: Record<string, boolean>, detached: string[]): Promise<void> {
+  const run = toggleQueue.then(async () => {
+    const state = await readInstanceState()
+    const known = manifest ? new Set(manifest.mods.map((m) => m.id)) : null
+    state.choices = Object.fromEntries(Object.entries(choices).filter(([id, on]) => typeof on === 'boolean' && (!known || known.has(id))))
+    state.detached = [...new Set(detached.filter((id) => !known || known.has(id)))]
+    for (const id of state.detached) {
+      const mod = manifest?.mods.find((m) => m.id === id)
+      if (mod) delete state.owned[mod.file.path]
+    }
+    await writeInstanceState(state)
+  })
+  toggleQueue = run.catch(() => {})
+  return run
+}

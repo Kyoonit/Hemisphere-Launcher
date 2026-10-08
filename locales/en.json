@@ -46,7 +46,8 @@
       "launcher": "Launcher",
       "account": "Account",
       "installation": "Installation",
-      "advanced": "Advanced"
+      "advanced": "Advanced",
+      "backups": "Backups"
     },
     "language": "Language",
     "languageHint": "Follows your Windows language by default",
@@ -354,7 +355,9 @@
     "lastAdded": "Last added",
     "addedOn": "Added {{date}}",
     "notInstalledYet": "Not installed yet (next Play)",
-    "disabledFilter": "Disabled"
+    "disabledFilter": "Disabled",
+    "undo": "Undo",
+    "undone": "Update undone: your mods are back as they were."
   },
   "repair": {
     "title": "Repair installation",
@@ -578,5 +581,84 @@
     "deleteManyFailed_one": "{{count}} screenshot couldn’t be deleted. Close Minecraft if it’s open, then try again.",
     "deleteManyFailed_other": "{{count}} screenshots couldn’t be deleted. Close Minecraft if it’s open, then try again.",
     "done": "Done"
+  },
+  "backups": {
+    "pointsTitle": "Restore points",
+    "pointsHint": "Taken automatically before client updates, imports, “Update all” and version changes. The last 10 are kept.",
+    "createNow": "Create one now",
+    "created": "Restore point created.",
+    "nothingYet": "Nothing to save yet: play once first.",
+    "empty": "No restore points yet. One is taken automatically before your next update.",
+    "reason": {
+      "clientUpdate": "Before updating Hemisphere {{from}} → {{to}}",
+      "import": "Before importing from another launcher",
+      "updateAll": "Before “Update all”",
+      "version": "Before changing the version of {{mod}}",
+      "restore": "Before restoring a point ({{when}})",
+      "setupImport": "Before importing a setup",
+      "repair": "Before a full repair",
+      "manual": "Created by you"
+    },
+    "client": "client {{version}}",
+    "modsCount_one": "{{count}} of your mods",
+    "modsCount_other": "{{count}} of your mods",
+    "keybinds": "keybinds",
+    "servers": "servers",
+    "configCount_one": "{{count}} config file",
+    "configCount_other": "{{count}} config files",
+    "restore": "Restore",
+    "delete": "Delete this restore point",
+    "comparing": "Comparing with now…",
+    "willTitle": "Restoring will:",
+    "will": {
+      "options": "Put back your keybinds and video settings",
+      "servers": "Put back your server list",
+      "configs_one": "Put back {{count}} mod config file",
+      "configs_other": "Put back {{count}} mod config files",
+      "changed_one": "Switch {{count}} mod back to its version",
+      "changed_other": "Switch {{count}} mods back to their version",
+      "back_one": "Bring back {{count}} mod",
+      "back_other": "Bring back {{count}} mods",
+      "away_one": "Remove {{count}} mod added since",
+      "away_other": "Remove {{count}} mods added since",
+      "switched_one": "Switch {{count}} mod on or off as it was",
+      "switched_other": "Switch {{count}} mods on or off as they were"
+    },
+    "noDifference": "Nothing differs from now.",
+    "safety": "What you have now is saved first as a restore point, so you can undo this.",
+    "restoreConfirm": "Restore",
+    "restoring": "Restoring…",
+    "restored": "Restored. Hemisphere’s own mods are put back in place before your next game.",
+    "restoredMissing": "Restored, except these mods whose file was no longer available: {{names}}",
+    "moveTitle": "Move to a new PC",
+    "moveHint": "One file with your keybinds, servers, mod configs, your mods and launcher settings. Accounts are never included.",
+    "export": "Export my setup",
+    "import": "Import my setup",
+    "exported": "Saved to {{path}} ({{size}}).",
+    "setupMods_one": "{{count}} of your mods",
+    "setupMods_other": "{{count}} of your mods",
+    "setupEmbedded_one": "({{count}} inside the file, the others downloaded again from Modrinth)",
+    "setupEmbedded_other": "({{count}} inside the file, the others downloaded again from Modrinth)",
+    "keybindsLong": "Keybinds and video settings",
+    "serversLong": "Server list",
+    "launcherSettings": "Launcher settings (memory, language, game window…)",
+    "otherMinecraft": "This setup is from Minecraft {{from}}. Mods are switched to their version for {{to}} and their locks are removed; mods without one are left out.",
+    "importReplaces": "Your current mods and settings are replaced. They’re saved first as a restore point.",
+    "importConfirm": "Import",
+    "importing": "Importing… downloading mods",
+    "imported_one": "Setup imported: {{count}} mod.",
+    "imported_other": "Setup imported: {{count}} mods.",
+    "importUpdated": "Switched to their version for this Minecraft: {{names}}",
+    "skipped": {
+      "blocked": "{{name}}: not allowed on Hemisphere, left out",
+      "notAvailable": "{{name}}: no version for this Minecraft, left out",
+      "download": "{{name}}: download failed, left out"
+    },
+    "errors": {
+      "busy": "Close Minecraft (and wait for the launcher to finish installing) first.",
+      "notFound": "This restore point no longer exists.",
+      "failed": "That didn’t work. Details are in the launcher logs.",
+      "invalid": "This isn’t a Hemisphere setup file, or it’s damaged."
+    }
   }
 }

@@ -23,6 +23,8 @@ import { parseIncompatibleMods } from '@shared/crash'
 import { readInstanceState } from '../sync/sync'
 import { endSession, startSession } from '../playtime/playtimeStore'
 import { cleanStore, syncClient } from '../sync/sync'
+import { createRestorePoint } from '../backup/restorePoints'
+import type { ClientManifest } from '@shared/manifest'
 import { GameError, toGameError } from './util'
 
 let state: GameState = { phase: 'idle', activity: null, progress: null, runningAccounts: [], error: null, background: false }
@@ -84,6 +86,7 @@ export function prepareInBackground(): Promise<void> {
       if (installed.minecraft && installed.minecraft !== manifest.minecraft) return // new Minecraft version: player decides
       const report = progressReporter()
       await ensureGameInstalled({ minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }, report)
+      await pointBeforeClientChange(installed.clientVersion, manifest)
       const synced = await syncClient(manifest, report('mods'))
       console.log(`[background] client ${manifest.clientVersion} ready (${synced.downloaded} downloaded, ${synced.placed} placed) in ${Math.round((Date.now() - started) / 1000)} s`)
     } catch (err) {
@@ -100,6 +103,12 @@ export function prepareInBackground(): Promise<void> {
 function isMissingGameFiles(err: unknown): boolean {
   const code = (err as { error?: unknown } | null)?.error
   return code === 'MissingLibraries' || code === 'CorruptedVersionJar' || code === 'MissingVersionJson'
+}
+
+/** A new (or older) client is about to replace the installed one: keep a restore point of the player's setup first. */
+async function pointBeforeClientChange(installed: string | null, manifest: ClientManifest): Promise<void> {
+  if (installed && installed !== manifest.clientVersion)
+    await createRestorePoint({ kind: 'clientUpdate', from: installed, to: manifest.clientVersion }, { clientVersion: installed, minecraft: manifest.minecraft })
 }
 
 /** Hides the last error card (the player closed it). */
@@ -149,6 +158,7 @@ export async function play(accountId: string, opts: PlayOptions = { target: 'lat
     // 3-5. Minecraft + Java + Fabric, then Hemisphere mods (only what changed).
     const target = { minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }
     let { versionId, javaPath } = await ensureGameInstalled(target, report)
+    await pointBeforeClientChange((await readInstanceState()).clientVersion, manifest)
     // The player's own mods (and Hemisphere mods they took over) are never updated by PLAY: they choose when, in
     // Mods. If one doesn't work with this version, the crash card names it.
     const synced = await syncClient(manifest, report('mods'))
@@ -240,6 +250,7 @@ export async function repair(mode: RepairMode): Promise<RepairReport | { error: 
     })
     const info: GameRepairInfo = { minecraftIssues: [] }
     await ensureGameInstalled({ minecraft: manifest.minecraft, fabricLoader: manifest.loader.version }, report, true, info)
+    if (mode === 'full') await createRestorePoint({ kind: 'repair' }, { clientVersion: manifest.clientVersion, minecraft: manifest.minecraft })
     const synced = await syncClient(manifest, report('mods'), {
       verifyAll: true,
       restoreMissingDefaults: true,

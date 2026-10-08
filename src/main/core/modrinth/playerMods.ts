@@ -495,3 +495,19 @@ export function placeHemisphereFileAsPlayer(file: { url: string; sha512: string;
     return name
   })
 }
+
+// ------------------------------------------------------------------------------ restore points and setups
+export type PlayerModRecord = Entry
+
+/** Runs a job with the player's mods to itself (no install, update or identification meanwhile). */
+export const withPlayerMods = <T,>(job: () => Promise<T>): Promise<T> => serial(job)
+/** Only inside withPlayerMods. */
+export const readPlayerRegistry = (): Record<string, PlayerModRecord> => readRegistry()
+/** Only inside withPlayerMods. */
+export const writePlayerRegistry = (r: Record<string, PlayerModRecord>): Promise<void> => writeRegistry(r)
+/** Hashes and identifies the player's mods now (inside withPlayerMods: use identifyNow). */
+export const identifyPlayerMods = (owned: string[]): Promise<Record<string, PlayerModRecord>> => serial(() => identify(owned))
+export const identifyNow = (owned: string[]): Promise<Record<string, PlayerModRecord>> => identify(owned)
+/** The player's jars on disk (mods/ minus Hemisphere's files, and mods-disabled/). */
+export const playerJars = (owned: string[]) => playerFiles(owned)
+export const registryKey = key
