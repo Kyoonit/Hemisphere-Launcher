@@ -8,15 +8,16 @@ import { getModIcons } from '../remote/modIcons'
 import { detachMod, readInstanceState, reattachMod } from '../sync/sync'
 import { latestByHash, pickVersion, projectVersions, updateTarget } from './api'
 import { createRestorePoint } from '../backup/restorePoints'
+import { readHistory, record } from './history'
+import type { ModHistoryEntry, ModHistoryItem, UndoResult } from '@shared/modSets'
 import {
   checkPlayerModUpdates,
   hemisphereMods,
+  installMod,
   isLocked,
   listPlayerMods,
   modVersions,
   placeHemisphereFileAsPlayer,
-  readPlayerRegistry,
-  registryKey,
   removePlayerMod,
   setLocked,
   setModVersion,
@@ -147,15 +148,11 @@ export async function versionsFor(manifest: ClientManifest, key: string): Promis
   return file ? modVersions(file, await owned(), manifest.minecraft) : null
 }
 
-export async function setVersionFor(manifest: ClientManifest, key: string, versionId: string, lock: boolean, safetyPoint = true): Promise<SetVersionResult> {
+export async function setVersionFor(manifest: ClientManifest, key: string, versionId: string, lock: boolean, kind: 'version' | 'update' = 'version'): Promise<SetVersionResult> {
   const h = hemisphereMod(manifest, key)
-  if (safetyPoint && !(fileOf(key) && isLocked(fileOf(key)!, manifest.minecraft))) {
-    const name = h?.name ?? readPlayerRegistry()[registryKey(fileOf(key) ?? '')]?.title ?? fileOf(key)?.replace(/.jar$/i, '') ?? key
-    await createRestorePoint({ kind: 'version', mod: name }, { clientVersion: manifest.clientVersion, minecraft: manifest.minecraft })
-  }
   const file = h ? await takeOver(manifest, h) : fileOf(key)
   if (!file) return { ok: false, reason: 'notFound' }
-  return setModVersion(file, versionId, await owned(), manifest.minecraft, lock)
+  return setModVersion(file, versionId, await owned(), manifest.minecraft, lock, kind)
 }
 
 export async function setLockFor(manifest: ClientManifest, key: string, locked: boolean): Promise<boolean> {
@@ -180,8 +177,9 @@ export async function backToHemisphere(manifest: ClientManifest, key: string): P
   const item = items.find((i) => i.key === key)
   const mod = item?.projectId ? manifest.mods.find((m) => m.source?.modrinth.projectId === item.projectId && state.detached.includes(m.id)) : undefined
   if (!file || !mod) return false
-  await removePlayerMod(file, Object.keys(state.owned))
+  await removePlayerMod(file, Object.keys(state.owned), true)
   await reattachMod(mod.id)
+  void record({ kind: 'backToHemisphere', name: mod.name, projectId: mod.source?.modrinth.projectId ?? null, to: mod.version })
   return true
 }
 
@@ -212,9 +210,66 @@ export async function updateAll(manifest: ClientManifest): Promise<UpdateApplied
   for (const [id, v] of [...managedUpdates]) {
     const mod = manifest.mods.find((m) => m.id === id)
     if (!mod || !enabled.has(id)) continue // switched off: nothing to update
-    const r = await setVersionFor(manifest, `h:${id}`, v.versionId, false, false)
+    const r = await setVersionFor(manifest, `h:${id}`, v.versionId, false, 'update')
     if (r.ok) updated.push(mod.name)
   }
   const mine = await updatePlayerMods(await owned(), manifest.minecraft, false)
   return { updated: [...updated, ...mine.updated], disabled: mine.disabled, restorePoint }
+}
+
+// ------------------------------------------------------------------------------ history
+
+type Undo = (manifest: ClientManifest, policy: ModPolicy | null | undefined) => Promise<UndoResult>
+
+/** How to undo a change, or null: only a mod's newest change, while the mod is still exactly as it left it. */
+function undoFor(e: ModHistoryEntry, items: ModItem[]): Undo | null {
+  if (!e.projectId) return null
+  const mine = items.find((i) => !i.managed && i.projectId === e.projectId)
+  const asLeft = !!mine && mine.versionNumber === e.to
+  const done = (ok: boolean): UndoResult => (ok ? { ok: true } : { ok: false, reason: 'notPossible' })
+  switch (e.kind) {
+    case 'version':
+    case 'update':
+      if (!asLeft || !e.fromVersionId || mine!.locked) return null
+      return async (m) => {
+        const r = await setVersionFor(m, mine!.key, e.fromVersionId!, false)
+        return r.ok ? { ok: true } : { ok: false, reason: r.reason === 'locked' ? 'locked' : r.reason === 'network' ? 'network' : 'notPossible' }
+      }
+    case 'install':
+      return asLeft ? async (m) => done(await removeFor(m, mine!.key)) : null
+    case 'remove': {
+      if (!e.fromVersionId || items.some((i) => i.projectId === e.projectId)) return null
+      return async (m, policy) => {
+        const state = await readInstanceState()
+        const r = await installMod(e.projectId!, true, m, Object.keys(state.owned), policy, new Set(state.detached), e.fromVersionId)
+        return r.ok ? { ok: true } : { ok: false, reason: r.reason === 'network' ? 'network' : 'notPossible' }
+      }
+    }
+    case 'lock':
+    case 'unlock':
+      if (!asLeft || mine!.locked !== (e.kind === 'lock')) return null
+      return async (m) => done(await setLockFor(m, mine!.key, e.kind === 'unlock'))
+    default:
+      return null
+  }
+}
+
+/** The mod history, newest first, with what can still be undone. */
+export async function listHistory(manifest: ClientManifest, policy: ModPolicy | null | undefined): Promise<ModHistoryItem[]> {
+  const items = await listMods(manifest, policy)
+  const seen = new Set<string>()
+  return readHistory().map((e) => {
+    const newest = !!e.projectId && !seen.has(e.projectId)
+    if (e.projectId) seen.add(e.projectId)
+    return { ...e, undo: newest && !!undoFor(e, items) }
+  })
+}
+
+export async function undoHistory(id: string, manifest: ClientManifest, policy: ModPolicy | null | undefined): Promise<UndoResult> {
+  const entry = readHistory().find((e) => e.id === id)
+  if (!entry) return { ok: false, reason: 'notPossible' }
+  const newer = readHistory().find((e) => e.projectId === entry.projectId)
+  if (newer?.id !== id) return { ok: false, reason: 'notPossible' }
+  const undo = undoFor(entry, await listMods(manifest, policy))
+  return undo ? undo(manifest, policy) : { ok: false, reason: 'notPossible' }
 }

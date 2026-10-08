@@ -11,8 +11,8 @@ import { sha512OfFile, tempNameFor } from '../sync/download'
 import { readInstanceState, restoreModChoices } from '../sync/sync'
 
 /**
- * Restore points: what a player tunes by hand, saved before anything that could undo it (client update, import,
- * "Update all", a version change, a restore, a full repair). instance/.hemisphere/restore-points/:
+ * Restore points: what a player tunes by hand, saved before the big changes (client update, import, "Update all",
+ * a restore, a setup import, a full repair). Everyday changes go to the mod history instead. instance/.hemisphere/restore-points/:
  *   <id>/point.json   what was there (mods with hashes, choices, locks)
  *   <id>/files/…      options.txt (keybinds, video), servers.dat, config/
  *   jars/<hash>.jar   the player's mod files, shared by every point (hard links: no extra space while the file is
@@ -46,12 +46,22 @@ interface Point {
 
 const CONFIG_FILE_MAX = 8 * 1024 * 1024
 const CONFIG_TOTAL_MAX = 100 * 1024 * 1024
-/** Several version changes in a row: the point before the first one is the useful one. */
-const COALESCE_MS = 10 * 60_000
 
 const root = () => join(gamePaths().instance, '.hemisphere', 'restore-points')
 const jarsDir = () => join(root(), 'jars')
-const jarPath = (sha512: string) => join(jarsDir(), `${sha512.slice(0, 40)}.jar`)
+/** Where a mod file is kept for restore points and mod sets (one copy per file, whoever needs it). */
+export const jarPath = (sha512: string) => join(jarsDir(), `${sha512.slice(0, 40)}.jar`)
+/** Mod sets (see modSets.ts): their files are kept in the same place. */
+export const setsDir = () => join(gamePaths().instance, '.hemisphere', 'mod-sets')
+
+/** Keeps a mod file (hard link while it's the same file on disk: no extra space). */
+export async function storeJar(path: string, sha512: string): Promise<string> {
+  const dest = jarPath(sha512)
+  if (existsSync(dest)) return dest
+  await mkdir(jarsDir(), { recursive: true })
+  await link(path, dest).catch(() => copyFile(path, dest))
+  return dest
+}
 const inInstance = (rel: string) => join(gamePaths().instance, ...rel.split('/'))
 export const isRestorePointId = (id: unknown): id is string => typeof id === 'string' && /^[0-9a-z]{8,12}-[0-9a-f]{6}$/.test(id)
 
@@ -132,8 +142,7 @@ const info = (p: Point): RestorePointInfo => ({
 export const listRestorePoints = (): Promise<RestorePointInfo[]> => serial(async () => (await allPoints()).map(info))
 
 /**
- * Takes a restore point now. Returns its id, or null when there was nothing to keep (fresh install) or a version
- * change follows another one closely. Never throws for the automatic ones: a failed point must not block the change.
+ * Takes a restore point now. Returns its id, or null when there was nothing to keep (fresh install). Never throws for the automatic ones: a failed point must not block the change.
  */
 export function createRestorePoint(reason: RestoreReason, client: { clientVersion: string; minecraft: string } | null = null): Promise<string | null> {
   return serial(() => takePoint(reason, client)).catch((err) => {
@@ -144,10 +153,6 @@ export function createRestorePoint(reason: RestoreReason, client: { clientVersio
 }
 
 async function takePoint(reason: RestoreReason, client: { clientVersion: string; minecraft: string } | null): Promise<string | null> {
-  if (reason.kind === 'version') {
-    const last = (await allPoints())[0]
-    if (last?.reason.kind === 'version' && Date.now() - last.createdAt < COALESCE_MS) return null
-  }
   const state = await readInstanceState()
   const owned = Object.keys(state.owned)
   const files = await gameFiles()
@@ -158,12 +163,7 @@ async function takePoint(reason: RestoreReason, client: { clientVersion: string;
   const mods = await withPlayerMods(async () => {
     const reg = readPlayerRegistry()
     const found = await currentMods(owned, reg)
-    await mkdir(jarsDir(), { recursive: true })
-    for (const m of found) {
-      const dest = jarPath(m.sha512)
-      if (existsSync(dest)) continue
-      await link(m.path, dest).catch(() => copyFile(m.path, dest))
-    }
+    for (const m of found) await storeJar(m.path, m.sha512)
     return { found, reg }
   })
   if (!state.clientVersion && !mods.found.length && !files.length) return null // nothing to protect yet
@@ -199,10 +199,25 @@ async function takePoint(reason: RestoreReason, client: { clientVersion: string;
 async function prune(): Promise<void> {
   const points = await allPoints()
   for (const p of points.slice(MAX_RESTORE_POINTS)) await rm(join(root(), p.id), { recursive: true, force: true })
-  const keep = new Set(points.slice(0, MAX_RESTORE_POINTS).flatMap((p) => p.mods.map((m) => `${m.sha512.slice(0, 40)}.jar`)))
-  for (const name of await readdir(jarsDir()).catch(() => [] as string[])) if (!keep.has(name)) await rm(join(jarsDir(), name), { force: true })
+  await cleanJars(points.slice(0, MAX_RESTORE_POINTS).flatMap((p) => p.mods.map((m) => m.sha512)))
   // leftovers of an interrupted point
   for (const name of await readdir(root()).catch(() => [] as string[])) if (name.endsWith('.tmp')) await rm(join(root(), name), { recursive: true, force: true })
+}
+
+/** Deletes kept mod files that no restore point and no mod set needs any more. */
+export async function cleanJars(fromPoints?: string[]): Promise<void> {
+  const shas = fromPoints ?? (await allPoints()).flatMap((p) => p.mods.map((m) => m.sha512))
+  for (const name of await readdir(setsDir()).catch(() => [] as string[])) {
+    if (!name.endsWith('.json') || name === 'active.json') continue
+    try {
+      const set = JSON.parse(await readFile(join(setsDir(), name), 'utf8')) as { mods?: { sha512: string }[] }
+      for (const m of set.mods ?? []) shas.push(m.sha512)
+    } catch {
+      return // can't tell what a set needs: keep everything
+    }
+  }
+  const keep = new Set(shas.map((s) => `${s.slice(0, 40)}.jar`))
+  for (const name of await readdir(jarsDir()).catch(() => [] as string[])) if (!keep.has(name)) await rm(join(jarsDir(), name), { force: true })
 }
 
 export const deleteRestorePoint = (id: string): Promise<boolean> =>
@@ -378,3 +393,6 @@ export async function restorePoint(id: string, manifest: ClientManifest | null):
 
 /** For tests: the hash of a buffer the way jars are named. */
 export const sha512Of = (data: Buffer) => createHash('sha512').update(data).digest('hex')
+
+/** Runs a job on the kept mod files with restore points to themselves (never call createRestorePoint inside). */
+export const withJarStore = <T,>(job: () => Promise<T>): Promise<T> => serial(job)

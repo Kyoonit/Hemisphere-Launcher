@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, RotateCcw, TriangleAlert, Wrench, Loader2 } from 'lucide-react'
+import { Check, Layers, RotateCcw, TriangleAlert, Wrench, Loader2 } from 'lucide-react'
 import type { GameState } from '@shared/game'
 import type { ClientSummary } from '@shared/client'
 import { useAccounts } from '../accounts'
@@ -23,6 +23,11 @@ export default function PlayZone({ client, onRepair, onOpenMods }: { client: Cli
   const { t } = useTranslation()
   const { active } = useAccounts()
   const game = useGameState()
+  // the active mod set, shown next to the client version (a click opens Mods)
+  const [setName, setSetName] = useState<string | null>(null)
+  useEffect(() => {
+    void window.hemisphere.modSets.list().then((s) => setSetName(s.sets.find((x) => x.id === s.active)?.name ?? null))
+  }, [])
   if (!game || !active) return null
 
   if (game.phase === 'preparing') return <Preparing game={game} />
@@ -89,6 +94,14 @@ export default function PlayZone({ client, onRepair, onOpenMods }: { client: Cli
           )}
           {' · '}
           {client ? t('home.clientVersion', { version: client.clientVersion, minecraft: client.minecraft }) : t('home.clientUnknown')}
+          {setName && (
+            <>
+              {' · '}
+              <button onClick={onOpenMods} title={t('sets.playHint')} className="inline-flex max-w-[180px] items-center gap-1 font-semibold text-gray-300 hover:text-white">
+                <Layers size={13} className="flex-none text-green-400" /> <span className="truncate">{setName}</span>
+              </button>
+            </>
+          )}
         </p>
       )}
     </div>

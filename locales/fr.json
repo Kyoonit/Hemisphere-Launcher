@@ -603,7 +603,7 @@
   },
   "backups": {
     "pointsTitle": "Points de restauration",
-    "pointsHint": "Créés automatiquement avant les mises à jour du client, les imports, « Tout mettre à jour » et les changements de version. Les 10 derniers sont gardés.",
+    "pointsHint": "Créés automatiquement avant les mises à jour du client, les imports, « Tout mettre à jour », les réparations complètes et les restaurations. Les 10 derniers sont gardés. Les changements de mods du quotidien sont dans Mods → Historique.",
     "createNow": "En créer un maintenant",
     "created": "Point de restauration créé.",
     "nothingYet": "Rien à sauvegarder pour l’instant : lance une partie d’abord.",
@@ -688,6 +688,78 @@
       "notFound": "Ce point de restauration n’existe plus.",
       "failed": "Ça n’a pas marché. Les détails sont dans les journaux du launcher.",
       "invalid": "Ce n’est pas un fichier de config Hemisphere, ou il est abîmé."
+    },
+    "deleteTitle": "Supprimer ce point de restauration ?",
+    "deleteBody": "Tu ne pourras plus y revenir. Tes mods et réglages restent comme ils sont maintenant.",
+    "deleteConfirm": "Supprimer le point"
+  },
+  "sets": {
+    "button": "Ensembles de mods",
+    "title": "Ensembles de mods",
+    "hint": "Passe d’une liste de mods à une autre en un clic. Avant de changer, tes mods sont enregistrés dans l’ensemble actif. Les mods absents d’un ensemble sont désactivés, jamais supprimés.",
+    "empty": "Pas encore d’ensemble. Enregistre tes mods actuels pour commencer, par exemple « Survie », puis crée un ensemble « Construction ».",
+    "myMods": "Mes mods",
+    "active": "actif",
+    "activeHint": "Tes mods actuels. Tes changements sont enregistrés dans cet ensemble quand tu en changes.",
+    "switchTo": "Passer à « {{name}} »",
+    "counts_one": "{{count}} de tes mods · {{on}} activés",
+    "counts_other": "{{count}} de tes mods · {{on}} activés",
+    "counts_many": "{{count}} de tes mods · {{on}} activés",
+    "share": "Partager en code",
+    "rename": "Renommer",
+    "delete": "Supprimer cet ensemble",
+    "saveCurrent": "Enregistrer mes mods en ensemble",
+    "namePlaceholder": "Nom (ex. Construction)",
+    "saveButton": "Enregistrer",
+    "addFriend": "Ajouter l’ensemble d’un ami",
+    "codePlaceholder": "Colle le code d’un ensemble",
+    "addButton": "Ajouter l’ensemble",
+    "adding": "Téléchargement des mods…",
+    "saved": "Ensemble « {{name}} » enregistré : c’est maintenant l’ensemble actif.",
+    "switched": "Passé à « {{name}} ». Les mods d’Hemisphere suivent avant ta prochaine partie.",
+    "switchedSaved": "Passé à « {{name}} ». Tes mods précédents ont été enregistrés dans l’ensemble « {{saved}} ».",
+    "missing": "Certains mods n’étaient plus disponibles : {{names}}",
+    "shared": "Code de « {{name}} » copié : colle-le à un ami (Discord…).",
+    "notShared": "Pas dans le code (pas sur Modrinth) : {{names}}",
+    "imported_one": "Ensemble « {{name}} » ajouté ({{count}} mod). Passe dessus depuis cette liste.",
+    "imported_other": "Ensemble « {{name}} » ajouté ({{count}} mods). Passe dessus depuis cette liste.",
+    "imported_many": "Ensemble « {{name}} » ajouté ({{count}} mods). Passe dessus depuis cette liste.",
+    "deleted": "Ensemble « {{name}} » supprimé. Tes mods restent comme ils sont.",
+    "deleteTitle": "Supprimer cet ensemble de mods ?",
+    "deleteBody": "Seul l’ensemble est supprimé : les mods de ton dossier restent comme ils sont maintenant.",
+    "deleteConfirm": "Supprimer l’ensemble",
+    "playHint": "Ensemble de mods actif (à changer dans Mods)",
+    "errors": {
+      "busy": "Ferme Minecraft (et attends que le launcher ait fini d’installer) d’abord.",
+      "notFound": "Cet ensemble n’existe plus.",
+      "failed": "Ça n’a pas marché. Les détails sont dans les journaux du launcher.",
+      "empty": "Cet ensemble n’a aucun mod Modrinth à partager.",
+      "invalid": "Ce n’est pas un code d’ensemble valide."
+    }
+  },
+  "history": {
+    "title": "Historique",
+    "subtitle": "Tes changements de mods",
+    "hint": "Changements de version, installations, suppressions, mises à jour et verrous, du plus récent au plus ancien. « Annuler » est proposé tant que le mod est resté tel que le changement l’a laissé. Les gros changements (mises à jour du client, imports, « Tout mettre à jour ») ont aussi un point de restauration dans Paramètres → Sauvegardes.",
+    "empty": "Aucun changement pour l’instant. Les changements de version, installations, suppressions et mises à jour apparaissent ici.",
+    "undo": "Annuler",
+    "undone": "Annulé : {{name}}.",
+    "kinds": {
+      "version": "{{name}} : {{from}} → {{to}}",
+      "update": "{{name}} mis à jour : {{from}} → {{to}}",
+      "install": "{{name}} installé ({{to}})",
+      "remove": "{{name}} supprimé ({{from}}), dans la Corbeille",
+      "lock": "{{name}} verrouillé sur {{to}}",
+      "unlock": "{{name}} déverrouillé ({{to}})",
+      "backToHemisphere": "{{name}} revenu à la version d’Hemisphere ({{to}})",
+      "setSwitch": "Passé à l’ensemble « {{name}} »",
+      "setImport": "Ensemble « {{name}} » ajouté"
+    },
+    "errors": {
+      "busy": "Ferme Minecraft (et attends que le launcher ait fini d’installer) d’abord.",
+      "notPossible": "Ce changement ne peut plus être annulé.",
+      "locked": "Ce mod est verrouillé sur sa version : déverrouille-le d’abord.",
+      "network": "Impossible de joindre Modrinth. Vérifie ta connexion et réessaie."
     }
   }
 }

@@ -6,6 +6,7 @@ import type { ClientManifest } from '@shared/manifest'
 import { policyFor, type InstallResult, type ModPolicy, type ModVersionChoice, type PlayerModInfo, type SetVersionResult, type UpdateApplied, type UpdateCheck } from '@shared/modBrowser'
 import { gamePaths } from '../game/target'
 import { blobPath, downloadToStore, sha512OfFile } from '../sync/download'
+import { record, type NewHistoryEntry } from './history'
 import { getProjects, isSafeModFileName, latestByHash, pickVersion, primaryFile, projectVersions, safeIcon, updateTarget, versionsByHash, type ModrinthVersion } from './api'
 
 /**
@@ -263,6 +264,7 @@ export function installMod(
     const reg = await identify(owned)
     const have = new Set(Object.values(reg).flatMap((e) => (e.projectId ? [e.projectId] : [])))
     const installed: string[] = []
+    const placed = new Map<string, ModrinthVersion>()
     const alreadyHad: string[] = []
     const titles = new Map<string, string>()
 
@@ -288,6 +290,7 @@ export function installMod(
           }
           await placeVersion(v)
           installed.push(id)
+          placed.set(id, v)
           for (const d of v.dependencies) if (d.dependency_type === 'required' && d.project_id) next.push(d.project_id)
         }
         level = next
@@ -297,19 +300,22 @@ export function installMod(
       console.warn('[player-mods] install failed:', err)
       return { ok: false, reason: 'network' }
     }
+    void record(...installed.map((id): NewHistoryEntry => ({ kind: 'install', name: titles.get(id) ?? id, projectId: id, to: placed.get(id)!.version_number, toVersionId: placed.get(id)!.id })))
     console.log(`[player-mods] installed ${installed.join(', ')}${alreadyHad.length ? ` (already had ${alreadyHad.join(', ')})` : ''}`)
     return { ok: true, installed: installed.map((id) => titles.get(id) ?? id), alreadyHad: alreadyHad.map((id) => titles.get(id) ?? id) }
   })
 }
 
 /** Moves a player mod to the Recycle Bin (recoverable). Hemisphere's own files are refused. */
-export function removePlayerMod(file: string, owned: string[]): Promise<boolean> {
+export function removePlayerMod(file: string, owned: string[], quiet = false): Promise<boolean> {
   return serial(async () => {
     if (!isSafeModFileName(file)) return false
     const target = playerFiles(owned).find((f) => f.file === file)
     if (!target) return false
     await shell.trashItem(join(target.dir, file))
     const reg = readRegistry()
+    const e = reg[key(file)]
+    if (!quiet) void record({ kind: 'remove', name: e?.title ?? file.replace(/\.jar$/i, ''), projectId: e?.projectId ?? null, from: e?.versionNumber ?? null, fromVersionId: e?.versionId ?? null })
     delete reg[key(file)]
     await writeRegistry(reg)
     return true
@@ -354,6 +360,7 @@ export function updatePlayerMods(owned: string[], minecraft: string, disableInco
     )
     const updated: string[] = []
     const disabled: string[] = []
+    const history: NewHistoryEntry[] = []
     for (const e of known) {
       const loc = files.get(key(e.file))!
       const found = latest[e.sha512]
@@ -368,6 +375,7 @@ export function updatePlayerMods(owned: string[], minecraft: string, disableInco
             delete reg[key(e.file)]
           }
           updated.push(e.title ?? e.file)
+          history.push({ kind: 'update', name: e.title ?? e.file, projectId: e.projectId, from: e.versionNumber, to: v.version_number, fromVersionId: e.versionId, toVersionId: v.id })
         } catch (err) {
           console.warn(`[player-mods] update of ${e.file} failed:`, err)
         }
@@ -381,6 +389,7 @@ export function updatePlayerMods(owned: string[], minecraft: string, disableInco
       }
     }
     await writeRegistry(reg)
+    void record(...history)
     if (updated.length || disabled.length) console.log(`[player-mods] for ${minecraft}: updated ${updated.length}, switched off ${disabled.length}`)
     return { updated, disabled }
   })
@@ -410,7 +419,7 @@ export function modVersions(file: string, owned: string[], minecraft: string): P
  * Switches one of the player's mods to a specific Modrinth version (same Minecraft version), locked or not. A locked
  * version is never changed by "Update all". The old file goes to the Recycle Bin.
  */
-export function setModVersion(file: string, versionId: string, owned: string[], minecraft: string, lock = false): Promise<SetVersionResult> {
+export function setModVersion(file: string, versionId: string, owned: string[], minecraft: string, lock = false, kind: 'version' | 'update' = 'version'): Promise<SetVersionResult> {
   return serial(async () => {
     const reg = await identify(owned)
     const e = reg[key(file)]
@@ -427,6 +436,7 @@ export function setModVersion(file: string, versionId: string, owned: string[], 
     if (e.pinned === minecraft && v.id !== e.versionId) return { ok: false, reason: 'locked' } // unlock it first
     const pinned = lock
     if (v.id === e.versionId) {
+      if (pinned !== (e.pinned === minecraft)) void record({ kind: pinned ? 'lock' : 'unlock', name: e.title ?? file, projectId: e.projectId, to: v.version_number, toVersionId: v.id })
       e.pinned = pinned ? minecraft : null
       e.update = null
       await writeRegistry(reg)
@@ -459,6 +469,7 @@ export function setModVersion(file: string, versionId: string, owned: string[], 
       pinned: pinned ? minecraft : null,
     }
     await writeRegistry(reg)
+    void record({ kind, name: e.title ?? file, projectId: e.projectId, from: e.versionNumber, to: v.version_number, fromVersionId: e.versionId, toVersionId: v.id })
     console.log(`[player-mods] ${e.title ?? file}: ${e.versionNumber} -> ${v.version_number}${pinned ? ' (pinned)' : ''}`)
     return { ok: true, versionNumber: v.version_number, pinned }
   })
@@ -475,6 +486,7 @@ export function setLocked(file: string, locked: boolean, owned: string[], minecr
     const reg = await identify(owned)
     const e = reg[key(file)]
     if (!e) return false
+    if (locked !== (e.pinned === minecraft)) void record({ kind: locked ? 'lock' : 'unlock', name: e.title ?? file, projectId: e.projectId, to: e.versionNumber, toVersionId: e.versionId })
     e.pinned = locked ? minecraft : null
     await writeRegistry(reg)
     return true

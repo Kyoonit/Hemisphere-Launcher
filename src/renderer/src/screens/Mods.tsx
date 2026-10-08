@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, CloudOff, Download, FolderOpen, History, Info, Loader2, Lock, LockOpen, RefreshCw, RotateCcw, Search, Trash2, TriangleAlert, Upload } from 'lucide-react'
+import ModSetsMenu from '../components/ModSetsMenu'
 import type { ModItem, ModVersionChoice } from '@shared/modBrowser'
 import Toggle from '../components/Toggle'
 import type { ClientSummary } from '@shared/client'
@@ -29,7 +30,7 @@ export function useClient(refreshKey: unknown = null): ClientSummary | null | un
  * updates, remove. Changing a Hemisphere mod takes it over (it stops following Hemisphere's updates) until the player
  * goes back to Hemisphere's version.
  */
-export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrowse(): void }) {
+export default function Mods({ onImport, onBrowse, onHistory }: { onImport(): void; onBrowse(): void; onHistory(): void }) {
   const { t, i18n } = useTranslation()
   const client = useClient()
   const [filter, setFilter] = useState<Filter>('all')
@@ -120,6 +121,16 @@ export default function Mods({ onImport, onBrowse }: { onImport(): void; onBrows
               void reload()
             }}
           />
+          <ModSetsMenu
+            className={toolButton}
+            onSwitched={() => {
+              setNotice(null)
+              void reload()
+            }}
+          />
+          <button onClick={onHistory} className={toolButton}>
+            <History size={14} /> {t('history.title')}
+          </button>
           <button onClick={onImport} className={toolButton}>
             <Upload size={14} /> {t('import.settingsButton')}
           </button>

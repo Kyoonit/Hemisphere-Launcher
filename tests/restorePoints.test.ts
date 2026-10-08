@@ -81,12 +81,6 @@ describe('restore points', () => {
     expect(readdirSync(inst('.hemisphere/restore-points/jars'))).toHaveLength(11)
   })
 
-  test('version changes in a row share the point taken before the first one', async () => {
-    expect(await rp.createRestorePoint({ kind: 'version', mod: 'Sodium' })).not.toBeNull()
-    expect(await rp.createRestorePoint({ kind: 'version', mod: 'Iris' })).toBeNull()
-    expect(await rp.createRestorePoint({ kind: 'updateAll' })).not.toBeNull()
-  })
-
   test('nothing to keep on a fresh install', async () => {
     rmSync(inst(), { recursive: true })
     expect(await rp.createRestorePoint({ kind: 'clientUpdate', from: '1.0.1', to: '1.0.2' })).toBeNull()

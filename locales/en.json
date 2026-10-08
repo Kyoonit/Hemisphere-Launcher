@@ -584,7 +584,7 @@
   },
   "backups": {
     "pointsTitle": "Restore points",
-    "pointsHint": "Taken automatically before client updates, imports, “Update all” and version changes. The last 10 are kept.",
+    "pointsHint": "Taken automatically before client updates, imports, “Update all”, full repairs and restores. The last 10 are kept. Everyday mod changes are in Mods → History.",
     "createNow": "Create one now",
     "created": "Restore point created.",
     "nothingYet": "Nothing to save yet: play once first.",
@@ -659,6 +659,76 @@
       "notFound": "This restore point no longer exists.",
       "failed": "That didn’t work. Details are in the launcher logs.",
       "invalid": "This isn’t a Hemisphere setup file, or it’s damaged."
+    },
+    "deleteTitle": "Delete this restore point?",
+    "deleteBody": "You won’t be able to go back to it. Your mods and settings stay as they are now.",
+    "deleteConfirm": "Delete restore point"
+  },
+  "sets": {
+    "button": "Mod sets",
+    "title": "Mod sets",
+    "hint": "Switch between mod lists in one click. Before switching, your mods are saved in the active set. Mods a set doesn’t have are switched off, never deleted.",
+    "empty": "No sets yet. Save your mods as they are now to start, e.g. “Survival”, then make a “Building” set.",
+    "myMods": "My mods",
+    "active": "active",
+    "activeHint": "Your mods now. Changes you make are saved in this set when you switch.",
+    "switchTo": "Switch to “{{name}}”",
+    "counts_one": "{{count}} of your mods · {{on}} on",
+    "counts_other": "{{count}} of your mods · {{on}} on",
+    "share": "Share as a code",
+    "rename": "Rename",
+    "delete": "Delete this set",
+    "saveCurrent": "Save my mods as a set",
+    "namePlaceholder": "Set name (e.g. Building)",
+    "saveButton": "Save",
+    "addFriend": "Add a friend’s set",
+    "codePlaceholder": "Paste the code of a set",
+    "addButton": "Add the set",
+    "adding": "Downloading mods…",
+    "saved": "Set “{{name}}” saved: it’s now the active set.",
+    "switched": "Switched to “{{name}}”. Hemisphere’s mods follow before your next game.",
+    "switchedSaved": "Switched to “{{name}}”. Your previous mods were saved as the set “{{saved}}”.",
+    "missing": "Some mods were no longer available: {{names}}",
+    "shared": "Code of “{{name}}” copied: paste it to a friend (Discord…).",
+    "notShared": "Not in the code (not on Modrinth): {{names}}",
+    "imported_one": "Set “{{name}}” added ({{count}} mod). Switch to it from this list.",
+    "imported_other": "Set “{{name}}” added ({{count}} mods). Switch to it from this list.",
+    "deleted": "Set “{{name}}” deleted. Your mods stay as they are.",
+    "deleteTitle": "Delete this mod set?",
+    "deleteBody": "Only the set is deleted: the mods in your folder stay as they are now.",
+    "deleteConfirm": "Delete set",
+    "playHint": "Active mod set (change it in Mods)",
+    "errors": {
+      "busy": "Close Minecraft (and wait for the launcher to finish installing) first.",
+      "notFound": "This set no longer exists.",
+      "failed": "That didn’t work. Details are in the launcher logs.",
+      "empty": "This set has no Modrinth mods to share.",
+      "invalid": "This isn’t a valid set code."
+    }
+  },
+  "history": {
+    "title": "History",
+    "subtitle": "Your mod changes",
+    "hint": "Version changes, installs, removals, updates and locks, newest first. Undo is offered while the mod is still as the change left it. Big changes (client updates, imports, “Update all”) also get a restore point in Settings → Backups.",
+    "empty": "No changes yet. Version changes, installs, removals and updates show up here.",
+    "undo": "Undo",
+    "undone": "Undone: {{name}}.",
+    "kinds": {
+      "version": "{{name}}: {{from}} → {{to}}",
+      "update": "{{name}} updated: {{from}} → {{to}}",
+      "install": "{{name}} installed ({{to}})",
+      "remove": "{{name}} removed ({{from}}), in the Recycle Bin",
+      "lock": "{{name}} locked on {{to}}",
+      "unlock": "{{name}} unlocked ({{to}})",
+      "backToHemisphere": "{{name}} back to Hemisphere’s version ({{to}})",
+      "setSwitch": "Switched to the set “{{name}}”",
+      "setImport": "Added the set “{{name}}”"
+    },
+    "errors": {
+      "busy": "Close Minecraft (and wait for the launcher to finish installing) first.",
+      "notPossible": "This change can’t be undone any more.",
+      "locked": "This mod is locked on its version: unlock it first.",
+      "network": "Couldn’t reach Modrinth. Check your connection and try again."
     }
   }
 }

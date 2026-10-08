@@ -1,5 +1,5 @@
 
-import { app, BrowserWindow, dialog, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, shell } from 'electron'
 import { join } from 'node:path'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
@@ -34,7 +34,7 @@ import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemI
 import { detectGpus } from './core/system/gpu'
 import { detectSources, importFrom, setPlayerModEnabled, sourceFromFolder } from './core/importer/importer'
 import { canEnablePlayerMod, hemisphereMods, installMod, knownPlayerProjects, listPlayerMods } from './core/modrinth/playerMods'
-import { backToHemisphere, checkAllUpdates, listMods, removeFor, setLockFor, setVersionFor, updateAll, versionsFor } from './core/modrinth/allMods'
+import { backToHemisphere, checkAllUpdates, listHistory, listMods, undoHistory, removeFor, setLockFor, setVersionFor, updateAll, versionsFor } from './core/modrinth/allMods'
 import { pickVersion, projectVersions, safeIcon, searchMods } from './core/modrinth/api'
 import { MODRINTH_ID, policyFor, type InstallResult, type ModItem, type ModSearchResult, type ModVersionChoice, type SetVersionResult, type UpdateApplied, type UpdateCheck } from '@shared/modBrowser'
 import type { ClientManifest } from '@shared/manifest'
@@ -45,6 +45,7 @@ import { handle, hardenApp, on, trustWindow } from './security'
 import { copyScreenshot, deleteScreenshot, exportScreenshots, listScreenshots, registerScreenshotScheme, serveScreenshots, showScreenshotInFolder } from './core/system/screenshots'
 import { checkForUpdates, getUpdateState, installUpdateNow, onUpdateState, startUpdater } from './core/system/updater'
 import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePoints, previewRestore, restorePoint } from './core/backup/restorePoints'
+import { deleteSet, importSetCode, isSetId, listSets, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
@@ -370,6 +371,36 @@ function registerIpc(): void {
     const result = await importSetup(setup, manifest, getFeed().modPolicy)
     if (result.ok) void prepareInBackground()
     return result
+  })
+  // Mod sets and history. Switching, importing and undoing change mods: refused while the game runs or the launcher installs.
+  handle(IPC.setsList, () => listSets())
+  handle(IPC.setsSave, (_e, name: unknown) => saveSet(name))
+  handle(IPC.setsSwitch, async (_e, id: unknown, fallbackName: unknown) => {
+    if (!isSetId(id)) return { ok: false, reason: 'notFound' }
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    const result = await switchSet(id, (await clientInfo()).manifest, fallbackName)
+    if (result.ok) void prepareInBackground() // Hemisphere's mods for the set's choices
+    return result
+  })
+  handle(IPC.setsRename, (_e, id: unknown, name: unknown) => (isSetId(id) ? renameSet(id, name) : false))
+  handle(IPC.setsDelete, (_e, id: unknown) => (isSetId(id) ? deleteSet(id) : false))
+  handle(IPC.setsShare, async (_e, id: unknown) => {
+    const { manifest } = await clientInfo()
+    if (!isSetId(id) || !manifest) return { ok: false, reason: 'notFound' }
+    const result = await shareSet(id, manifest.minecraft)
+    if (result.ok) clipboard.writeText(result.code)
+    return result
+  })
+  handle(IPC.setsImport, async (_e, code: unknown) => {
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    const { manifest } = await clientInfo()
+    return manifest ? importSetCode(code, manifest, getFeed().modPolicy) : { ok: false, reason: 'failed' }
+  })
+  handle(IPC.historyList, () => withManifest(null, (m) => listHistory(m, getFeed().modPolicy)))
+  handle(IPC.historyUndo, async (_e, id: unknown) => {
+    if (typeof id !== 'string' || id.length > 40) return { ok: false, reason: 'notPossible' }
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    return withManifest({ ok: false, reason: 'network' }, (m) => undoHistory(id, m, getFeed().modPolicy))
   })
   handle(IPC.feedGet, () => getFeed())
   on(IPC.feedOpenLink, (_e, id: unknown) => {

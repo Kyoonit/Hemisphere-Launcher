@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, Download, FileUp, History, LoaderCircle, Package, RefreshCw, Save, Trash2, TriangleAlert, Upload, Wrench, type LucideIcon } from 'lucide-react'
 import type { RestorePointInfo, RestorePreview, RestoreReason, SetupImportResult, SetupSummary } from '@shared/restorePoints'
 import { formatBytes } from '../format'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const button = 'flex items-center gap-2 rounded-lg bg-gray-700/85 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600 disabled:pointer-events-none disabled:opacity-50'
 const primary = 'flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-green-500 disabled:pointer-events-none disabled:opacity-50'
@@ -28,6 +29,8 @@ export default function Backups() {
   const [open, setOpen] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<Message | null>(null)
+  // the restore point the player is about to delete (confirmation box)
+  const [deleting, setDeleting] = useState<RestorePointInfo | null>(null)
   const reload = () => window.hemisphere.backups.list().then(setPoints)
   useEffect(() => {
     void reload()
@@ -54,6 +57,7 @@ export default function Backups() {
     } else setMessage({ ok: false, text: t(`backups.errors.${r.reason}`) })
   }
   const remove = async (id: string) => {
+    setDeleting(null)
     if (await window.hemisphere.backups.remove(id)) {
       if (open === id) setOpen(null)
       void reload()
@@ -107,7 +111,7 @@ export default function Backups() {
                   <button onClick={() => setOpen(open === p.id ? null : p.id)} className={open === p.id ? `${button} !bg-gray-600` : button} aria-expanded={open === p.id}>
                     <History size={15} /> {t('backups.restore')}
                   </button>
-                  <button onClick={() => remove(p.id)} title={t('backups.delete')} aria-label={t('backups.delete')} className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-700 hover:text-red-400">
+                  <button onClick={() => setDeleting(p)} title={t('backups.delete')} aria-label={t('backups.delete')} className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-700 hover:text-red-400">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -129,6 +133,19 @@ export default function Backups() {
       )}
 
       <MoveSetup onImported={() => void reload()} />
+
+      {deleting && (
+        <ConfirmDialog title={t('backups.deleteTitle')} confirmLabel={t('backups.deleteConfirm')} onConfirm={() => remove(deleting.id)} onCancel={() => setDeleting(null)}>
+          <p className="rounded-lg bg-gray-800/80 px-3 py-2.5">
+            <b className="block text-white">“{reasonText(deleting.reason)}”</b>
+            <span className="text-[12.5px] text-gray-400">
+              {when(deleting.createdAt)}
+              {deleting.clientVersion && ` · ${t('backups.client', { version: deleting.clientVersion })}`}
+            </span>
+          </p>
+          <p className="mt-3">{t('backups.deleteBody')}</p>
+        </ConfirmDialog>
+      )}
     </div>
   )
 }

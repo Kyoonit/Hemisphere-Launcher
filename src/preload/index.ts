@@ -38,6 +38,19 @@ const api: HemisphereApi = {
     pickSetup: () => ipcRenderer.invoke(IPC.setupPick),
     importSetup: (token) => ipcRenderer.invoke(IPC.setupImport, token),
   },
+  modSets: {
+    list: () => ipcRenderer.invoke(IPC.setsList),
+    save: (name) => ipcRenderer.invoke(IPC.setsSave, name),
+    switchTo: (id, fallbackName) => ipcRenderer.invoke(IPC.setsSwitch, id, fallbackName),
+    rename: (id, name) => ipcRenderer.invoke(IPC.setsRename, id, name),
+    remove: (id) => ipcRenderer.invoke(IPC.setsDelete, id),
+    share: (id) => ipcRenderer.invoke(IPC.setsShare, id),
+    importCode: (code) => ipcRenderer.invoke(IPC.setsImport, code),
+  },
+  modHistory: {
+    list: () => ipcRenderer.invoke(IPC.historyList),
+    undo: (id) => ipcRenderer.invoke(IPC.historyUndo, id),
+  },
   launcherUpdate: {
     get: () => ipcRenderer.invoke(IPC.launcherUpdateGet),
     onChange: (cb) => {

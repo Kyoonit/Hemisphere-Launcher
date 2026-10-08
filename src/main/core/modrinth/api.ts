@@ -131,6 +131,19 @@ export async function getProjects(ids: string[]): Promise<Map<string, ModrinthPr
   return out
 }
 
+/** Versions by id (up to 100 per request), in no particular order. */
+export async function getVersions(ids: string[]): Promise<ModrinthVersion[]> {
+  const out: ModrinthVersion[] = []
+  for (let i = 0; i < ids.length; i += 100) {
+    const list = z.array(z.unknown()).parse(await get(`/versions?ids=${encodeURIComponent(JSON.stringify(ids.slice(i, i + 100)))}`))
+    for (const v of list) {
+      const r = VersionSchema.safeParse(v)
+      if (r.success) out.push(r.data)
+    }
+  }
+  return out
+}
+
 const parseVersionMap = (raw: unknown): Record<string, ModrinthVersion> => {
   const out: Record<string, ModrinthVersion> = {}
   for (const [k, v] of Object.entries(z.record(z.string(), z.unknown()).parse(raw))) {

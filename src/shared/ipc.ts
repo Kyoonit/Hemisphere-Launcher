@@ -7,6 +7,7 @@ import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from '
 import type { ClientSummary } from './client'
 import type { LauncherUpdateState } from './launcherUpdate'
 import type { ScreenshotExport, ScreenshotList } from './screenshots'
+import type { ModHistoryItem, ModSetInfo, ModSetsState, SetImportResult, SetShareResult, SetSwitchResult, UndoResult } from './modSets'
 import type { RestorePointInfo, RestorePreview, RestoreResult, SetupExportResult, SetupImportResult, SetupPick } from './restorePoints'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
 
@@ -63,6 +64,15 @@ export const IPC = {
   setupExport: 'setup:export',
   setupPick: 'setup:pick',
   setupImport: 'setup:import',
+  setsList: 'sets:list',
+  setsSave: 'sets:save',
+  setsSwitch: 'sets:switch',
+  setsRename: 'sets:rename',
+  setsDelete: 'sets:delete',
+  setsShare: 'sets:share',
+  setsImport: 'sets:import',
+  historyList: 'history:list',
+  historyUndo: 'history:undo',
   systemPreflight: 'system:preflight',
   systemOpenFolder: 'system:open-folder',
   systemDiagnostics: 'system:diagnostics',
@@ -140,6 +150,24 @@ export interface HemisphereApi {
     /** open dialog, then what the file contains */
     pickSetup(): Promise<SetupPick>
     importSetup(token: string): Promise<SetupImportResult>
+  }
+  /** Mod sets: named mod lists to switch between, shared as a code */
+  modSets: {
+    list(): Promise<ModSetsState>
+    /** the mods as they are now, as a new (active) set */
+    save(name: string): Promise<ModSetInfo | null>
+    /** fallbackName: name for the mods as they are now when no set is active yet ("My mods") */
+    switchTo(id: string, fallbackName: string): Promise<SetSwitchResult>
+    rename(id: string, name: string): Promise<boolean>
+    remove(id: string): Promise<boolean>
+    /** the code is also put on the clipboard */
+    share(id: string): Promise<SetShareResult>
+    importCode(code: string): Promise<SetImportResult>
+  }
+  /** Everyday mod changes, newest first, with undo */
+  modHistory: {
+    list(): Promise<ModHistoryItem[] | null>
+    undo(id: string): Promise<UndoResult>
   }
   /** Updates of the launcher itself (GitHub releases) */
   launcherUpdate: {
