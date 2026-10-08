@@ -594,7 +594,8 @@ function registerIpc(): void {
       notify: devNotify,
       discord: devDiscord,
       resetSeen: async () => {
-        await updateSettings({ seenNews: [], seenChangelog: null, importPromptDismissed: false })
+        // seenChangelog: older than any version, so "What's new" shows again (null means a first run: nothing shown)
+        await updateSettings({ seenNews: [], seenChangelog: '0.0.0', importPromptDismissed: false })
       },
       simulateRestart: async () => {
         const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
