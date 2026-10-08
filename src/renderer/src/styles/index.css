@@ -193,10 +193,10 @@
   margin-top: clamp(20px, calc(7.5vh - 25px), 32px);
 }
 .home-pad {
-  padding-bottom: clamp(16px, calc(5vh - 14px), 24px);
+  padding-bottom: clamp(8px, calc(5vh - 22px), 16px); /* + the 20 px disclaimer strip below */
 }
 .home-title-compact {
-  font-size: clamp(22px, calc(5vh - 8px), 32px);
+  font-size: clamp(20px, calc(5vh - 10px), 32px);
 }
 
 /* News badge appearing */

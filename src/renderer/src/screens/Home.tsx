@@ -39,7 +39,7 @@ export default function Home({ onOpenNews, onRepair, onImport }: { onOpenNews():
       <WhatsNew client={client ?? null} />
       <ServerPanel status={status} feed={feed} />
 
-      <section className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
+      <section className="flex min-h-0 flex-1 flex-col items-center justify-center-safe text-center">
         {active?.status === 'expired' && <ExpiredBanner />}
         {/* one compact line while the crash card needs the room */}
         <h1
@@ -50,7 +50,7 @@ export default function Home({ onOpenNews, onRepair, onImport }: { onOpenNews():
           <span className="text-green-400">{active ? active.name : t('app.name')}</span>
         </h1>
 
-        <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-3' : 'home-gap'}`}>
+        <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-2' : 'home-gap'}`}>
           <PlayZone client={client ?? null} onRepair={onRepair} />
           <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
             <ServerNotice offline={status?.online === false} feed={feed} />

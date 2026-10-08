@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import TitleBar, { type Screen } from './components/TitleBar'
 import Background from './components/Background'
 import AccountMenu from './components/AccountMenu'
@@ -14,6 +15,7 @@ import { useFeed, useSettings } from './hooks'
 import { markNewsSeen, unseenNewsCount } from '@shared/feed'
 
 export default function App() {
+  const { t } = useTranslation()
   const { state } = useAccounts()
   const [screen, setScreen] = useState<Screen>('home')
   const [settingsSection, setSettingsSection] = useState<Section>('game')
@@ -49,7 +51,7 @@ export default function App() {
         account={<AccountMenu onAddAccount={() => setAddingAccount(true)} onManage={() => openSettings('account')} />}
       />
       {state && (
-        <main key={showLogin ? 'login' : `${screen}-${settingsSection}`} className="animate-fade absolute inset-x-0 top-[52px] bottom-0">
+        <main key={showLogin ? 'login' : `${screen}-${settingsSection}`} className="animate-fade absolute inset-x-0 top-[52px] bottom-5">
           {showLogin ? (
             <Login onBack={needsLogin ? undefined : () => setAddingAccount(false)} />
           ) : (
@@ -64,6 +66,10 @@ export default function App() {
           )}
         </main>
       )}
+      {/* Required by Minecraft's usage guidelines for anything built around the game. */}
+      <p className="pointer-events-none absolute inset-x-0 bottom-0 h-5 truncate px-4 text-center text-[11px] leading-5 text-gray-500">
+        {t('legal.disclaimer')}
+      </p>
     </div>
   )
 }

@@ -455,5 +455,8 @@
   "preflight": {
     "lowDisk": "Peu d’espace disque : {{value}} Go libres",
     "lowRam": "Ce PC a {{value}} Go de RAM : ferme les autres programmes pour un jeu plus fluide"
+  },
+  "legal": {
+    "disclaimer": "Produit Minecraft non officiel. Non approuvé par Mojang ou Microsoft et sans lien avec eux."
   }
 }

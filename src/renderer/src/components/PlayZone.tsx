@@ -69,7 +69,7 @@ export default function PlayZone({ client, onRepair }: { client: ClientSummary |
         {t('home.play')}
       </button>
       {game.error?.code === 'crashed' ? (
-        <div className="mt-4">
+        <div className="mt-3">
           <CrashCard suspects={game.error.suspects ?? []} onRepair={onRepair} />
         </div>
       ) : game.error ? (
