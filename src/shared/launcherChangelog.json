@@ -3,6 +3,12 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "1.0.18",
+        "area": "launcher",
+        "en": "No more “Update failed” warning when you’re offline or GitHub doesn’t answer: the launcher simply checks again later.",
+        "fr": "Plus d’alerte « Échec de la mise à jour » quand tu es hors ligne ou que GitHub ne répond pas : le launcher revérifie simplement plus tard."
+      },
+      {
         "version": "1.0.17",
         "area": "launcher",
         "en": "The installer now shows a Hemisphere window with its progress, instead of the small Windows box.",
