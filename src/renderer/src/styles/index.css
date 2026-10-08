@@ -1,7 +1,5 @@
 @import 'tailwindcss';
 
-/* Compact layout for short windows (small laptop screens, resized window). */
-@custom-variant short (@media (max-height: 720px));
 
 /* Hemisphere design tokens (Phase 1). The website is built on Tailwind's default gray/green
    palette, so standard classes like bg-gray-900 or text-green-400 match it exactly. */
@@ -184,4 +182,16 @@
   to {
     background-position: -200% 0;
   }
+}
+
+/* Home scales smoothly with the window height (600 px window -> compact, 760 px and up -> full size)
+   instead of jumping at a breakpoint. */
+.home-title {
+  font-size: clamp(34px, calc(6.25vh - 3.5px), 44px);
+}
+.home-gap {
+  margin-top: clamp(20px, calc(7.5vh - 25px), 32px);
+}
+.home-pad {
+  padding-bottom: clamp(16px, calc(5vh - 14px), 24px);
 }

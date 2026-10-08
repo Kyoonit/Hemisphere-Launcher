@@ -3,11 +3,11 @@ import { Clock, Construction, Signal } from 'lucide-react'
 import type { ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
 import { restartState, type RestartSchedule, type RestartState } from '@shared/restart'
-import { splitDuration, useNow, useShortWindow } from '../hooks'
+import { splitDuration, useNow, useWindowHeight } from '../hooks'
 
-// fewer heads in a short window so the panel never reaches the news card
-const MAX_HEADS = 10
-const MAX_HEADS_SHORT = 4
+// Rows of heads (2 per row) grow with the window height, so the panel never reaches the news card:
+// 2 rows in the smallest window, one more row every 40 px, up to 5 rows.
+const headRows = (height: number) => Math.min(5, Math.max(2, 2 + Math.floor((height - 600) / 40)))
 
 export default function ServerPanel({ status, feed }: { status: ServerStatus | null; feed: Feed | null }) {
   const { t, i18n } = useTranslation()
@@ -115,7 +115,7 @@ function RestartBox({ restart }: { restart: RestartState }) {
 
 function PlayerList({ status }: { status: ServerStatus }) {
   const { t } = useTranslation()
-  const shown = status.players.slice(0, useShortWindow() ? MAX_HEADS_SHORT : MAX_HEADS)
+  const shown = status.players.slice(0, headRows(useWindowHeight()) * 2)
   const total = status.playersOnline ?? status.players.length
   const more = total - shown.length
 

@@ -31,24 +31,25 @@ export default function Home({ onOpenNews, onRepair, onImport }: { onOpenNews():
   const crashed = game?.error?.code === 'crashed'
 
   return (
-    <div className="relative flex h-full flex-col items-center px-7 pb-6 short:pb-4">
+    <div className="home-pad relative flex h-full flex-col items-center px-7">
       <PlaytimeCard key={active?.id} />
       <ImportPrompt onImport={onImport} />
       <ServerPanel status={status} feed={feed} />
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
         {active?.status === 'expired' && <ExpiredBanner />}
-        <h1
-          className={`animate-rise text-[44px] leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms] short:text-[34px] ${crashed ? 'short:hidden' : ''}`}
-        >
-          {active ? t('home.welcomeBack') : t('home.welcomeTo')}
-          <br />
-          <span className="text-green-400">{active ? active.name : t('app.name')}</span>
-        </h1>
+        {/* the crash card takes the welcome title's place */}
+        {!crashed && (
+          <h1 className="home-title animate-rise leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]">
+            {active ? t('home.welcomeBack') : t('home.welcomeTo')}
+            <br />
+            <span className="text-green-400">{active ? active.name : t('app.name')}</span>
+          </h1>
+        )}
 
-        <div className="animate-rise mt-8 flex flex-col items-center [animation-delay:250ms] short:mt-5">
+        <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? '' : 'home-gap'}`}>
           <PlayZone client={client ?? null} onRepair={onRepair} />
-          <div className="mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400">
+          <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
             <ServerNotice offline={status?.online === false} feed={feed} />
             {feed?.maintenance.active && <MaintenanceBanner feed={feed} />}
           </div>

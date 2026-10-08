@@ -13,14 +13,16 @@ export default function CrashCard({ suspects, onRepair }: { suspects: string[]; 
   }, [])
 
   return (
-    <div className="glass animate-fade w-[480px] max-w-[calc(100vw-540px)] px-5 py-4 text-left" role="alert">
+    // Never wider than the gap between the side panels; in a narrow window it drops the subtitle and link labels
+    // (a container query) so it stays short enough to fit above the bottom row.
+    <div className="glass animate-fade @container w-[min(480px,calc(100vw-610px))] px-5 py-4 text-left" role="alert">
       <div className="flex items-center gap-3">
         <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-red-600/20 text-red-400">
           <X size={18} />
         </span>
         <div>
           <b className="block text-white">{t('crash.title')}</b>
-          <span className="text-[13px] text-gray-400">{t('crash.subtitle')}</span>
+          <span className="text-[13px] text-gray-400 @max-[400px]:hidden">{t('crash.subtitle')}</span>
         </div>
       </div>
 
@@ -48,7 +50,7 @@ export default function CrashCard({ suspects, onRepair }: { suspects: string[]; 
         </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-white/10 pt-2.5">
+      <div className="mt-3 flex flex-wrap items-center gap-x-0.5 border-t border-white/10 pt-2.5">
         <LinkButton onClick={() => window.hemisphere.system.openFolder('crashReports')} icon={<FileWarning size={14} />}>
           {t('crash.reports')}
         </LinkButton>
@@ -70,10 +72,14 @@ export default function CrashCard({ suspects, onRepair }: { suspects: string[]; 
   )
 }
 
-function LinkButton({ onClick, icon, children }: { onClick(): void; icon: React.ReactNode; children: React.ReactNode }) {
+function LinkButton({ onClick, icon, children }: { onClick(): void; icon: React.ReactNode; children: string }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] text-gray-400 transition-colors hover:bg-gray-700 hover:text-white">
-      {icon} {children}
+    <button
+      onClick={onClick}
+      title={children}
+      className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] whitespace-nowrap text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
+    >
+      {icon} <span className="@max-[400px]:sr-only">{children}</span>
     </button>
   )
 }

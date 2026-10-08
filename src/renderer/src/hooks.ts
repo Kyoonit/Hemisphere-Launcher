@@ -2,17 +2,15 @@ import { useEffect, useState } from 'react'
 import type { PlaytimeSummary, ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
 
-/** True while the window is short (same breakpoint as the CSS `short:` variant). */
-export function useShortWindow(): boolean {
-  const query = '(max-height: 720px)'
-  const [short, setShort] = useState(() => matchMedia(query).matches)
+/** Window height in CSS pixels, updated on resize. */
+export function useWindowHeight(): number {
+  const [height, setHeight] = useState(() => window.innerHeight)
   useEffect(() => {
-    const mq = matchMedia(query)
-    const onChange = () => setShort(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
+    const onResize = () => setHeight(window.innerHeight)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
   }, [])
-  return short
+  return height
 }
 
 /** Current time, re-rendered every `intervalMs`. */
