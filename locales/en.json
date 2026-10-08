@@ -313,7 +313,12 @@
     "incompatible": "Switched off: no version for Minecraft {{minecraft}} yet",
     "notOnModrinth": "not on Modrinth",
     "remove": "Remove {{mod}}",
-    "removeConfirm": "Move to Recycle Bin"
+    "removeConfirm": "Move to Recycle Bin",
+    "enabledTotal_one": "{{count}} mod on",
+    "enabledTotal_other": "{{count}} mods on",
+    "yoursTag": "Added by you",
+    "duplicate": "Duplicate",
+    "duplicateHint": "Hemisphere already includes this mod: remove this copy and use Hemisphere’s switch instead"
   },
   "repair": {
     "title": "Repair installation",
@@ -470,7 +475,7 @@
     "title": "Find mods",
     "subtitle": "From Modrinth · Fabric · Minecraft {{minecraft}}",
     "search": "Search mods…",
-    "rules": "Only mods made for this Minecraft version are shown. Cheats like x-ray are blocked by the staff; follow the server rules for everything else.",
+    "rules": "Only mods made for this Minecraft version are shown.",
     "by": "by {{author}}",
     "downloads": "{{count}} downloads",
     "install": "Install",

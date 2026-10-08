@@ -194,7 +194,12 @@ function registerIpc(): void {
       return { ok: false, reason: 'failed', detail: String(err) }
     }
   })
-  handle(IPC.modsPlayer, async () => listPlayerMods(Object.keys((await readInstanceState()).owned), getFeed().modPolicy))
+  handle(IPC.modsPlayer, async () => {
+    const hemisphere = await getContent()
+      .then((c) => hemisphereProjects(c.manifest))
+      .catch(() => new Set<string>())
+    return listPlayerMods(Object.keys((await readInstanceState()).owned), getFeed().modPolicy, hemisphere)
+  })
   // Changing mods while the game runs (or while the launcher is installing) is refused.
   const modsBusy = () => {
     const g = getGameState()

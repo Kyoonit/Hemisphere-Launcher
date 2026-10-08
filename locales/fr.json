@@ -317,7 +317,13 @@
     "incompatible": "Désactivé : pas encore de version pour Minecraft {{minecraft}}",
     "notOnModrinth": "absent de Modrinth",
     "remove": "Supprimer {{mod}}",
-    "removeConfirm": "Mettre à la Corbeille"
+    "removeConfirm": "Mettre à la Corbeille",
+    "enabledTotal_one": "{{count}} mod activé",
+    "enabledTotal_other": "{{count}} mods activés",
+    "enabledTotal_many": "{{count}} mods activés",
+    "yoursTag": "Ajouté par toi",
+    "duplicate": "Doublon",
+    "duplicateHint": "Hemisphere inclut déjà ce mod : supprime cette copie et utilise l’interrupteur d’Hemisphere"
   },
   "repair": {
     "title": "Réparer l’installation",
@@ -482,7 +488,7 @@
     "title": "Trouver des mods",
     "subtitle": "Depuis Modrinth · Fabric · Minecraft {{minecraft}}",
     "search": "Rechercher des mods…",
-    "rules": "Seuls les mods faits pour cette version de Minecraft sont affichés. Les triches comme le x-ray sont bloquées par le staff ; pour le reste, respecte les règles du serveur.",
+    "rules": "Seuls les mods faits pour cette version de Minecraft sont affichés.",
     "by": "par {{author}}",
     "downloads": "{{count}} téléchargements",
     "install": "Installer",

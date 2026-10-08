@@ -128,7 +128,7 @@ async function identify(owned: string[]): Promise<Registry> {
   return reg
 }
 
-export function listPlayerMods(owned: string[], policy: ModPolicy | null | undefined): Promise<PlayerModInfo[]> {
+export function listPlayerMods(owned: string[], policy: ModPolicy | null | undefined, hemisphere: Set<string> = new Set()): Promise<PlayerModInfo[]> {
   return serial(async () => {
     const reg = await identify(owned)
     return playerFiles(owned)
@@ -145,6 +145,7 @@ export function listPlayerMods(owned: string[], policy: ModPolicy | null | undef
           ...policyFor(policy, e?.projectId ?? null),
           update: e?.update ? { versionNumber: e.update.versionNumber } : null,
           incompatibleWith: e?.incompatibleWith ?? null,
+          inHemisphere: !!e?.projectId && hemisphere.has(e.projectId),
         }
       })
       .sort((a, b) => (a.title ?? a.file).localeCompare(b.title ?? b.file))

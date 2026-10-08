@@ -71,6 +71,8 @@ export interface PlayerModInfo {
   reason?: Localized
   /** a newer version for the current Minecraft version (after "Check for updates") */
   update: { versionNumber: string } | null
+  /** Hemisphere ships this mod too: the player's copy is a duplicate */
+  inHemisphere: boolean
   /** switched off because no version exists yet for this Minecraft version */
   incompatibleWith: string | null
 }
