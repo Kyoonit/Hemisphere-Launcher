@@ -24,6 +24,7 @@ import { readInstanceState } from '../sync/sync'
 import { endSession, startSession } from '../playtime/playtimeStore'
 import { cleanStore, syncClient } from '../sync/sync'
 import { createRestorePoint } from '../backup/restorePoints'
+import { devEnabled } from '../dev/devTools'
 import type { ClientManifest } from '@shared/manifest'
 import { GameError, toGameError } from './util'
 
@@ -40,6 +41,11 @@ export const gameEvents = {
 export const getGameState = () => state
 export function onGameState(cb: (s: GameState) => void): void {
   onState = cb
+}
+
+/** Developer tab only (development build or staff code): show a pretend game state (crash card, errors, progress). */
+export function simulateGameState(patch: Partial<GameState>): void {
+  if (devEnabled()) set(patch)
 }
 
 function set(patch: Partial<GameState>): void {

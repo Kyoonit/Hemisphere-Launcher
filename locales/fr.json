@@ -47,7 +47,8 @@
       "account": "Compte",
       "installation": "Installation",
       "advanced": "Avancé",
-      "backups": "Sauvegardes"
+      "backups": "Sauvegardes",
+      "developer": "Développeur"
     },
     "language": "Langue",
     "languageHint": "Suit la langue de Windows par défaut",
@@ -1034,5 +1035,86 @@
     "discord": "Afficher « Joue sur Hemisphere SMP » dans Discord",
     "discordHint": "Dans ton statut Discord, seulement pendant que le jeu tourne.",
     "discordNotReady": "Pas encore disponible : le staff ne l’a pas configuré."
+  },
+  "dev": {
+    "staffAccess": "Accès staff",
+    "staffAccessHint": "Staff d’Hemisphere : entre le code staff pour tester le launcher (onglet Développeur, sur ce PC seulement).",
+    "staffAccessDev": "Version de développement : l’onglet Développeur est toujours disponible.",
+    "staffAccessOn": "Déverrouillé sur ce PC.",
+    "codePlaceholder": "Code staff",
+    "unlock": "Déverrouiller",
+    "open": "Ouvrir l’onglet Développeur",
+    "unlocked": "Déverrouillé : l’onglet Développeur est maintenant dans la liste à gauche.",
+    "wrong": "Ce n’est pas le code staff.",
+    "wait": "Trop d’essais : attends {{seconds}} s.",
+    "lock": "Verrouiller",
+    "introDev": "Version de développement. Tout ici est pour de faux et seulement sur ce PC : rien n’atteint le serveur ni les autres joueurs. Les réglages restent après un redémarrage jusqu’à ce que tu les désactives.",
+    "introStaff": "Tests du staff. Tout ici est pour de faux et seulement sur ce PC : rien n’atteint le serveur ni les autres joueurs. Les réglages restent après un redémarrage jusqu’à ce que tu les désactives. Verrouiller cache à nouveau cet onglet.",
+    "save": "Enregistrer",
+    "groups": {
+      "feed": "Actus, événements et accueil",
+      "server": "Statut du serveur",
+      "game": "Jeu",
+      "community": "Notifications et Discord",
+      "launcher": "Launcher",
+      "files": "Fichiers",
+      "window": "Fenêtre"
+    },
+    "sampleEvents": "Événements d’exemple",
+    "sampleEventsHint": "Un en cours, un dans 16 minutes (son rappel arrive environ une minute après), un dans 3 jours. Dans Actus et sur l’accueil.",
+    "maintenance": "Maintenance",
+    "maintenanceHint": "Le bandeau orange et le panneau du serveur, pendant 2 heures.",
+    "restart": "Redémarrage quotidien",
+    "restartHint": "Le compte à rebours et l’état « redémarrage » dans le panneau du serveur.",
+    "restartOptions": {
+      "real": "Comme publié",
+      "soon": "Dans 3 minutes",
+      "now": "Redémarrage en cours"
+    },
+    "extraNews": "Actus non lues en plus",
+    "extraNewsHint": "Ajoute des actus de test : le badge rouge sur Actus (9+ à partir de 10).",
+    "resetSeen": "Réafficher les actus non lues, « Nouveautés » et la carte d’import",
+    "server": "Serveur",
+    "serverHint": "Ce que le launcher affiche (le vrai serveur n’est pas touché).",
+    "serverOptions": {
+      "real": "Statut réel",
+      "busy": "En ligne, 137 joueurs",
+      "offline": "Hors ligne",
+      "unknown": "Statut inconnu"
+    },
+    "gameHint": "Affiché sur l’accueil, comme si c’était arrivé (aucun jeu n’est lancé).",
+    "crash": "Carte de crash",
+    "progress": "Progression de Jouer",
+    "background": "Préparation en arrière-plan",
+    "errors": {
+      "network": "Erreur réseau",
+      "java": "Erreur Java",
+      "disk": "Erreur disque",
+      "busy": "Fichiers utilisés",
+      "sessionExpired": "Session expirée",
+      "content": "Client indisponible"
+    },
+    "clearError": "Effacer",
+    "notifyBack": "Notification : serveur de retour",
+    "notifyEvent": "Notification : rappel d’événement",
+    "discordId": "Id d’application Discord",
+    "discordIdHint": "Ton propre id d’app Discord, pour essayer le statut Discord avant que le staff publie le sien.",
+    "discordTest": "Afficher le statut Discord maintenant",
+    "discordClear": "Effacer le statut Discord",
+    "launcherUpdate": "Mise à jour du launcher",
+    "launcherUpdateHint": "Le bandeau de mise à jour et Paramètres → Launcher (rien n’est installé).",
+    "updateOptions": {
+      "real": "Réelle",
+      "downloading": "Téléchargement 9.9.9 (42 %)",
+      "ready": "9.9.9 prête à installer",
+      "error": "Erreur de mise à jour"
+    },
+    "preflight": "Alertes disque et mémoire faibles",
+    "preflightHint": "Les alertes affichées avant Jouer.",
+    "shotsAdd": "Ajouter 6 captures d’exemple",
+    "shotsRemove": "Retirer les captures d’exemple",
+    "openData": "Ouvrir le dossier de données du launcher",
+    "windowMin": "La plus petite (960 × 600)",
+    "windowDefault": "Par défaut (1120 × 700)"
   }
 }

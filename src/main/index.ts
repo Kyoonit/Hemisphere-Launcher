@@ -18,7 +18,7 @@ import {
   switchAccount,
 } from './core/auth/accounts'
 import { cancelSignIn } from './core/auth/oauth'
-import { dismissGameError, gameEvents, getGameState, onGameState, play, prepareInBackground, repair, withModsHeld } from './core/game/gameService'
+import { dismissGameError, gameEvents, getGameState, onGameState, play, prepareInBackground, repair, simulateGameState, withModsHeld } from './core/game/gameService'
 import { getSettings, onSettingsChanged, updateSettings } from './core/settings/settings'
 import { AUTOSTART_ARG } from '@shared/settings'
 import { recoverSessions } from './core/playtime/playtimeStore'
@@ -50,7 +50,9 @@ import { createRestorePoint, deleteRestorePoint, isRestorePointId, listRestorePo
 import { checkPackUpdates, installPack, knownPackProjects, listPacks, moveResourcePack, packVersions, removePack, setPackActive, setPackLock, setPackVersion, shadersOff, updatePacks } from './core/packs/packs'
 import { PACK_TYPES, type PackType } from '@shared/packs'
 import { buildReport, lastReportZip, prepareReport } from './core/support/report'
-import { keepInTrayOnClose, onCommunitySettings, onGameExited, onGameLaunched, onServerStatus, startCommunity } from './core/community/community'
+import { devDiscord, devNotify, keepInTrayOnClose, onCommunitySettings, onGameExited, onGameLaunched, onServerStatus, startCommunity } from './core/community/community'
+import { devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, runDevAction, setDevState, unlockDev } from './core/dev/devTools'
+import { DEV_ACTIONS, DEFAULT_DEV, type DevAction, type DevState } from '@shared/dev'
 import { eventIcs } from '@shared/events'
 import { writeFile } from 'node:fs/promises'
 import { REPORT_CATEGORIES, REPORT_FREQUENCY, REPORT_PARTS, REPORT_WHEN, type ReportDraft } from '@shared/report'
@@ -124,7 +126,7 @@ function registerIpc(): void {
     }
   })
 
-  handle(IPC.serverStatusGet, async () => lastStatus ?? (lastStatus = await getServerStatus()))
+  handle(IPC.serverStatusGet, async () => devStatus(lastStatus ?? (lastStatus = await getServerStatus())))
   handle(IPC.playtimeGet, () => getPlaytime(getAccountsState().activeId ?? 'none'))
 
   handle(IPC.authState, () => getAccountsState())
@@ -161,7 +163,7 @@ function registerIpc(): void {
     if (pick.canceled || !pick.filePaths[0]) return null
     return exportScreenshots(names.filter((n): n is string => typeof n === 'string'), pick.filePaths[0])
   })
-  handle(IPC.systemPreflight, () => preflightWarnings())
+  handle(IPC.systemPreflight, async () => devPreflight(await preflightWarnings()))
   on(IPC.systemOpenFolder, (_e, kind: unknown) => {
     const kinds: FolderKind[] = ['game', 'mods', 'resourcepacks', 'shaderpacks', 'screenshots', 'gameLogs', 'crashReports', 'launcherLogs']
     if (kinds.includes(kind as FolderKind)) void openFolder(kind as FolderKind)
@@ -549,22 +551,63 @@ function registerIpc(): void {
     if (typeof message === 'string' && message.length <= 4000) clipboard.writeText(message)
   })
   on(IPC.reportOpenSupport, () => void shell.openExternal(getFeed().support?.url ?? LINKS.discord))
+  // Developer tab: development builds, or the installed launcher once the staff code was entered (else refused)
+  const devRefresh = () => {
+    win?.webContents.send(IPC.feedChanged, devFeed(getFeed()))
+    win?.webContents.send(IPC.serverStatusUpdate, devStatus(lastStatus))
+    win?.webContents.send(IPC.launcherUpdateChanged, devUpdate(getUpdateState()))
+    if (lastStatus) onServerStatus(devStatus(lastStatus) ?? lastStatus)
+  }
+  handle(IPC.devGet, () => ({ devBuild: !app.isPackaged, unlocked: devUnlocked(), state: devEnabled() ? getDevState() : null }))
+  handle(IPC.devUnlock, async (_e, code: unknown) => {
+    const result = await unlockDev(code, getFeed().staffCode)
+    if (result.ok) devRefresh()
+    return result
+  })
+  handle(IPC.devLock, async () => {
+    await lockDev()
+    devRefresh()
+    simulateGameState({ error: null })
+    return true
+  })
+  handle(IPC.devSet, async (_e, patch: unknown) => {
+    if (!devEnabled() || typeof patch !== 'object' || !patch) return null
+    const p = patch as Record<string, unknown>
+    const clean: Partial<DevState> = {}
+    for (const k of Object.keys(DEFAULT_DEV) as (keyof DevState)[]) if (k !== 'base' && typeof p[k] === typeof DEFAULT_DEV[k]) Object.assign(clean, { [k]: p[k] })
+    if (clean.discordAppId !== undefined && clean.discordAppId !== '' && !/^\d{17,20}$/.test(clean.discordAppId)) delete clean.discordAppId
+    const next = await setDevState(clean)
+    devRefresh()
+    return next
+  })
+  handle(IPC.devAction, async (_e, action: unknown) => {
+    if (!devEnabled() || !DEV_ACTIONS.includes(action as DevAction)) return 'not available'
+    return runDevAction(action as DevAction, {
+      window: () => win,
+      gameState: simulateGameState,
+      notify: devNotify,
+      discord: devDiscord,
+      resetSeen: async () => {
+        await updateSettings({ seenNews: [], seenChangelog: null, importPromptDismissed: false })
+      },
+    })
+  })
   // Events: "Add to calendar" opens a calendar file in the player's calendar app; reminders are one per event.
   on(IPC.eventsAddToCalendar, (_e, id: unknown) => {
-    const ev = getFeed().events?.find((x) => x.id === id)
+    const ev = devFeed(getFeed()).events?.find((x) => x.id === id)
     if (!ev) return
     const s = getSettings().language
     const file = join(app.getPath('temp'), `hemisphere-${ev.id}.ics`)
     void writeFile(file, eventIcs(ev, s === 'auto' ? app.getLocale() : s)).then(() => shell.openPath(file))
   })
   handle(IPC.eventsSetReminder, async (_e, id: unknown, on: unknown) => {
-    if (typeof id !== 'string' || typeof on !== 'boolean' || !getFeed().events?.some((x) => x.id === id)) return getSettings().eventReminders
+    if (typeof id !== 'string' || typeof on !== 'boolean' || !devFeed(getFeed()).events?.some((x) => x.id === id)) return getSettings().eventReminders
     const list = getSettings().eventReminders.filter((x) => x !== id)
     return (await updateSettings({ eventReminders: on ? [...list, id].slice(-50) : list })).eventReminders
   })
-  handle(IPC.feedGet, () => getFeed())
+  handle(IPC.feedGet, () => devFeed(getFeed()))
   on(IPC.feedOpenLink, (_e, id: unknown) => {
-    const feed = getFeed()
+    const feed = devFeed(getFeed())
     // a news item's or an event's button (looked up in the verified feed, never a raw URL)
     const url = feed.news.find((n) => n.id === id)?.link?.url ?? feed.events?.find((e) => e.id === id)?.link?.url
     if (url?.startsWith('https://')) void shell.openExternal(url)
@@ -623,7 +666,7 @@ function registerIpc(): void {
   })
 
   handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform }))
-  handle(IPC.launcherUpdateGet, () => getUpdateState())
+  handle(IPC.launcherUpdateGet, () => devUpdate(getUpdateState()))
   handle(IPC.launcherUpdateCheck, () => checkForUpdates())
   on(IPC.launcherUpdateInstall, () => installUpdateNow())
 }
@@ -687,7 +730,7 @@ if (!app.requestSingleInstanceLock()) {
     createWindow()
     startCommunity({
       window: () => win,
-      feed: () => getFeed(),
+      feed: () => devFeed(getFeed()),
       play: () => {
         const active = getAccountsState().activeId
         const g = getGameState()
@@ -698,12 +741,12 @@ if (!app.requestSingleInstanceLock()) {
     })
     startStatusPolling((status) => {
       lastStatus = status
-      win?.webContents.send(IPC.serverStatusUpdate, status)
-      onServerStatus(status)
+      win?.webContents.send(IPC.serverStatusUpdate, devStatus(status))
+      onServerStatus(devStatus(status) ?? status)
     })
     void refreshAccount() // renew the active session silently in the background
-    startFeedPolling((feed) => win?.webContents.send(IPC.feedChanged, feed))
-    onUpdateState((s) => win?.webContents.send(IPC.launcherUpdateChanged, s))
+    startFeedPolling((feed) => win?.webContents.send(IPC.feedChanged, devFeed(feed)))
+    onUpdateState((s) => win?.webContents.send(IPC.launcherUpdateChanged, devUpdate(s)))
     void detectGpus()
     // Get the next PLAY ready shortly after start (once the window and status are up), then twice an hour.
     setTimeout(() => void prepareInBackground(), 15_000)

@@ -1,0 +1,76 @@
+/**
+ * Developer tab: pretend situations on top of the real data, to look at and stress-test every screen. Always there in
+ * development builds; in the installed launcher only after a staff member enters the staff code (Settings > Advanced),
+ * on that PC. Everything it does is local and pretend: nothing reaches the server or other players.
+ */
+
+/**
+ * The staff code's scrypt fingerprint (never the code itself). Staff can switch to another code without a launcher
+ * update: "staffCode" in the signed feed (npm run staff-code).
+ */
+export const STAFF_CODE = { salt: '2fb443460aff31bbbab159b124f90be5', hash: '0d5eab3761c7c39761f5d85a1cf786d5437c7b8919e078e866b8f56bb0a39572b66e83259431dd96c6cb8bbcd749ac7796f3ea4db0ffd5f6537d3ea09264ba49' }
+export const STAFF_CODE_SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64 }
+
+/** What the page needs to know about the tab. */
+export interface DevAccess {
+  /** a development build: the tab is always there */
+  devBuild: boolean
+  /** the staff code was entered on this PC */
+  unlocked: boolean
+  state: DevState | null
+}
+export type DevUnlockResult = { ok: true } | { ok: false; reason: 'wrong' | 'wait'; seconds?: number }
+
+export interface DevState {
+  /** a live event, one starting in 16 minutes (its reminder fires about a minute later), one in 3 days */
+  sampleEvents: boolean
+  maintenance: boolean
+  /** daily restart: soon = in 3 minutes, now = restarting */
+  restart: 'real' | 'soon' | 'now'
+  /** extra unread news items (the red badge, "9+") */
+  extraNews: number
+  server: 'real' | 'busy' | 'offline' | 'unknown'
+  launcherUpdate: 'real' | 'downloading' | 'ready' | 'error'
+  preflight: boolean
+  /** your own Discord application id, to try the Discord status before staff publish theirs */
+  discordAppId: string
+  /** when the sample events / restart were switched on (their times are relative to it) */
+  base: number
+}
+
+export const DEFAULT_DEV: DevState = {
+  sampleEvents: false,
+  maintenance: false,
+  restart: 'real',
+  extraNews: 0,
+  server: 'real',
+  launcherUpdate: 'real',
+  preflight: false,
+  discordAppId: '',
+  base: 0,
+}
+
+export const DEV_ACTIONS = [
+  'crash',
+  'error:network',
+  'error:java',
+  'error:disk',
+  'error:busy',
+  'error:sessionExpired',
+  'error:content',
+  'progress',
+  'background',
+  'clearError',
+  'notify:back',
+  'notify:event',
+  'discord:test',
+  'discord:clear',
+  'shots:add',
+  'shots:remove',
+  'reset:seen',
+  'window:960x600',
+  'window:1120x700',
+  'window:1600x900',
+  'open:data',
+] as const
+export type DevAction = (typeof DEV_ACTIONS)[number]

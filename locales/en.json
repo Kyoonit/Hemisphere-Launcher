@@ -47,7 +47,8 @@
       "account": "Account",
       "installation": "Installation",
       "advanced": "Advanced",
-      "backups": "Backups"
+      "backups": "Backups",
+      "developer": "Developer"
     },
     "language": "Language",
     "languageHint": "Follows your Windows language by default",
@@ -989,5 +990,86 @@
     "discord": "Show “Playing on Hemisphere SMP” in Discord",
     "discordHint": "In your Discord status, only while the game runs.",
     "discordNotReady": "Not available yet: the staff haven’t set it up."
+  },
+  "dev": {
+    "staffAccess": "Staff access",
+    "staffAccessHint": "Hemisphere staff: enter the staff code to test the launcher (Developer tab, on this PC only).",
+    "staffAccessDev": "Development build: the Developer tab is always available.",
+    "staffAccessOn": "Unlocked on this PC.",
+    "codePlaceholder": "Staff code",
+    "unlock": "Unlock",
+    "open": "Open the Developer tab",
+    "unlocked": "Unlocked: the Developer tab is now in the list on the left.",
+    "wrong": "That isn’t the staff code.",
+    "wait": "Too many tries: wait {{seconds}} s.",
+    "lock": "Lock",
+    "introDev": "Development build. Everything here is pretend and only on this PC: nothing reaches the server or other players. Switches stay on after a restart until you switch them off.",
+    "introStaff": "Staff testing. Everything here is pretend and only on this PC: nothing reaches the server or other players. Switches stay on after a restart until you switch them off. Lock hides this tab again.",
+    "save": "Save",
+    "groups": {
+      "feed": "News, events and Home",
+      "server": "Server status",
+      "game": "Game",
+      "community": "Notifications and Discord",
+      "launcher": "Launcher",
+      "files": "Files",
+      "window": "Window"
+    },
+    "sampleEvents": "Sample events",
+    "sampleEventsHint": "One live, one starting in 16 minutes (its reminder fires about a minute later), one in 3 days. In News and on Home.",
+    "maintenance": "Maintenance",
+    "maintenanceHint": "The amber banner and the server panel, for 2 hours.",
+    "restart": "Daily restart",
+    "restartHint": "The restart countdown and the \"restarting\" state in the server panel.",
+    "restartOptions": {
+      "real": "As published",
+      "soon": "In 3 minutes",
+      "now": "Restarting now"
+    },
+    "extraNews": "Extra unread news",
+    "extraNewsHint": "Adds test news items: the red badge on News (9+ from 10).",
+    "resetSeen": "Show unread news, “What’s new” and the import card again",
+    "server": "Server",
+    "serverHint": "What the launcher shows (the real server is untouched).",
+    "serverOptions": {
+      "real": "Real status",
+      "busy": "Online, 137 players",
+      "offline": "Offline",
+      "unknown": "Status unknown"
+    },
+    "gameHint": "Shown on Home, as if it happened (no game is started).",
+    "crash": "Crash card",
+    "progress": "PLAY progress",
+    "background": "Background preparation",
+    "errors": {
+      "network": "Network error",
+      "java": "Java error",
+      "disk": "Disk error",
+      "busy": "Files in use",
+      "sessionExpired": "Session expired",
+      "content": "Client unavailable"
+    },
+    "clearError": "Clear",
+    "notifyBack": "Notification: server back",
+    "notifyEvent": "Notification: event reminder",
+    "discordId": "Discord application id",
+    "discordIdHint": "Your own Discord app id, to try the Discord status before staff publish theirs.",
+    "discordTest": "Show Discord status now",
+    "discordClear": "Clear Discord status",
+    "launcherUpdate": "Launcher update",
+    "launcherUpdateHint": "The update banner and Settings → Launcher (nothing is installed).",
+    "updateOptions": {
+      "real": "Real",
+      "downloading": "Downloading 9.9.9 (42%)",
+      "ready": "9.9.9 ready to install",
+      "error": "Update error"
+    },
+    "preflight": "Low disk and low RAM warnings",
+    "preflightHint": "The warnings shown before PLAY.",
+    "shotsAdd": "Add 6 sample screenshots",
+    "shotsRemove": "Remove the sample screenshots",
+    "openData": "Open the launcher’s data folder",
+    "windowMin": "Smallest (960 × 600)",
+    "windowDefault": "Default (1120 × 700)"
   }
 }

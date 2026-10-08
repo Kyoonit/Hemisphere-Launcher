@@ -68,6 +68,13 @@ const api: HemisphereApi = {
     projectVersions: (type, projectId) => ipcRenderer.invoke(IPC.packsProjectVersions, type, projectId),
     install: (type, projectId, confirmed, versionId) => ipcRenderer.invoke(IPC.packsInstall, type, projectId, confirmed, versionId ?? null),
   },
+  dev: {
+    get: () => ipcRenderer.invoke(IPC.devGet),
+    unlock: (code) => ipcRenderer.invoke(IPC.devUnlock, code),
+    lock: () => ipcRenderer.invoke(IPC.devLock),
+    set: (patch) => ipcRenderer.invoke(IPC.devSet, patch),
+    action: (action) => ipcRenderer.invoke(IPC.devAction, action),
+  },
   events: {
     addToCalendar: (id) => ipcRenderer.send(IPC.eventsAddToCalendar, id),
     setReminder: (id, on) => ipcRenderer.invoke(IPC.eventsSetReminder, id, on),

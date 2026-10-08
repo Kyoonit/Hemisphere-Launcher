@@ -158,3 +158,23 @@ Discord" (Settings → Launcher; off by default, only while the game runs). It n
    Discord shows: "Playing Hemisphere SMP").
 2. **Rich Presence → Art Assets**: upload the server logo with the name **`logo`**.
 3. Copy the **Application ID** into `"discordAppId"` and publish the feed. Until then the option is greyed out.
+
+## Staff testing (Developer tab)
+
+The installed launcher has a hidden **Developer** tab for staff: pretend situations to look at every screen without
+waiting for them to happen (sample events, maintenance, restart countdown, unread news, busy/offline server, crash
+card and every error, PLAY progress, notifications, Discord status with your own app id, launcher update banner,
+low disk/RAM warnings, sample screenshots, window sizes). Everything is local to that PC and pretend: nothing reaches
+the server or other players.
+
+To unlock it: **Settings → Advanced → Staff access**, enter the staff code. It stays unlocked on that PC until
+**Lock** (in the tab). Five wrong codes in a row make it wait. Development builds always show the tab.
+
+The code is never stored, only its fingerprint. To switch to a new code (e.g. someone left the staff):
+
+```bash
+npm run staff-code
+```
+
+It prints the new code (share it privately) and a `"staffCode"` entry to paste into `content-src/feed.json`; publish
+with `npm run content:feed`. From then on only the new code works (PCs already unlocked stay unlocked).

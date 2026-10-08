@@ -84,6 +84,8 @@ export const FeedSchema = z
     events: z.array(EventSchema).max(50).optional(),
     /** Discord application id for "Playing on Hemisphere SMP" in players' Discord status (optional) */
     discordAppId: z.string().regex(/^\d{17,20}$/).optional(),
+    /** Another staff code for the Developer tab (its scrypt fingerprint, from npm run staff-code), optional */
+    staffCode: z.object({ salt: z.string().regex(/^[0-9a-f]{32}$/), hash: z.string().regex(/^[0-9a-f]{128}$/) }).optional(),
   })
   .superRefine((f, ctx) => {
     if (f.restart) {

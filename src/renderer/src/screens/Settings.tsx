@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, Flag, Gamepad2, History, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
+import { Check, ClipboardCopy, Coffee, FolderInput, FolderOpen, FlaskConical, Flag, Gamepad2, History, KeyRound, Plus, RefreshCw, Rocket, RotateCcw, TriangleAlert, Upload, User, Wrench, type LucideIcon } from 'lucide-react'
 import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
 import type { JavaRuntimeInfo } from '@shared/game'
@@ -9,8 +9,10 @@ import { LANGUAGES, systemLanguage } from '../i18n'
 import { headUrl, useAccounts } from '../accounts'
 import Toggle from '../components/Toggle'
 import Backups from './Backups'
+import Developer from './Developer'
+import type { DevAccess } from '@shared/dev'
 
-export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'backups' | 'advanced'
+export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'backups' | 'advanced' | 'developer'
 
 const SECTIONS: { id: Section; icon: LucideIcon }[] = [
   { id: 'game', icon: Gamepad2 },
@@ -19,6 +21,8 @@ const SECTIONS: { id: Section; icon: LucideIcon }[] = [
   { id: 'installation', icon: FolderOpen },
   { id: 'backups', icon: History },
   { id: 'advanced', icon: Wrench },
+  // only in development builds, or once the staff code was entered on this PC
+  { id: 'developer', icon: FlaskConical },
 ]
 
 const selectClass = 'rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-white'
@@ -40,11 +44,15 @@ export default function Settings({
 }) {
   const { t } = useTranslation()
   const [section, setSection] = useState<Section>(initialSection)
+  const [dev, setDev] = useState<DevAccess | null>(null)
+  const loadDev = () => void window.hemisphere.dev.get().then(setDev)
+  useEffect(loadDev, [])
+  const devVisible = !!dev && (dev.devBuild || dev.unlocked)
 
   return (
     <div className="grid h-full grid-cols-[200px_1fr]">
       <nav className="flex flex-col gap-0.5 border-r border-white/5 bg-gray-900/50 px-3 py-6">
-        {SECTIONS.map(({ id, icon: Icon }) => (
+        {SECTIONS.filter((s) => s.id !== 'developer' || devVisible).map(({ id, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setSection(id)}
@@ -65,7 +73,16 @@ export default function Settings({
         {section === 'account' && <AccountSettings onAddAccount={onAddAccount} />}
         {section === 'installation' && <InstallationSettings onRepair={onRepair} onImport={onImport} onReport={onReport} />}
         {section === 'backups' && <Backups />}
-        {section === 'advanced' && <AdvancedSettings />}
+        {section === 'advanced' && <AdvancedSettings dev={dev} onDevChanged={loadDev} onOpenDev={() => setSection('developer')} />}
+        {section === 'developer' && dev && devVisible && (
+          <Developer
+            access={dev}
+            onLocked={() => {
+              loadDev()
+              setSection('advanced')
+            }}
+          />
+        )}
       </section>
     </div>
   )
@@ -359,7 +376,7 @@ function InstallationSettings({ onRepair, onImport, onReport }: { onRepair(): vo
 }
 
 // ---------------------------------------------------------------- Advanced
-function AdvancedSettings() {
+function AdvancedSettings({ dev, onDevChanged, onOpenDev }: { dev: DevAccess | null; onDevChanged(): void; onOpenDev(): void }) {
   const { t } = useTranslation()
   const [settings, update] = useSettings()
   const [java, setJava] = useState<JavaRuntimeInfo[] | null>(null)
@@ -474,7 +491,56 @@ function AdvancedSettings() {
           ))
         )}
       </div>
+      <StaffAccess dev={dev} onChanged={onDevChanged} onOpen={onOpenDev} />
     </div>
+  )
+}
+
+// ---------------------------------------------------------------- staff access (Developer tab)
+function StaffAccess({ dev, onChanged, onOpen }: { dev: DevAccess | null; onChanged(): void; onOpen(): void }) {
+  const { t } = useTranslation()
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  if (!dev) return null
+  const unlock = async () => {
+    setBusy(true)
+    setMsg(null)
+    const r = await window.hemisphere.dev.unlock(code).catch(() => null)
+    setBusy(false)
+    if (r?.ok) {
+      setCode('')
+      setMsg({ ok: true, text: t('dev.unlocked') })
+      onChanged()
+    } else setMsg({ ok: false, text: r && r.reason === 'wait' ? t('dev.wait', { seconds: r.seconds }) : t('dev.wrong') })
+  }
+  return (
+    <>
+      <Row title={t('dev.staffAccess')} hint={dev.devBuild ? t('dev.staffAccessDev') : dev.unlocked ? t('dev.staffAccessOn') : t('dev.staffAccessHint')}>
+        {dev.devBuild || dev.unlocked ? (
+          <button onClick={onOpen} className={buttonClass}>
+            <FlaskConical size={16} /> {t('dev.open')}
+          </button>
+        ) : (
+          <span className="flex gap-2">
+            <input
+              type="password"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && code.trim() && void unlock()}
+              placeholder={t('dev.codePlaceholder')}
+              autoComplete="off"
+              spellCheck={false}
+              className="w-[200px] rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 font-mono text-sm text-white"
+            />
+            <button onClick={unlock} disabled={busy || !code.trim()} className={buttonClass}>
+              <KeyRound size={16} /> {t('dev.unlock')}
+            </button>
+          </span>
+        )}
+      </Row>
+      {msg && <Notice ok={msg.ok}>{msg.text}</Notice>}
+    </>
   )
 }
 

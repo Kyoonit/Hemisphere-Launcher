@@ -18,7 +18,8 @@
     "content:publish": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/publish.ts",
     "content:feed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/feed.ts",
     "dist": "npm run build && electron-builder --win --publish never",
-    "release": "npm run build && electron-builder --win --publish always"
+    "release": "npm run build && electron-builder --win --publish always",
+    "staff-code": "node tools/staff-code.mjs"
   },
   "dependencies": {
     "@xmcl/core": "2.15.1",

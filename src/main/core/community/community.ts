@@ -221,6 +221,29 @@ export function onGameExited(anyRunning: boolean): void {
     })
 }
 
+// ------------------------------------------------------------------------------ Developer tab
+
+/** Developer tab: a notification now, as players would get it. */
+export function devNotify(kind: 'back' | 'event'): void {
+  const t = text()
+  if (kind === 'back') notify(t.backTitle, t.backBody)
+  else notify(lang() === 'fr' ? 'Course d’élytres' : 'Elytra race', `${t.eventSoon(15)} · /warp race`)
+}
+
+/** Developer tab: the Discord status right away (on) or cleared; false = Discord not reachable / no app id. */
+export async function devDiscord(on: boolean): Promise<boolean> {
+  const appId = hooks?.feed().discordAppId
+  if (!appId) return false
+  if (!on) {
+    onGameExited(false)
+    return true
+  }
+  presence?.close()
+  presence = new DiscordPresence(appId)
+  const t = text()
+  return presence.set({ details: t.playing, state: 'Minecraft 26.3', startedAt: Date.now(), largeImage: 'logo', largeText: 'Hemisphere SMP', buttons: [{ label: t.website, url: LINKS.website }] })
+}
+
 // ------------------------------------------------------------------------------ start
 
 export function startCommunity(h: CommunityHooks): void {

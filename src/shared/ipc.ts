@@ -9,6 +9,7 @@ import type { LauncherUpdateState } from './launcherUpdate'
 import type { ScreenshotExport, ScreenshotList } from './screenshots'
 import type { PackList, PackResult, PackType } from './packs'
 import type { ReportDraft, ReportPrepare, ReportResult } from './report'
+import type { DevAccess, DevAction, DevState, DevUnlockResult } from './dev'
 import type { ModHistoryItem, ModSetInfo, ModSetsState, SetImportResult, SetShareResult, SetSwitchResult, UndoResult } from './modSets'
 import type { RestorePointInfo, RestorePreview, RestoreResult, SetupExportResult, SetupImportResult, SetupPick } from './restorePoints'
 import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
@@ -78,6 +79,11 @@ export const IPC = {
   historyUndo: 'history:undo',
   reportPrepare: 'report:prepare',
   eventsAddToCalendar: 'events:addToCalendar',
+  devGet: 'dev:get',
+  devSet: 'dev:set',
+  devAction: 'dev:action',
+  devUnlock: 'dev:unlock',
+  devLock: 'dev:lock',
   eventsSetReminder: 'events:setReminder',
   reportBuild: 'report:build',
   reportShow: 'report:show',
@@ -215,6 +221,14 @@ export interface HemisphereApi {
     search(type: PackType, query: string, offset: number): Promise<ModSearchResult | null>
     projectVersions(type: PackType, projectId: string): Promise<ModVersionChoice[] | null>
     install(type: PackType, projectId: string, confirmed: boolean, versionId?: string | null): Promise<InstallResult>
+  }
+  /** Developer tab (development builds, or the installed launcher with the staff code) */
+  dev: {
+    get(): Promise<DevAccess>
+    unlock(code: string): Promise<DevUnlockResult>
+    lock(): Promise<boolean>
+    set(patch: Partial<DevState>): Promise<DevState | null>
+    action(action: DevAction): Promise<string>
   }
   /** Events calendar (from the feed) */
   events: {
