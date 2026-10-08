@@ -28,7 +28,7 @@ interface Entry {
   icon: string
   update: { versionId: string; versionNumber: string } | null
   incompatibleWith: string | null
-  /** Minecraft version for which the player picked this exact version (updates skip it); null = follow latest */
+  /** Minecraft version for which the player locked this exact version (updates never change it); null = unlocked */
   pinned?: string | null
 }
 type Registry = Record<string, Entry>
@@ -148,9 +148,11 @@ export interface HemisphereMods {
   projects: Set<string>
   keys: Set<string>
 }
-export function hemisphereMods(manifest: ClientManifest): HemisphereMods {
-  const keys = manifest.mods.flatMap((m) => [modKey(m.name), modKey(m.file.path.split('/').pop() ?? '')])
-  return { projects: hemisphereProjects(manifest), keys: new Set(keys.filter((k) => k.length >= 3)) }
+export function hemisphereMods(manifest: ClientManifest, detached: ReadonlySet<string> = new Set()): HemisphereMods {
+  // mods the player took over are theirs now: their copy is not a duplicate
+  const managed = manifest.mods.filter((m) => !detached.has(m.id))
+  const keys = managed.flatMap((m) => [modKey(m.name), modKey(m.file.path.split('/').pop() ?? '')])
+  return { projects: new Set(managed.flatMap((m) => (m.source ? [m.source.modrinth.projectId] : []))), keys: new Set(keys.filter((k) => k.length >= 3)) }
 }
 export function isDuplicate(mod: { file: string; projectId: string | null; title: string | null }, h: HemisphereMods | null): boolean {
   if (!h) return false
@@ -173,14 +175,14 @@ async function parkDuplicatesNow(owned: string[], reg: Registry, h: HemisphereMo
 }
 
 /** Before PLAY: make sure no duplicate is enabled. */
-export function parkDuplicates(owned: string[], manifest: ClientManifest): Promise<string[]> {
-  return serial(async () => parkDuplicatesNow(owned, await identify(owned), hemisphereMods(manifest)))
+export function parkDuplicates(owned: string[], manifest: ClientManifest, detached: ReadonlySet<string> = new Set()): Promise<string[]> {
+  return serial(async () => parkDuplicatesNow(owned, await identify(owned), hemisphereMods(manifest, detached)))
 }
 
 /** Whether this player file may be switched on (not a duplicate of a Hemisphere mod). */
-export function canEnablePlayerMod(file: string, manifest: ClientManifest): boolean {
+export function canEnablePlayerMod(file: string, manifest: ClientManifest, detached: ReadonlySet<string> = new Set()): boolean {
   const e = readRegistry()[key(file)]
-  return !isDuplicate({ file, projectId: e?.projectId ?? null, title: e?.title ?? null }, hemisphereMods(manifest))
+  return !isDuplicate({ file, projectId: e?.projectId ?? null, title: e?.title ?? null }, hemisphereMods(manifest, detached))
 }
 
 export function listPlayerMods(
@@ -243,12 +245,14 @@ export function installMod(
   manifest: ClientManifest,
   owned: string[],
   policy: ModPolicy | null | undefined,
+  detached: ReadonlySet<string> = new Set(),
+  versionId: string | null = null,
 ): Promise<InstallResult> {
   return serial(async () => {
     const verdict = policyFor(policy, projectId).verdict
     if (verdict === 'blocked') return { ok: false, reason: 'blocked' }
     if (verdict === 'askStaff' && !confirmed) return { ok: false, reason: 'needsConfirm' }
-    const hemisphere = hemisphereProjects(manifest)
+    const hemisphere = hemisphereMods(manifest, detached).projects
     if (hemisphere.has(projectId)) return { ok: false, reason: 'inHemisphere' }
 
     const reg = await identify(owned)
@@ -271,7 +275,8 @@ export function installMod(
             continue
           }
           if (id !== projectId && policyFor(policy, id).verdict === 'blocked') continue // never pulled in silently
-          const v = pickVersion(await projectVersions(id, manifest.minecraft))
+          const all = await projectVersions(id, manifest.minecraft)
+          const v = id === projectId && versionId ? (all.find((x) => x.id === versionId) ?? null) : pickVersion(all)
           if (!v) {
             if (id === projectId) return { ok: false, reason: 'notCompatible' }
             continue // optional-in-practice dependency without a version: the mod may still load
@@ -388,15 +393,16 @@ export function modVersions(file: string, owned: string[], minecraft: string): P
       published: v.date_published,
       current: v.id === e.versionId,
       latest: v.id === latest?.id,
+      locked: v.id === e.versionId && e.pinned === minecraft,
     }))
   })
 }
 
 /**
- * Switches one of the player's mods to a specific Modrinth version (same Minecraft version). Picking anything but the
- * newest pins it, so "Update all" leaves it alone; picking the newest unpins. The old file goes to the Recycle Bin.
+ * Switches one of the player's mods to a specific Modrinth version (same Minecraft version), locked or not. A locked
+ * version is never changed by "Update all". The old file goes to the Recycle Bin.
  */
-export function setModVersion(file: string, versionId: string, owned: string[], minecraft: string): Promise<SetVersionResult> {
+export function setModVersion(file: string, versionId: string, owned: string[], minecraft: string, lock = false): Promise<SetVersionResult> {
   return serial(async () => {
     const reg = await identify(owned)
     const e = reg[key(file)]
@@ -410,7 +416,7 @@ export function setModVersion(file: string, versionId: string, owned: string[], 
     }
     const v = versions.find((x) => x.id === versionId)
     if (!v) return { ok: false, reason: 'notFound' }
-    const pinned = v.id !== pickVersion(versions)?.id
+    const pinned = lock
     if (v.id === e.versionId) {
       e.pinned = pinned ? minecraft : null
       e.update = null
@@ -445,5 +451,33 @@ export function setModVersion(file: string, versionId: string, owned: string[], 
     await writeRegistry(reg)
     console.log(`[player-mods] ${e.title ?? file}: ${e.versionNumber} -> ${v.version_number}${pinned ? ' (pinned)' : ''}`)
     return { ok: true, versionNumber: v.version_number, pinned }
+  })
+}
+
+/** Locks (or unlocks) the version a mod is on now, for this Minecraft version. */
+export function setLocked(file: string, locked: boolean, owned: string[], minecraft: string): Promise<boolean> {
+  return serial(async () => {
+    const reg = await identify(owned)
+    const e = reg[key(file)]
+    if (!e) return false
+    e.pinned = locked ? minecraft : null
+    if (locked) e.update = null
+    await writeRegistry(reg)
+    return true
+  })
+}
+
+/** Puts a Hemisphere mod's file in mods/ (or mods-disabled/) as the player's own copy, if it isn't there yet. */
+export function placeHemisphereFileAsPlayer(file: { url: string; sha512: string; size: number; path: string }, enabled: boolean): Promise<string> {
+  return serial(async () => {
+    const name = file.path.split('/').pop()!
+    if (!isSafeModFileName(name)) throw new Error('unsafe file name')
+    if (existsSync(join(modsDir(), name)) || existsSync(join(disabledDir(), name))) return name
+    const store = join(gamePaths().root, 'store')
+    await downloadToStore(store, { url: file.url, sha512: file.sha512, size: file.size }, () => {})
+    const dir = enabled ? modsDir() : disabledDir()
+    await mkdir(dir, { recursive: true })
+    await copyFile(blobPath(store, file.sha512), join(dir, name))
+    return name
   })
 }

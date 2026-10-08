@@ -326,7 +326,7 @@
     "duplicateHint": "Hemisphere inclut déjà ce mod : supprime cette copie et utilise l’interrupteur d’Hemisphere",
     "duplicateLocked": "Supprime cette copie pour l’activer : Hemisphere inclut déjà ce mod",
     "versions": "Versions de {{mod}}",
-    "versionsHint": "Choisis une version plus ancienne si la plus récente ne fonctionne pas avec un autre mod. Elle reste celle que tu as choisie jusqu’à ce que tu reprennes la plus récente.",
+    "versionsHint": "Clique sur une version pour l’utiliser. Le cadenas garde une version : « Tout mettre à jour » ne change jamais un mod verrouillé.",
     "versionsNone": "Aucune version pour cette version de Minecraft sur Modrinth.",
     "current": "Actuelle",
     "latest": "Dernière",
@@ -334,15 +334,24 @@
       "beta": "Bêta",
       "alpha": "Alpha"
     },
-    "pinned": "Épinglé",
-    "pinnedHint": "Tu as choisi cette version : « Tout mettre à jour » n’y touche pas",
-    "versionPinned": "{{mod}} est maintenant en {{version}} et y reste (épinglé).",
-    "versionLatest": "{{mod}} est maintenant en {{version}}, la dernière version.",
     "versionErrors": {
       "busy": "Ferme Minecraft (ou attends que le launcher ait fini) avant de changer de version.",
       "notFound": "Cette version n’est plus disponible.",
       "network": "Impossible de joindre Modrinth. Vérifie ta connexion internet et réessaie."
-    }
+    },
+    "takeOverHint": "Changer, verrouiller ou supprimer un mod d’Hemisphere le rend tien : Hemisphere ne le met plus à jour tant que tu ne reviens pas à sa version.",
+    "takenOver": "ta version",
+    "locked": "Verrouillé",
+    "lockedHint": "Verrouillé : « Tout mettre à jour » ne change jamais cette version",
+    "lockVersion": "Verrouiller {{version}}",
+    "unlockVersion": "Déverrouiller {{version}}",
+    "lockedNow": "{{mod}} est verrouillé en {{version}}.",
+    "unlocked": "{{mod}} est déverrouillé : « Tout mettre à jour » peut à nouveau le mettre à jour.",
+    "versionSet": "{{mod}} est maintenant en {{version}}.",
+    "versionLocked": "{{mod}} est maintenant en {{version}} et verrouillé.",
+    "backToHemisphere": "Revenir à la version d’Hemisphere ({{version}})",
+    "backDone": "{{mod}} est revenu à la version d’Hemisphere ({{version}}) et suit à nouveau ses mises à jour.",
+    "removed": "{{mod}} a été mis à la Corbeille."
   },
   "repair": {
     "title": "Réparer l’installation",
@@ -531,6 +540,8 @@
       "inHemisphere": "{{mod}} fait déjà partie d’Hemisphere : active-le dans la liste.",
       "busy": "Ferme Minecraft (ou attends que le launcher ait fini) avant d’ajouter des mods.",
       "network": "Le téléchargement a échoué. Vérifie ta connexion internet et réessaie."
-    }
+    },
+    "chooseVersion": "Choisis la version à installer (la plus récente en premier).",
+    "chooseVersionButton": "Choisir une version de {{mod}}"
   }
 }

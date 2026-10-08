@@ -24,9 +24,11 @@ export interface InstanceState {
   owned: Record<string, { sha512: string; size: number; mtimeMs: number }>
   /** "default" files already handed over to the player (path -> hash given) */
   seeded: Record<string, string>
+  /** Hemisphere mods the player took over (own version, lock, removal): Hemisphere no longer places or updates them */
+  detached: string[]
 }
 
-export const emptyState = (): InstanceState => ({ version: 1, clientVersion: null, minecraft: null, choices: {}, owned: {}, seeded: {} })
+export const emptyState = (): InstanceState => ({ version: 1, clientVersion: null, minecraft: null, choices: {}, owned: {}, seeded: {}, detached: [] })
 
 export interface LocalInfo {
   size: number
@@ -46,11 +48,12 @@ export interface SyncPlan {
   remove: string[]
 }
 
-export function desiredFiles(manifest: ClientManifest, choices: Choices): DesiredFile[] {
+export function desiredFiles(manifest: ClientManifest, choices: Choices, detached: readonly string[] = []): DesiredFile[] {
   const enabled = resolveEnabled(manifest.mods, choices)
+  const playerOwned = new Set(detached)
   return [
     ...manifest.mods
-      .filter((m) => enabled.has(m.id))
+      .filter((m) => enabled.has(m.id) && !playerOwned.has(m.id))
       .map((m): DesiredFile => ({ ...m.file, policy: 'managed', label: m.name })),
     ...manifest.files.map((f): DesiredFile => ({ path: f.path, url: f.url, sha512: f.sha512, size: f.size, policy: f.policy, label: f.path })),
   ]

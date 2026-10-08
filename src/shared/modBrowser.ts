@@ -83,6 +83,37 @@ export type InstallResult =
   | { ok: true; installed: string[]; alreadyHad: string[] }
   | { ok: false; reason: 'blocked' | 'needsConfirm' | 'notCompatible' | 'inHemisphere' | 'busy' | 'network' }
 
+/** One row of the Mods page: a Hemisphere mod or a file the player owns, with the same actions for both. */
+export interface ModItem {
+  /** "h:<Hemisphere mod id>" (still managed by Hemisphere) or "p:<file name>" (the player's file) */
+  key: string
+  name: string
+  icon: string
+  /** Hemisphere's description (Hemisphere mods, also once taken over) */
+  description: Localized | null
+  versionNumber: string | null
+  size: number
+  enabled: boolean
+  /** Hemisphere still manages it: follows Hemisphere's tested updates */
+  managed: boolean
+  /** a Hemisphere mod (managed or taken over): no "Added by you" */
+  fromHemisphere: boolean
+  /** for a taken-over Hemisphere mod: the version Hemisphere ships ("Back to Hemisphere's version") */
+  hemisphereVersion: string | null
+  recommended: boolean
+  category: string | null
+  projectId: string | null
+  locked: boolean
+  update: { versionNumber: string } | null
+  verdict: ModVerdict
+  reason?: Localized
+  /** the player's copy of a mod Hemisphere still manages (kept off) */
+  duplicate: boolean
+  incompatibleWith: string | null
+  /** file name for the player's files, null for managed Hemisphere mods */
+  file: string | null
+}
+
 /** One Modrinth version of a mod, for the version picker. */
 export interface ModVersionChoice {
   id: string
@@ -93,6 +124,8 @@ export interface ModVersionChoice {
   published: string
   current: boolean
   latest: boolean
+  /** the mod is locked on this version (only on the current one) */
+  locked: boolean
 }
 
 export type SetVersionResult = { ok: true; versionNumber: string; pinned: boolean } | { ok: false; reason: 'busy' | 'notFound' | 'network' }

@@ -7,7 +7,7 @@ import { FeedSchema } from '../src/shared/feed'
 
 vi.mock('electron', () => ({ app: { getVersion: () => '0.0.0-test', getPath: () => '.' }, shell: { trashItem: async () => {} } }))
 const { VersionSchema, pickVersion, primaryFile, safeIcon } = await import('../src/main/core/modrinth/api')
-const { modKey, isDuplicate } = await import('../src/main/core/modrinth/playerMods')
+const { modKey, isDuplicate, hemisphereMods } = await import('../src/main/core/modrinth/playerMods')
 
 const policy: ModPolicy = {
   rules: [
@@ -101,5 +101,20 @@ describe('duplicates of Hemisphere mods', () => {
     expect(isDuplicate({ file: 'sodium-extra-0.9.4.jar', projectId: null, title: null }, { projects: new Set(), keys: new Set(['sodium']) })).toBe(false)
     expect(isDuplicate({ file: 'jade-26.3.5.jar', projectId: 'nvQzSEkH', title: 'Jade' }, hemisphere)).toBe(false)
     expect(isDuplicate({ file: 'x.jar', projectId: null, title: null }, null)).toBe(false)
+  })
+})
+
+describe('taken-over Hemisphere mods', () => {
+  const manifest = {
+    mods: [
+      { id: 'iris', name: 'Iris Shaders', file: { path: 'mods/iris-1.11.7.jar' }, source: { modrinth: { projectId: 'YL57xq9U', versionId: 'xxxxxxxx' } } },
+      { id: 'sodium', name: 'Sodium', file: { path: 'mods/sodium-0.9.2.jar' }, source: { modrinth: { projectId: 'AANobbMI', versionId: 'yyyyyyyy' } } },
+    ],
+  } as never
+  test('the player copy of a mod they took over is not a duplicate', () => {
+    const copy = { file: 'iris-1.11.8.jar', projectId: 'YL57xq9U', title: 'Iris Shaders' }
+    expect(isDuplicate(copy, hemisphereMods(manifest))).toBe(true)
+    expect(isDuplicate(copy, hemisphereMods(manifest, new Set(['iris'])))).toBe(false)
+    expect(isDuplicate({ file: 'sodium-0.9.3.jar', projectId: 'AANobbMI', title: 'Sodium' }, hemisphereMods(manifest, new Set(['iris'])))).toBe(true)
   })
 })

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Ban, Check, CloudOff, Download, Loader2, Package, Search, ShieldAlert, TriangleAlert } from 'lucide-react'
-import type { InstallResult, ModSearchHit, ModSearchResult } from '@shared/modBrowser'
+import { ArrowLeft, Ban, Check, ChevronDown, CloudOff, Download, Loader2, Package, Search, ShieldAlert, TriangleAlert } from 'lucide-react'
+import type { InstallResult, ModSearchHit, ModSearchResult, ModVersionChoice } from '@shared/modBrowser'
+import { VersionRow } from './Mods'
 import { localize } from '@shared/manifest'
 
 /** Find mods: Modrinth search limited to Fabric + Hemisphere's Minecraft version, with the staff policy applied. */
@@ -11,7 +12,7 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
   const [result, setResult] = useState<ModSearchResult | null | undefined>(undefined)
   const [loadingMore, setLoadingMore] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
-  const [confirm, setConfirm] = useState<ModSearchHit | null>(null)
+  const [confirm, setConfirm] = useState<{ hit: ModSearchHit; versionId: string | null } | null>(null)
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
   const searchId = useRef(0)
   // The version doesn't change while typing: remember it from the first answer.
@@ -39,13 +40,13 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
     if (more) setResult({ ...more, hits: [...result.hits, ...more.hits], offset: result.offset })
   }
 
-  const install = async (hit: ModSearchHit, confirmed = false) => {
+  const install = async (hit: ModSearchHit, confirmed = false, versionId: string | null = null) => {
     setConfirm(null)
     setBusy(hit.projectId)
     setNotice(null)
-    const res: InstallResult = await window.hemisphere.client.install(hit.projectId, confirmed)
+    const res: InstallResult = await window.hemisphere.client.install(hit.projectId, confirmed, versionId)
     setBusy(null)
-    if (!res.ok && res.reason === 'needsConfirm') return setConfirm(hit)
+    if (!res.ok && res.reason === 'needsConfirm') return setConfirm({ hit, versionId })
     if (res.ok) {
       const extra = res.installed.filter((n) => n !== hit.title)
       setNotice({ ok: true, text: extra.length ? t('browse.installedWith', { mod: hit.title, deps: extra.join(', ') }) : t('browse.installed', { mod: hit.title }) })
@@ -93,10 +94,10 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
 
       {confirm && (
         <div role="alertdialog" className="animate-fade mb-4 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/40 px-4 py-3 text-[13px] text-amber-100">
-          <b className="block text-white">{t('browse.askStaffTitle', { mod: confirm.title })}</b>
-          {confirm.reason && <span className="block">{localize(confirm.reason, i18n.language)}</span>}
+          <b className="block text-white">{t('browse.askStaffTitle', { mod: confirm.hit.title })}</b>
+          {confirm.hit.reason && <span className="block">{localize(confirm.hit.reason, i18n.language)}</span>}
           <div className="mt-2.5 flex gap-2">
-            <button onClick={() => install(confirm, true)} className="rounded-md bg-amber-400 px-3 py-1 text-xs font-bold text-gray-900 hover:bg-amber-300">
+            <button onClick={() => install(confirm.hit, true, confirm.versionId)} className="rounded-md bg-amber-400 px-3 py-1 text-xs font-bold text-gray-900 hover:bg-amber-300">
               {t('browse.installAnyway')}
             </button>
             <button onClick={() => setConfirm(null)} className="rounded-md px-3 py-1 text-xs font-semibold text-amber-100 hover:bg-amber-900/60">
@@ -122,7 +123,7 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
         <>
           <div className="overflow-hidden rounded-lg bg-gray-900/55">
             {result.hits.map((hit) => (
-              <HitRow key={hit.projectId} hit={hit} busy={busy === hit.projectId} disabled={busy !== null} lang={i18n.language} onInstall={() => install(hit)} />
+              <HitRow key={hit.projectId} hit={hit} busy={busy === hit.projectId} disabled={busy !== null} lang={i18n.language} onInstall={(versionId) => install(hit, false, versionId)} />
             ))}
           </div>
           {result.offset + result.hits.length < result.total && (
@@ -141,11 +142,18 @@ export default function ModBrowser({ onBack }: { onBack(): void }) {
   )
 }
 
-function HitRow({ hit, busy, disabled, lang, onInstall }: { hit: ModSearchHit; busy: boolean; disabled: boolean; lang: string; onInstall(): void }) {
+function HitRow({ hit, busy, disabled, lang, onInstall }: { hit: ModSearchHit; busy: boolean; disabled: boolean; lang: string; onInstall(versionId: string | null): void }) {
   const { t, i18n } = useTranslation()
+  const [choosing, setChoosing] = useState(false)
+  const [versions, setVersions] = useState<ModVersionChoice[] | null | undefined>(undefined)
   const downloads = new Intl.NumberFormat(i18n.language, { notation: 'compact' }).format(hit.downloads)
+  const openVersions = () => {
+    setChoosing((c) => !c)
+    if (versions === undefined) window.hemisphere.client.projectVersions(hit.projectId).then(setVersions)
+  }
   return (
-    <div className="flex items-center gap-3.5 border-t border-white/5 px-3.5 py-3 first:border-t-0">
+    <div className="border-t border-white/5 first:border-t-0">
+    <div className="flex items-center gap-3.5 px-3.5 py-3">
       <Icon src={hit.icon} />
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 truncate">
@@ -161,12 +169,56 @@ function HitRow({ hit, busy, disabled, lang, onInstall }: { hit: ModSearchHit; b
           </p>
         )}
       </div>
-      <Action hit={hit} busy={busy} disabled={disabled} onInstall={onInstall} />
+      <Action hit={hit} busy={busy} disabled={disabled} choosing={choosing} onInstall={() => onInstall(null)} onChooseVersion={openVersions} />
+    </div>
+    {choosing && (
+      <div className="mx-3.5 mb-3 rounded-lg border border-white/10 bg-gray-950/60 p-2">
+        <p className="px-1.5 pb-1.5 text-xs text-gray-400">{t('browse.chooseVersion')}</p>
+        {versions === undefined ? (
+          <div className="space-y-1">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="skeleton h-8 rounded-md" />
+            ))}
+          </div>
+        ) : !versions?.length ? (
+          <p className="px-1.5 py-1 text-[13px] text-gray-400">{versions === null ? t('browse.offline') : t('mods.versionsNone')}</p>
+        ) : (
+          <ul className="max-h-[240px] overflow-y-auto pr-1">
+            {versions.map((v) => (
+              <VersionRow
+                key={v.id}
+                v={v}
+                busy={busy ? v.id : null}
+                lang={lang}
+                onPick={() => {
+                  setChoosing(false)
+                  onInstall(v.id)
+                }}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    )}
     </div>
   )
 }
 
-function Action({ hit, busy, disabled, onInstall }: { hit: ModSearchHit; busy: boolean; disabled: boolean; onInstall(): void }) {
+function Action({
+  hit,
+  busy,
+  disabled,
+  choosing,
+  onInstall,
+  onChooseVersion,
+}: {
+  hit: ModSearchHit
+  busy: boolean
+  disabled: boolean
+  choosing: boolean
+  onInstall(): void
+  onChooseVersion(): void
+}) {
   const { t } = useTranslation()
   const pill = 'flex flex-none items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold'
   if (hit.state === 'inHemisphere')
@@ -187,15 +239,24 @@ function Action({ hit, busy, disabled, onInstall }: { hit: ModSearchHit; busy: b
         <Ban size={14} /> {t('browse.notAllowed')}
       </span>
     )
+  const tone = hit.verdict === 'askStaff' ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-green-600 text-white hover:bg-green-500'
   return (
-    <button
-      onClick={onInstall}
-      disabled={disabled}
-      className={`${pill} transition-colors disabled:opacity-50 ${hit.verdict === 'askStaff' ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30' : 'bg-green-600 text-white hover:bg-green-500'}`}
-    >
-      {busy ? <Loader2 size={14} className="animate-spin" /> : hit.verdict === 'askStaff' ? <TriangleAlert size={14} /> : <Download size={14} />}
-      {hit.verdict === 'askStaff' ? t('browse.askStaff') : t('browse.install')}
-    </button>
+    <span className="flex flex-none">
+      <button onClick={onInstall} disabled={disabled} className={`${pill} rounded-r-none transition-colors disabled:opacity-50 ${tone}`}>
+        {busy ? <Loader2 size={14} className="animate-spin" /> : hit.verdict === 'askStaff' ? <TriangleAlert size={14} /> : <Download size={14} />}
+        {hit.verdict === 'askStaff' ? t('browse.askStaff') : t('browse.install')}
+      </button>
+      <button
+        onClick={onChooseVersion}
+        disabled={disabled}
+        aria-label={t('browse.chooseVersionButton', { mod: hit.title })}
+        title={t('browse.chooseVersionButton', { mod: hit.title })}
+        aria-expanded={choosing}
+        className={`rounded-l-none rounded-r-lg border-l border-black/20 px-2 transition-colors disabled:opacity-50 ${tone}`}
+      >
+        <ChevronDown size={14} className={`transition-transform ${choosing ? 'rotate-180' : ''}`} />
+      </button>
+    </span>
   )
 }
 

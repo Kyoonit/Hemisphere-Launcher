@@ -321,7 +321,7 @@
     "duplicateHint": "Hemisphere already includes this mod: remove this copy and use Hemisphere’s switch instead",
     "duplicateLocked": "Remove this copy to switch it on: Hemisphere already includes this mod",
     "versions": "Versions of {{mod}}",
-    "versionsHint": "Pick an older version if the newest one doesn’t work with another mod. An older version stays as you chose until you pick the latest again.",
+    "versionsHint": "Click a version to switch to it. The lock keeps a version: “Update all” never changes a locked mod.",
     "versionsNone": "No versions for this Minecraft version on Modrinth.",
     "current": "Current",
     "latest": "Latest",
@@ -329,15 +329,24 @@
       "beta": "Beta",
       "alpha": "Alpha"
     },
-    "pinned": "Pinned",
-    "pinnedHint": "You chose this version: \"Update all\" leaves it as it is",
-    "versionPinned": "{{mod}} is now on {{version}} and stays on it (pinned).",
-    "versionLatest": "{{mod}} is now on {{version}}, the latest version.",
     "versionErrors": {
       "busy": "Close Minecraft (or wait for the launcher to finish) before changing versions.",
       "notFound": "That version isn’t available anymore.",
       "network": "Couldn’t reach Modrinth. Check your internet connection and try again."
-    }
+    },
+    "takeOverHint": "Changing, locking or removing a Hemisphere mod makes it yours: Hemisphere stops updating it until you go back to its version.",
+    "takenOver": "your version",
+    "locked": "Locked",
+    "lockedHint": "Locked: “Update all” never changes this version",
+    "lockVersion": "Lock {{version}}",
+    "unlockVersion": "Unlock {{version}}",
+    "lockedNow": "{{mod}} is locked on {{version}}.",
+    "unlocked": "{{mod}} is unlocked: “Update all” can update it again.",
+    "versionSet": "{{mod}} is now on {{version}}.",
+    "versionLocked": "{{mod}} is now on {{version}} and locked.",
+    "backToHemisphere": "Back to Hemisphere’s version ({{version}})",
+    "backDone": "{{mod}} is back on Hemisphere’s version ({{version}}) and updates with Hemisphere again.",
+    "removed": "{{mod}} was moved to the Recycle Bin."
   },
   "repair": {
     "title": "Repair installation",
@@ -518,6 +527,8 @@
       "inHemisphere": "{{mod}} is already part of Hemisphere: turn it on in the list.",
       "busy": "Close Minecraft (or wait for the launcher to finish) before adding mods.",
       "network": "The download failed. Check your internet connection and try again."
-    }
+    },
+    "chooseVersion": "Choose the version to install (newest first).",
+    "chooseVersionButton": "Choose a version of {{mod}}"
   }
 }

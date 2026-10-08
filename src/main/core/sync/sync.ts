@@ -107,7 +107,7 @@ export async function syncClient(manifest: ClientManifest, onProgress: ProgressF
     state.seeded = {}
     for (const rel of Object.keys(state.owned)) if (rel.startsWith('config/')) delete state.owned[rel]
   }
-  const desired = desiredFiles(manifest, state.choices)
+  const desired = desiredFiles(manifest, state.choices, state.detached)
 
   const local = new Map<string, LocalInfo>()
   for (const rel of new Set([...desired.map((f) => f.path), ...Object.keys(state.owned)])) {
@@ -262,4 +262,36 @@ async function saveToggle(manifest: ClientManifest, id: string, on: boolean): Pr
   state.choices = choices
   await writeInstanceState(state)
   return { enabled: [...resolveEnabled(manifest.mods, choices)], alsoChanged }
+}
+
+/**
+ * The player takes over a Hemisphere mod: its file (if any) stays where it is but is no longer Hemisphere's, and the
+ * mod is never placed, replaced or removed by a sync again. Returns whether a file was handed over.
+ */
+export function detachMod(manifest: ClientManifest, id: string): Promise<{ handedOver: boolean; wasEnabled: boolean }> {
+  const run = toggleQueue.then(async () => {
+    const state = await readInstanceState()
+    const mod = manifest.mods.find((m) => m.id === id)
+    if (!mod) throw new Error(`unknown mod ${id}`)
+    const wasEnabled = resolveEnabled(manifest.mods, state.choices).has(id)
+    const handedOver = !!state.owned[mod.file.path]
+    delete state.owned[mod.file.path]
+    if (!state.detached.includes(id)) state.detached.push(id)
+    await writeInstanceState(state)
+    return { handedOver, wasEnabled }
+  })
+  toggleQueue = run.catch(() => {})
+  return run
+}
+
+/** Hemisphere manages the mod again (its version is placed on the next sync). */
+export function reattachMod(id: string): Promise<void> {
+  const run = toggleQueue.then(async () => {
+    const state = await readInstanceState()
+    state.detached = state.detached.filter((d) => d !== id)
+    state.choices = { ...state.choices, [id]: true }
+    await writeInstanceState(state)
+  })
+  toggleQueue = run.catch(() => {})
+  return run
 }

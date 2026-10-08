@@ -33,9 +33,11 @@ import { installFileLogger } from './core/logging/logger'
 import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemInfo, type FolderKind } from './core/system/system'
 import { detectGpus } from './core/system/gpu'
 import { detectSources, importFrom, setPlayerModEnabled, sourceFromFolder } from './core/importer/importer'
-import { canEnablePlayerMod, checkPlayerModUpdates, modVersions, setModVersion, hemisphereMods, hemisphereProjects, installMod, knownPlayerProjects, listPlayerMods, removePlayerMod, updatePlayerMods } from './core/modrinth/playerMods'
-import { safeIcon, searchMods } from './core/modrinth/api'
-import { MODRINTH_ID, policyFor, type InstallResult, type ModSearchResult, type SetVersionResult } from '@shared/modBrowser'
+import { canEnablePlayerMod, hemisphereMods, installMod, knownPlayerProjects, listPlayerMods } from './core/modrinth/playerMods'
+import { backToHemisphere, checkAllUpdates, listMods, removeFor, setLockFor, setVersionFor, updateAll, versionsFor } from './core/modrinth/allMods'
+import { pickVersion, projectVersions, safeIcon, searchMods } from './core/modrinth/api'
+import { MODRINTH_ID, policyFor, type InstallResult, type ModItem, type ModSearchResult, type ModVersionChoice, type SetVersionResult, type UpdateApplied, type UpdateCheck } from '@shared/modBrowser'
+import type { ClientManifest } from '@shared/manifest'
 import type { ImportOptions, ImportSource } from '@shared/importer'
 import type { ClientSummary } from '@shared/client'
 import { loadWindowState, trackWindowState } from './core/system/windowState'
@@ -194,26 +196,58 @@ function registerIpc(): void {
       return { ok: false, reason: 'failed', detail: String(err) }
     }
   })
+  const detachedSet = async () => new Set((await readInstanceState()).detached)
   handle(IPC.modsPlayer, async () => {
-    const hemisphere = await getContent()
-      .then((c) => hemisphereMods(c.manifest))
-      .catch(() => null)
-    const minecraft = await getContent()
-      .then((c) => c.manifest.minecraft)
-      .catch(() => null)
-    return listPlayerMods(Object.keys((await readInstanceState()).owned), getFeed().modPolicy, hemisphere, minecraft)
+    const content = await getContent().catch(() => null)
+    const hemisphere = content ? hemisphereMods(content.manifest, await detachedSet()) : null
+    return listPlayerMods(Object.keys((await readInstanceState()).owned), getFeed().modPolicy, hemisphere, content?.manifest.minecraft ?? null)
   })
   // Changing mods while the game runs (or while the launcher is installing) is refused.
   const modsBusy = () => {
     const g = getGameState()
     return g.phase === 'preparing' || g.background || g.runningAccounts.length > 0
   }
+  /** Mod keys from the interface: "h:<Hemisphere mod id>" or "p:<file name>". */
+  const isModKey = (k: unknown): k is string => typeof k === 'string' && /^(h:[a-z0-9-]{1,64}|p:[^\\/:*?"<>|]{1,200}\.jar)$/i.test(k)
+  const withManifest = async <T,>(fallback: T, job: (manifest: ClientManifest) => Promise<T>): Promise<T> => {
+    try {
+      return await job((await getContent()).manifest)
+    } catch (err) {
+      console.warn('[mods]', err)
+      return fallback
+    }
+  }
+
+  handle(IPC.modsList, () => withManifest<ModItem[] | null>(null, (m) => listMods(m, getFeed().modPolicy)))
+  handle(IPC.modsVersions, (_e, key: unknown) => (isModKey(key) ? withManifest<ModVersionChoice[] | null>(null, (m) => versionsFor(m, key)) : null))
+  handle(IPC.modsSetVersion, async (_e, key: unknown, versionId: unknown, lock: unknown): Promise<SetVersionResult> => {
+    if (!isModKey(key) || typeof versionId !== 'string' || !MODRINTH_ID.test(versionId)) return { ok: false, reason: 'notFound' }
+    if (modsBusy()) return { ok: false, reason: 'busy' }
+    return withManifest<SetVersionResult>({ ok: false, reason: 'network' }, (m) => setVersionFor(m, key, versionId, lock === true))
+  })
+  handle(IPC.modsSetLock, async (_e, key: unknown, locked: unknown) => {
+    if (!isModKey(key) || typeof locked !== 'boolean' || modsBusy()) return false
+    return withManifest(false, (m) => setLockFor(m, key, locked))
+  })
+  handle(IPC.modsRemove, async (_e, key: unknown) => {
+    if (!isModKey(key) || modsBusy()) return false
+    return withManifest(false, (m) => removeFor(m, key))
+  })
+  handle(IPC.modsBackToHemisphere, async (_e, key: unknown) => {
+    if (!isModKey(key) || modsBusy()) return false
+    const ok = await withManifest(false, (m) => backToHemisphere(m, key))
+    if (ok) void prepareInBackground() // place Hemisphere's version now rather than at the next PLAY
+    return ok
+  })
+  handle(IPC.modsCheckUpdates, () => withManifest<UpdateCheck | null>(null, (m) => checkAllUpdates(m)))
+  handle(IPC.modsUpdateAll, async () => (modsBusy() ? null : withManifest<UpdateApplied | null>(null, (m) => updateAll(m))))
+
   handle(IPC.modsSearch, async (_e, query: unknown, offset: unknown): Promise<ModSearchResult | null> => {
     if (typeof query !== 'string' || typeof offset !== 'number' || !Number.isInteger(offset) || offset < 0 || offset > 10_000) return null
     try {
       const { manifest } = await getContent()
-      const hemisphere = hemisphereProjects(manifest)
-      // Browsing (no search text): leave out what Hemisphere already ships. A search by name still shows it, marked.
+      const hemisphere = hemisphereMods(manifest, await detachedSet()).projects
+      // Browsing (no search text): leave out what Hemisphere already manages. A search by name still shows it, marked.
       const res = await searchMods(query, manifest.minecraft, offset, query.trim() ? [] : [...hemisphere])
       const mine = knownPlayerProjects()
       const policy = getFeed().modPolicy
@@ -238,56 +272,36 @@ function registerIpc(): void {
       return null
     }
   })
-  handle(IPC.modsInstall, async (_e, projectId: unknown, confirmed: unknown): Promise<InstallResult> => {
+  handle(IPC.modsProjectVersions, async (_e, projectId: unknown): Promise<ModVersionChoice[] | null> => {
+    if (typeof projectId !== 'string' || !MODRINTH_ID.test(projectId)) return null
+    return withManifest<ModVersionChoice[] | null>(null, async (m) => {
+      const versions = (await projectVersions(projectId, m.minecraft)).sort((a, b) => b.date_published.localeCompare(a.date_published))
+      const latest = pickVersion(versions)
+      return versions.slice(0, 60).map((v) => ({
+        id: v.id,
+        versionNumber: v.version_number,
+        name: v.name,
+        type: v.version_type,
+        published: v.date_published,
+        current: false,
+        latest: v.id === latest?.id,
+        locked: false,
+      }))
+    })
+  })
+  handle(IPC.modsInstall, async (_e, projectId: unknown, confirmed: unknown, versionId: unknown): Promise<InstallResult> => {
     if (typeof projectId !== 'string' || !MODRINTH_ID.test(projectId)) return { ok: false, reason: 'notCompatible' }
+    if (versionId !== undefined && versionId !== null && (typeof versionId !== 'string' || !MODRINTH_ID.test(versionId))) return { ok: false, reason: 'notCompatible' }
     if (modsBusy()) return { ok: false, reason: 'busy' }
     const { manifest } = await getContent()
-    return installMod(projectId, confirmed === true, manifest, Object.keys((await readInstanceState()).owned), getFeed().modPolicy)
-  })
-  handle(IPC.modsPlayerRemove, async (_e, file: unknown) => {
-    if (typeof file !== 'string' || modsBusy()) return false
-    return removePlayerMod(file, Object.keys((await readInstanceState()).owned))
-  })
-  handle(IPC.modsPlayerVersions, async (_e, file: unknown) => {
-    if (typeof file !== 'string') return null
-    try {
-      const { manifest } = await getContent()
-      return await modVersions(file, Object.keys((await readInstanceState()).owned), manifest.minecraft)
-    } catch (err) {
-      console.warn('[mods] versions failed:', err)
-      return null
-    }
-  })
-  handle(IPC.modsPlayerSetVersion, async (_e, file: unknown, versionId: unknown): Promise<SetVersionResult> => {
-    if (typeof file !== 'string' || typeof versionId !== 'string' || !MODRINTH_ID.test(versionId)) return { ok: false, reason: 'notFound' }
-    if (modsBusy()) return { ok: false, reason: 'busy' }
-    const { manifest } = await getContent()
-    return setModVersion(file, versionId, Object.keys((await readInstanceState()).owned), manifest.minecraft)
-  })
-  handle(IPC.modsPlayerCheckUpdates, async () => {
-    try {
-      const { manifest } = await getContent()
-      return await checkPlayerModUpdates(Object.keys((await readInstanceState()).owned), manifest.minecraft)
-    } catch (err) {
-      console.warn('[mods] update check failed:', err)
-      return null
-    }
-  })
-  handle(IPC.modsPlayerUpdate, async () => {
-    if (modsBusy()) return null
-    try {
-      const { manifest } = await getContent()
-      return await updatePlayerMods(Object.keys((await readInstanceState()).owned), manifest.minecraft, false)
-    } catch (err) {
-      console.warn('[mods] update failed:', err)
-      return null
-    }
+    const state = await readInstanceState()
+    return installMod(projectId, confirmed === true, manifest, Object.keys(state.owned), getFeed().modPolicy, new Set(state.detached), (versionId as string | null) ?? null)
   })
   handle(IPC.modsPlayerSet, async (_e, file: unknown, enabled: unknown) => {
     const g = getGameState()
     if (typeof file !== 'string' || typeof enabled !== 'boolean' || g.runningAccounts.length) return false
-    // A copy of a mod Hemisphere already ships stays off until it's removed.
-    if (enabled && !canEnablePlayerMod(file, (await getContent()).manifest)) return false
+    // A copy of a mod Hemisphere still manages stays off until it's removed.
+    if (enabled && !canEnablePlayerMod(file, (await getContent()).manifest, await detachedSet())) return false
     return setPlayerModEnabled(file, enabled, Object.keys((await readInstanceState()).owned))
   })
   handle(IPC.feedGet, () => getFeed())

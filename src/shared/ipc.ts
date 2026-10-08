@@ -6,7 +6,7 @@ import type { Feed } from './feed'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from './importer'
 import type { ClientSummary } from './client'
 import type { LauncherUpdateState } from './launcherUpdate'
-import type { InstallResult, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
+import type { InstallResult, ModItem, ModSearchResult, ModVersionChoice, PlayerModInfo, SetVersionResult, UpdateApplied, UpdateCheck } from './modBrowser'
 
 /** IPC contract shared by main, preload and renderer. Every channel is listed here. */
 
@@ -62,11 +62,15 @@ export const IPC = {
   modsPlayerSet: 'mods:player-set',
   modsSearch: 'mods:search',
   modsInstall: 'mods:install',
-  modsPlayerRemove: 'mods:player-remove',
-  modsPlayerCheckUpdates: 'mods:player-check-updates',
-  modsPlayerUpdate: 'mods:player-update',
-  modsPlayerVersions: 'mods:player-versions',
-  modsPlayerSetVersion: 'mods:player-set-version',
+  modsList: 'mods:list',
+  modsVersions: 'mods:versions',
+  modsSetVersion: 'mods:set-version',
+  modsSetLock: 'mods:set-lock',
+  modsRemove: 'mods:remove',
+  modsBackToHemisphere: 'mods:back-to-hemisphere',
+  modsCheckUpdates: 'mods:check-updates',
+  modsUpdateAll: 'mods:update-all',
+  modsProjectVersions: 'mods:project-versions',
 } as const
 
 /** External links the renderer may open. The renderer sends a key, never a URL. */
@@ -182,15 +186,21 @@ export interface HemisphereApi {
     playerMods(): Promise<PlayerModInfo[]>
     /** Modrinth search: Fabric mods for Hemisphere's Minecraft version */
     search(query: string, offset: number): Promise<ModSearchResult | null>
-    /** Installs a Modrinth project (+ required dependencies). confirmed = the player accepted an "ask staff" warning */
-    install(projectId: string, confirmed: boolean): Promise<InstallResult>
-    /** Moves one of the player's mods to the Recycle Bin */
-    removePlayerMod(file: string): Promise<boolean>
-    checkPlayerModUpdates(): Promise<UpdateCheck | null>
-    updatePlayerMods(): Promise<UpdateApplied | null>
-    /** Modrinth versions of one of the player's mods (null = not on Modrinth / offline) */
-    playerModVersions(file: string): Promise<ModVersionChoice[] | null>
-    setPlayerModVersion(file: string, versionId: string): Promise<SetVersionResult>
+    /** Installs a Modrinth project (+ required dependencies), newest version or versionId. confirmed = accepted an "ask staff" warning */
+    install(projectId: string, confirmed: boolean, versionId?: string | null): Promise<InstallResult>
+    /** Versions of a Modrinth project for this Minecraft version (Find mods) */
+    projectVersions(projectId: string): Promise<ModVersionChoice[] | null>
+    /** Every mod (Hemisphere's and the player's), same actions for all; keys "h:<id>" / "p:<file>" */
+    list(): Promise<ModItem[] | null>
+    versions(key: string): Promise<ModVersionChoice[] | null>
+    setVersion(key: string, versionId: string, lock: boolean): Promise<SetVersionResult>
+    setLock(key: string, locked: boolean): Promise<boolean>
+    /** To the Recycle Bin (a Hemisphere mod is taken over first) */
+    remove(key: string): Promise<boolean>
+    /** A taken-over Hemisphere mod goes back to Hemisphere's version and updates */
+    backToHemisphere(key: string): Promise<boolean>
+    checkUpdates(): Promise<UpdateCheck | null>
+    updateAll(): Promise<UpdateApplied | null>
     setPlayerMod(file: string, enabled: boolean): Promise<boolean>
   }
 }

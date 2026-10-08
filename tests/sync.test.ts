@@ -6,7 +6,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, existsSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { applyToggle, resolveEnabled, type SelectableMod } from '../src/shared/modSelection'
-import { emptyState, planSync, type DesiredFile } from '../src/main/core/sync/plan'
+import { desiredFiles, emptyState, planSync, type DesiredFile } from '../src/main/core/sync/plan'
 import { blobPath, downloadToStore } from '../src/main/core/sync/download'
 
 vi.mock('electron', () => ({ app: { getPath: () => tmpdir(), isPackaged: true } }))
@@ -169,5 +169,28 @@ describe('downloadToStore', () => {
     await expect(downloadToStore(store, f(), () => {})).rejects.toThrow(/not allowed/)
     expect(requests).toHaveLength(0)
     rmSync(store, { recursive: true, force: true })
+  })
+})
+
+describe('mods the player took over', () => {
+  const mod = (id: string) => ({
+    id,
+    name: id,
+    description: { en: id },
+    category: 'comfort' as const,
+    recommended: false,
+    defaultEnabled: true,
+    requires: [],
+    version: '1.0',
+    file: { path: `mods/${id}.jar`, url: `https://x/${id}.jar`, sha512: 'a'.repeat(128), size: 1 },
+  })
+  const manifest = { schema: 1, clientVersion: '1.0.0', createdAt: '', minecraft: '26.3', loader: { type: 'fabric', version: '0.19.5' }, mods: [mod('jade'), mod('zoomify')], files: [] } as never
+  test('are never placed by Hemisphere', () => {
+    expect(desiredFiles(manifest, {}, ['jade']).map((f) => f.path)).toEqual(['mods/zoomify.jar'])
+  })
+  test('their file is not removed once Hemisphere stopped owning it', () => {
+    const s = { ...emptyState(), detached: ['jade'] }
+    const p = planSync(desiredFiles(manifest, {}, s.detached), s, new Map([['mods/jade.jar', { size: 5, mtimeMs: 1 }]]))
+    expect(p.remove).toEqual([])
   })
 })
