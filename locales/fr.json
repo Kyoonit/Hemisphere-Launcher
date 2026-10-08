@@ -423,6 +423,7 @@
     "mentioned": "Cités dans le crash : {{mods}}",
     "withoutMyMods": "Lancer sans mes mods",
     "reports": "Rapports de crash",
-    "help": "Demander de l’aide"
+    "help": "Demander de l’aide",
+    "close": "Fermer"
   }
 }

@@ -28,6 +28,7 @@ export const IPC = {
   gameState: 'game:state',
   gameStateChanged: 'game:state-changed',
   gamePlay: 'game:play',
+  gameDismissError: 'game:dismiss-error',
   gameJava: 'game:java',
   gameRepair: 'game:repair',
   clientGet: 'client:get',
@@ -139,6 +140,8 @@ export interface HemisphereApi {
     onState(cb: (state: GameState) => void): () => void
     /** Install if needed and launch with the active account */
     play(opts?: PlayOptions): void
+    /** Close the error / crash card */
+    dismissError(): void
     /** Managed runtime (if installed) + Java found on this PC */
     javaInfo(): Promise<JavaRuntimeInfo[]>
     /** Verify and fix the installation (progress arrives through onState) */

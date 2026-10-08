@@ -16,7 +16,7 @@ import {
   switchAccount,
 } from './core/auth/accounts'
 import { cancelSignIn } from './core/auth/oauth'
-import { gameEvents, getGameState, onGameState, play, repair } from './core/game/gameService'
+import { dismissGameError, gameEvents, getGameState, onGameState, play, repair } from './core/game/gameService'
 import { getSettings, onSettingsChanged, updateSettings } from './core/settings/settings'
 import { recoverSessions } from './core/playtime/playtimeStore'
 import { instanceLogPath } from './core/game/install'
@@ -116,6 +116,7 @@ function registerIpc(): void {
   )
 
   ipcMain.handle(IPC.gameState, () => getGameState())
+  ipcMain.on(IPC.gameDismissError, () => dismissGameError())
   ipcMain.on(IPC.gamePlay, (_e, opts: unknown) => {
     const active = getAccountsState().activeId
     const o = (opts ?? {}) as { target?: unknown; withoutPlayerMods?: unknown }

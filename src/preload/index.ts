@@ -97,6 +97,7 @@ const api: HemisphereApi = {
       return () => ipcRenderer.removeListener(IPC.gameStateChanged, listener)
     },
     play: (opts) => ipcRenderer.send(IPC.gamePlay, opts),
+    dismissError: () => ipcRenderer.send(IPC.gameDismissError),
     javaInfo: () => ipcRenderer.invoke(IPC.gameJava),
     repair: (mode) => ipcRenderer.invoke(IPC.gameRepair, mode),
   },

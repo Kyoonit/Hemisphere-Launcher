@@ -56,6 +56,11 @@ function progressReporter() {
 }
 
 /** Recommended memory for this PC (used when the player hasn't chosen one). */
+/** Hides the last error card (the player closed it). */
+export function dismissGameError(): void {
+  if (state.error) set({ error: null })
+}
+
 export function recommendedMemoryMb(): number {
   const gb = totalmem() / 1024 ** 3
   return gb <= 6 ? 2048 : gb <= 8 ? 3072 : gb <= 16 ? 4096 : 6144

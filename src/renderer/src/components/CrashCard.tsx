@@ -20,10 +20,18 @@ export default function CrashCard({ suspects, onRepair }: { suspects: string[]; 
         <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-red-600/20 text-red-400">
           <X size={18} />
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <b className="block text-white">{t('crash.title')}</b>
           <span className="text-[13px] text-gray-400 @max-[400px]:hidden">{t('crash.subtitle')}</span>
         </div>
+        <button
+          onClick={() => window.hemisphere.game.dismissError()}
+          aria-label={t('crash.close')}
+          title={t('crash.close')}
+          className="flex-none self-start rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white"
+        >
+          <X size={16} />
+        </button>
       </div>
 
       {(ownMods > 0 || suspects.length > 0) && (

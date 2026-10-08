@@ -195,3 +195,6 @@
 .home-pad {
   padding-bottom: clamp(16px, calc(5vh - 14px), 24px);
 }
+.home-title-compact {
+  font-size: clamp(22px, calc(5vh - 8px), 32px);
+}

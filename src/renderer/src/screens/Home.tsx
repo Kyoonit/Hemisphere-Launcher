@@ -38,16 +38,16 @@ export default function Home({ onOpenNews, onRepair, onImport }: { onOpenNews():
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
         {active?.status === 'expired' && <ExpiredBanner />}
-        {/* the crash card takes the welcome title's place */}
-        {!crashed && (
-          <h1 className="home-title animate-rise leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]">
-            {active ? t('home.welcomeBack') : t('home.welcomeTo')}
-            <br />
-            <span className="text-green-400">{active ? active.name : t('app.name')}</span>
-          </h1>
-        )}
+        {/* one compact line while the crash card needs the room */}
+        <h1
+          className={`${crashed ? 'home-title-compact' : 'home-title'} animate-rise leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]`}
+        >
+          {active ? t('home.welcomeBack') : t('home.welcomeTo')}
+          {crashed ? ' ' : <br />}
+          <span className="text-green-400">{active ? active.name : t('app.name')}</span>
+        </h1>
 
-        <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? '' : 'home-gap'}`}>
+        <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-3' : 'home-gap'}`}>
           <PlayZone client={client ?? null} onRepair={onRepair} />
           <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
             <ServerNotice offline={status?.online === false} feed={feed} />

@@ -415,6 +415,7 @@
     "mentioned": "Mentioned in the crash: {{mods}}",
     "withoutMyMods": "Launch without my mods",
     "reports": "Crash reports",
-    "help": "Get help"
+    "help": "Get help",
+    "close": "Close"
   }
 }
