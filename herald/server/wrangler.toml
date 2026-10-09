@@ -13,6 +13,8 @@ GITHUB_BRANCH = "main"
 CONTENT_DIR = "content"
 # The workflow that validates, signs and commits (herald/publisher/herald-publish.yml, copied into the content repository)
 GITHUB_WORKFLOW = "herald-publish.yml"
+# Private repository of the Herald app releases (the App needs Contents: read there too)
+HERALD_RELEASES_REPO = "Kyoonit/herald-releases"
 
 [[d1_databases]]
 binding = "DB"

@@ -408,3 +408,17 @@ joueurs tant que rien n'est publié en v2). Un build de développement peut vise
 
 Pas encore à l'écran (prévu dans les phases suivantes, les données sont déjà là) : bandeau, message d'accueil, fonds
 distants, maintenance annoncée, exceptions de restart, son des news.
+
+## 19. Phase S4 : le squelette de Herald (9 octobre 2026)
+
+- **Serveur** : profils, sessions, journal (`herald/server/src/accounts.ts`, migration `0004`). Codes aléatoires de 20
+  caractères, stockés en HMAC ; jetons de session stockés en SHA-256 ; 5 codes faux = blocage 15 min ; révocation et
+  nouveau code coupent les sessions à l'instant. Rôles et permissions partagés (`src/shared/heraldRoles.ts`), vérifiés
+  par le serveur ; répartition par rôle = **première proposition**, à décider par le propriétaire.
+- **Application** (`herald/app`) : connexion, onglets selon les permissions (un Lodge keeper en voit 4), Home (présence,
+  activité), Team (personnes par rang, création avec code affiché une fois, rôle, permissions ajustées, révocation,
+  nouveau code, journal), Mon fuseau horaire. Les autres onglets annoncent leur phase.
+- **Installateur** `Herald-Setup-x.y.z.exe` (icône « H » verte) ; **mises à jour** relayées par le serveur depuis le
+  dépôt privé `herald-releases`, réservées aux sessions valides, bouton orange comme le launcher.
+- Testé : 21 vérifications de comptes de bout en bout ; l'application pilotée comme un utilisateur (connexion,
+  session retrouvée après redémarrage, création d'un profil, éditeur de profil, vue Lodge keeper).

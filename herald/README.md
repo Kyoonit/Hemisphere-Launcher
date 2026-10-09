@@ -69,3 +69,21 @@ Build the launcher with the test environment, run it, and it shows the test feed
 ```bash
 MAIN_VITE_HERALD_URL=https://herald-staging.hemisphere-launcher.workers.dev MAIN_VITE_HERALD_CONTENT_BASE=https://raw.githubusercontent.com/Kyoonit/herald-test-content/main/content/ MAIN_VITE_HERALD_PUBLIC_KEY=$(cat herald/server/test-public-key.txt) npx electron-vite build
 ```
+
+## The Herald app (phase S4)
+
+```bash
+npm run herald:typecheck && npm run herald:build     # herald/app/out (everything bundled, no node_modules)
+npm run herald:dist                                  # herald/app/dist/Herald-Setup-<version>.exe (+ latest.yml)
+npm run herald:release                               # GH_TOKEN with Contents: read and write on Kyoonit/herald-releases
+```
+
+A build talks to the staging server unless `MAIN_VITE_HERALD_SERVER` says otherwise (e.g. `http://127.0.0.1:8787`
+with `npm run herald:server:dev`). The session token is kept by Windows (safeStorage), never given to the page.
+
+Accounts: `POST /bootstrap` (one-time `BOOTSTRAP_TOKEN` secret) creates the Owner and the Developer; everyone else is
+created in Herald (Team → New profile). Local test: `npm run herald:server:reset-local`, then
+`npm run herald:e2e-accounts`. Server secrets added in S4: `CODE_PEPPER`, `BOOTSTRAP_TOKEN`.
+
+Updates: installed apps ask the Herald server (`/update/…`, signed-in staff only), which relays the latest release of
+the PRIVATE repository `Kyoonit/herald-releases` (the GitHub App needs it in its installation, Contents: read).

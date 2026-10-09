@@ -30,6 +30,8 @@ if (existsSync(varsPath)) for (const line of readFileSync(varsPath, 'utf8').spli
 vars.delete('SIGNING_KEY')
 if (!vars.has('VAULT_MASTER')) vars.set('VAULT_MASTER', randomBytes(32).toString('base64'))
 if (!vars.has('PUBLISHER_TOKEN')) vars.set('PUBLISHER_TOKEN', randomBytes(32).toString('base64url'))
+if (!vars.has('CODE_PEPPER')) vars.set('CODE_PEPPER', randomBytes(32).toString('base64'))
+if (!vars.has('BOOTSTRAP_TOKEN')) vars.set('BOOTSTRAP_TOKEN', randomBytes(24).toString('base64url'))
 if (!vars.has('DEV_TOKEN')) vars.set('DEV_TOKEN', randomBytes(24).toString('base64url'))
 writeFileSync(varsPath, '# Local secrets of the Herald server (git-ignored). TEST values only.\n' + [...vars].map(([k, v]) => `${k}=${v}`).join('\n') + '\n')
 

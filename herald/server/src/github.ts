@@ -65,3 +65,20 @@ export async function startPublishWorkflow(env: GithubEnv, reason: string): Prom
     body: JSON.stringify({ ref: env.GITHUB_BRANCH, inputs: { reason: reason.slice(0, 100) } }),
   })
 }
+
+/**
+ * A file of the latest release of the PRIVATE Herald releases repository, streamed to a signed-in Herald app (its
+ * updates). The App needs Contents: read on that repository; nothing is public, nothing is stored here.
+ */
+export async function latestReleaseFile(env: GithubEnv, repo: string, name: string): Promise<Response> {
+  const token = await accessToken(env)
+  const release = (await (await gh(`/repos/${repo}/releases/latest`, token)).json()) as { assets: { name: string; url: string; size: number }[] }
+  const asset = release.assets.find((a) => a.name === name)
+  if (!asset) return new Response('not found', { status: 404 })
+  // GitHub answers with a redirect to a short-lived storage link, fetched WITHOUT the token; the body is streamed through
+  const pointer = await fetch(asset.url, { redirect: 'manual', headers: { authorization: `Bearer ${token}`, accept: 'application/octet-stream', 'user-agent': 'herald-server' } })
+  const location = pointer.headers.get('location')
+  const file = location ? await fetch(location, { headers: { 'user-agent': 'herald-server' } }) : pointer
+  if (!file.ok || !file.body) return new Response('not available', { status: 502 })
+  return new Response(file.body, { headers: { 'content-type': name.endsWith('.yml') ? 'text/yaml' : 'application/octet-stream', 'content-length': String(asset.size), 'cache-control': 'no-store' } })
+}

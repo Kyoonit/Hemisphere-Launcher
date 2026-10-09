@@ -1,0 +1,41 @@
+# Herald's Windows installer (staff only, distributed privately). Built by `npm run herald:dist`, published by
+# `npm run herald:release` to the PRIVATE herald-releases repository; installed apps update through the Herald server.
+appId: club.hemispheresurvival.herald
+productName: Herald
+copyright: Hemisphere SMP
+electronVersion: 44.7.0
+directories:
+  output: dist
+  buildResources: build
+
+# Everything is bundled in out/ (no node_modules)
+files:
+  - out/**
+  - package.json
+
+win:
+  target: nsis
+  icon: build/icon.png
+  artifactName: Herald-Setup-${version}.${ext}
+  # No code-signing certificate: Windows SmartScreen shows "unknown publisher" on first run.
+
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Herald
+  deleteAppDataOnUninstall: false
+
+# Only used to write latest.yml next to the installer; the files are served by the Herald server's /update/ relay
+publish:
+  provider: generic
+  url: https://herald-staging.hemisphere-launcher.workers.dev/update/
+
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true

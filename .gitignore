@@ -13,3 +13,7 @@ dist/
 herald/server/worker-configuration.d.ts
 herald/publisher/dist/
 herald/server/.actions-secrets.txt
+herald/app/out/
+herald/app/dist/
+herald/server/.staging-codes.txt
+herald/app/package-lock.json

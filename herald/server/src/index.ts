@@ -2,6 +2,11 @@
  * Herald server — phase S2: the test infrastructure only (no staff accounts yet).
  *   GET  /health, /time          liveness and server clock
  *   GET  /vault-key/:id          PUBLIC: a vault's key, only from its opening time (launchers ask right at that time)
+ *   POST /bootstrap              one-time creation of the Owner / Developer profiles (BOOTSTRAP_TOKEN secret)
+ *   POST /login, /logout         staff sign-in (name + code) → session token
+ *   GET  /me, /sync              the signed-in profile; presence + activity (the app refreshes every 15 s)
+ *   …    /profiles               create, change, revoke profiles, new codes (permission profiles.manage)
+ *   GET  /update/<file>          Herald app updates (signed-in staff only), from the private releases repository
  *   GET  /pulse                  PUBLIC: last sequence + commit; launchers read the feed at that exact commit (raw
  *                                 by commit is never cached, plain raw is cached up to 5 min): emergencies in minutes
  *   POST /internal/next          PUBLISHER: the newest queued job + its sequence (older queued jobs are superseded)
@@ -14,8 +19,9 @@
  * validates, signs and commits; this server only says what to publish. /dev/* never exists in production.
  */
 import { sealVault, toB64, unwrapKey, wrapKey } from './crypto'
-import { githubConfigured, startPublishWorkflow, type GithubEnv } from './github'
+import { githubConfigured, latestReleaseFile, startPublishWorkflow, type GithubEnv } from './github'
 import { openKeys, sealFuture, type FeedDraft } from './feedV2'
+import { authenticate, bootstrap, createProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, updateProfile } from './accounts'
 
 export interface Env extends GithubEnv {
   DB: D1Database
@@ -24,6 +30,12 @@ export interface Env extends GithubEnv {
   VAULT_MASTER: string
   /** Shared with the publish workflow (secret of the content repository) */
   PUBLISHER_TOKEN: string
+  /** Private repository of Herald app releases (its updates go through this server) */
+  HERALD_RELEASES_REPO: string
+  /** HMAC key of the profile codes */
+  CODE_PEPPER: string
+  /** One-time secret to create the Owner and Developer profiles (removed afterwards) */
+  BOOTSTRAP_TOKEN?: string
   DEV_TOKEN?: string
 }
 
@@ -39,6 +51,8 @@ export default {
       if (req.method === 'GET' && path === '/health') return json({ ok: true, env: env.HERALD_ENV, now: Date.now() })
       if (req.method === 'GET' && path === '/time') return json({ now: Date.now() })
       if (req.method === 'GET' && path === '/pulse') return await pulse(env)
+      const staff = await staffRoute(req, env, path)
+      if (staff) return staff
       const key = path.match(/^\/vault-key\/([a-z0-9-]{1,80})$/)
       if (req.method === 'GET' && key) return await vaultKey(env, key[1])
       if (path.startsWith('/internal/')) {
@@ -57,6 +71,7 @@ export default {
       }
       return json({ error: 'not found' }, 404)
     } catch (err) {
+      if (err instanceof HttpError) return json({ error: err.message }, err.status)
       console.error(err)
       return json({ error: err instanceof Error ? err.message : String(err) }, 400)
     }
@@ -84,6 +99,27 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env>
+
+/** Staff routes (null = not one of them). Everything but bootstrap and login needs a session. */
+async function staffRoute(req: Request, env: Env, path: string): Promise<Response | null> {
+  const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
+  if (req.method === 'POST' && path === '/bootstrap') return json(await bootstrap(env, await body()))
+  if (req.method === 'POST' && path === '/login') return json(await login(env, await body()))
+  const profile = path.match(/^\/profiles\/(p-[a-z0-9-]{1,20})(\/code)?$/)
+  const update = path.match(/^\/update\/(latest\.yml|Herald-Setup-\d+\.\d+\.\d+\.exe)$/)
+  if (!['/me', '/logout', '/sync', '/profiles'].includes(path) && !profile && !update) return null
+  const actor = await authenticate(env, req)
+  // Herald's own updates: only for signed-in staff, from the private releases repository
+  if (req.method === 'GET' && update) return githubConfigured(env) ? await latestReleaseFile(env, env.HERALD_RELEASES_REPO, update[1]) : json({ error: 'not available' }, 404)
+  if (req.method === 'GET' && path === '/me') return json((await sync(env, actor)).me)
+  if (req.method === 'POST' && path === '/logout') return json(await logout(env, req, actor).then(() => ({ ok: true })))
+  if (req.method === 'GET' && path === '/sync') return json(await sync(env, actor))
+  if (req.method === 'GET' && path === '/profiles') return json(await listProfiles(env, actor))
+  if (req.method === 'POST' && path === '/profiles') return json(await createProfile(env, actor, await body()))
+  if (req.method === 'PATCH' && profile && !profile[2]) return json(await updateProfile(env, actor, profile[1], await body()))
+  if (req.method === 'POST' && profile?.[2]) return json(await newProfileCode(env, actor, profile[1]))
+  return json({ error: 'not found' }, 404)
+}
 
 async function vaultKey(env: Env, id: string): Promise<Response> {
   const now = Date.now()
