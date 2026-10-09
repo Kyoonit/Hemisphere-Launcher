@@ -13,7 +13,7 @@
 - Nom : **Herald** (générique, sans référence à Hemisphere ou à Minecraft).
 - Application **réservée au staff**, distincte du launcher, **en anglais uniquement** (interface).
 - Rôle : publier tout ce que les joueurs voient dans le launcher (news, maintenances, événements, restart, bandeau,
-  message d'accueil, screenshots du menu, politique des mods, pack de mods, réglages publics), le préparer à
+  message d'accueil, screenshots du menu, pack de mods, réglages publics), le préparer à
   plusieurs, le programmer, et réagir en urgence.
 - **Windows uniquement** pour l'instant.
 
@@ -61,9 +61,9 @@ Herald (PC du staff) ──nom + code──▶ Serveur Herald (Cloudflare Worker
 |---|---|
 | **Owner** | Liable |
 | **Developer** | Kyonit |
-| **Admin** | Staff |
-| **Modérateur** | Staff |
-| **Lodge keeper** | **Pas membre du staff.** Écrit des articles et programme des événements pour animer le serveur ; ne touche jamais au fonctionnement du launcher (maintenance, restart, mods, réglages…) |
+| **Admin** | Covee, Netcrafts, Frunobulax, Trav |
+| **Modérateur** | FireLegendDad |
+| **Lodge keeper** | Iceorbs, Kingly, Scruffy, Blu. **Pas membres du staff.** Écrit des articles et programme des événements pour animer le serveur ; ne touche jamais au fonctionnement du launcher (maintenance, restart, mods, réglages…) |
 
   Le détail des permissions de chaque rôle sera défini plus tard (point ouvert, § 19).
 - Tout le staff peut modifier les publications des autres (selon les permissions).
@@ -82,7 +82,6 @@ Herald (PC du staff) ──nom + code──▶ Serveur Herald (Cloudflare Worker
 | **Message d'accueil** | Remplace le texte de bienvenue de l'accueil, programmable (saisons, fêtes) |
 | **Screenshots du menu** | Ajouter, supprimer, programmer par période (Halloween, Noël…) ; § 9 |
 | **Restart** | Heure + fuseau au choix, changement programmé avec date d'effet, exceptions ; § 10 |
-| **Politique des mods** | Interdit / demander au staff, **programmable** (« interdit à partir du 1er novembre ») |
 | **Pack de mods** | Liste des mods par défaut, versions, configs ; **validation à plusieurs** |
 | **Réglages publics** | Lien du support, ID Discord, code staff (généré, affiché une fois) |
 
@@ -130,12 +129,11 @@ Herald (PC du staff) ──nom + code──▶ Serveur Herald (Cloudflare Worker
 - Correction d'horloge : le launcher apprend l'écart entre l'horloge du PC et l'heure du serveur (réponse du serveur),
   pour qu'un PC mal réglé n'affiche pas trop tôt ou trop tard.
 
-### 6.3 « Précise » et « Secrète »
-Choix par publication, **Secrète par défaut** ; **Précise** pour les maintenances et le restart.
+### 6.3 Toutes les publications programmées sont secrètes (modifié en S1)
+Pas de choix « Précise / Secrète » : **tout contenu programmé est envoyé en avance dans un coffre** et ne devient
+lisible qu'à son heure (décision du propriétaire en S1, remplace le choix par publication prévu en S0).
 
-- **Précise** : la publication est envoyée en clair avec sa date ; le launcher l'affiche à la seconde, même hors ligne.
-  Une personne technique pourrait la lire en avance dans les fichiers.
-- **Secrète (coffre)** : la publication (texte et images) est envoyée **en avance, chiffrée** (AES, une clé par
+- **Coffre** : la publication (texte et images) est envoyée **en avance, chiffrée** (AES, une clé par
   publication). La clé reste sur le serveur Herald. Comme le launcher **sait à quelle heure le coffre s'ouvre**, il
   demande la clé **exactement à l'heure prévue** ; le serveur ne la donne qu'à partir de cette heure. La publication
   s'affiche donc à **18:00:00 (à une seconde près)** chez tous les joueurs en ligne.
@@ -190,7 +188,7 @@ Choix par publication, **Secrète par défaut** ; **Précise** pour les maintena
 - Une seule mise à jour du launcher (**1.2**) apporte tout ce qu'il faut, **avant l'ouverture aux joueurs** (seul le
   staff utilise le launcher aujourd'hui) :
   - dates de premier affichage / fin d'affichage, maintenance annoncée, récurrences, durée « à la une » ;
-  - coffres (Secrète) et correction d'horloge ;
+  - coffres et correction d'horloge ;
   - vérification toutes les 2 minutes ;
   - bandeau d'annonce, message d'accueil, screenshots distants ;
   - son des news ;
@@ -214,7 +212,7 @@ Choix par publication, **Secrète par défaut** ; **Précise** pour les maintena
 - Les brouillons ne sont jamais publics (ils vivent sur le serveur Herald, pas dans le dépôt).
 - Aucune donnée sur les joueurs n'est collectée.
 
-## 14. Déménagement vers un GitHub officiel d'Hemisphere (proposition, décision plus tard)
+## 14. Déménagement vers un GitHub officiel d'Hemisphere (idée seulement, pas une décision)
 
 Souhait : passer ce dépôt en **privé** et publier depuis un GitHub **officiel d'Hemisphere**. Proposition à
 détailler en S1 :
@@ -238,6 +236,9 @@ détailler en S1 :
 - Alertes Discord / webhook : **reportées** (alertes dans Herald uniquement).
 - Version web, macOS, Linux : **reportées**.
 - Double authentification : **non**.
+- Politique des mods dans Herald : **retirée** (S1). La règle actuelle du flux reste en place telle quelle, et reste
+  modifiable par les commandes de secours si un jour c'est nécessaire.
+- Choix « Précise / Secrète » : **retiré** (S1), tout est secret (§ 6.3).
 
 ## 17. Tests sans toucher aux joueurs (inchangé, obligatoire)
 
@@ -275,7 +276,7 @@ détailler en S1 :
 | **S6 · Maintenance, restart, urgence** | | Non (test) |
 | **S7 · Événements et calendrier** | Récurrences, frise | Non (test) |
 | **S8 · Screenshots du menu** | Launcher + Herald | Non (test) |
-| **S9 · Politique des mods, réglages publics, code staff** | | Non (test) |
+| **S9 · Réglages publics, code staff** | | Non (test) |
 | **S10 · Pack de mods** | Modrinth, dépendances, versions, validation à plusieurs | Non (test) |
 | **S11 · Traçabilité et confort** | Corbeille, historique, journal, modèles, relances, état en ligne | Non (test) |
 | **S12 · Mise en service** | Clé réelle sur le serveur, launcher 1.2 publié par le propriétaire, installateur Herald, guide, première vraie publication **avec l'accord du propriétaire** | **Oui, une fois validé** |

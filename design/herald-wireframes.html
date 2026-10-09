@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Herald Wireframes</title>
+<style>
+:root{
+  --bg-950:#0b0f19;--bg-900:#111827;--bg-800:#1f2937;--bg-700:#374151;--bg-600:#4b5563;
+  --body:#e5e7eb;--muted:#d1d5db;--dim:#9ca3af;
+  --green-300:#86efac;--green-400:#4ade80;--green-500:#22c55e;--green-600:#16a34a;--line:rgba(34,197,94,.2);
+  --red:#f87171;--red-600:#dc2626;--amber:#fbbf24;--blue:#60a5fa;--violet:#a78bfa;--orange:#fb923c;--discord:#4f46e5;
+  --r:8px;
+  --font:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,"Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg-950);color:var(--body);font:14px/1.5 var(--font);padding:16px 24px 40px;display:flex;flex-direction:column;align-items:center}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--body);background:var(--bg-900);border:1px solid var(--bg-700);border-radius:6px;padding:7px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid rgba(74,222,128,.4);border-color:var(--green-600)}
+textarea{resize:vertical;min-height:120px;line-height:1.55}
+
+/* ---------- prototype controls (not part of Herald) ---------- */
+#proto{width:1280px;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--dim);margin-bottom:10px;flex-wrap:wrap}
+#proto b{color:var(--green-400)}
+#proto .seg button{font-size:12px}
+
+/* ---------- window ---------- */
+#win{width:1280px;height:800px;flex:none;border-radius:10px;overflow:hidden;position:relative;background:var(--bg-900);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);display:flex;flex-direction:column}
+.titlebar{height:52px;flex:none;display:flex;align-items:center;gap:14px;padding-left:16px;background:linear-gradient(90deg,rgba(17,24,39,.97),rgba(31,41,55,.94),rgba(17,24,39,.97));border-bottom:1px solid var(--line);z-index:5}
+.brand{display:flex;align-items:center;gap:9px;color:#fff;font-weight:700;font-size:17px}
+.hlogo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--green-400),var(--green-600));display:grid;place-items:center;color:#05210f;font-size:15px;font-weight:800}
+.env{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:1px 7px;border-radius:99px;background:rgba(251,191,36,.14);color:var(--amber);border:1px solid rgba(251,191,36,.3)}
+.tabs-top{display:flex;gap:4px;margin-left:6px}
+.tabs-top button{display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:8px;font-size:13.5px;white-space:nowrap;font-weight:500;color:var(--muted)}
+.tabs-top button:hover{background:var(--bg-700);color:#fff}
+.tabs-top button.on{background:var(--green-600);color:#fff}
+.tabs-top .badge{font-size:10.5px;font-weight:700;background:var(--red-600);color:#fff;border-radius:99px;padding:0 6px;margin-left:-2px}
+.tb-right{margin-left:auto;display:flex;align-items:center;height:100%;gap:4px}
+.presence{display:flex;align-items:center;margin-right:8px}
+.presence .av{width:24px;height:24px;margin-left:-6px;border:2px solid var(--bg-900);font-size:10px}
+.presence span:not(.av){display:none}
+.update{white-space:nowrap;background:#ea580c;color:#fff;font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:7px;margin-right:4px}
+.me{display:flex;align-items:center;gap:8px;padding:5px 10px 5px 6px;border-radius:8px;font-size:13px;position:relative}
+.me:hover{background:var(--bg-700)}
+.me small{color:var(--dim)}
+.wc{width:46px;height:100%;display:grid;place-items:center;color:var(--dim)}.wc:hover{background:var(--bg-700)}.wc.x:hover{background:var(--red-600);color:#fff}
+.menu{position:absolute;top:46px;right:0;width:230px;background:var(--bg-800);border:1px solid var(--bg-700);border-radius:8px;padding:6px;box-shadow:0 12px 30px rgba(0,0,0,.5);z-index:20;display:none;text-align:left}
+.menu.open{display:block}
+.menu button{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:6px;font-size:13px;color:var(--muted)}
+.menu button:hover{background:var(--bg-700);color:#fff}
+.menu hr{border:0;border-top:1px solid var(--bg-700);margin:5px 0}
+.page{flex:1;min-height:0;overflow:auto;padding:22px 28px;position:relative}
+.screen{display:none}.screen.on{display:block;animation:fade .2s}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}}
+
+/* ---------- building blocks ---------- */
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green-400)}
+h1{font-size:26px;font-weight:800;color:#fff;line-height:1.15;letter-spacing:.005em}
+h1 span{color:var(--green-400)}
+h2{font-size:15px;font-weight:700;color:#fff}
+.head{display:flex;align-items:flex-end;gap:12px;margin-bottom:18px}
+.head .actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.row{display:flex;gap:10px;align-items:center}
+.card{background:var(--bg-800);border-radius:var(--r);padding:16px 18px;border:1px solid rgba(255,255,255,.04)}
+.card-title{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--green-400);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:8px;background:var(--bg-700);color:#fff;font-size:13.5px;font-weight:600;white-space:nowrap}
+.btn:hover{background:var(--bg-600)}
+.btn.primary{background:var(--green-600)}.btn.primary:hover{background:#15803d}
+.btn.danger{background:var(--red-600)}.btn.danger:hover{background:#b91c1c}
+.btn.ghost{background:none;border:1px solid var(--bg-600)}.btn.ghost:hover{background:var(--bg-800)}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.btn.link{background:none;padding:0;color:var(--green-400);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:1px 9px;border-radius:99px;white-space:nowrap}
+.st-draft{background:rgba(156,163,175,.15);color:var(--muted)}
+.st-review{background:rgba(96,165,250,.15);color:var(--blue)}
+.st-ready{background:rgba(167,139,250,.15);color:var(--violet)}
+.st-sched{background:rgba(251,191,36,.14);color:var(--amber)}
+.st-live{background:rgba(74,222,128,.14);color:var(--green-400)}
+.st-ended{background:rgba(75,85,99,.35);color:var(--dim)}
+.lang{font-size:10.5px;font-weight:700;padding:0 5px;border-radius:4px;border:1px solid var(--bg-600);color:var(--dim)}
+.lang.ok{border-color:rgba(74,222,128,.4);color:var(--green-400)}
+.lang.todo{border-color:rgba(251,191,36,.45);color:var(--amber)}
+.dim{color:var(--dim)}.small{font-size:12.5px}.mono{font-family:var(--mono)}
+.lbl{font-size:12.5px;font-weight:600;color:var(--muted);margin:14px 0 5px;display:block}
+.lbl:first-child{margin-top:0}
+.help{font-size:12px;color:var(--dim);margin-top:4px}
+.av{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;font-size:11.5px;font-weight:800;color:#111;flex:none}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.dot.on{background:var(--green-400);box-shadow:0 0 0 3px rgba(74,222,128,.15)}
+.dot.off{background:var(--bg-600)}
+.seg{display:inline-flex;background:var(--bg-900);border-radius:8px;padding:3px;border:1px solid var(--bg-700)}
+.seg button{padding:5px 12px;border-radius:6px;font-size:13px;color:var(--dim);font-weight:500}
+.seg button.on{background:var(--bg-700);color:#fff}
+.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--bg-700);margin-bottom:16px}
+.subtabs button{padding:8px 14px;font-size:14px;font-weight:600;color:var(--dim);border-bottom:2px solid transparent;margin-bottom:-1px}
+.subtabs button.on{color:#fff;border-color:var(--green-400)}
+.callout{border-radius:8px;padding:10px 13px;font-size:13px;display:flex;gap:10px;align-items:flex-start;line-height:1.45}
+.callout.info{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25)}
+.callout.warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3)}
+.empty{color:var(--dim);font-size:13px;padding:6px 0}
+.tag{position:absolute;background:var(--amber);color:#241500;font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;box-shadow:0 2px 8px rgba(0,0,0,.4);z-index:9;pointer-events:none;max-width:260px;line-height:1.35}
+.hidden{display:none!important}
+
+/* rows used in lists */
+.item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;cursor:pointer}
+.item:hover{background:rgba(55,65,81,.45)}
+.item+.item{border-top:1px solid rgba(55,65,81,.45)}
+.item .title{color:#fff;font-weight:600}
+.item .meta{font-size:12.5px;color:var(--dim)}
+.item .end{margin-left:auto;display:flex;gap:8px;align-items:center}
+.kind{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex:none;font-size:14px}
+.k-news{background:rgba(96,165,250,.14);color:var(--blue)}
+.k-event{background:rgba(74,222,128,.14);color:var(--green-400)}
+.k-banner{background:rgba(251,191,36,.14);color:var(--amber)}
+.k-welcome{background:rgba(167,139,250,.14);color:var(--violet)}
+.k-maint{background:rgba(248,113,113,.14);color:var(--red)}
+.k-bg{background:rgba(251,146,60,.14);color:var(--orange)}
+
+/* ---------- home ---------- */
+.home-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+.now-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.now-tile{background:var(--bg-800);border-radius:8px;padding:12px 14px;display:flex;gap:11px;align-items:center}
+.now-tile b{color:#fff;display:block;font-size:14px}
+.now-tile span{font-size:12.5px;color:var(--dim)}
+.attention .item{cursor:pointer}
+.attention .warn{color:var(--amber);font-size:16px;width:30px;text-align:center}
+
+/* ---------- publications ---------- */
+.filters{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.fchip{padding:5px 12px;border-radius:8px;background:var(--bg-800);font-size:13px;font-weight:500;color:var(--muted)}
+.fchip.on{background:var(--green-600);color:#fff}
+.fchip:hover:not(.on){background:var(--bg-700)}
+
+/* calendar */
+.tl{border:1px solid var(--bg-700);border-radius:8px;overflow:hidden;position:relative}
+.tl-head{display:grid;grid-template-columns:130px repeat(14,1fr);background:var(--bg-900);font-size:11px;color:var(--dim)}
+.tl-head div{padding:6px 2px;text-align:center;border-left:1px solid var(--bg-800)}
+.tl-head div:first-child{text-align:left;padding-left:12px;border:0}
+.tl-row{display:grid;grid-template-columns:130px 1fr;border-top:1px solid var(--bg-800);min-height:42px}
+.tl-row>div:first-child{padding:11px 12px;font-size:13px;color:var(--muted);background:rgba(17,24,39,.5)}
+.tl-lane{position:relative;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/14 - 1px),var(--bg-800) calc(100%/14 - 1px),var(--bg-800) calc(100%/14))}
+.bar{position:absolute;top:8px;height:25px;border-radius:6px;font-size:11.5px;font-weight:600;padding:3px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.b-news{background:rgba(96,165,250,.25);color:#bfdbfe;border:1px solid rgba(96,165,250,.5)}
+.b-event{background:rgba(74,222,128,.2);color:var(--green-300);border:1px solid rgba(74,222,128,.45)}
+.b-maint{background:rgba(248,113,113,.25);color:#fecaca;border:1px solid rgba(248,113,113,.55)}
+.b-announce{background:repeating-linear-gradient(45deg,rgba(248,113,113,.07) 0 6px,rgba(248,113,113,.15) 6px 12px);color:#fecaca;border:1px dashed rgba(248,113,113,.5)}
+.b-banner{background:rgba(251,191,36,.18);color:#fde68a;border:1px solid rgba(251,191,36,.45)}
+.b-bg{background:rgba(251,146,60,.18);color:#fed7aa;border:1px solid rgba(251,146,60,.45)}
+.tl-now{position:absolute;top:0;bottom:0;width:2px;background:var(--green-400);z-index:2}
+
+/* ---------- editor ---------- */
+.editor{display:grid;grid-template-columns:minmax(0,1fr) 470px;gap:20px}
+.ed-top{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.back{color:var(--dim);font-size:13px;font-weight:600}
+.back:hover{color:#fff}
+.flow{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)}
+.flow i{font-style:normal;padding:2px 8px;border-radius:99px;background:var(--bg-800)}
+.flow i.done{color:var(--green-400)}
+.flow i.cur{background:var(--blue);color:#0b1b33;font-weight:700}
+.langtabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.langtabs button{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:var(--bg-800);font-size:13px;font-weight:600;color:var(--muted)}
+.langtabs button.on{background:var(--bg-700);color:#fff;box-shadow:inset 0 -2px 0 var(--green-400)}
+.drop{border:1.5px dashed var(--bg-600);border-radius:8px;display:flex;gap:14px;align-items:center;padding:10px}
+.drop img{width:150px;height:84px;object-fit:cover;border-radius:6px}
+.when{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.when .box{background:var(--bg-900);border:1px solid var(--bg-700);border-radius:8px;padding:12px}
+.dt{display:grid;grid-template-columns:1fr 92px;gap:8px}
+.zone-btn{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--green-400);font-weight:600;margin-top:8px}
+.equiv{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.6}
+details{margin-top:16px;background:var(--bg-800);border-radius:8px;padding:2px 16px}
+details summary{cursor:pointer;padding:11px 0;font-weight:600;color:#fff;list-style:none;display:flex;align-items:center;gap:8px}
+details summary::before{content:"▸";color:var(--dim);transition:transform .15s}
+details[open] summary::before{transform:rotate(90deg)}
+details>div{padding:0 0 14px}
+.secret-note{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--dim);margin-top:10px}
+
+/* preview panel */
+.pv-panel{position:sticky;top:0}
+.pv-ctrl{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.moments{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.moments button{padding:7px 4px;border-radius:7px;background:var(--bg-800);font-size:12px;color:var(--muted);text-align:center;line-height:1.3;border:1px solid transparent}
+.moments button b{display:block;color:#fff;font-size:12.5px}
+.moments button.on{border-color:var(--green-400);background:rgba(74,222,128,.07)}
+.pv-caption{font-size:12.5px;color:var(--dim);margin-top:8px;display:flex;gap:6px;align-items:center}
+
+/* comments drawer */
+.drawer{position:absolute;top:0;right:0;bottom:0;width:360px;background:var(--bg-800);border-left:1px solid var(--bg-700);box-shadow:-20px 0 40px rgba(0,0,0,.35);padding:18px;z-index:12;display:none;flex-direction:column}
+.drawer.open{display:flex}
+.comment{display:flex;gap:10px;padding:9px 0}
+.comment p{font-size:13px}
+
+/* ---------- launcher replica ---------- */
+.lx-frame{position:relative;overflow:hidden;border-radius:8px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 12px 30px rgba(0,0,0,.45);background:#111827}
+.lx{width:1080px;height:770px;position:absolute;left:0;top:0;transform-origin:0 0;font-family:"Segoe UI",sans-serif;color:#e5e7eb;overflow:hidden;background:#111827}
+.lx-tb{position:absolute;inset:0 0 auto 0;height:52px;display:flex;align-items:center;gap:16px;padding-left:14px;background:linear-gradient(90deg,rgba(17,24,39,.97),rgba(31,41,55,.94),rgba(17,24,39,.97));border-bottom:1px solid rgba(34,197,94,.2);z-index:5}
+.lx-brand{display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:17px}
+.lx-brand img{width:28px;height:28px}
+.lx-tabs{display:flex;gap:4px;margin-left:10px}
+.lx-tab{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;font-size:14px;font-weight:500;color:#d1d5db;position:relative}
+.lx-tab.on{background:#16a34a;color:#fff}
+.lx-tab .nb{position:absolute;top:-2px;right:-2px;background:#dc2626;color:#fff;font-size:10px;font-weight:700;border-radius:99px;min-width:16px;height:16px;display:grid;place-items:center;padding:0 4px}
+.lx-acc{margin-left:auto;display:flex;align-items:center;gap:8px;margin-right:130px;font-size:13px;font-weight:600;color:#fff}
+.lx-acc i{width:26px;height:26px;border-radius:4px;background:linear-gradient(#6b4226 0 40%,#c58c62 40%);display:block}
+.lx-bg{position:absolute;inset:0;background-size:cover;background-position:center}
+.lx-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(17,24,39,.75),rgba(31,41,55,.6) 45%,rgba(17,24,39,.95))}
+.lx-place{position:absolute;top:64px;left:20px;font-size:12px;color:rgba(255,255,255,.55);z-index:2}
+.lx-banner{position:absolute;top:52px;left:0;right:0;z-index:4;padding:7px 20px;font-size:13px;font-weight:600;text-align:center}
+.lx-banner.info{background:rgba(22,163,74,.92);color:#fff}
+.lx-banner.important{background:rgba(217,119,6,.95);color:#fff}
+.lx-left{position:absolute;left:24px;top:96px;width:212px;background:rgba(31,41,55,.55);backdrop-filter:blur(6px);border-radius:8px;padding:16px;z-index:2}
+.lx-left .k{font-size:11px;font-weight:700;letter-spacing:.1em;color:#d1d5db}
+.lx-left .v{font-size:30px;font-weight:800;color:#fff;margin:4px 0 8px}
+.lx-left .v small{color:#4ade80;font-size:15px}
+.lx-left .r{display:flex;justify-content:space-between;font-size:12.5px;color:#d1d5db;padding:3px 0}
+.lx-center{position:absolute;left:270px;right:300px;top:170px;text-align:center;z-index:2}
+.lx-welcome{font-size:44px;font-weight:800;line-height:1.05;color:#fff;letter-spacing:.01em;text-transform:uppercase;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35))}
+.lx-welcome span{color:#4ade80;display:block}
+.lx-welcome.custom{font-size:38px}
+.lx-sub{font-size:15px;color:#e5e7eb;margin-top:6px;text-shadow:0 2px 4px rgba(0,0,0,.6)}
+.lx-play{margin:30px auto 0;width:300px;height:80px;border-radius:8px;background:linear-gradient(#22c55e,#16a34a);color:#fff;font-size:36px;font-weight:800;letter-spacing:.2em;display:grid;place-items:center;box-shadow:0 10px 25px rgba(22,163,74,.35)}
+.lx-ready{font-size:13px;color:#d1d5db;margin-top:12px}
+.lx-ready b{color:#4ade80;font-weight:600}
+.lx-maint{margin:14px auto 0;max-width:420px;border-radius:8px;padding:9px 12px;font-size:13px;text-align:left;display:flex;gap:9px;align-items:flex-start}
+.lx-maint.plan{background:rgba(31,41,55,.88);border:1px solid rgba(251,191,36,.45);color:#fde68a}
+.lx-maint.on{background:rgba(127,29,29,.88);border:1px solid rgba(248,113,113,.6);color:#fecaca}
+.lx-maint b{color:#fff;display:block}
+.lx-right{position:absolute;right:24px;top:84px;width:250px;z-index:2}
+.lx-right .k{font-size:11px;font-weight:700;letter-spacing:.1em;color:#d1d5db;margin:10px 0 6px}
+.lx-pill{display:inline-flex;gap:7px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.08em;padding:4px 11px;border-radius:99px;background:rgba(17,24,39,.6)}
+.lx-pill.ok{color:#4ade80}.lx-pill.bad{color:#f87171}
+.lx-box{background:rgba(31,41,55,.7);border-radius:8px;padding:9px 12px;margin-top:8px;font-size:12.5px;color:#d1d5db}
+.lx-box b{color:#fff;display:block;font-size:13.5px}
+.lx-peek{position:absolute;right:24px;bottom:34px;width:330px;display:flex;gap:10px;background:rgba(31,41,55,.7);border-radius:8px;padding:8px;z-index:2}
+.lx-peek img,.lx-peek .noimg{width:90px;height:62px;object-fit:cover;border-radius:5px;flex:none;background:#374151}
+.lx-peek .c{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:#4ade80}
+.lx-peek b{display:block;color:#fff;font-size:13.5px;line-height:1.2}
+.lx-peek span{font-size:11.5px;color:#d1d5db}
+.lx-links{position:absolute;left:24px;bottom:34px;display:flex;gap:8px;z-index:2}
+.lx-links div{padding:9px 16px;border-radius:8px;background:rgba(31,41,55,.7);font-size:14px;font-weight:600;color:#e5e7eb}
+.lx-links div:first-child{background:#4f46e5;color:#fff}
+.lx-foot{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:11px;color:rgba(209,213,219,.6);z-index:2}
+/* news page */
+.lx-news{position:absolute;inset:52px 0 0 0;background:#111827;padding:26px 32px;overflow:hidden}
+.lx-news .ey{font-size:12px;font-weight:700;letter-spacing:.1em;color:#4ade80}
+.lx-news h3{font-size:30px;font-weight:800;color:#fff;line-height:1.1}
+.lx-news h3 span{color:#4ade80}
+.lx-cats{position:absolute;right:32px;top:40px;display:flex;gap:6px}
+.lx-cats div{padding:6px 12px;border-radius:8px;background:#1f2937;font-size:13px;color:#e5e7eb;font-weight:500}
+.lx-cats div:first-child{background:#16a34a;color:#fff}
+.lx-ntabs{display:flex;gap:22px;border-bottom:1px solid #374151;margin:16px 0 14px;font-size:14px;font-weight:600;color:#9ca3af}
+.lx-ntabs div{padding:7px 2px}
+.lx-ntabs div:first-child{color:#fff;border-bottom:2px solid #4ade80}
+.lx-ev-k{font-size:11px;font-weight:700;letter-spacing:.1em;color:#d1d5db;margin-bottom:6px}
+.lx-ev{border:1px solid #1f2937;border-radius:10px;padding:12px 14px;display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.lx-ev .d{width:56px;text-align:center;background:#1f2937;border-radius:8px;padding:4px 0;font-size:11px;font-weight:700;color:#d1d5db}
+.lx-ev .d b{display:block;font-size:20px;color:#fff;line-height:1.1}
+.lx-ev .t{font-size:15px;font-weight:700;color:#fff}
+.lx-ev .t i{font-style:normal;font-size:11px;font-weight:500;background:#374151;color:#e5e7eb;border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+.lx-ev .s{font-size:12px;color:#9ca3af}
+.lx-ev .acts{margin-left:auto;display:flex;gap:6px}
+.lx-ev .acts div{background:#1f2937;border-radius:7px;padding:6px 10px;font-size:12px;color:#e5e7eb;font-weight:600}
+.lx-feat{display:grid;grid-template-columns:1.15fr 1fr;background:#1f2937;border-radius:10px;overflow:hidden;height:300px;margin-bottom:14px}
+.lx-feat img,.lx-feat .noimg{width:100%;height:100%;object-fit:cover;background:#374151}
+.lx-feat .x{padding:26px}
+.lx-cat{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.lx-feat b{display:block;font-size:24px;color:#fff;line-height:1.15;margin:8px 0}
+.lx-feat p{font-size:14px;color:#9ca3af;line-height:1.5;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.lx-feat .rm{display:inline-block;margin-top:14px;background:#374151;border-radius:8px;padding:8px 14px;color:#fff;font-weight:600;font-size:13.5px}
+.lx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.lx-card{background:#1f2937;border-radius:10px;overflow:hidden}
+.lx-card img,.lx-card .noimg{width:100%;height:100px;object-fit:cover;display:block;background:#374151}
+.lx-card .x{padding:10px 12px}
+.lx-card b{display:block;color:#fff;font-size:14px;margin-top:3px}
+.lx-card p{font-size:12px;color:#9ca3af;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.c-update{color:#4ade80}.c-event{color:#60a5fa}.c-server{color:#fbbf24}.c-community{color:#f472b6}
+.lx-new{outline:3px solid #fbbf24;outline-offset:2px}
+
+/* ---------- preview tab ---------- */
+.tt-bar{display:flex;align-items:center;gap:10px;background:var(--bg-800);border-radius:10px;padding:10px 14px;margin-bottom:14px;flex-wrap:wrap}
+.tt-bar .sentence{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tt-bar input,.tt-bar select{width:auto}
+.tt-bar .zone-pick{min-width:230px}
+.stepbtns{display:flex;gap:4px;margin-left:auto}
+.preview-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
+.changes .item{padding:9px 10px}
+.changes .when-t{font-size:12px;color:var(--dim);width:92px;flex:none}
+.changes .item.past{opacity:.5}
+.changes .item.cur{background:rgba(74,222,128,.08)}
+
+/* ---------- server ---------- */
+.status-hero{display:flex;align-items:center;gap:18px;border-radius:12px;padding:20px 24px;margin-bottom:16px}
+.status-hero.ok{background:linear-gradient(90deg,rgba(22,163,74,.18),rgba(31,41,55,.6));border:1px solid rgba(74,222,128,.35)}
+.status-hero.bad{background:linear-gradient(90deg,rgba(220,38,38,.2),rgba(31,41,55,.6));border:1px solid rgba(248,113,113,.4)}
+.status-hero .big{font-size:24px;font-weight:800;color:#fff}
+.status-hero .actions{margin-left:auto;display:flex;gap:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.timeline3{display:grid;grid-template-columns:repeat(3,1fr);margin-top:10px;font-size:12.5px}
+.timeline3 div{border-top:3px solid;padding:7px 8px 0 0}
+.timeline3 b{color:#fff;display:block}
+.restart-big{font-size:30px;font-weight:800;color:#fff}
+.mini-table{width:100%;font-size:13px;border-collapse:collapse;margin-top:6px}
+.mini-table td{padding:7px 0;border-top:1px solid rgba(55,65,81,.6)}
+.modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:15}
+.modal-bg.open{display:grid}
+.modal{width:480px;background:var(--bg-800);border-radius:12px;padding:20px 22px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.modal h2{font-size:18px;margin-bottom:4px}
+
+/* ---------- backgrounds ---------- */
+.bg-layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px}
+.periods .item{padding:10px 12px}
+.periods .item.on{background:var(--bg-700)}
+.periods .item.live .title::after{content:" ● live";color:var(--green-400);font-size:11px}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.thumb{border-radius:8px;overflow:hidden;background:var(--bg-800);border:1px solid var(--bg-700);position:relative}
+.thumb img{width:100%;height:120px;object-fit:cover;display:block}
+.thumb .t{padding:8px 10px;font-size:12.5px;display:flex;align-items:center}
+.thumb .t b{color:#fff;font-size:13px}
+.thumb.add{display:grid;place-items:center;height:160px;border-style:dashed;color:var(--dim);font-size:13px;text-align:center}
+
+/* ---------- team ---------- */
+.people{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.people .person{margin-bottom:0}
+.role-row{margin-bottom:18px}
+.role-row h3{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+.zchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.zchip{display:flex;align-items:center;gap:8px;background:var(--bg-900);border:1px solid var(--bg-700);border-radius:8px;padding:6px 6px 6px 11px;font-size:13px}
+.zchip b{color:#fff;font-weight:600}
+.zchip span{color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+.zchip button{width:22px;height:22px;border-radius:5px;color:var(--dim)}
+.zchip button:hover{background:var(--bg-700);color:#fff}
+.equiv-demo{margin-top:12px;background:var(--bg-900);border-radius:8px;padding:10px 12px;font-size:13px}
+.person{display:flex;align-items:center;gap:10px;background:var(--bg-800);border-radius:8px;padding:9px 12px;margin-bottom:8px;cursor:pointer}
+.person:hover{background:var(--bg-700)}
+.person b{color:#fff;font-size:13.5px}
+.person .meta{font-size:12px;color:var(--dim)}
+.person .end{margin-left:auto}
+.code{font-family:var(--mono);font-size:21px;letter-spacing:.12em;color:var(--green-300);background:var(--bg-950);padding:14px;border-radius:8px;text-align:center;border:1px dashed var(--green-600);margin:12px 0}
+
+/* time zone picker */
+.zp{position:relative}
+.zp-list{position:absolute;top:100%;left:0;right:0;max-height:300px;overflow:auto;background:var(--bg-800);border:1px solid var(--bg-600);border-radius:8px;margin-top:4px;z-index:30;display:none;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.zp.open .zp-list{display:block}
+.zp-list .grp{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:8px 10px 3px;position:sticky;top:0;background:var(--bg-800)}
+.zp-list button{display:flex;width:100%;text-align:left;padding:6px 10px;font-size:13px;color:var(--muted);gap:8px}
+.zp-list button:hover{background:var(--bg-700);color:#fff}
+.zp-list button span{margin-left:auto;color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+
+/* sign in */
+#signin{position:absolute;inset:52px 0 0 0;background:radial-gradient(ellipse at top,#173524,#111827 62%);display:none;place-items:center;z-index:10}
+#win.signed-out #signin{display:grid}
+#win.signed-out .tabs-top,#win.signed-out .tb-right .presence,#win.signed-out .tb-right .update,#win.signed-out .tb-right .me{visibility:hidden}
+</style>
+</head>
+<body>
+
+<div id="proto">
+  <span><b>Herald · wireframes v2 (S1)</b> — mock data, nothing is saved. Prototype controls (not part of the app):</span>
+  <span class="seg" id="who">
+    <button data-who="out">Signed out</button>
+    <button data-who="dev" class="on">Kyonit · Developer</button>
+    <button data-who="admin">Covee · Admin</button>
+    <button data-who="lodge">Iceorbs · Lodge keeper</button>
+  </span>
+  <span>Lodge keepers only see what they may use.</span>
+</div>
+
+<div id="win">
+  <div class="titlebar">
+    <div class="brand"><div class="hlogo">H</div>Herald</div>
+    <span class="env">STAGING</span>
+    <div class="tabs-top" id="tabs">
+      <button data-s="home" class="on">Home <span class="badge">3</span></button>
+      <button data-s="publications">Publications</button>
+      <button data-s="preview">Preview</button>
+      <button data-s="server" data-perm="staff">Server</button>
+      <button data-s="backgrounds" data-perm="staff">Backgrounds</button>
+      <button data-s="pack" data-perm="staff">Mod pack</button>
+      <button data-s="team">Team</button>
+    </div>
+    <div class="tb-right">
+      <div class="presence" title="Online in Herald">
+        <span class="av" style="background:#fde68a">Li</span><span class="av" style="background:#bfdbfe">Co</span><span class="av" style="background:#86efac">Ky</span><span>3 online</span>
+      </div>
+      <button class="update">⬆ Update</button>
+      <div style="position:relative">
+        <button class="me" id="meBtn"><span class="av" id="meAv" style="background:#86efac;width:26px;height:26px">Ky</span><span id="meName">Kyonit</span> ▾</button>
+        <div class="menu" id="meMenu">
+          <div class="small dim" style="padding:6px 10px">Signed in as <b id="meRole" style="color:#fff">Developer</b></div><hr>
+          <button data-go="settings-me">My time zone…</button>
+          <button data-go="settings-launcher" data-perm="staff">Launcher settings…</button>
+          <hr><button data-go="signout">Sign out</button>
+        </div>
+      </div>
+      <button class="wc">—</button><button class="wc">☐</button><button class="wc x">✕</button>
+    </div>
+  </div>
+
+  <div class="page" id="page">
+
+<!-- ================================ HOME ================================ -->
+<section class="screen on" id="s-home">
+  <div class="head"><div><div class="eyebrow">Friday 9 October · 21:14 your time</div><h1>Hi <span id="hiName">Kyonit</span></h1></div></div>
+  <div class="now-strip">
+    <div class="now-tile"><span class="dot on"></span><div><b>Server online</b><span>No maintenance planned today</span></div></div>
+    <div class="now-tile"><span class="kind k-banner">▬</span><div><b>“Double XP this weekend”</b><span>Banner shown until Sun 23:59</span></div></div>
+    <div class="now-tile"><span class="kind k-news">↻</span><div><b>Restart tomorrow 17:00</b><span>Every day · Paris time</span></div></div>
+  </div>
+  <div class="home-grid">
+    <div class="card attention"><div class="card-title">Needs attention <span class="dim small" style="text-transform:none;letter-spacing:0;font-weight:400">· everyone sees this list</span></div>
+      <div class="item" data-open="editor"><span class="warn">⚠</span><div><div class="title">Halloween hunt</div><div class="meta">Appears in 11 days · French text still missing</div></div><div class="end"><span class="lang ok">EN</span><span class="lang todo">FR</span></div></div>
+      <div class="item"><span class="warn">⚠</span><div><div class="title">Build contest results</div><div class="meta">Draft untouched for 9 days · Kingly</div></div></div>
+      <div class="item" data-go="pack" data-perm="staff"><span class="warn">⚠</span><div><div class="title">Mod pack 1.0.3</div><div class="meta">Waiting for 1 more approval</div></div></div>
+    </div>
+    <div class="card"><div class="card-title">Coming up</div>
+      <div class="item" data-open="editor"><span class="kind k-news">✎</span><div><div class="title">Halloween hunt</div><div class="meta">News · Tue 20 Oct 18:00</div></div></div>
+      <div class="item" data-go="backgrounds" data-perm="staff"><span class="kind k-bg">▣</span><div><div class="title">Halloween backgrounds</div><div class="meta">Tue 20 Oct → Mon 2 Nov</div></div></div>
+      <div class="item" data-go="server" data-perm="staff"><span class="kind k-maint">⚡</span><div><div class="title">Server migration</div><div class="meta">Maintenance · Wed 28 Oct 14:00–16:00</div></div></div>
+      <div style="margin-top:8px"><button class="btn link" data-go="publications">See everything →</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ PUBLICATIONS ============================ -->
+<section class="screen" id="s-publications">
+  <div class="head">
+    <div><div class="eyebrow">News · events · banners · welcome messages</div><h1>Publications</h1></div>
+    <div class="actions"><span class="seg" id="pubView"><button class="on" data-v="list">List</button><button data-v="cal">Calendar</button></span><button class="btn primary" data-open="editor">＋ New</button></div>
+  </div>
+  <div id="pubList">
+    <div class="filters">
+      <button class="fchip on">All</button><button class="fchip">News</button><button class="fchip">Events</button><button class="fchip" data-perm="staff">Banners</button><button class="fchip" data-perm="staff">Welcome</button>
+      <span style="width:12px"></span>
+      <select style="width:170px"><option>Any status</option><option>Draft</option><option>In review</option><option>Ready</option><option>Scheduled</option><option>Live</option><option>Ended</option><option>Deleted (trash)</option></select>
+      <input placeholder="Search…" style="width:220px;margin-left:auto">
+    </div>
+    <div class="card" style="padding:6px">
+      <div class="item" data-open="editor"><span class="kind k-news">✎</span><div><div class="title">Halloween hunt</div><div class="meta">News · appears Tue 20 Oct 18:00 · Liable</div></div><div class="end"><span class="lang ok">EN</span><span class="lang todo">FR</span><span class="chip st-review">In review</span></div></div>
+      <div class="item" data-perm="staff"><span class="kind k-banner">▬</span><div><div class="title">Double XP this weekend</div><div class="meta">Banner · until Sun 11 Oct 23:59 · Covee</div></div><div class="end"><span class="lang ok">EN</span><span class="lang ok">FR</span><span class="chip st-live">Live</span></div></div>
+      <div class="item"><span class="kind k-event">◆</span><div><div class="title">Build contest: castles</div><div class="meta">Event · Sun 11 Oct 20:30 · Iceorbs</div></div><div class="end"><span class="lang ok">EN</span><span class="lang ok">FR</span><span class="chip st-live">Live</span></div></div>
+      <div class="item"><span class="kind k-event">◆</span><div><div class="title">Weekly build night</div><div class="meta">Event · every Saturday 20:00 · Scruffy</div></div><div class="end"><span class="lang ok">EN</span><span class="lang ok">FR</span><span class="lang ok">DE</span><span class="chip st-live">Live</span></div></div>
+      <div class="item"><span class="kind k-news">✎</span><div><div class="title">Build contest results</div><div class="meta">News · not scheduled · Kingly · 👁 admins only</div></div><div class="end"><span class="lang ok">EN</span><span class="chip st-draft">Draft</span></div></div>
+      <div class="item"><span class="kind k-news">✎</span><div><div class="title">Welcome to the new Hemisphere Launcher</div><div class="meta">News · since Thu 8 Oct · Kyonit</div></div><div class="end"><span class="lang ok">EN</span><span class="lang ok">FR</span><span class="chip st-live">Live</span></div></div>
+    </div>
+  </div>
+  <div id="pubCal" class="hidden">
+    <div class="row" style="margin-bottom:10px"><button class="btn sm ghost">◀</button><b style="color:#fff">19 Oct → 1 Nov</b><button class="btn sm ghost">▶</button><span class="dim small" style="margin-left:auto">Your time zone · click a bar to open it</span></div>
+    <div class="tl">
+      <div class="tl-head"><div></div><div>Mon 19</div><div>Tue 20</div><div>Wed 21</div><div>Thu 22</div><div>Fri 23</div><div>Sat 24</div><div>Sun 25</div><div>Mon 26</div><div>Tue 27</div><div>Wed 28</div><div>Thu 29</div><div>Fri 30</div><div>Sat 31</div><div>Sun 1</div></div>
+      <div class="tl-row"><div>News</div><div class="tl-lane"><div class="bar b-news" style="left:9.5%;width:89%" data-open="editor">Halloween hunt</div></div></div>
+      <div class="tl-row"><div>Events</div><div class="tl-lane"><div class="bar b-event" style="left:35.7%;width:4%">Build night</div><div class="bar b-event" style="left:64.8%;width:5%">Party</div><div class="bar b-event" style="left:85.7%;width:7%">Build night</div></div></div>
+      <div class="tl-row"><div>Maintenance</div><div class="tl-lane"><div class="bar b-announce" style="left:3.6%;width:60.7%">announced to players</div><div class="bar b-maint" style="left:64.3%;width:3%">⚡</div></div></div>
+      <div class="tl-row"><div>Backgrounds</div><div class="tl-lane"><div class="bar b-bg" style="left:7.1%;width:92.9%">Halloween</div></div></div>
+    </div>
+    <div class="callout warn" style="margin-top:12px">⚠ <span>The event <b>Party</b> (Wed 28, 15:00) happens during the <b>maintenance</b> (Wed 28, 14:00–16:00).</span></div>
+  </div>
+</section>
+
+<!-- ============================== EDITOR =============================== -->
+<section class="screen" id="s-editor">
+  <div class="ed-top">
+    <button class="back" data-go="publications">← Publications</button>
+    <span class="dim">·</span>
+    <div class="flow"><i class="done">Draft</i>→<i class="cur">In review</i>→<i>Ready</i>→<i>Scheduled</i>→<i>Live</i></div>
+    <div style="margin-left:auto" class="row">
+      <span class="dim small">✎ Liable is also here</span>
+      <button class="btn ghost sm" id="commentsBtn">💬 2</button>
+      <button class="btn ghost sm">⋯</button>
+      <button class="btn primary">Mark as ready</button>
+    </div>
+  </div>
+  <div class="editor">
+    <div>
+      <div class="langtabs"><button class="on">English</button><button>Français <span class="lang todo">to do</span></button><button class="dim">＋ Language</button></div>
+      <label class="lbl">Title</label><input id="edTitle" value="The Halloween hunt is coming!">
+      <label class="lbl">Text</label>
+      <textarea id="edBody">Pumpkins have been hidden all over the world. Find them before 1 November to win the exclusive Hemisphere head.
+
+Meet at /warp spawn on 31 October at 20:00.</textarea>
+      <div class="help">Leave an empty line to start a new paragraph.</div>
+      <label class="lbl">Picture</label>
+      <div class="drop"><img src="https://hemispheresurvival.club/images/603aeb_07e6cb00ad0040eaa25b5b4ede69bf7e~mv2.avif" alt=""><div class="small"><b style="color:#fff">night-island.webp</b> · 412 KB<br><span class="dim">Cropped for the launcher. Drop another picture to replace it.</span></div></div>
+      <label class="lbl">When</label>
+      <div class="when">
+        <div class="box"><div class="small" style="font-weight:600;color:#fff;margin-bottom:6px">Appears</div>
+          <div class="dt"><input type="date" value="2026-10-20"><input type="text" value="18:00"></div>
+          <button class="zone-btn" data-zone-for="ed">◷ Europe/Paris (yours) ▾</button>
+          <div class="equiv">New York 12:00 · Sydney 03:00 (21 Oct) · UTC 16:00</div>
+        </div>
+        <div class="box"><div class="small" style="font-weight:600;color:#fff;margin-bottom:6px">Disappears</div>
+          <select><option>Never — someone removes it</option><option>On a date…</option></select>
+          <div class="equiv">It stays in the News page until the staff removes it.</div>
+        </div>
+      </div>
+      <div class="secret-note">🔒 Sent to every launcher in advance, locked: nobody can read it before 18:00.</div>
+      <details><summary>More options</summary><div>
+        <div class="two">
+          <div><label class="lbl">Category</label><select><option>Event</option><option>Update</option><option>Server</option><option>Community</option></select></div>
+          <div><label class="lbl">Big card at the top of News</label><select><option>For 3 days after it appears</option><option>No</option><option>Until it disappears</option></select></div>
+          <div><label class="lbl">Button</label><input value="Event rules"><input value="https://hemispheresurvival.club/rules" style="margin-top:6px"></div>
+          <div><label class="lbl">Show to</label><select><option>Every player</option><option>Players using French only</option></select>
+            <label class="lbl">Who can see this draft</label><select><option>All the staff</option><option>Admins and above</option></select></div>
+        </div>
+      </div></details>
+    </div>
+    <div class="pv-panel">
+      <div class="pv-ctrl"><b style="color:#fff">Preview</b><span class="seg" id="edView"><button class="on" data-v="news">News</button><button data-v="home">Home</button></span><span class="dim small" style="margin-left:auto">as a player in</span></div>
+      <div class="zp" id="edZone" style="margin-bottom:8px"></div>
+      <div class="lx-frame" id="edFrame" style="width:470px;height:335px"></div>
+      <div class="moments" id="moments">
+        <button data-m="before"><b>Before</b>19 Oct</button>
+        <button data-m="appear" class="on"><b>It appears</b>20 Oct 18:00</button>
+        <button data-m="featured"><b>Big card</b>until 23 Oct</button>
+        <button data-m="after"><b>Later</b>1 Nov</button>
+      </div>
+      <div class="pv-caption" id="edCaption"></div>
+      <button class="btn link" data-go="preview" style="margin-top:6px">Open the full preview →</button>
+    </div>
+  </div>
+  <div class="drawer" id="drawer">
+    <div class="row"><h2>Comments</h2><button class="btn sm ghost" style="margin-left:auto" id="drawerClose">✕</button></div>
+    <div style="flex:1;overflow:auto;margin-top:10px">
+      <div class="comment"><span class="av" style="background:#fde68a">Li</span><div><b class="small" style="color:#fff">Liable</b> <span class="dim small">· 20 min ago</span><p>Can someone write the French version?</p></div></div>
+      <div class="comment"><span class="av" style="background:#86efac">Ky</span><div><b class="small" style="color:#fff">Kyonit</b> <span class="dim small">· 4 min ago</span><p>I'll do it tonight.</p></div></div>
+      <div class="dim small" style="margin-top:14px">History</div>
+      <div class="small dim" style="line-height:1.9">v7 · Liable edited the text · 5 min ago<br>v6 · Kyonit changed the picture · 1 h ago<br>v1 · Liable created it · 5 Oct</div>
+    </div>
+    <input placeholder="Write a comment…">
+  </div>
+</section>
+
+<!-- ============================== PREVIEW ============================== -->
+<section class="screen" id="s-preview">
+  <div class="tt-bar">
+    <div class="sentence">See the launcher of a player in <span class="zp zone-pick" id="ttZone"></span> on
+      <input type="date" id="ttDate" value="2026-10-20"> at <input type="text" id="ttTime" value="03:00" step="60"> their time</div>
+    <div class="stepbtns"><button class="btn sm ghost" data-step="-86400">−1 day</button><button class="btn sm ghost" data-step="-3600">−1 h</button><button class="btn sm ghost" data-step="3600">+1 h</button><button class="btn sm ghost" data-step="86400">+1 day</button><button class="btn sm" id="ttNow">Now</button></div>
+  </div>
+  <div class="preview-layout">
+    <div>
+      <div class="row" style="margin-bottom:8px"><span class="seg" id="ttView"><button class="on" data-v="home">Home</button><button data-v="news">News</button></span><span class="dim small" id="ttSummary" style="margin-left:auto"></span></div>
+      <div class="lx-frame" id="ttFrame" data-fit="width" style="width:100%"></div>
+    </div>
+    <div class="card changes" style="padding:12px">
+      <div class="card-title">What changes · click to jump</div>
+      <div id="ttChanges"></div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== SERVER ============================== -->
+<section class="screen" id="s-server">
+  <div class="status-hero ok" id="hero">
+    <span class="dot on" style="width:14px;height:14px"></span>
+    <div><div class="big" id="heroTitle">Server online</div><div class="dim" id="heroSub">Players see the normal Home. Next planned maintenance: Wed 28 Oct 14:00.</div></div>
+    <div class="actions"><button class="btn danger" id="heroBtn">⚡ Start a maintenance now</button></div>
+  </div>
+  <div class="two">
+    <div class="card"><div class="card-title">Planned maintenances <button class="btn sm primary" style="margin-left:auto;text-transform:none;letter-spacing:0" id="planBtn">＋ Plan one</button></div>
+      <div class="item" style="cursor:default;padding:4px 0"><span class="kind k-maint">⚡</span><div><div class="title">Server migration</div><div class="meta">by Liable</div></div><div class="end"><button class="btn sm ghost">Edit</button></div></div>
+      <div class="timeline3">
+        <div style="border-color:rgba(251,191,36,.6)"><b>Announced</b>from Mon 19 Oct 12:00</div>
+        <div style="border-color:var(--red)"><b>Maintenance</b>Wed 28 Oct 14:00</div>
+        <div style="border-color:var(--green-400)"><b>Back online</b>16:00 (or button)</div>
+      </div>
+      <div class="help" style="margin-top:10px">Players see: “Maintenance planned Wed 28 Oct, 2:00–4:00 PM” in their own time.</div>
+    </div>
+    <div class="card"><div class="card-title">Daily restart <button class="btn sm ghost" style="margin-left:auto;text-transform:none;letter-spacing:0" id="restartBtn">Change</button></div>
+      <div class="restart-big">17:00 <span class="dim" style="font-size:15px;font-weight:600">Europe/Paris · 5 min</span></div>
+      <div class="dim small">Same Paris time all year: players' launchers adapt to summer/winter time.</div>
+      <table class="mini-table">
+        <tr><td><span class="chip st-sched">From 25 Oct</span></td><td>16:00 Europe/Paris</td><td class="dim" style="text-align:right">Covee</td></tr>
+        <tr><td><span class="chip st-draft">24 Dec</span></td><td>No restart</td><td class="dim" style="text-align:right">Trav</td></tr>
+        <tr><td><span class="chip st-draft">31 Oct</span></td><td>Extra restart 23:30</td><td class="dim" style="text-align:right">Liable</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="modal-bg" id="maintModal"><div class="modal">
+    <h2>Start a maintenance now</h2><p class="dim small">Players see it in about 2 to 7 minutes.</p>
+    <label class="lbl">Message</label><select><option>Template: Quick maintenance (back in ~30 min)</option><option>Template: Crash, we're on it</option><option>Write my own…</option></select>
+    <label class="lbl">Expected end (optional)</label><div class="dt"><input type="date" value="2026-10-09"><input type="text" value="21:45"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="maintGo">Start now</button></div>
+  </div></div>
+  <div class="modal-bg" id="restartModal"><div class="modal">
+    <h2>Change the daily restart</h2>
+    <div class="seg" style="margin:8px 0 4px"><button class="on">New time from a date</button><button>Skip one day</button><button>Extra restart</button></div>
+    <label class="lbl">From</label><input type="date" value="2026-10-25">
+    <label class="lbl">Time</label><div class="dt"><input type="text" value="16:00"><input value="5 min"></div>
+    <div class="zp" id="rsZone" style="margin-top:8px"></div>
+    <div class="equiv">Players: Paris 16:00 · New York 11:00 · Sydney 02:00 (next day)</div>
+    <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" data-close>Schedule</button></div>
+  </div></div>
+</section>
+
+<!-- ============================ BACKGROUNDS ============================ -->
+<section class="screen" id="s-backgrounds">
+  <div class="head"><div><div class="eyebrow">Pictures behind the launcher's Home</div><h1>Backgrounds</h1></div></div>
+  <div class="bg-layout">
+    <div>
+      <div class="card periods" style="padding:6px" id="periods">
+        <div class="item on live" data-p="year"><span class="kind k-bg">▣</span><div><div class="title">All year</div><div class="meta">4 pictures · default</div></div></div>
+        <div class="item" data-p="halloween"><span class="kind k-bg">🎃</span><div><div class="title">Halloween</div><div class="meta">20 Oct → 2 Nov · 2 pictures</div></div></div>
+        <div class="item" data-p="christmas"><span class="kind k-bg">❄</span><div><div class="title">Christmas</div><div class="meta">15 Dec → 2 Jan · empty</div></div></div>
+      </div>
+      <button class="btn ghost" style="width:100%;justify-content:center;margin-top:10px">＋ New period</button>
+    </div>
+    <div id="bgDetail"></div>
+  </div>
+</section>
+
+<!-- ============================== MOD PACK ============================= -->
+<section class="screen" id="s-pack">
+  <div class="head"><div><div class="eyebrow">Hemisphere Client · Minecraft 26.3 · Fabric 0.19.5</div><h1>Mod pack</h1></div>
+    <div class="actions"><button class="btn ghost">Browse the 24 mods</button><button class="btn primary">＋ Propose a change</button></div></div>
+  <div class="two">
+    <div class="card"><div class="card-title">Online for players</div><div class="restart-big">1.0.2</div><div class="dim small">24 mods · 47.1 MB · published 8 Oct by Kyonit</div></div>
+    <div class="card" style="border-color:rgba(96,165,250,.35)"><div class="card-title" style="color:var(--blue)">Proposal 1.0.3 · waiting for approval</div>
+      <div class="small" style="line-height:1.9">↑ Sodium 0.7.2 → 0.7.3<br>↑ Iris 1.9.1 → 1.9.2<br>＋ ModernFix (performance, recommended)</div>
+      <div class="row" style="margin-top:10px"><span class="dim small">✓ Kyonit · waiting for 1 more</span><button class="btn sm primary" style="margin-left:auto">Approve</button><button class="btn sm ghost">Details</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================ TEAM =============================== -->
+<section class="screen" id="s-team">
+  <div class="head"><div><div class="eyebrow">Hemisphere staff</div><h1>Team</h1></div>
+    <div class="actions"><button class="btn primary" id="newProfile" data-perm="admin">＋ New profile</button></div></div>
+  <div class="subtabs" id="teamTabs"><button class="on" data-t="people">People</button><button data-t="activity">Activity</button><button data-t="trash" data-perm="staff">Trash</button></div>
+  <div id="t-people">
+    <div class="role-row"><h3>Owner</h3><div class="people">
+      <div class="person"><span class="av" style="background:#fde68a">Li</span><div><b>Liable</b><div class="meta">online</div></div><span class="end"><span class="dot on"></span></span></div>
+    </div></div>
+    <div class="role-row"><h3>Developer</h3><div class="people">
+      <div class="person"><span class="av" style="background:#86efac">Ky</span><div><b>Kyonit</b><div class="meta">online</div></div><span class="end"><span class="dot on"></span></span></div>
+    </div></div>
+    <div class="role-row"><h3>Admins · 4</h3><div class="people">
+      <div class="person"><span class="av" style="background:#bfdbfe">Co</span><div><b>Covee</b><div class="meta">online</div></div><span class="end"><span class="dot on"></span></span></div>
+      <div class="person"><span class="av" style="background:#c4b5fd">Ne</span><div><b>Netcrafts</b><div class="meta">seen 2 h ago</div></div><span class="end"><span class="dot off"></span></span></div>
+      <div class="person"><span class="av" style="background:#99f6e4">Fr</span><div><b>Frunobulax</b><div class="meta">seen yesterday</div></div><span class="end"><span class="dot off"></span></span></div>
+      <div class="person"><span class="av" style="background:#fdba74">Tr</span><div><b>Trav</b><div class="meta">seen 3 days ago · ＋ approve mod pack</div></div><span class="end"><span class="dot off"></span></span></div>
+    </div></div>
+    <div class="role-row"><h3>Moderator</h3><div class="people">
+      <div class="person"><span class="av" style="background:#fca5a5">Fi</span><div><b>FireLegendDad</b><div class="meta">seen 5 h ago</div></div><span class="end"><span class="dot off"></span></span></div>
+    </div></div>
+    <div class="role-row"><h3>Lodge keepers · 4 <span style="text-transform:none;letter-spacing:0;font-weight:400">· not staff: articles and events only</span></h3><div class="people">
+      <div class="person"><span class="av" style="background:#a5f3fc">Ic</span><div><b>Iceorbs</b><div class="meta">seen 1 h ago</div></div><span class="end"><span class="dot off"></span></span></div>
+      <div class="person"><span class="av" style="background:#fbcfe8">Ki</span><div><b>Kingly</b><div class="meta">seen 9 days ago</div></div><span class="end"><span class="dot off"></span></span></div>
+      <div class="person"><span class="av" style="background:#d9f99d">Sc</span><div><b>Scruffy</b><div class="meta">seen 2 days ago</div></div><span class="end"><span class="dot off"></span></span></div>
+      <div class="person"><span class="av" style="background:#bae6fd">Bl</span><div><b>Blu</b><div class="meta">seen 4 days ago</div></div><span class="end"><span class="dot off"></span></span></div>
+    </div></div>
+  </div>
+  <div id="t-activity" class="hidden"><div class="card" style="padding:6px">
+    <div class="item"><span class="av" style="background:#fde68a">Li</span><div><div class="title" style="font-weight:500"><b>Liable</b> edited <b>Halloween hunt</b></div><div class="meta">English text · 5 min ago</div></div><button class="btn sm ghost end">See change</button></div>
+    <div class="item"><span class="av" style="background:#86efac">Ky</span><div><div class="title" style="font-weight:500"><b>Kyonit</b> proposed <b>Mod pack 1.0.3</b></div><div class="meta">1 h ago</div></div></div>
+    <div class="item"><span class="av" style="background:#bfdbfe">Co</span><div><div class="title" style="font-weight:500"><b>Covee</b> published the banner <b>Double XP this weekend</b></div><div class="meta">yesterday 19:02</div></div></div>
+    <div class="item"><span class="av" style="background:#fdba74">Tr</span><div><div class="title" style="font-weight:500"><b>Trav</b> skipped the restart on <b>24 Dec</b></div><div class="meta">yesterday 18:40</div></div></div>
+    <div class="item"><span class="av" style="background:#fbcfe8">Ki</span><div><div class="title" style="font-weight:500"><b>Kingly</b> moved <b>Old event draft</b> to the trash</div><div class="meta">3 days ago</div></div></div>
+  </div></div>
+  <div id="t-trash" class="hidden"><div class="card" style="padding:6px">
+    <div class="item"><span class="kind k-event">◆</span><div><div class="title">Old event draft</div><div class="meta">Deleted by Kingly · 3 days ago</div></div><button class="btn sm end">Restore</button></div>
+    <div class="item"><span class="kind k-banner">▬</span><div><div class="title">Summer banner</div><div class="meta">Deleted by Covee · 2 Sep</div></div><button class="btn sm end">Restore</button></div>
+  </div></div>
+  <div class="modal-bg" id="profileModal"><div class="modal">
+    <h2>New profile</h2>
+    <label class="lbl">Name</label><input value="Nova">
+    <label class="lbl">Role</label><select><option>Moderator</option><option>Admin</option><option>Lodge keeper</option></select>
+    <label class="lbl">Extra permissions (optional)</label><select><option>None</option></select>
+    <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="createProfile">Create</button></div>
+  </div></div>
+  <div class="modal-bg" id="codeModal"><div class="modal">
+    <h2>Nova can now sign in</h2><p class="dim small">This code is shown <b style="color:#fff">only once</b>. Send it to Nova privately.</p>
+    <div class="code">K7QM-PX4R-2HWN-9TCF-LBDZ</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn">Copy</button><button class="btn primary" data-close>Done</button></div>
+  </div></div>
+</section>
+
+<!-- ============================== SETTINGS ============================= -->
+<section class="screen" id="s-settings">
+  <div class="head"><div><div class="eyebrow">Settings</div><h1 id="setTitle">My time zone</h1></div></div>
+  <div id="set-me" style="max-width:560px">
+    <div class="card">
+      <label class="lbl">Show every time in</label>
+      <div class="zp" id="meZone"></div>
+      <div class="help">Default: your computer's time zone. Pick another one (UTC, a city, a fixed offset…) if you prefer; every date in Herald follows it.</div>
+      <label class="lbl">Also show the time for players in</label>
+      <div class="zchips" id="eqChips"></div>
+      <div class="zp" id="eqAdd" style="margin-top:8px;max-width:300px"></div>
+      <div class="help">Up to 6. Shown under every date you enter in Herald, like the example below.</div>
+      <div class="equiv-demo"><div class="dim small" style="margin-bottom:4px">Example · a news appearing Tue 20 Oct at 18:00 (your time)</div><div id="eqDemo"></div></div>
+    </div>
+  </div>
+  <div id="set-launcher" class="hidden two">
+    <div class="card"><div class="card-title">Problem reports</div><label class="lbl">Discord ticket link</label><input value="https://discord.com/channels/…/support"></div>
+    <div class="card"><div class="card-title">Discord status</div><label class="lbl">Application ID</label><input class="mono" value="1557889951620931644"></div>
+    <div class="card"><div class="card-title">Launcher staff code</div><p class="small dim">Opens the Developer tab of the launcher. A new code is shown once; only its fingerprint is published.</p><button class="btn" style="margin-top:10px">Generate a new code</button></div>
+    <div class="card"><div class="card-title">Compatibility</div><p class="small">Latest launcher: <b style="color:#fff">1.2</b><br><span class="dim">Herald only offers what this launcher can show.</span></p></div>
+  </div>
+</section>
+
+  </div><!-- /page -->
+
+  <div id="signin">
+    <div class="card" style="width:370px;padding:28px">
+      <div class="row" style="justify-content:center;margin-bottom:8px"><div class="hlogo" style="width:46px;height:46px;font-size:24px;border-radius:10px">H</div></div>
+      <h1 style="text-align:center;font-size:24px">Herald</h1>
+      <p class="dim small" style="text-align:center;margin-bottom:12px">Hemisphere SMP staff</p>
+      <label class="lbl">Name</label><input value="Kyonit">
+      <label class="lbl">Code</label><input class="mono" type="password" value="K7QMPX4R2HWN9TCFLBDZ">
+      <button class="btn primary" style="width:100%;justify-content:center;margin-top:18px" id="signinBtn">Sign in</button>
+      <p class="small dim" style="margin-top:12px;text-align:center">Herald remembers you on this computer for 30 days.<br>Lost your code? Ask Liable or Kyonit.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================= time helpers ======================= */
+// Paris wall time → UTC ms (summer time ends 25 Oct 2026 03:00)
+const P = (y, m, d, h = 0, mi = 0) => { const guess = Date.UTC(y, m - 1, d, h, mi); return guess - (guess < Date.UTC(2026, 9, 25, 1) ? 2 : 1) * 3600e3 }
+const fmt = (t, zone, o) => new Intl.DateTimeFormat('en-GB', { timeZone: zone, ...o }).format(t)
+const hm = (t, zone) => fmt(t, zone, { hour: '2-digit', minute: '2-digit', hour12: false })
+const ampm = (t, zone) => new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: '2-digit', minute: '2-digit' }).format(t)
+const dayLabel = (t, zone) => fmt(t, zone, { weekday: 'short', day: 'numeric', month: 'short' })
+const offsetOf = (zone, t = Date.now()) => { const p = new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'shortOffset' }).formatToParts(t).find((x) => x.type === 'timeZoneName'); return (p ? p.value : 'GMT').replace('GMT', 'UTC') }
+// wall time in a zone → UTC ms
+function zoned(dateStr, timeStr, zone) {
+  const [y, m, d] = dateStr.split('-').map(Number), [h, mi] = timeStr.split(':').map(Number)
+  let t = Date.UTC(y, m - 1, d, h, mi)
+  for (let i = 0; i < 2; i++) { const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(t).map((p) => [p.type, p.value])); const shown = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute); t += Date.UTC(y, m - 1, d, h, mi) - shown }
+  return t
+}
+
+/* ======================= time zone picker (every IANA zone + fixed offsets) ======================= */
+const ZONES = (() => {
+  let all = []
+  try { all = Intl.supportedValuesOf('timeZone') } catch { all = ['Europe/Paris', 'Europe/London', 'America/New_York', 'America/Los_Angeles', 'Australia/Sydney', 'Asia/Tokyo'] }
+  const groups = {}
+  for (const z of all) { const g = z.includes('/') ? z.split('/')[0] : 'Other'; (groups[g] ||= []).push(z) }
+  groups.UTC = ['UTC', ...Array.from({ length: 27 }, (_, i) => i - 12).filter((n) => n).map((n) => `Etc/GMT${n > 0 ? '-' : '+'}${Math.abs(n)}`)]
+  return groups
+})()
+const zoneLabel = (z) => z.startsWith('Etc/GMT') ? `UTC${z[7] === '-' ? '+' : '−'}${z.slice(8)} (fixed)` : z.replace(/_/g, ' ')
+function zonePicker(el, initial, onPick) {
+  el.innerHTML = `<button class="btn ghost" style="width:100%;justify-content:space-between"><span class="cur"></span><span class="dim">▾</span></button>
+    <div class="zp-list"><div style="padding:8px;position:sticky;top:0;background:var(--bg-800);z-index:2"><input placeholder="Search a city, a country or UTC+…"></div><div class="opts"></div></div>`
+  const btn = el.querySelector('button'), list = el.querySelector('.opts'), search = el.querySelector('input')
+  let value = initial
+  const setCur = () => { el.querySelector('.cur').textContent = `◷ ${zoneLabel(value)} · ${offsetOf(value)}` }
+  const render = (q = '') => {
+    q = q.toLowerCase(); let html = ''
+    const order = ['UTC', 'Europe', 'America', 'Asia', 'Australia', 'Africa', 'Pacific', 'Atlantic', 'Indian', 'Antarctica', 'Arctic', 'Other']
+    for (const g of order) { const zs = (ZONES[g] || []).filter((z) => !q || zoneLabel(z).toLowerCase().includes(q) || offsetOf(z).toLowerCase().includes(q)); if (!zs.length) continue
+      html += `<div class="grp">${g} · ${zs.length}</div>` + zs.slice(0, q ? 200 : 400).map((z) => `<button data-z="${z}">${zoneLabel(z)}<span>${offsetOf(z)} · ${hm(Date.now(), z)}</span></button>`).join('') }
+    list.innerHTML = html || '<div class="empty" style="padding:10px">No time zone found</div>'
+  }
+  btn.addEventListener('click', (e) => { e.stopPropagation(); document.querySelectorAll('.zp.open').forEach((x) => x !== el && x.classList.remove('open')); el.classList.toggle('open'); if (el.classList.contains('open')) { render(); search.value = ''; search.focus() } })
+  search.addEventListener('click', (e) => e.stopPropagation())
+  search.addEventListener('input', () => render(search.value))
+  list.addEventListener('click', (e) => { const b = e.target.closest('[data-z]'); if (!b) return; e.stopPropagation(); value = b.dataset.z; setCur(); el.classList.remove('open'); onPick && onPick(value) })
+  setCur()
+  return { get: () => value }
+}
+document.addEventListener('click', () => document.querySelectorAll('.zp.open').forEach((x) => x.classList.remove('open')))
+let totalZones = Object.values(ZONES).reduce((n, z) => n + z.length, 0)
+
+/* ======================= mock content (what the signed feed would contain) ======================= */
+const IMG = { castle: 'https://hemispheresurvival.club/images/603aeb_168d4a74ad9b474eb5ea65e96590eaa3~mv2.avif', night: 'https://hemispheresurvival.club/images/603aeb_07e6cb00ad0040eaa25b5b4ede69bf7e~mv2.avif' }
+const BG = { kingdom: ['../src/renderer/src/assets/backgrounds/kingdom.webp', 'Kingdom'], hempshire: ['../src/renderer/src/assets/backgrounds/hempshire.avif', 'Hempshire'], bases: ['../src/renderer/src/assets/backgrounds/player-bases.webp', 'Player bases'], community: ['../src/renderer/src/assets/backgrounds/community.avif', 'Community'], night: [IMG.night, 'The night island'], castle: [IMG.castle, 'Spawn castle'] }
+const DATA = {
+  news: [
+    { id: 'halloween', cat: 'event', title: 'The Halloween hunt is coming!', body: 'Pumpkins have been hidden all over the world. Find them before 1 November to win the exclusive Hemisphere head.', img: IMG.night, from: P(2026, 10, 20, 18), featuredUntil: P(2026, 10, 23, 18), draft: true },
+    { id: 'welcome', cat: 'update', title: 'Welcome to the new Hemisphere Launcher', body: "One click and you're on Hemisphere: Minecraft, Fabric, Java and our performance mods are installed and kept up to date for you.", img: IMG.castle, from: P(2026, 10, 8, 12), featured: true },
+    { id: 'client', cat: 'update', title: 'Client 1.0.1: Mod Menu recommended', body: 'Mod Menu adds a Mods button in game with a searchable list of every installed mod.', img: IMG.castle, from: P(2026, 10, 8, 13) },
+    { id: 'restart', cat: 'server', title: 'Daily restart at 17:00 (Paris time)', body: 'The server restarts every day for a few minutes. The launcher shows a countdown in your own time zone.', img: IMG.night, from: P(2026, 10, 8, 14) },
+  ],
+  events: [
+    { title: 'Build contest: castles', where: '/warp contest', start: P(2026, 10, 11, 20, 30), end: P(2026, 10, 11, 23, 30) },
+    { title: 'Halloween party', where: '/warp spawn', start: P(2026, 10, 31, 20), end: P(2026, 10, 31, 23) },
+  ],
+  banners: [{ text: '⚡ Double XP this weekend!', level: 'info', from: P(2026, 10, 9, 18), until: P(2026, 10, 11, 23, 59) }],
+  welcome: [{ title: 'Happy Halloween', sub: 'The hunt is on until 1 November', from: P(2026, 10, 31, 0), until: P(2026, 11, 2, 0) }],
+  maint: { announce: P(2026, 10, 19, 12), start: P(2026, 10, 28, 14), end: P(2026, 10, 28, 16) },
+  restart: { time: [17, 0], zone: 'Europe/Paris' },
+  bgs: { year: ['kingdom', 'hempshire', 'bases', 'community'], halloween: { from: P(2026, 10, 20), until: P(2026, 11, 2), list: ['night', 'castle'] } },
+}
+let liveMaintenance = false
+
+/* what a player sees at instant t (stands for src/shared/schedule.ts → visibleAt) */
+function visibleAt(t) {
+  const news = DATA.news.filter((n) => n.from <= t).sort((a, b) => b.from - a.from)
+  const featured = news.find((n) => n.featuredUntil && n.featuredUntil > t) || news.find((n) => n.featured) || news[0]
+  const events = DATA.events.filter((e) => e.end > t).sort((a, b) => a.start - b.start)
+  const banner = DATA.banners.find((b) => b.from <= t && t < b.until)
+  const welcome = DATA.welcome.find((w) => w.from <= t && t < w.until)
+  const m = DATA.maint
+  const maint = liveMaintenance ? 'on' : t >= m.start && t < m.end ? 'on' : t >= m.announce && t < m.start ? 'plan' : null
+  const halloween = t >= DATA.bgs.halloween.from && t < DATA.bgs.halloween.until
+  const bg = halloween ? DATA.bgs.halloween.list[0] : DATA.bgs.year[1]
+  // next restart (17:00 Paris every day)
+  const parisDay = fmt(t, 'Europe/Paris', { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-')
+  let r = zoned(parisDay, '17:00', 'Europe/Paris'); if (r <= t) r = zoned(new Date(r + 864e5 + 3 * 3600e3).toISOString().slice(0, 10), '17:00', 'Europe/Paris')
+  return { news, featured, events, banner, welcome, maint, bg, restart: r }
+}
+
+/* ======================= launcher replica (same look as the real launcher 1.1) ======================= */
+const CAT = { update: 'Update', event: 'Event', server: 'Server', community: 'Community' }
+const img = (src, cls = '') => src ? `<img class="${cls}" src="${src}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'noimg'}))">` : '<div class="noimg"></div>'
+function launcherHTML(view, t, zone, highlight) {
+  const v = visibleAt(t)
+  const tb = `<div class="lx-tb"><div class="lx-brand"><img src="../src/renderer/src/assets/logo.png" alt="">Hemisphere SMP</div>
+    <div class="lx-tabs"><div class="lx-tab ${view === 'home' ? 'on' : ''}">▷ Play</div><div class="lx-tab ${view === 'news' ? 'on' : ''}">▤ News${view === 'home' && highlight && v.news.some((n) => n.id === highlight) ? '<span class="nb">1</span>' : ''}</div><div class="lx-tab">⬡ Content</div><div class="lx-tab">▧ Screenshots</div><div class="lx-tab">⚙ Settings</div></div>
+    <div class="lx-acc"><i></i>Kyo ⌄</div></div>`
+  if (view === 'news') {
+    const ev = v.events[0], f = v.featured, others = v.news.filter((n) => n !== f).slice(0, 3)
+    const evHTML = ev ? `<div class="lx-ev-k">UPCOMING EVENTS</div><div class="lx-ev"><div class="d">${fmt(ev.start, zone, { month: 'short' }).toUpperCase()}<b>${fmt(ev.start, zone, { day: 'numeric' })}</b>${fmt(ev.start, zone, { weekday: 'short' })}</div><div><div class="t">${ev.title}<i>${t >= ev.start ? 'now' : ev.start - t < 864e5 ? 'today' : 'in ' + Math.ceil((ev.start - t) / 864e5) + ' days'}</i></div><div class="s">${fmt(ev.start, zone, { weekday: 'long', month: 'long', day: 'numeric' })} · ${ampm(ev.start, zone)} – ${ampm(ev.end, zone)} (your time)</div><div class="s">⌖ ${ev.where}</div></div><div class="acts"><div>🔔 Remind me</div><div>📅 Add to calendar</div></div></div>` : ''
+    const feat = f ? `<div class="lx-feat ${f.id === highlight ? 'lx-new' : ''}">${img(f.img)}<div class="x"><div class="lx-cat c-${f.cat}">${CAT[f.cat]} · ${fmt(f.from, zone, { month: 'short', day: 'numeric' }).toUpperCase()}</div><b>${f.title}</b><p>${f.body}</p><span class="rm">Read more →</span></div></div>` : '<p style="color:#9ca3af">No news yet.</p>'
+    const grid = others.map((n) => `<div class="lx-card ${n.id === highlight ? 'lx-new' : ''}">${img(n.img)}<div class="x"><div class="lx-cat c-${n.cat}">${CAT[n.cat]} · ${fmt(n.from, zone, { month: 'short', day: 'numeric' }).toUpperCase()}</div><b>${n.title}</b><p>${n.body}</p></div></div>`).join('')
+    return `${tb}<div class="lx-news"><div class="ey">FROM THE TEAM</div><h3>LATEST <span>NEWS</span></h3><div class="lx-cats"><div>All</div><div>Update</div><div>Event</div><div>Server</div><div>Community</div></div>
+      <div class="lx-ntabs"><div>▤ Server news</div><div>🚀 Launcher updates</div></div>${evHTML}${feat}<div class="lx-grid">${grid}</div></div>`
+  }
+  const latest = v.news[0], ev = v.events[0], bg = BG[v.bg]
+  const until = Math.max(0, v.restart - t), hh = Math.floor(until / 3600e3), mm = Math.floor((until % 3600e3) / 6e4)
+  const maintHTML = v.maint === 'plan' ? `<div class="lx-maint plan">🛠<div><b>Maintenance planned</b>${dayLabel(DATA.maint.start, zone)}, ${ampm(DATA.maint.start, zone)} – ${ampm(DATA.maint.end, zone)} your time</div></div>`
+    : v.maint === 'on' ? `<div class="lx-maint on">🛠<div><b>Server under maintenance</b>Back around ${ampm(DATA.maint.end, zone)} your time</div></div>` : ''
+  return `<div class="lx-bg" style="background-image:url('${bg[0]}')"></div>${tb}
+    ${v.banner ? `<div class="lx-banner ${v.banner.level}">${v.banner.text}</div>` : ''}
+    <div class="lx-place" style="${v.banner ? 'top:92px' : ''}">⌖ ${bg[1]}</div>
+    <div class="lx-left" style="${v.banner ? 'top:116px' : ''}"><div class="k">YOUR PLAYTIME</div><div class="v">0<small>h</small> 09<small>m</small></div><div class="r"><span>Last session</span><b>0h 1m</b></div><div class="r"><span>This week</span><b>0h 9m</b></div><div class="r"><span>Sessions</span><b>8</b></div></div>
+    <div class="lx-center">${v.welcome ? `<div class="lx-welcome custom">${v.welcome.title}<span>Kyo</span></div><div class="lx-sub">${v.welcome.sub}</div>` : '<div class="lx-welcome">Welcome back<span>Kyo</span></div>'}
+      <div class="lx-play">PLAY</div><div class="lx-ready"><b>✓ Ready</b> · Hemisphere Client 1.0.2 · Minecraft 26.3</div>${maintHTML}</div>
+    <div class="lx-right" style="${v.banner ? 'top:104px' : ''}"><div class="k">HEMISPHERE SURVIVAL</div><span class="lx-pill ${v.maint === 'on' ? 'bad' : 'ok'}">● ${v.maint === 'on' ? 'MAINTENANCE' : 'ONLINE'}</span>
+      <div class="lx-box"><b>⏱ Restart in ${hh}h ${String(mm).padStart(2, '0')}m</b>Daily at ${ampm(v.restart, zone)} your time</div>
+      ${ev ? `<div class="lx-box"><b>📅 ${ev.title}</b>${t >= ev.start ? 'now' : ev.start - t < 864e5 ? 'today' : 'in ' + Math.ceil((ev.start - t) / 864e5) + ' days'}</div>` : ''}
+      <div class="k">ONLINE NOW <span style="float:right;font-weight:400">0 / 420</span></div><div class="lx-box">Nobody online right now — be the first!</div></div>
+    ${latest ? `<div class="lx-peek ${latest.id === highlight ? 'lx-new' : ''}">${img(latest.img)}<div><div class="c">${CAT[latest.cat].toUpperCase()} · ${fmt(latest.from, zone, { month: 'short', day: 'numeric' }).toUpperCase()}</div><b>${latest.title}</b><span>All news →</span></div></div>` : ''}
+    <div class="lx-links"><div>Discord</div><div>Website</div><div>Map</div><div>Rules</div></div>
+    <div class="lx-foot">Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</div>`
+}
+function renderReplica(frame, view, t, zone, highlight) {
+  if (frame.dataset.fit === "width") frame.style.height = Math.round(frame.clientWidth * 770 / 1080) + "px"
+  const w = frame.clientWidth, h = frame.clientHeight, s = Math.min(w / 1080, h / 770)
+  frame.innerHTML = `<div class="lx" style="transform:scale(${s})">${launcherHTML(view, t, zone, highlight)}</div>`
+}
+
+/* ======================= editor preview ======================= */
+const edZone = zonePicker(document.getElementById('edZone'), 'Australia/Sydney', () => renderEditor())
+let edView = 'news', edMoment = 'appear'
+const MOMENTS = { before: P(2026, 10, 19, 18), appear: P(2026, 10, 20, 18), featured: P(2026, 10, 22, 12), after: P(2026, 11, 1, 12) }
+function renderEditor() {
+  const t = MOMENTS[edMoment], z = edZone.get()
+  DATA.news[0].title = document.getElementById('edTitle').value
+  DATA.news[0].body = document.getElementById('edBody').value.split('\n\n')[0]
+  renderReplica(document.getElementById('edFrame'), edView, t, z, 'halloween')
+  const shown = DATA.news[0].from <= t
+  document.getElementById('edCaption').innerHTML = `${shown ? '<span style="color:var(--green-400)">● Visible</span>' : '<span class="dim">○ Not visible yet (locked)</span>'} · ${dayLabel(t, z)} ${hm(t, z)} for this player · <span style="color:var(--amber)">yellow outline</span> = this news`
+  document.querySelectorAll('#moments button').forEach((b) => { b.classList.toggle('on', b.dataset.m === edMoment); const tt = MOMENTS[b.dataset.m]; b.innerHTML = `<b>${{ before: 'Before', appear: 'It appears', featured: 'Big card', after: 'Later' }[b.dataset.m]}</b>${dayLabel(tt, z)} ${hm(tt, z)}` })
+}
+document.getElementById('moments').addEventListener('click', (e) => { const b = e.target.closest('[data-m]'); if (b) { edMoment = b.dataset.m; renderEditor() } })
+document.getElementById('edView').addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return; edView = b.dataset.v; document.querySelectorAll('#edView button').forEach((x) => x.classList.toggle('on', x === b)); renderEditor() })
+;['edTitle', 'edBody'].forEach((id) => document.getElementById(id).addEventListener('input', renderEditor))
+
+/* ======================= time travel (Preview tab) ======================= */
+let ttT = P(2026, 10, 20, 18), ttView = 'home'
+const ttZone = zonePicker(document.getElementById('ttZone'), 'Australia/Sydney', () => { syncInputs(); renderTT() })
+const CHANGES = [
+  [P(2026, 10, 9, 18), 'Banner “Double XP” appears', 'k-banner', '▬'],
+  [P(2026, 10, 11, 20, 30), 'Build contest starts', 'k-event', '◆'],
+  [P(2026, 10, 12, 0), 'Banner ends', 'k-banner', '▬'],
+  [P(2026, 10, 19, 12), 'Maintenance announced', 'k-maint', '⚡'],
+  [P(2026, 10, 20, 0), 'Halloween backgrounds', 'k-bg', '▣'],
+  [P(2026, 10, 20, 18), 'News “Halloween hunt” unlocks', 'k-news', '✎'],
+  [P(2026, 10, 23, 18), 'Halloween hunt: no longer the big card', 'k-news', '✎'],
+  [P(2026, 10, 28, 14), 'Maintenance starts', 'k-maint', '⚡'],
+  [P(2026, 10, 28, 16), 'Server back online', 'k-maint', '⚡'],
+  [P(2026, 10, 31, 0), 'Welcome message “Happy Halloween”', 'k-welcome', '✦'],
+]
+function syncInputs() { const z = ttZone.get(); document.getElementById('ttDate').value = fmt(ttT, z, { year: 'numeric', month: '2-digit', day: '2-digit' }).split('/').reverse().join('-'); document.getElementById('ttTime').value = hm(ttT, z) }
+function renderTT() {
+  const z = ttZone.get(), v = visibleAt(ttT)
+  renderReplica(document.getElementById('ttFrame'), ttView, ttT, z)
+  document.getElementById('ttSummary').textContent = `${fmt(ttT, z, { weekday: 'long', day: 'numeric', month: 'long' })}, ${hm(ttT, z)} · ${v.news.length} news · ${v.maint ? 'maintenance ' + (v.maint === 'on' ? 'running' : 'announced') : 'no maintenance'}${v.banner ? ' · banner' : ''}`
+  let past = true
+  document.getElementById('ttChanges').innerHTML = CHANGES.map(([t, label, k, ic], i) => { const cur = t <= ttT && (!CHANGES[i + 1] || CHANGES[i + 1][0] > ttT); return `<div class="item ${t <= ttT ? 'past' : ''} ${cur ? 'cur' : ''}" data-jump="${t}"><span class="when-t">${dayLabel(t, z)}<br>${hm(t, z)}</span><span class="kind ${k}" style="width:24px;height:24px;font-size:12px">${ic}</span><div class="small" style="color:#fff">${label}</div></div>` }).join('')
+}
+document.getElementById('ttChanges').addEventListener('click', (e) => { const b = e.target.closest('[data-jump]'); if (b) { ttT = +b.dataset.jump; syncInputs(); renderTT() } })
+document.querySelectorAll('[data-step]').forEach((b) => b.addEventListener('click', () => { ttT += +b.dataset.step * 1000; syncInputs(); renderTT() }))
+document.getElementById('ttNow').addEventListener('click', () => { ttT = P(2026, 10, 9, 21, 14); syncInputs(); renderTT() })
+;['ttDate', 'ttTime'].forEach((id) => document.getElementById(id).addEventListener('change', () => { ttT = zoned(document.getElementById('ttDate').value, document.getElementById('ttTime').value, ttZone.get()); renderTT() }))
+document.getElementById('ttView').addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return; ttView = b.dataset.v; document.querySelectorAll('#ttView button').forEach((x) => x.classList.toggle('on', x === b)); renderTT() })
+
+/* ======================= backgrounds ======================= */
+const PERIODS = {
+  year: { name: 'All year', note: 'Shown whenever no other period replaces them.', list: DATA.bgs.year, dates: null },
+  halloween: { name: 'Halloween', note: '', list: DATA.bgs.halloween.list, dates: ['2026-10-20', '2026-11-02'] },
+  christmas: { name: 'Christmas', note: '', list: [], dates: ['2026-12-15', '2027-01-02'] },
+}
+function renderBg(p) {
+  const d = PERIODS[p]
+  document.getElementById('bgDetail').innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <div class="row"><h2 style="font-size:18px">${d.name}</h2>${p === 'year' ? '<span class="chip st-live">Default</span>' : ''}<button class="btn sm ghost" style="margin-left:auto">${p === 'year' ? 'Rename' : 'Delete period'}</button></div>
+      ${d.dates ? `<div class="two" style="margin-top:10px"><div><label class="lbl">From</label><input type="date" value="${d.dates[0]}"></div><div><label class="lbl">Until</label><input type="date" value="${d.dates[1]}"></div></div>
+        <label class="lbl">During this period</label><span class="seg"><button class="on">Only these pictures</button><button>Add them to the all-year ones</button></span>` : `<p class="dim small" style="margin-top:4px">${d.note}</p>`}
+    </div>
+    <div class="thumbs">${d.list.map((k) => `<div class="thumb">${img(BG[k][0])}<div class="t"><b>${BG[k][1]}</b><button class="btn sm ghost" style="margin-left:auto">⋯</button></div></div>`).join('')}
+      <div class="thumb add">＋ Add pictures<br><span class="small">Cropped and compressed automatically</span></div></div>
+    ${d.list.length ? `<div class="card" style="margin-top:14px"><div class="card-title">Preview on the real Home</div><div class="lx-frame" id="bgFrame" data-fit="width" style="width:100%"></div></div>` : ''}`
+  if (d.list.length) { const keep = DATA.bgs.year; renderReplica(document.getElementById('bgFrame'), 'home', p === 'halloween' ? P(2026, 10, 21, 12) : P(2026, 10, 9, 21), 'Europe/Paris') }
+  document.querySelectorAll('#periods .item').forEach((x) => x.classList.toggle('on', x.dataset.p === p))
+}
+document.getElementById('periods').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (b) renderBg(b.dataset.p) })
+
+/* ======================= navigation, roles, modals ======================= */
+const page = document.getElementById('page')
+function go(s, sub) {
+  if (s === 'signout') return setWho('out')
+  if (s.startsWith('settings-')) { sub = s.slice(9); s = 'settings' }
+  document.querySelectorAll('.screen').forEach((x) => x.classList.toggle('on', x.id === 's-' + s))
+  const tabFor = s === 'editor' ? 'publications' : s
+  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.s === tabFor))
+  page.scrollTop = 0
+  if (s === 'editor') renderEditor()
+  if (s === 'preview') { syncInputs(); renderTT() }
+  if (s === 'backgrounds') renderBg('year')
+  if (s === 'settings') { document.getElementById('set-me').classList.toggle('hidden', sub !== 'me'); document.getElementById('set-launcher').classList.toggle('hidden', sub !== 'launcher'); document.getElementById('setTitle').textContent = sub === 'me' ? 'My time zone' : 'Launcher settings' }
+  document.getElementById('drawer').classList.remove('open')
+}
+document.getElementById('tabs').addEventListener('click', (e) => { const b = e.target.closest('[data-s]'); if (b) go(b.dataset.s) })
+document.addEventListener('click', (e) => {
+  const o = e.target.closest('[data-open]'); if (o) return go(o.dataset.open)
+  const g = e.target.closest('[data-go]'); if (g) { e.stopPropagation(); document.getElementById('meMenu').classList.remove('open'); return go(g.dataset.go) }
+  const c = e.target.closest('[data-close]'); if (c) c.closest('.modal-bg').classList.remove('open')
+})
+document.getElementById('meBtn').addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('meMenu').classList.toggle('open') })
+document.addEventListener('click', () => document.getElementById('meMenu').classList.remove('open'))
+document.getElementById('commentsBtn').addEventListener('click', () => document.getElementById('drawer').classList.add('open'))
+document.getElementById('drawerClose').addEventListener('click', () => document.getElementById('drawer').classList.remove('open'))
+document.getElementById('pubView').addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return; document.querySelectorAll('#pubView button').forEach((x) => x.classList.toggle('on', x === b)); document.getElementById('pubList').classList.toggle('hidden', b.dataset.v !== 'list'); document.getElementById('pubCal').classList.toggle('hidden', b.dataset.v !== 'cal') })
+document.getElementById('teamTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (!b) return; document.querySelectorAll('#teamTabs button').forEach((x) => x.classList.toggle('on', x === b)); ['people', 'activity', 'trash'].forEach((t) => document.getElementById('t-' + t).classList.toggle('hidden', t !== b.dataset.t)) })
+document.getElementById('newProfile').addEventListener('click', () => document.getElementById('profileModal').classList.add('open'))
+document.getElementById('createProfile').addEventListener('click', () => { document.getElementById('profileModal').classList.remove('open'); document.getElementById('codeModal').classList.add('open') })
+document.getElementById('restartBtn').addEventListener('click', () => document.getElementById('restartModal').classList.add('open'))
+zonePicker(document.getElementById('rsZone'), 'Europe/Paris')
+// My settings: my zone + the extra zones shown under every date
+let eqZones = ['America/New_York', 'Australia/Sydney', 'UTC']
+const meZone = zonePicker(document.getElementById('meZone'), 'Europe/Paris', () => renderEq())
+const eqAddEl = document.getElementById('eqAdd')
+const eqAdd = zonePicker(eqAddEl, 'UTC', (z) => { if (!eqZones.includes(z) && eqZones.length < 6) eqZones.push(z); renderEq() })
+function renderEq() {
+  const sample = zoned('2026-10-20', '18:00', meZone.get())
+  document.getElementById('eqChips').innerHTML = eqZones.map((z, i) => `<div class="zchip"><b>${zoneLabel(z).split('/').pop()}</b><span>${offsetOf(z, sample)}</span><button data-rm="${i}" title="Remove">✕</button></div>`).join('') || '<span class="dim small">None: only your own time is shown.</span>'
+  eqAddEl.querySelector('.cur').textContent = eqZones.length < 6 ? '＋ Add a time zone…' : 'Maximum reached (6)'
+  document.getElementById('eqDemo').innerHTML = `<b style="color:#fff">${dayLabel(sample, meZone.get())} ${hm(sample, meZone.get())}</b> <span class="dim">· ${zoneLabel(meZone.get())}</span><div class="equiv" style="margin-top:2px">` +
+    eqZones.map((z) => `${zoneLabel(z).split('/').pop()} ${hm(sample, z)}${fmt(sample, z, { day: 'numeric' }) !== fmt(sample, meZone.get(), { day: 'numeric' }) ? ' (' + fmt(sample, z, { day: 'numeric', month: 'short' }) + ')' : ''}`).join(' · ') + '</div>'
+}
+document.getElementById('eqChips').addEventListener('click', (e) => { const b = e.target.closest('[data-rm]'); if (b) { eqZones.splice(+b.dataset.rm, 1); renderEq() } })
+renderEq()
+document.getElementById('heroBtn').addEventListener('click', () => {
+  if (!liveMaintenance) return document.getElementById('maintModal').classList.add('open')
+  liveMaintenance = false; setHero()
+})
+document.getElementById('maintGo').addEventListener('click', () => { liveMaintenance = true; document.getElementById('maintModal').classList.remove('open'); setHero() })
+function setHero() {
+  const h = document.getElementById('hero'); h.className = 'status-hero ' + (liveMaintenance ? 'bad' : 'ok')
+  h.querySelector('.dot').style.background = liveMaintenance ? 'var(--red)' : ''
+  document.getElementById('heroTitle').textContent = liveMaintenance ? 'Maintenance in progress' : 'Server online'
+  document.getElementById('heroSub').textContent = liveMaintenance ? 'Started 21:14 by Kyonit · players see it within a few minutes · expected end 21:45' : 'Players see the normal Home. Next planned maintenance: Wed 28 Oct 14:00.'
+  const b = document.getElementById('heroBtn'); b.className = 'btn ' + (liveMaintenance ? 'primary' : 'danger'); b.textContent = liveMaintenance ? '✓ Server is back online' : '⚡ Start a maintenance now'
+}
+// who is signed in (prototype only)
+const WHO = { dev: ['Kyonit', 'Developer', '#86efac', 'Ky'], admin: ['Covee', 'Admin', '#bfdbfe', 'Co'], lodge: ['Iceorbs', 'Lodge keeper', '#a5f3fc', 'Ic'] }
+function setWho(w) {
+  document.querySelectorAll('#who button').forEach((b) => b.classList.toggle('on', b.dataset.who === w))
+  const win = document.getElementById('win'); win.classList.toggle('signed-out', w === 'out')
+  if (w === 'out') return
+  const [n, r, c, a] = WHO[w]
+  document.getElementById('meName').textContent = n; document.getElementById('meRole').textContent = r
+  const av = document.getElementById('meAv'); av.textContent = a; av.style.background = c
+  document.getElementById('hiName').textContent = n
+  document.querySelectorAll('[data-perm="staff"]').forEach((x) => x.classList.toggle('hidden', w === 'lodge'))
+  document.querySelectorAll('[data-perm="admin"]').forEach((x) => x.classList.toggle('hidden', w === 'lodge'))
+  go('home')
+}
+document.getElementById('who').addEventListener('click', (e) => { const b = e.target.closest('[data-who]'); if (b) setWho(b.dataset.who) })
+document.getElementById('signinBtn').addEventListener('click', () => setWho('dev'))
+</script>
+</body>
+</html>
