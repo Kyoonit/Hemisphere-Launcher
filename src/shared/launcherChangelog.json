@@ -1,5 +1,22 @@
 [
   {
+    "date": "2026-10-10",
+    "changes": [
+      {
+        "version": "next",
+        "area": "launcher",
+        "en": "Each preset now has its own settings: keybinds, video and sound, mod settings and server list switch with it.",
+        "fr": "Chaque préréglage a maintenant ses propres réglages : touches, vidéo et son, réglages des mods et liste de serveurs changent avec lui."
+      },
+      {
+        "version": "next",
+        "area": "launcher",
+        "en": "Importing from another launcher asks where your mods and packs go: a new preset, named after the modpack (rename it whenever you like), or in place of the current one. Nothing piles up twice anymore: a pack you already have is used as it is.",
+        "fr": "L’import depuis un autre launcher demande où mettre tes mods et packs : un nouveau préréglage, au nom du modpack (renommable quand tu veux), ou à la place de l’actuel. Plus rien en double : un pack que tu as déjà est utilisé tel quel."
+      }
+    ]
+  },
+  {
     "date": "2026-10-09",
     "changes": [
       {

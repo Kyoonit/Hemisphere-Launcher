@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, FolderSearch, Info, Package, RefreshCw, TriangleAlert, Upload } from 'lucide-react'
+import { Check, FolderSearch, Info, Layers, Package, RefreshCw, TriangleAlert, Upload } from 'lucide-react'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource, LauncherKind } from '@shared/importer'
+import { SET_NAME_MAX, type ModSetInfo } from '@shared/modSets'
 
 const BADGE: Record<LauncherKind, { text: string; bg: string; fg?: string }> = {
   official: { text: 'MC', bg: '#3c8527' },
@@ -12,27 +13,41 @@ const BADGE: Record<LauncherKind, { text: string; bg: string; fg?: string }> = {
   folder: { text: '', bg: '#374151' },
 }
 
-const ALL: (keyof ImportOptions)[] = ['settings', 'servers', 'resourcepacks', 'shaderpacks', 'config', 'mods']
+type Item = 'settings' | 'servers' | 'resourcepacks' | 'shaderpacks' | 'config' | 'mods'
+const ALL: Item[] = ['settings', 'servers', 'resourcepacks', 'shaderpacks', 'config', 'mods']
+/** these go into a preset (the others are shared by every preset) */
+const IN_PRESET: Item[] = ['mods', 'resourcepacks', 'shaderpacks']
 
 export default function Import({ onClose }: { onClose(): void }) {
   const { t } = useTranslation()
   const [sources, setSources] = useState<ImportSource[] | null>(null)
   const [selected, setSelected] = useState<ImportSource | null>(null)
-  const [opts, setOpts] = useState<ImportOptions>({ settings: true, servers: true, resourcepacks: true, shaderpacks: true, config: false, mods: true })
+  const [opts, setOpts] = useState<Record<Item, boolean>>({ settings: true, servers: true, resourcepacks: true, shaderpacks: true, config: false, mods: true })
   const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [report, setReport] = useState<ImportReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
+  // the active preset: mods and packs go into a new preset (named after the setup) or replace this one
+  const [active, setActive] = useState<ModSetInfo | null>(null)
+  const [mode, setMode] = useState<'new' | 'replace'>('new')
+  const [presetName, setPresetName] = useState('')
 
   useEffect(() => {
     window.hemisphere.importer.detect().then((s) => {
       setSources(s)
       setSelected(s[0] ?? null)
     })
+    window.hemisphere.modSets.list().then((st) => {
+      const a = st.sets.find((x) => x.id === st.active) ?? null
+      setActive(a)
+      // an empty preset (a newcomer's first one) is simply filled
+      if (a && !a.mods && !a.packs && !a.shader) setMode('replace')
+    })
     return window.hemisphere.importer.onProgress(setProgress)
   }, [])
+  useEffect(() => setPresetName(selected?.name.slice(0, SET_NAME_MAX) ?? ''), [selected])
 
-  const available = (src: ImportSource | null, k: keyof ImportOptions) => {
+  const available = (src: ImportSource | null, k: Item) => {
     if (!src) return false
     const h = src.has
     return { settings: h.settings, servers: h.servers, resourcepacks: h.resourcepacks > 0, shaderpacks: h.shaderpacks > 0, config: h.config, mods: h.mods > 0 }[k]
@@ -52,7 +67,9 @@ export default function Import({ onClose }: { onClose(): void }) {
     if (!selected) return
     setError(null)
     setRunning(true)
-    const chosen = Object.fromEntries(ALL.map((k) => [k, opts[k] && available(selected, k)])) as unknown as ImportOptions
+    const chosen = Object.fromEntries(ALL.map((k) => [k, opts[k] && available(selected, k)])) as Record<Item, boolean> as ImportOptions
+    chosen.preset = mode === 'replace' && active ? { mode: 'replace' } : { mode: 'new', name: presetName.trim() || selected.name }
+    chosen.fallbackName = t('sets.myMods')
     const res = await window.hemisphere.importer.run(selected.id, chosen)
     setRunning(false)
     setProgress(null)
@@ -141,6 +158,29 @@ export default function Import({ onClose }: { onClose(): void }) {
                   })}
                 </div>
               )}
+
+              {selected && IN_PRESET.some((k) => opts[k] && available(selected, k)) && (
+                <div className="mt-4">
+                  <p className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-gray-300">
+                    <Layers size={14} /> {t('import.preset.title')}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('import.preset.title')}>
+                    <PresetChoice selected={mode === 'new'} onSelect={() => setMode('new')} title={t('import.preset.new')} hint={active ? t('import.preset.newHint', { name: active.name }) : ''}>
+                      <input
+                        value={presetName}
+                        maxLength={SET_NAME_MAX}
+                        onFocus={() => setMode('new')}
+                        onChange={(e) => setPresetName(e.target.value)}
+                        aria-label={t('import.preset.name')}
+                        className="mt-2 w-full rounded-md border border-gray-600 bg-gray-800 px-2.5 py-1.5 text-[13px] text-white outline-none focus:border-green-500"
+                      />
+                    </PresetChoice>
+                    {active && (
+                      <PresetChoice selected={mode === 'replace'} onSelect={() => setMode('replace')} title={t('import.preset.replace', { name: active.name })} hint={t('import.preset.replaceHint')} />
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
           {error && (
@@ -180,6 +220,28 @@ export default function Import({ onClose }: { onClose(): void }) {
   )
 }
 
+function PresetChoice({ selected, onSelect, title, hint, children }: { selected: boolean; onSelect(): void; title: string; hint: string; children?: React.ReactNode }) {
+  return (
+    <div
+      role="radio"
+      aria-checked={selected}
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget && onSelect()}
+      className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors ${
+        selected ? 'border-green-500 bg-green-600/10' : 'border-transparent bg-gray-900/60 hover:border-gray-600'
+      }`}
+    >
+      <span className={`mt-0.5 h-[18px] w-[18px] flex-none rounded-full border-2 ${selected ? 'border-[5px] border-green-500' : 'border-gray-600'}`} />
+      <span className="min-w-0 flex-1">
+        <b className="block truncate text-[13.5px] font-semibold text-white">{title}</b>
+        {hint && <span className="block text-xs text-gray-400">{hint}</span>}
+        {children}
+      </span>
+    </div>
+  )
+}
+
 function SourceCard({ source, selected, onSelect }: { source: ImportSource; selected: boolean; onSelect(): void }) {
   const { t } = useTranslation()
   const b = BADGE[source.launcher]
@@ -214,6 +276,7 @@ function SourceCard({ source, selected, onSelect }: { source: ImportSource; sele
 function Results({ report }: { report: ImportReport }) {
   const { t } = useTranslation()
   const lines: { tone: 'ok' | 'warn' | 'info'; text: string }[] = []
+  if (report.preset) lines.push({ tone: 'ok', text: t(report.preset.created ? 'import.result.presetNew' : 'import.result.presetReplaced', { name: report.preset.name }) })
   if (report.settings) lines.push({ tone: 'ok', text: t('import.result.settings') })
   if (report.servers) lines.push({ tone: 'ok', text: t('import.result.servers') })
   if (report.resourcepacks) lines.push({ tone: 'ok', text: t('import.result.resourcepacks', { count: report.resourcepacks }) })

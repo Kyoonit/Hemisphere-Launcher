@@ -20,6 +20,9 @@ export interface ImportSource {
   }
 }
 
+/** Where imported mods and packs go: a new preset (named after the setup by default), or the active one, replaced */
+export type ImportPreset = { mode: 'new'; name: string } | { mode: 'replace' }
+
 export interface ImportOptions {
   settings: boolean
   servers: boolean
@@ -27,6 +30,10 @@ export interface ImportOptions {
   shaderpacks: boolean
   config: boolean
   mods: boolean
+  /** used when mods or packs are imported */
+  preset?: ImportPreset
+  /** name for the mods as they are now when no preset is active yet ("My mods") */
+  fallbackName?: string
 }
 
 export interface ImportReport {
@@ -43,6 +50,8 @@ export interface ImportReport {
   modsUnavailable: string[]
   /** not found on Modrinth: not copied (can't check compatibility or safety) */
   modsUnknown: string[]
+  /** the preset the mods and packs went into (now the active one); null when only settings were imported */
+  preset: { name: string; created: boolean } | null
 }
 
 export interface ImportProgress {

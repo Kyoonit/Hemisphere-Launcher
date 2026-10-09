@@ -339,7 +339,7 @@ export interface HemisphereApi {
     detect(): Promise<ImportSource[]>
     /** Windows folder picker; null if cancelled or nothing importable there */
     chooseFolder(): Promise<ImportSource | null | 'nothing'>
-    run(sourceId: string, opts: ImportOptions): Promise<{ ok: true; report: ImportReport } | { ok: false; reason: 'busy' | 'unknownSource' | 'failed'; detail?: string }>
+    run(sourceId: string, opts: ImportOptions): Promise<{ ok: true; report: ImportReport } | { ok: false; reason: 'busy' | 'unknownSource' | 'tooManyPresets' | 'failed'; detail?: string }>
     onProgress(cb: (p: ImportProgress) => void): () => void
   }
   settings: {

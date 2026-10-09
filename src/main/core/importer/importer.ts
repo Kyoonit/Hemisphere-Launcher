@@ -5,16 +5,20 @@ import { homedir } from 'node:os'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource, LauncherKind } from '@shared/importer'
 import type { ClientManifest } from '@shared/manifest'
 import { gamePaths } from '../game/target'
-import { getProjects, isSafeModFileName, latestByHash, primaryFile, versionsByHash } from '../modrinth/api'
+import { getProjects, isSafeModFileName, isSafePackFileName, latestByHash, primaryFile, versionsByHash } from '../modrinth/api'
+import { addPackFile, identifiedPacks, packDir, packEntries } from '../packs/packs'
+import { readResourcePacks, readShaders, writeResourcePacks, writeShaders } from '../packs/gameSettings'
+import type { PackType } from '@shared/packs'
 
 export { isSafeModFileName }
 import { blobPath, downloadToStore, sha512OfFile } from '../sync/download'
 
 /**
  * Import from another launcher. Sources are only READ — nothing in them is ever changed.
- * Copies into the Hemisphere instance: keybinds/settings and server list (previous files backed up),
- * resource/shader packs and mod configs (never overwriting), and the player's own mods in the version that
- * matches Hemisphere's Minecraft (looked up on Modrinth by file hash).
+ * Copies into the Hemisphere instance: keybinds/settings and server list (previous files backed up), mod configs
+ * (never overwriting), resource/shader packs (one copy each: a pack already here, same file or same Modrinth project,
+ * is used as it is) switched on as they were, and the player's own mods in the version that matches Hemisphere's
+ * Minecraft (looked up on Modrinth by file hash). Mods and packs go into a preset prepared before (see modSets).
  */
 
 const appData = () => process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming')
@@ -145,17 +149,64 @@ async function replaceWithBackup(src: string, dest: string): Promise<boolean> {
   return true
 }
 
+/**
+ * Packs of a kind from a source folder, one copy each: a pack already here (the same file, or the same Modrinth project
+ * in any version) is not copied again. Returns each source name with its name here, and how many were copied.
+ */
+async function importPacks(type: PackType, srcDir: string): Promise<{ names: Map<string, string>; copied: number }> {
+  const names = new Map<string, string>()
+  let copied = 0
+  if (!isDir(srcDir)) return { names, copied }
+  const here = await identifiedPacks(type)
+  const byHash = new Map(here.flatMap((p) => (p.sha512 ? [[p.sha512, p.file] as const] : [])))
+  const byProject = new Map(here.flatMap((p) => (p.projectId ? [[p.projectId, p.file] as const] : [])))
+  const isPack = (name: string) => (isDir(join(srcDir, name)) ? existsSync(join(srcDir, name, type === 'resourcepack' ? 'pack.mcmeta' : 'shaders')) && !name.startsWith('.') : isSafePackFileName(name))
+  const entries = (await readdir(srcDir)).filter(isPack)
+  const hashes = new Map<string, string>()
+  for (const name of entries) if (!isDir(join(srcDir, name))) hashes.set(name, await sha512OfFile(join(srcDir, name)))
+  const known = hashes.size ? await versionsByHash([...new Set(hashes.values())]).catch(() => ({}) as Awaited<ReturnType<typeof versionsByHash>>) : {}
+  for (const name of entries) {
+    const hash = hashes.get(name)
+    const project = hash ? known[hash]?.project_id : undefined
+    const same = (hash && byHash.get(hash)) || (project && byProject.get(project)) || (existsSync(join(packDir(type), name)) ? name : null)
+    if (same) {
+      names.set(name, same)
+      continue
+    }
+    if (hash ? await addPackFile(type, name, join(srcDir, name)) : await cp(join(srcDir, name), join(packDir(type), name), { recursive: true, errorOnExist: false, force: false }).then(() => true)) {
+      names.set(name, name)
+      if (project) byProject.set(project, name)
+      copied++
+    }
+  }
+  return { names, copied }
+}
+
 export async function importFrom(source: ImportSource, opts: ImportOptions, manifest: ClientManifest, onProgress: (p: ImportProgress) => void): Promise<ImportReport> {
   const inst = gamePaths().instance
   await mkdir(inst, { recursive: true })
-  const report: ImportReport = { settings: false, servers: false, resourcepacks: 0, shaderpacks: 0, configFiles: 0, modsAdded: [], modsIncluded: [], modsUnavailable: [], modsUnknown: [] }
+  const report: ImportReport = { settings: false, servers: false, resourcepacks: 0, shaderpacks: 0, configFiles: 0, modsAdded: [], modsIncluded: [], modsUnavailable: [], modsUnknown: [], preset: null }
 
   onProgress({ step: 'files', ratio: null })
+  // the source's options.txt also says which of ITS packs are on: set again below with the packs as they are here
+  const packsOn = (await readResourcePacks()).active
   if (opts.settings) report.settings = await replaceWithBackup(join(source.path, 'options.txt'), join(inst, 'options.txt'))
   if (opts.servers) report.servers = await replaceWithBackup(join(source.path, 'servers.dat'), join(inst, 'servers.dat'))
-  if (opts.resourcepacks) report.resourcepacks = await copyMissing(join(source.path, 'resourcepacks'), join(inst, 'resourcepacks'))
-  if (opts.shaderpacks) report.shaderpacks = await copyMissing(join(source.path, 'shaderpacks'), join(inst, 'shaderpacks'), (n) => !n.endsWith('.txt'))
   if (opts.config) report.configFiles = await copyMissing(join(source.path, 'config'), join(inst, 'config'))
+  const here = new Set(packEntries('resourcepack').map((e) => e.file))
+  if (opts.resourcepacks) {
+    const { names, copied } = await importPacks('resourcepack', join(source.path, 'resourcepacks'))
+    report.resourcepacks = copied
+    const on = (await readResourcePacks(source.path)).active.flatMap((f) => (names.has(f) ? [names.get(f)!] : []))
+    await writeResourcePacks([...new Set(on)])
+  } else if (opts.settings) await writeResourcePacks(packsOn.filter((f) => here.has(f)))
+  if (opts.shaderpacks) {
+    const { names, copied } = await importPacks('shader', join(source.path, 'shaderpacks'))
+    report.shaderpacks = copied
+    const used = await readShaders(source.path)
+    const pack = names.get(used.pack) ?? ''
+    await writeShaders({ pack, on: used.on && !!pack })
+  }
 
   if (opts.mods) {
     const jars = list(join(source.path, 'mods')).filter((f) => f.toLowerCase().endsWith('.jar'))
@@ -171,11 +222,15 @@ export async function importFrom(source: ImportSource, opts: ImportOptions, mani
       const projects = await getProjects([...new Set(Object.values(known).map((v) => v.project_id))])
       const title = (v: { project_id: string; name: string }) => projects.get(v.project_id)?.title ?? v.name
       const toUpdate: string[] = []
+      const projectsSeen = new Set<string>() // two versions of a mod in the source: one copy
       for (const hash of all) {
         const v = known[hash]
         if (!v) report.modsUnknown.push(hashes.get(hash)!)
         else if (shipped.has(v.project_id)) report.modsIncluded.push(title(v))
-        else toUpdate.push(hash)
+        else if (!projectsSeen.has(v.project_id)) {
+          projectsSeen.add(v.project_id)
+          toUpdate.push(hash)
+        }
       }
       const compatible = await latestByHash(toUpdate, manifest.minecraft)
       const store = join(gamePaths().root, 'store')

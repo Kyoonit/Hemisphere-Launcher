@@ -8,8 +8,8 @@ import { gamePaths } from '../game/target'
  *   config/iris.properties     shaderPack=…  enableShaders=true|false
  * Never while the game runs: Minecraft and Iris write these files when they close.
  */
-const optionsPath = () => join(gamePaths().instance, 'options.txt')
-const irisPath = () => join(gamePaths().instance, 'config', 'iris.properties')
+const optionsPath = (dir = gamePaths().instance) => join(dir, 'options.txt')
+const irisPath = (dir = gamePaths().instance) => join(dir, 'config', 'iris.properties')
 
 async function replaceFile(path: string, text: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true })
@@ -38,8 +38,9 @@ export interface ResourcePackSettings {
   incompatible: string[]
 }
 
-export async function readResourcePacks(): Promise<ResourcePackSettings> {
-  const text = await readFile(optionsPath(), 'utf8').catch(() => '')
+/** `dir`: another game folder (an import source); default Hemisphere's instance */
+export async function readResourcePacks(dir?: string): Promise<ResourcePackSettings> {
+  const text = await readFile(optionsPath(dir), 'utf8').catch(() => '')
   const raw = listLine(text, 'resourcePacks')
   const files = (list: string[]) => list.filter((e) => e.startsWith('file/')).map((e) => e.slice(5))
   return { raw, active: files(raw).reverse(), incompatible: files(listLine(text, 'incompatibleResourcePacks')) }
@@ -86,8 +87,8 @@ export interface ShaderSettings {
   on: boolean
 }
 
-export async function readShaders(): Promise<ShaderSettings> {
-  const text = await readFile(irisPath(), 'utf8').catch(() => '')
+export async function readShaders(dir?: string): Promise<ShaderSettings> {
+  const text = await readFile(irisPath(dir), 'utf8').catch(() => '')
   const get = (key: string) => {
     const m = text.match(new RegExp(`^\\s*${key}\\s*[=:]\\s*(.*)$`, 'm'))
     return m ? unescape(m[1].trim()) : null

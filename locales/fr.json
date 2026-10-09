@@ -507,7 +507,7 @@
     "itemHints": {
       "settings": "Les actuels sont sauvegardés",
       "servers": "Ta liste actuelle est sauvegardée",
-      "resourcepacks": "Les packs déjà présents sont gardés",
+      "resourcepacks": "Un seul exemplaire de chacun, activés comme avant",
       "shaderpacks": "Pour Iris (active-le dans Mods)",
       "config": "Seulement les fichiers manquants",
       "mods": "Mis à jour pour Hemisphere · peuvent entrer en conflit"
@@ -522,9 +522,20 @@
     "errors": {
       "busy": "Ferme Minecraft avant d’importer.",
       "unknownSource": "Choisis à nouveau une installation.",
+      "tooManyPresets": "Tu as le maximum de préréglages : supprimes-en un, ou remplace l’actuel.",
       "failed": "L’import a échoué — vérifie ta connexion internet et réessaie."
     },
+    "preset": {
+      "title": "Où mettre les mods et les packs ?",
+      "new": "Un nouveau préréglage",
+      "newHint": "« {{name}} » reste tel quel",
+      "name": "Nom du nouveau préréglage",
+      "replace": "Remplacer « {{name}} »",
+      "replaceHint": "Ses mods et packs laissent la place à ceux-ci (un point de restauration est créé avant)"
+    },
     "result": {
+      "presetNew": "Nouveau préréglage « {{name}} » créé et utilisé",
+      "presetReplaced": "Préréglage « {{name}} » remplacé et utilisé",
       "settings": "Réglages & touches importés",
       "servers": "Liste de serveurs importée",
       "resourcepacks_one": "{{count}} pack de ressources ajouté",
@@ -791,7 +802,7 @@
   "sets": {
     "button": "Préréglages",
     "title": "Préréglages",
-    "hint": "Tes mods, packs de ressources et shader, enregistrés ensemble : passe de l’un à l’autre en un clic. Avant de changer, l’actuel est enregistré dans le préréglage actif. Rien n’est jamais supprimé.",
+    "hint": "Tes mods, packs de ressources et shader, avec leurs propres réglages (touches, vidéo, réglages des mods, liste de serveurs), enregistrés ensemble : passe de l’un à l’autre en un clic. Avant de changer, l’actuel est enregistré dans le préréglage actif. Rien n’est jamais supprimé.",
     "empty": "Pas encore de préréglage. Enregistre ce que tu utilises pour commencer, par exemple « Survie », puis crée « Construction ».",
     "myMods": "Ma config",
     "active": "actif",

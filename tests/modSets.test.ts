@@ -1,5 +1,5 @@
 // Phase 21: mod sets (save, switch without losing anything, share code) and the mod history.
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
@@ -262,5 +262,59 @@ describe('share codes with packs', () => {
     const { deflateRawSync } = await import('node:zlib')
     const old = 'HSET1-' + deflateRawSync(JSON.stringify({ v: 1, n: 'Old', mc: '26.3', m: [['AANobbMI', 'abcdEFGH', 1]], c: {} })).toString('base64url')
     expect(sets.decodeSetCode(old)).toMatchObject({ v: 1, n: 'Old' })
+  })
+})
+
+describe('presets keep their game settings', () => {
+  const read = (rel: string) => (existsSync(inst(rel)) ? readFileSync(inst(rel), 'utf8') : null)
+
+  test('keybinds/video, the server list and mod configs switch with the preset; Hemisphere’s enforced configs stay', async () => {
+    put('.hemisphere/state.json', JSON.stringify({ version: 1, clientVersion: '1.0.2', minecraft: '26.3', choices: {}, owned: { 'config/hemisphere.json': { sha512: 'x', size: 1, mtimeMs: 0 } }, seeded: {}, detached: [] }))
+    put('config/hemisphere.json', 'enforced')
+    put('options.txt', 'key_key.jump:key.keyboard.space\nfov:0.5\n')
+    put('servers.dat', 'survival servers')
+    put('config/sodium-options.json', '{"quality":"high"}')
+    const survival = (await sets.saveSet('Survival'))!
+
+    put('options.txt', 'key_key.jump:key.keyboard.j\nfov:1.0\n')
+    put('servers.dat', 'building servers')
+    put('config/sodium-options.json', '{"quality":"low"}')
+    put('config/litematica.json', '{}') // only in Building
+    const building = (await sets.saveSet('Building'))!
+
+    await sets.switchSet(survival.id, manifest, 'My mods')
+    expect(read('options.txt')).toContain('key.keyboard.space')
+    expect(read('servers.dat')).toBe('survival servers')
+    expect(read('config/sodium-options.json')).toBe('{"quality":"high"}')
+    expect(read('config/litematica.json')).toBeNull()
+    expect(read('config/hemisphere.json')).toBe('enforced')
+
+    put('options.txt', 'key_key.jump:key.keyboard.space\nfov:0.7\n') // changed while Survival is active: kept in it
+    await sets.switchSet(building.id, manifest, 'My mods')
+    expect(read('options.txt')).toContain('key.keyboard.j')
+    expect(read('servers.dat')).toBe('building servers')
+    expect(read('config/litematica.json')).toBe('{}')
+    await sets.switchSet(survival.id, manifest, 'My mods')
+    expect(read('options.txt')).toContain('fov:0.7')
+  })
+
+  test('a preset saved before settings were kept takes the ones in place; a copy has its own', async () => {
+    put('options.txt', 'fov:0.5\n')
+    const b = (await sets.saveSet('B'))!
+    const a = (await sets.saveSet('A'))! // active
+    const json = JSON.parse(readFileSync(inst(`.hemisphere/mod-sets/${b.id}.json`), 'utf8'))
+    delete json.files // B as saved by an older launcher
+    writeFileSync(inst(`.hemisphere/mod-sets/${b.id}.json`), JSON.stringify(json))
+    put('options.txt', 'fov:0.9\n') // changed in A
+    await sets.switchSet(b.id, manifest, 'My mods')
+    expect(read('options.txt')).toContain('fov:0.9') // B had none kept: left as it is
+    put('options.txt', 'fov:0.3\n') // changed in B
+    const copy = (await sets.duplicateSet(a.id))!
+    await sets.switchSet(copy.id, manifest, 'My mods')
+    expect(read('options.txt')).toContain('fov:0.9') // A's own, copied
+    await sets.switchSet(b.id, manifest, 'My mods')
+    expect(read('options.txt')).toContain('fov:0.3') // now kept for B too
+    expect(await sets.deleteSet(copy.id)).toBe(true)
+    expect(existsSync(inst(`.hemisphere/mod-sets/${copy.id}.files`))).toBe(false)
   })
 })

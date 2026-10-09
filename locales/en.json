@@ -498,7 +498,7 @@
     "itemHints": {
       "settings": "Your current ones are backed up",
       "servers": "Your current list is backed up",
-      "resourcepacks": "Packs you already have are kept",
+      "resourcepacks": "One copy each, switched on as they were",
       "shaderpacks": "For Iris (turn it on in Mods)",
       "config": "Only files you don’t have yet",
       "mods": "Updated for Hemisphere · may conflict with its mods"
@@ -513,9 +513,20 @@
     "errors": {
       "busy": "Close Minecraft before importing.",
       "unknownSource": "Choose a setup again.",
+      "tooManyPresets": "You have the most presets possible: delete one, or replace the current one.",
       "failed": "Import failed — check your internet connection and try again."
     },
+    "preset": {
+      "title": "Where should the mods and packs go?",
+      "new": "A new preset",
+      "newHint": "“{{name}}” stays as it is",
+      "name": "Name of the new preset",
+      "replace": "Replace “{{name}}”",
+      "replaceHint": "Its mods and packs make way for these (a restore point is made first)"
+    },
     "result": {
+      "presetNew": "New preset “{{name}}” created and in use",
+      "presetReplaced": "Preset “{{name}}” replaced and in use",
       "settings": "Settings & keybinds imported",
       "servers": "Server list imported",
       "resourcepacks_one": "{{count}} resource pack added",
@@ -759,7 +770,7 @@
   "sets": {
     "button": "Presets",
     "title": "Presets",
-    "hint": "Your mods, resource packs and shader, saved together: switch between them in one click. Before switching, the current ones are saved in the active preset. Nothing is ever deleted.",
+    "hint": "Your mods, resource packs and shader, with their own settings (keybinds, video, mod settings, server list), saved together: switch between them in one click. Before switching, the current ones are saved in the active preset. Nothing is ever deleted.",
     "empty": "No presets yet. Save what you use now to start, e.g. “Survival”, then make a “Building” one.",
     "myMods": "My setup",
     "active": "active",

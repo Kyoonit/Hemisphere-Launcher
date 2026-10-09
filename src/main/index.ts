@@ -60,7 +60,7 @@ import { DEV_ACTIONS, DEFAULT_DEV, type DevAction, type DevState } from '@shared
 import { eventIcs } from '@shared/events'
 import { writeFile } from 'node:fs/promises'
 import { REPORT_CATEGORIES, REPORT_FREQUENCY, REPORT_PARTS, REPORT_WHEN, type ReportDraft } from '@shared/report'
-import { deleteSet, duplicateSet, importSetCode, isSetId, listSets, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
+import { deleteSet, duplicateSet, importSetCode, isSetId, keepImportInPreset, listSets, presetForImport, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
 import { installNetMeter, lowEndInfo, perfSnapshot, trimChromium, trimGpuProcess } from './core/system/performance'
 import { isMetered } from './core/system/network'
@@ -297,10 +297,19 @@ function registerIpc(): void {
     if (g.phase === 'preparing' || g.background || g.runningAccounts.length) return { ok: false, reason: 'busy' }
     const o = (opts ?? {}) as Record<string, unknown>
     const options: ImportOptions = { settings: !!o.settings, servers: !!o.servers, resourcepacks: !!o.resourcepacks, shaderpacks: !!o.shaderpacks, config: !!o.config, mods: !!o.mods }
+    const preset = (o.preset ?? {}) as Record<string, unknown>
     try {
       const { manifest } = await getContent()
       await createRestorePoint({ kind: 'import' }, { clientVersion: manifest.clientVersion, minecraft: manifest.minecraft })
+      // Mods and packs go into an empty preset (a new one by default, named after the setup), never on top of others
+      const into = options.mods || options.resourcepacks || options.shaderpacks
+      const target = into ? await presetForImport(preset.mode === 'replace' ? 'replace' : 'new', typeof preset.name === 'string' ? preset.name : source.name, o.fallbackName, manifest) : null
+      if (target && !target.ok) return { ok: false, reason: target.reason }
       const report = await importFrom(source, options, manifest, (p) => toWindow(IPC.importProgress, p))
+      if (target?.ok) {
+        await keepImportInPreset()
+        report.preset = { name: target.name, created: target.created }
+      }
       return { ok: true, report }
     } catch (err) {
       console.error('[import] failed:', err)

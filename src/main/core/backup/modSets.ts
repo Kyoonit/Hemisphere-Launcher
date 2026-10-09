@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
+import { copyFile, cp, mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import { deflateRawSync, inflateRawSync } from 'node:zlib'
 import { z } from 'zod'
 import type { ClientManifest } from '@shared/manifest'
@@ -10,12 +11,12 @@ import { gamePaths } from '../game/target'
 import { getProjects, getVersions, isSafeModFileName, isSafePackFileName, pickVersion, primaryFile, projectVersions, safeIcon, type ModrinthVersion, type ProjectKind } from '../modrinth/api'
 import { record } from '../modrinth/history'
 import { readPlayerRegistry, registryKey, withPlayerMods, type PlayerModRecord } from '../modrinth/playerMods'
-import { blobPath, downloadToStore } from '../sync/download'
+import { blobPath, downloadToStore, tempNameFor } from '../sync/download'
 import { readInstanceState } from '../sync/sync'
 import { addPackVersion, identifiedPacks, packEntries } from '../packs/packs'
 import type { PackType } from '@shared/packs'
 import { readResourcePacks, readShaders, writeResourcePacks, writeShaders } from '../packs/gameSettings'
-import { applyPlan, cleanJars, currentMods, jarPath, setsDir, storeJar, withJarStore, type PointMod } from './restorePoints'
+import { applyPlan, cleanJars, currentMods, gameFiles, isSetupPath, jarPath, setsDir, storeJar, withJarStore, type PointMod } from './restorePoints'
 
 /**
  * Mod sets: named lists of the player's mods (which are on, their versions and locks, plus the Hemisphere mods
@@ -24,6 +25,8 @@ import { applyPlan, cleanJars, currentMods, jarPath, setsDir, storeJar, withJarS
  *
  * Switching first saves the mods as they are now into the active set (or, the first time, into a new set "My mods"),
  * then puts exactly the new set's mods in place. Nothing is lost: every file stays kept for the set that has it.
+ * A set also keeps its game settings: options.txt (keybinds, video, sound…), servers.dat and the mod configs, as copies
+ * in <id>.files/ (the config files Hemisphere manages and enforces stay Hemisphere's, the same in every set).
  */
 interface ModSet {
   format: 1
@@ -37,11 +40,15 @@ interface ModSet {
   registry: Record<string, PlayerModRecord>
   /** resource packs that are on (top first) and the shader in use; missing in sets saved before packs (left as is) */
   packs?: { resource: string[]; shader: { pack: string; on: boolean } }
+  /** game settings kept in <id>.files/ (relative paths); missing in sets saved before they were (left as they are) */
+  files?: string[]
 }
 
 export const isSetId = (id: unknown): id is string => typeof id === 'string' && /^s[0-9a-z]{8,12}-[0-9a-f]{4}$/.test(id)
 const setFile = (id: string) => join(setsDir(), `${id}.json`)
 const activeFile = () => join(setsDir(), 'active.json')
+const filesDir = (id: string) => join(setsDir(), `${id}.files`)
+const inInstance = (rel: string) => join(gamePaths().instance, ...rel.split('/'))
 export const cleanName = (name: unknown) => (typeof name === 'string' ? name.replace(/[\u0000-\u001f]/g, '').trim().slice(0, SET_NAME_MAX) : '')
 
 async function writeJson(path: string, data: unknown): Promise<void> {
@@ -88,6 +95,45 @@ const uniqueName = (name: string, sets: ModSet[], except?: string) => {
   return out
 }
 
+/** The game settings files that belong to sets: all of them but Hemisphere's managed and enforced config files. */
+async function settingsFiles(): Promise<string[]> {
+  const hemisphere = new Set(Object.keys((await readInstanceState()).owned).map((p) => p.toLowerCase()))
+  return (await gameFiles()).filter((rel) => !hemisphere.has(rel.toLowerCase()))
+}
+
+/** Keeps the game settings as they are now for a set (copies: the game changes the files in place). */
+async function keepFiles(id: string): Promise<string[]> {
+  const files = await settingsFiles()
+  const tmp = `${filesDir(id)}.tmp`
+  await rm(tmp, { recursive: true, force: true })
+  await mkdir(tmp, { recursive: true })
+  for (const rel of files) {
+    const dest = join(tmp, ...rel.split('/'))
+    await mkdir(dirname(dest), { recursive: true })
+    await copyFile(inInstance(rel), dest)
+  }
+  await rm(filesDir(id), { recursive: true, force: true })
+  await rename(tmp, filesDir(id))
+  return files
+}
+
+/** Puts a set's game settings in place, exactly (a file it doesn't have goes). A set saved before they were kept
+ *  leaves them as they are: they become its own the next time it's saved. */
+async function putFiles(set: ModSet): Promise<void> {
+  if (!set.files) return
+  const keep = new Set(set.files.map((rel) => rel.toLowerCase()))
+  for (const rel of await settingsFiles()) if (!keep.has(rel.toLowerCase())) await rm(inInstance(rel), { force: true })
+  for (const rel of set.files) {
+    const src = join(filesDir(set.id), ...rel.split('/'))
+    if (!isSetupPath(rel) || !existsSync(src)) continue
+    const dest = inInstance(rel)
+    await mkdir(dirname(dest), { recursive: true })
+    const tmp = tempNameFor(dest)
+    await copyFile(src, tmp)
+    await rename(tmp, dest)
+  }
+}
+
 /** One set operation at a time. */
 let queue: Promise<unknown> = Promise.resolve()
 function serial<T>(job: () => Promise<T>): Promise<T> {
@@ -106,7 +152,8 @@ export const DEFAULT_SET_NAME = 'Default'
 async function ensureDefault(): Promise<void> {
   if ((await allSets()).length) return
   const now = Date.now()
-  const set: ModSet = { format: 1, id: newId(), name: DEFAULT_SET_NAME, createdAt: now, updatedAt: now, ...(await capture()) }
+  const id = newId()
+  const set: ModSet = { format: 1, id, name: DEFAULT_SET_NAME, createdAt: now, updatedAt: now, ...(await capture()), files: await keepFiles(id) }
   await writeJson(setFile(set.id), set)
   await setActive(set.id)
   console.log(`[mod-sets] created "${set.name}" (${set.mods.length} mods)`)
@@ -145,7 +192,8 @@ export const saveSet = (name: unknown): Promise<ModSetInfo | null> =>
     const n = cleanName(name)
     if (!n || sets.length >= MAX_SETS) return null
     const now = Date.now()
-    const set: ModSet = { format: 1, id: newId(), name: uniqueName(n, sets), createdAt: now, updatedAt: now, ...(await capture()) }
+    const id = newId()
+    const set: ModSet = { format: 1, id, name: uniqueName(n, sets), createdAt: now, updatedAt: now, ...(await capture()), files: await keepFiles(id) }
     await writeJson(setFile(set.id), set)
     await setActive(set.id)
     console.log(`[mod-sets] saved "${set.name}" (${set.mods.length} mods)`)
@@ -169,9 +217,14 @@ export const duplicateSet = (id: string): Promise<ModSetInfo | null> =>
     const sets = await allSets()
     if (!set || sets.length >= MAX_SETS) return null
     // the active set's saved copy may be behind: the copy takes the mods as they are now
-    const live = (await activeId()) === id ? await capture() : {}
+    const isActive = (await activeId()) === id
+    const live = isActive ? await capture() : {}
     const now = Date.now()
-    const copy: ModSet = { ...set, ...live, id: newId(), name: uniqueName(`${set.name.slice(0, SET_NAME_MAX - 7)} (copy)`, sets), createdAt: now, updatedAt: now }
+    const copyId = newId()
+    let files = set.files
+    if (isActive) files = await keepFiles(copyId)
+    else if (set.files && existsSync(filesDir(id))) await cp(filesDir(id), filesDir(copyId), { recursive: true })
+    const copy: ModSet = { ...set, ...live, ...(files ? { files } : {}), id: copyId, name: uniqueName(`${set.name.slice(0, SET_NAME_MAX - 7)} (copy)`, sets), createdAt: now, updatedAt: now }
     await writeJson(setFile(copy.id), copy)
     console.log(`[mod-sets] "${set.name}" duplicated as "${copy.name}"`)
     return info(copy)
@@ -183,6 +236,7 @@ export const deleteSet = (id: string): Promise<boolean> =>
     const sets = await allSets()
     if (!sets.some((s) => s.id === id) || sets.length <= 1) return false // the last set stays
     await rm(setFile(id), { force: true })
+    await rm(filesDir(id), { recursive: true, force: true })
     if ((await activeId()) === null) await setActive(null)
     await withJarStore(() => cleanJars())
     return true
@@ -202,11 +256,12 @@ export const switchSet = (id: string, manifest: ClientManifest | null, fallbackN
       let savedAs: string | null = null
       if (active && active !== id) {
         const current = (await readSet(active))!
-        await writeJson(setFile(active), { ...current, ...now, updatedAt: Date.now() })
+        await writeJson(setFile(active), { ...current, ...now, files: await keepFiles(active), updatedAt: Date.now() })
       } else if (!active) {
         const sets = await allSets()
         const t = Date.now()
-        const saved: ModSet = { format: 1, id: newId(), name: uniqueName(cleanName(fallbackName) || 'My mods', sets), createdAt: t, updatedAt: t, ...now }
+        const savedId = newId()
+        const saved: ModSet = { format: 1, id: savedId, name: uniqueName(cleanName(fallbackName) || 'My mods', sets), createdAt: t, updatedAt: t, ...now, files: await keepFiles(savedId) }
         await writeJson(setFile(saved.id), saved)
         savedAs = saved.name
       }
@@ -222,6 +277,7 @@ export const switchSet = (id: string, manifest: ClientManifest | null, fallbackN
         },
         manifest,
       )
+      await putFiles(target)
       if (target.packs) {
         const resource = new Set(packEntries('resourcepack').map((e) => e.file))
         const shaders = new Set(packEntries('shader').map((e) => e.file))
@@ -237,6 +293,61 @@ export const switchSet = (id: string, manifest: ClientManifest | null, fallbackN
       console.error('[mod-sets] switch failed:', err)
       return { ok: false, reason: 'failed' }
     }
+  })
+
+// ------------------------------------------------------------------------------ import from another launcher
+
+const NO_PACKS: NonNullable<ModSet['packs']> = { resource: [], shader: { pack: '', on: false } }
+
+/**
+ * Before an import from another launcher brings mods or packs: the mods as they are now are saved in the active preset
+ * (or in a new one named `fallbackName` when none is active), then the import goes into an EMPTY preset, so nothing
+ * piles up twice: a new one named `name` (Hemisphere's mods as they come), or the active one emptied (`replace`; its
+ * choices of Hemisphere mods are kept, and the restore point made just before keeps what it had).
+ */
+export const presetForImport = (
+  mode: 'new' | 'replace',
+  name: unknown,
+  fallbackName: unknown,
+  manifest: ClientManifest | null,
+): Promise<{ ok: true; name: string; created: boolean } | { ok: false; reason: 'tooManyPresets' }> =>
+  serial(async () => {
+    await ensureDefault()
+    const now = await capture()
+    const sets = await allSets()
+    const active = await activeId()
+    const t = Date.now()
+    let target: ModSet
+    if (mode === 'replace' && active) {
+      target = { ...(await readSet(active))!, choices: now.choices, detached: [], mods: [], registry: {}, packs: NO_PACKS, updatedAt: t }
+    } else {
+      if (sets.length + (active ? 1 : 2) > MAX_SETS) return { ok: false, reason: 'tooManyPresets' }
+      if (active) await writeJson(setFile(active), { ...(await readSet(active))!, ...now, files: await keepFiles(active), updatedAt: t })
+      else {
+        const savedId = newId()
+        const saved: ModSet = { format: 1, id: savedId, name: uniqueName(cleanName(fallbackName) || 'My mods', sets), createdAt: t, updatedAt: t, ...now, files: await keepFiles(savedId) }
+        await writeJson(setFile(saved.id), saved)
+        sets.push(saved)
+      }
+      target = { format: 1, id: newId(), name: uniqueName(cleanName(name) || 'Imported', sets), createdAt: t, updatedAt: t, choices: {}, detached: [], mods: [], registry: {}, packs: NO_PACKS }
+    }
+    await writeJson(setFile(target.id), target)
+    await applyPlan({ files: [], mods: [], choices: target.choices, detached: [] }, manifest)
+    await writeResourcePacks([])
+    await writeShaders({ pack: '', on: false })
+    await setActive(target.id)
+    console.log(`[mod-sets] import goes into ${target.id === active ? 'the emptied' : 'the new'} preset "${target.name}"`)
+    return { ok: true, name: target.name, created: target.id !== active }
+  })
+
+/** After an import: the active preset takes the mods and packs as they are now. */
+export const keepImportInPreset = (): Promise<void> =>
+  serial(async () => {
+    const id = await activeId()
+    const set = id ? await readSet(id) : null
+    if (!set) return
+    await writeJson(setFile(set.id), { ...set, ...(await capture()), files: await keepFiles(set.id), updatedAt: Date.now() })
+    void record({ kind: 'setImport', name: set.name })
   })
 
 // ------------------------------------------------------------------------------ sharing as a code
