@@ -1,0 +1,146 @@
+/**
+ * Herald server — phase S2: the test infrastructure only (no staff accounts yet).
+ *   GET  /health, /time          liveness and server clock
+ *   GET  /vault-key/:id          PUBLIC: a vault's key, only from its opening time (launchers ask right at that time)
+ *   GET  /pulse                  PUBLIC: last sequence + commit; launchers read the feed at that exact commit (raw
+ *                                 by commit is never cached, plain raw is cached up to 5 min): emergencies in minutes
+ *   POST /internal/next          PUBLISHER: the newest queued job + its sequence (older queued jobs are superseded)
+ *   POST /internal/done|failed   PUBLISHER: result of a publish run
+ *   POST /dev/publish            test: queue a feed and start the publish workflow
+ *   GET  /dev/job/:id            test: where a job is
+ *   POST /dev/vault              test: seal a payload, keep its key until opensAt
+ * Plan A: the content signing key is NOT here. GitHub Actions ("Herald publish" workflow of the content repository)
+ * validates, signs and commits; this server only says what to publish. /dev/* never exists in production.
+ */
+import { sealVault, toB64, unwrapKey, wrapKey } from './crypto'
+import { githubConfigured, startPublishWorkflow, type GithubEnv } from './github'
+
+export interface Env extends GithubEnv {
+  DB: D1Database
+  HERALD_ENV: string
+  CONTENT_DIR: string
+  VAULT_MASTER: string
+  /** Shared with the publish workflow (secret of the content repository) */
+  PUBLISHER_TOKEN: string
+  DEV_TOKEN?: string
+}
+
+type Job = { id: string; payload: string; status: string; sequence: number | null; commit_sha: string | null; error: string | null }
+
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } })
+const bearer = (req: Request, token: string | undefined) => Boolean(token) && req.headers.get('authorization') === `Bearer ${token}`
+
+export default {
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const path = new URL(req.url).pathname
+    try {
+      if (req.method === 'GET' && path === '/health') return json({ ok: true, env: env.HERALD_ENV, now: Date.now() })
+      if (req.method === 'GET' && path === '/time') return json({ now: Date.now() })
+      if (req.method === 'GET' && path === '/pulse') return await pulse(env)
+      const key = path.match(/^\/vault-key\/([a-z0-9-]{1,80})$/)
+      if (req.method === 'GET' && key) return await vaultKey(env, key[1])
+      if (path.startsWith('/internal/')) {
+        if (!bearer(req, env.PUBLISHER_TOKEN)) return json({ error: 'not found' }, 404)
+        if (req.method === 'POST' && path === '/internal/next') return await nextJob(env)
+        if (req.method === 'POST' && path === '/internal/done') return await finishJob(env, await req.json(), 'done')
+        if (req.method === 'POST' && path === '/internal/failed') return await finishJob(env, await req.json(), 'failed')
+      }
+      if (path.startsWith('/dev/')) {
+        if (env.HERALD_ENV === 'production' || !bearer(req, env.DEV_TOKEN)) return json({ error: 'not found' }, 404)
+        if (req.method === 'POST' && path === '/dev/publish') return await devPublish(env, ctx, await req.json())
+        const job = path.match(/^\/dev\/job\/([a-z0-9-]{1,80})$/)
+        if (req.method === 'GET' && job) return await jobStatus(env, job[1])
+        if (req.method === 'POST' && path === '/dev/vault') return await devVault(env, await req.json())
+      }
+      return json({ error: 'not found' }, 404)
+    } catch (err) {
+      console.error(err)
+      return json({ error: err instanceof Error ? err.message : String(err) }, 400)
+    }
+  },
+
+  /** Every minute: marks the keys that are now public (S3 also publishes them in the feed as the GitHub fallback), and
+   *  starts the publish workflow again if a job waits for more than 90 s (its start failed: GitHub down, CPU limit…). */
+  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+    const now = Date.now()
+    const { meta } = await env.DB.prepare('UPDATE vaults SET released_at = ?1 WHERE released_at IS NULL AND opens_at <= ?1').bind(now).run()
+    if (meta.changes) console.log(`[cron] ${meta.changes} vault key(s) now public`)
+    const waiting = await env.DB.prepare("SELECT count(*) AS n FROM publish_jobs WHERE status = 'queued' AND created_at < ?1").bind(now - 90_000).first<{ n: number }>()
+    if (waiting?.n && env.HERALD_ENV !== 'local' && githubConfigured(env)) {
+      console.log(`[cron] ${waiting.n} job(s) still queued: starting the publish workflow again`)
+      await startPublishWorkflow(env, 'retry (cron)')
+    }
+  },
+} satisfies ExportedHandler<Env>
+
+async function vaultKey(env: Env, id: string): Promise<Response> {
+  const now = Date.now()
+  const row = await env.DB.prepare('SELECT opens_at, key_wrapped FROM vaults WHERE id = ?1').bind(id).first<{ opens_at: number; key_wrapped: string }>()
+  if (!row) return json({ error: 'unknown vault', now }, 404)
+  // The server's clock decides, never the player's: too early → when to ask again
+  if (now < row.opens_at) return json({ error: 'not yet', now, opensAt: row.opens_at, retryInMs: row.opens_at - now }, 425)
+  return json({ key: toB64(await unwrapKey(row.key_wrapped, env.VAULT_MASTER)), now })
+}
+
+/** Tiny answer, no player data, not logged: what was published last and in which commit. */
+async function pulse(env: Env): Promise<Response> {
+  const state = await env.DB.prepare('SELECT sequence, commit_sha FROM publish_state WHERE id = 1').first<{ sequence: number; commit_sha: string | null }>()
+  return json({ sequence: state?.sequence ?? 0, commit: state?.commit_sha ?? null, repo: env.GITHUB_REPO, dir: env.CONTENT_DIR, now: Date.now() })
+}
+
+// ------------------------------------------------------------------------------------------------ publishing
+
+/** The publisher takes the NEWEST queued job (the latest state); older queued ones are superseded. */
+async function nextJob(env: Env): Promise<Response> {
+  const job = await env.DB.prepare("SELECT * FROM publish_jobs WHERE status = 'queued' ORDER BY created_at DESC LIMIT 1").first<Job>()
+  if (!job) return json({ job: null })
+  const state = await env.DB.prepare('SELECT sequence FROM publish_state WHERE id = 1').first<{ sequence: number }>()
+  const sequence = (state?.sequence ?? 0) + 1
+  const now = Date.now()
+  await env.DB.batch([
+    env.DB.prepare("UPDATE publish_jobs SET status = 'superseded', updated_at = ?2 WHERE status = 'queued' AND id != ?1").bind(job.id, now),
+    env.DB.prepare("UPDATE publish_jobs SET status = 'publishing', sequence = ?2, updated_at = ?3 WHERE id = ?1").bind(job.id, sequence, now),
+  ])
+  return json({ job: { id: job.id, sequence, ...JSON.parse(job.payload) }, contentDir: env.CONTENT_DIR })
+}
+
+async function finishJob(env: Env, body: { id?: string; commit?: string; error?: string }, status: 'done' | 'failed'): Promise<Response> {
+  const job = await env.DB.prepare("SELECT * FROM publish_jobs WHERE id = ?1 AND status = 'publishing'").bind(body.id ?? '').first<Job>()
+  if (!job) return json({ error: 'no such job being published' }, 404)
+  const now = Date.now()
+  if (status === 'failed') {
+    await env.DB.prepare("UPDATE publish_jobs SET status = 'failed', error = ?2, updated_at = ?3 WHERE id = ?1").bind(job.id, String(body.error ?? 'unknown error').slice(0, 2000), now).run()
+    return json({ ok: true })
+  }
+  if (!/^[0-9a-f]{40}$/.test(body.commit ?? '') && body.commit !== 'local') return json({ error: 'commit sha expected' }, 400)
+  await env.DB.batch([
+    env.DB.prepare("UPDATE publish_jobs SET status = 'done', commit_sha = ?2, updated_at = ?3 WHERE id = ?1").bind(job.id, body.commit, now),
+    env.DB.prepare('INSERT INTO publish_state (id, sequence, commit_sha, updated_at) VALUES (1, ?1, ?2, ?3) ON CONFLICT(id) DO UPDATE SET sequence = ?1, commit_sha = ?2, updated_at = ?3')
+      .bind(job.sequence, body.commit, new Date(now).toISOString()),
+  ])
+  return json({ ok: true })
+}
+
+async function devPublish(env: Env, ctx: ExecutionContext, body: { feed?: Record<string, unknown> }): Promise<Response> {
+  const id = `job-${crypto.randomUUID()}`
+  const now = Date.now()
+  await env.DB.prepare("INSERT INTO publish_jobs (id, payload, status, created_at, updated_at) VALUES (?1, ?2, 'queued', ?3, ?3)").bind(id, JSON.stringify({ feed: body.feed ?? {} }), now).run()
+  // Starting the workflow is a network call: done after answering (waitUntil), its CPU stays tiny either way.
+  // Local server: never (the e2e test runs the publisher itself)
+  const workflow = env.HERALD_ENV !== 'local' && githubConfigured(env)
+  if (workflow) ctx.waitUntil(startPublishWorkflow(env, `test ${id}`).catch((err) => console.error('[publish] workflow not started:', err)))
+  return json({ job: id, workflow })
+}
+
+async function jobStatus(env: Env, id: string): Promise<Response> {
+  const job = await env.DB.prepare('SELECT id, status, sequence, commit_sha, error FROM publish_jobs WHERE id = ?1').bind(id).first<Omit<Job, 'payload'>>()
+  return job ? json(job) : json({ error: 'unknown job' }, 404)
+}
+
+async function devVault(env: Env, body: { payload?: unknown; opensInSec?: number }): Promise<Response> {
+  const opensAt = Date.now() + Math.max(0, Math.min(86400, Number(body.opensInSec ?? 10))) * 1000
+  const sealed = await sealVault(new TextEncoder().encode(JSON.stringify(body.payload ?? null)))
+  const id = `test-${crypto.randomUUID()}`
+  await env.DB.prepare('INSERT INTO vaults (id, opens_at, key_wrapped) VALUES (?1, ?2, ?3)').bind(id, opensAt, await wrapKey(sealed.key, env.VAULT_MASTER)).run()
+  return json({ id, opensAt, file: toB64(sealed.file), sha512: sealed.sha512, plainSha256: sealed.plainSha256 })
+}

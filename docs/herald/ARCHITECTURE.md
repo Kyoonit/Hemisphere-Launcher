@@ -16,16 +16,21 @@
 │ · éditeurs, aperçus, voyage dans le temps    │──────▶ │ · profils, sessions, rôles, permissions           │
 │ · images : recadrage + compression           │ jeton  │ · publications, versions, commentaires, journal   │
 │ · pack : résolution Modrinth                 │ de     │ · corbeille, modèles, présence, relances          │
-│ · jeton de session chiffré (safeStorage)     │ session│ · construit, valide (zod), signe (Ed25519)        │
+│ · jeton de session chiffré (safeStorage)     │ session│ · prépare la publication (file d'attente)        │
 └──────────────────────────────────────────────┘        │ · clés des coffres, délivrées à l'heure           │
                                                         │ Base D1 (SQLite)  ·  1 tâche planifiée / minute   │
                                                         └───────────────┬───────────────────────────────────┘
-                                                                        │ commit (GitHub App « Herald Publisher »)
+                                                                        │ lance le workflow (GitHub App : Actions seulement)
+                                                                        ▼
+                                                        GitHub Actions « Herald publish » (dépôt de contenu)
+                                                        · demande la publication au serveur
+                                                        · valide (zod), SIGNE (Ed25519, secret GitHub), commit
                                                                         ▼
                                                         GitHub, dépôt public de contenu : content/v2/…
-                                                                        │ API GitHub (requêtes conditionnelles)
-                                                                        ▼                         + raw en secours
-                                                        Launchers des joueurs (1.2+) ──clé d'un coffre, à l'heure──▶ Serveur Herald
+                                                                        │ raw à l'adresse du commit (+ raw normal en secours)
+                                                                        ▼
+                                                        Launchers des joueurs (1.2+) ──pouls toutes les 2 min,
+                                                                                       clé d'un coffre à l'heure──▶ Serveur Herald
 ```
 
 Principes :
@@ -67,12 +72,12 @@ tools/content/    commandes de secours (mises à jour pour le format v2)
 
 | Ressource (offre gratuite) | Limite | Usage prévu |
 |---|---|---|
-| Requêtes Worker | 100 000 / jour | Staff (synchro toutes les 15 s quand Herald est ouvert) ≈ 10 000 ; tâche/minute 1 440 ; clés de coffres : 1 par launcher en ligne et par coffre |
-| Temps de calcul | 10 ms par requête (l'attente réseau ne compte pas) | Signature et petits JSON : OK. **Point à mesurer en S2** : construire + valider + signer un gros flux |
+| Requêtes Worker | 100 000 / jour | Pouls : 30 par heure et par launcher ouvert (ex. 200 joueurs × 3 h = 18 000 / jour) ; staff (synchro 15 s) ≈ 10 000 ; tâche/minute 1 440 ; clés de coffres : 1 par launcher en ligne et par coffre. Au-delà : les launchers retombent sur `raw` (5 min), rien ne casse |
+| Temps de calcul | 10 ms par requête (l'attente réseau ne compte pas) | Mesuré en S2 : pouls et clés 0–1 ms, lancer une publication 4–7 ms. Valider + signer + écrire dans GitHub coûtait 6–14 ms : fait par GitHub Actions (plan A) |
 | Sous-requêtes | 50 par requête | Une publication = quelques appels GitHub |
 | Taille d'une requête | 100 Mo | Images envoyées une par une |
 | Tâches planifiées | 5 par compte | **1** (chaque minute) |
-| Secrets | 64, 5 Ko chacun | Clé de signature, clé GitHub App, « poivre » des codes |
+| Secrets | 64, 5 Ko chacun | Clé GitHub App, clé maîtresse des coffres, jeton du publieur, « poivre » des codes. **Pas** la clé de signature |
 | D1 : stockage | 500 Mo par base, 5 Go au total | Textes : négligeable. Images en morceaux de < 2 Mo (limite par ligne) |
 | D1 : lectures / écritures | 5 M / 100 000 par jour | Très large |
 
@@ -80,9 +85,10 @@ tools/content/    commandes de secours (mises à jour pour le format v2)
 Les joueurs ne sont pas touchés (ils lisent GitHub). R2 (stockage de fichiers Cloudflare) est **exclu** : il exige un
 moyen de paiement.
 
-**Plan B si 10 ms ne suffisent pas pour publier** (mesuré en S2) : le serveur prépare tout, puis déclenche un
-workflow **GitHub Actions** (gratuit et sans limite de calcul pour un dépôt public) qui valide, signe et commit. La
-clé de signature irait alors dans les secrets GitHub au lieu de Cloudflare. Délai ajouté : ~30 s à 1 min.
+**Plan A (choisi en S2, après mesure)** : le serveur ne signe pas. Il met la publication en file d'attente et lance
+le workflow **GitHub Actions** « Herald publish » du dépôt de contenu (gratuit et sans limite de calcul pour un dépôt
+public), qui valide, signe et commit. La clé de signature est un **secret GitHub** du dépôt de contenu. Mesuré : une
+publication complète prend **≈ 12 s**.
 
 ### 3.2 Données (tables D1)
 
@@ -99,7 +105,8 @@ clé de signature irait alors dans les secrets GitHub au lieu de Cloudflare. Dé
 | `settings` | restart (règles, exceptions), réglages publics, destination GitHub, version minimale du launcher |
 | `templates` | modèles |
 | `activity` | journal partagé : qui, quoi, quand, avant / après |
-| `publish_state` | séquence courante, dernier commit, verrou de publication |
+| `publish_state` | séquence courante, dernier commit (donné par le pouls) |
+| `publish_jobs` | file d'attente des publications : en attente, en cours, faite (commit), refusée (raison), remplacée |
 
 Suppression = `supprimée le` renseigné (**corbeille**) ; restauration = champ vidé. Rien n'est jamais effacé.
 
@@ -128,12 +135,14 @@ dépassée est refusé (« X a modifié cette publication, recharger »). Pendan
 ### 3.4 Publier
 
 1. Un membre autorisé clique **Publier** (ou une urgence, ou la tâche minute pour un secours de coffre).
-2. Le serveur prend le verrou de publication, rassemble toutes les publications programmées ou en ligne non
-   supprimées, construit `feed.json` v2, **valide avec le schéma zod partagé**, refuse si invalide.
-3. Il chiffre les nouveaux coffres, prépare les nouvelles images, incrémente la **séquence**, **signe**.
-4. Il crée **un seul commit** (API Git de GitHub : fichiers + flux + signature d'un coup) avec le message
-   « Herald: <action> by <nom> ».
-5. Il note le commit dans le journal et libère le verrou.
+2. Le serveur rassemble toutes les publications programmées ou en ligne non supprimées, chiffre les nouveaux coffres,
+   met le tout en **file d'attente** et lance le workflow « Herald publish » (GitHub App, droit Actions seulement).
+3. Le workflow (code : `tools/herald/publisher.ts`, empaqueté dans le dépôt de contenu) demande au serveur la
+   publication la **plus récente** (les plus anciennes en attente sont « remplacées » : on publie toujours le dernier
+   état), **valide avec le schéma zod partagé**, refuse si invalide (la raison remonte dans Herald), **signe**, commit
+   avec le message « Herald: publish sequence N », pousse.
+4. Il renvoie le commit au serveur, qui met à jour la **séquence** et le **pouls** : les launchers le voient en ≤ 2 min.
+5. Un seul workflow à la fois (`concurrency`). Si le lancement échoue, la tâche minute le relance après 90 s.
 
 Les éléments expirés depuis plus de 7 jours sortent du flux (ils restent dans l'historique de Herald).
 
@@ -224,7 +233,7 @@ temps, frise) et par les tests (changements d'heure, fuseaux extrêmes, minuit, 
 
 | Changement | Détail |
 |---|---|
-| Lecture du flux v2 | via l'**API GitHub** en requête conditionnelle toutes les **2 minutes** (une réponse « rien de changé » ne compte pas dans le quota GitHub, et l'API est plus fraîche que `raw`) ; `raw` en secours. À valider en S2 |
+| Lecture du flux v2 | toutes les **2 minutes**, le launcher demande le **pouls** du serveur Herald (`GET /pulse` : séquence + commit, aucune donnée joueur). S'il a changé, il lit le flux **à l'adresse de ce commit** sur `raw.githubusercontent.com` (jamais en cache : lisible 0,3 s après la publication). Serveur injoignable → lecture `raw` normale (cache GitHub ≤ 5 min). **Mesuré en S2**, voir § 17 |
 | Correction d'horloge | écart calculé avec l'en-tête `Date` des réponses GitHub et l'heure renvoyée par le serveur Herald |
 | Programmation | `visibleAt` réévalué à chaque changement de minute et aux instants exacts prévus |
 | Coffres | téléchargement en avance, minuterie, clé, déchiffrement, cache local |
@@ -281,9 +290,15 @@ est complétée. La release 1.2 reste faite par le propriétaire.
 
 ## 10. Accès à GitHub depuis le serveur
 
-- Une **GitHub App « Herald Publisher »**, installée **uniquement** sur le dépôt de contenu, avec le seul droit
-  « Contents : lecture/écriture » (et lecture du dépôt `herald-releases`). Sa clé privée est un secret du serveur.
-- Avantages : pas d'expiration à surveiller, droits minimaux, commits signés « herald-publisher[bot] ».
+- Une **GitHub App « Herald Publisher »**, installée **uniquement** sur le dépôt de contenu, avec les seuls droits
+  **Actions : écriture** (lancer le workflow) et **Contents : lecture** (et lecture du dépôt `herald-releases`). Sa clé
+  privée est un secret du serveur. **Le serveur ne peut pas écrire de contenu** : seul le workflow le peut, avec le jeton
+  temporaire que GitHub lui donne à chaque exécution.
+- Le workflow `herald/publisher/herald-publish.yml` et le programme empaqueté `herald-publish.mjs`
+  (`npm run herald:publisher:build`) sont copiés dans `.github/` du dépôt de contenu. Secrets du dépôt de contenu :
+  `SIGNING_KEY`, `PUBLISHER_TOKEN` ; variable : `HERALD_URL`.
+- Avantages : pas d'expiration à surveiller, droits minimaux, chaque publication est une exécution visible dans
+  l'onglet Actions du dépôt.
 - Les membres du staff n'ont **aucun** accès GitHub.
 
 ## 11. Sécurité (résumé)
@@ -292,7 +307,8 @@ est complétée. La release 1.2 reste faite par le propriétaire.
 |---|---|
 | Vol d'un code de profil | Révocation immédiate dans Herald ; blocage après 5 échecs ; journal de tout |
 | Membre malveillant | Permissions vérifiées par le serveur ; validation à plusieurs pour le pack ; tout est réversible (corbeille, historique) |
-| Compromission du serveur Herald | Il détient la clé de signature : compte Cloudflare réservé à l'Owner et au Developer, 2FA **sur le compte Cloudflare** ; les fichiers de mods restent limités par le launcher à Modrinth / notre dépôt, vérifiés par SHA-512, dans des dossiers autorisés |
+| Compromission du serveur Herald | Il **n'a pas** la clé de signature (plan A) : il peut seulement mettre en file une publication, que le workflow **valide avec le schéma du launcher** avant de signer. Compte Cloudflare de Kyonit avec 2FA. Les fichiers de mods restent limités par le launcher à Modrinth / notre dépôt, vérifiés par SHA-512, dans des dossiers autorisés |
+| Compromission du compte GitHub du propriétaire | Il détient la clé de signature (secret du dépôt de contenu) : 2FA GitHub obligatoire ; les secrets ne sont jamais lisibles, même par le propriétaire |
 | Faux contenu / faux serveur | Signature Ed25519 vérifiée par chaque launcher ; anti-retour (séquence) |
 | Lecture en avance d'un secret | Coffre AES-GCM, clé détenue par le serveur jusqu'à l'heure |
 | Fuite de secrets dans le dépôt | Aucun secret dans le code ; `wrangler.toml` sans secret ; `.gitignore` (`*.pem`, `.dev.vars`) |
@@ -304,7 +320,7 @@ est complétée. La release 1.2 reste faite par le propriétaire.
 |---|---|
 | Serveur | En local avec `wrangler dev` (Worker + D1 simulés sur le PC) pour presque tout ; puis un Worker **herald-staging** séparé sur Cloudflare |
 | Clé | **Clé de test** Ed25519 distincte (jamais la vraie) |
-| Contenu | Branche **`content-staging`** (ou dépôt de test) : jamais `main/content/` |
+| Contenu | **Dépôt de test** séparé (`herald-test-content`), avec son propre workflow, la clé de test en secret, et une **GitHub App de test** installée sur lui seul : elle ne peut pas atteindre le dépôt du launcher (choisi en S2) |
 | Launcher | Build de dev pointé sur le contenu de test, avec la clé publique de test (accepté seulement en dev) |
 | Logique | Tests vitest : planning, fuseaux, changements d'heure, coffres, permissions, schémas, migrations |
 
@@ -330,8 +346,8 @@ demanderait pas de mise à jour spéciale. Si un jour c'est décidé, la marche 
 | Quand | Action |
 |---|---|
 | S2 | Kyonit crée le compte Cloudflare **à son nom, sans carte**, et active la 2FA du compte |
-| S2 | Créer la GitHub App de test et la branche / le dépôt de test |
-| S12 | Copier la vraie clé de signature dans les secrets du serveur de production |
+| S2 | Créer le dépôt de test, la GitHub App de test (Actions : écriture, Contents : lecture), les secrets et la variable du dépôt de test (fait le 9/10) |
+| S12 | Copier la vraie clé de signature dans les **secrets GitHub** du dépôt de contenu de production ; créer la GitHub App de production |
 | S12 | (Si choisi) créer l'organisation GitHub et ses dépôts |
 | S12 | Publier le launcher 1.2 (`npm run release`) |
 | S12 | Créer les profils du staff et leur transmettre les codes en privé |
@@ -352,3 +368,24 @@ demanderait pas de mise à jour spéciale. Si un jour c'est décidé, la marche 
 2. Organisation GitHub officielle : **une idée, pas une décision** (§ 13).
 3. Maquettes v2 approuvées, avec l'équipe triée par rang (Owner, Developer, Admins, Moderator, Lodge keepers) et le
    réglage « Also show the time for players in » terminé (fuseaux ajoutés / retirés, exemple en direct).
+
+## 17. Mesures de la phase S2 (9 octobre 2026)
+
+| Mesure | Résultat | Conséquence |
+|---|---|---|
+| Ed25519, AES-GCM, D1 dans le vrai moteur de Cloudflare (`workerd`, en local) | Fonctionnent ; signature acceptée par la vérification du launcher | Pas de bibliothèque de chiffrement à ajouter |
+| Coffre : clé demandée à l'heure | Refusée avant (425 + délai), donnée 68 ms après l'heure, contenu intact | Affichage à la seconde confirmé |
+| `raw.githubusercontent.com` (adresse de branche) | Nouveau contenu visible entre **3 s et 270 s** selon l'âge du cache (`max-age=300`) ; un paramètre `?t=` ne contourne **pas** le cache | Seul, trop lent pour une urgence |
+| API GitHub sans compte | Plus fraîche (≈ 12 s) **mais** les réponses 304 consomment le quota (60 / heure / adresse IP, partagé par une même box) | **Abandonnée** pour les launchers |
+| `raw` à l'adresse d'un commit | Lisible **0,3 s** après le push, à chaque essai | Retenu : pouls + adresse de commit = urgence en ≤ 2 min |
+| Temps de calcul sur Cloudflare (limite 10 ms, serveur de staging) | Pouls, clés, coffres : **0 à 1 ms**. Publication **sans** GitHub : 2 à 7 ms. Publication **avec** le commit GitHub : **6 à 14 ms** (petits dépassements tolérés, mais sans garantie) | Trop juste : **plan A** choisi par le propriétaire (GitHub Actions signe et commit) |
+| Horloges | Le PC de test avançait de ~370 ms sur Cloudflare : le serveur a refusé la clé « trop tôt » puis l'a donnée au délai indiqué | Le launcher doit corriger son horloge avec celle du serveur (prévu § 7) |
+| Relais des mises à jour de Herald | **Reporté en S4** (il n'y a pas encore d'application à mettre à jour) | — |
+| Plan A de bout en bout (staging) | Publication complète (serveur → GitHub Actions → commit signé → pouls) : **≈ 12 s** ; contenu invalide refusé avec sa raison (« news.0.image: image host not allowed ») ; lancer une publication coûte **4 à 7 ms** au serveur | Urgence : publication 12 s + pouls ≤ 2 min |
+| Relance automatique | Une publication en attente sans workflow lancé a été publiée par la tâche minute en **36 s** | Une publication demandée n'est jamais perdue |
+| Droits réels de l'App de test | `actions: write`, `contents: read`, dépôt sélectionné uniquement | Le serveur ne peut pas écrire de contenu |
+
+**Point à décider avant S12 (production)** : où vit le contenu de production. Ce dépôt doit devenir privé un jour, et
+un dépôt privé ne peut pas servir les launchers. Recommandation : un **dépôt de contenu public dédié** (comme le dépôt
+de test), qui ne contient que le contenu, le workflow et le programme de publication ; le launcher 1.2 y pointe dès sa
+sortie. À trancher avec le propriétaire en S3.

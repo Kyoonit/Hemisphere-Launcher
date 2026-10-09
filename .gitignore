@@ -7,3 +7,9 @@ dist/
 # Never commit signing keys
 *.pem
 *.key
+# Herald server: local secrets, local database, generated types
+.dev.vars
+.wrangler/
+herald/server/worker-configuration.d.ts
+herald/publisher/dist/
+herald/server/.actions-secrets.txt

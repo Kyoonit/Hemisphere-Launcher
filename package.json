@@ -20,7 +20,16 @@
     "dist": "npm run build && electron-builder --win --publish never",
     "release": "node tools/release.mjs",
     "release:fix": "node tools/release.mjs --fix",
-    "staff-code": "node tools/staff-code.mjs"
+    "staff-code": "node tools/staff-code.mjs",
+    "herald:test-key": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/test-key.ts",
+    "herald:github-app": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/github-app.ts",
+    "herald:server:dev": "wrangler dev --config herald/server/wrangler.toml --local --port 8787 --test-scheduled --var HERALD_ENV:local",
+    "herald:server:migrate": "wrangler d1 migrations apply herald-staging --config herald/server/wrangler.toml --local",
+    "herald:server:types": "wrangler types --config herald/server/wrangler.toml herald/server/worker-configuration.d.ts",
+    "herald:server:typecheck": "tsc --noEmit -p herald/server/tsconfig.json",
+    "herald:server:deploy": "wrangler deploy --config herald/server/wrangler.toml",
+    "herald:publisher:build": "esbuild tools/herald/publish-run.ts --bundle --platform=node --format=esm --target=node20 --legal-comments=none --outfile=herald/publisher/dist/herald-publish.mjs",
+    "herald:e2e": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/e2e.ts"
   },
   "dependencies": {
     "@xmcl/core": "2.15.1",
@@ -42,10 +51,12 @@
     "electron": "44.7.0",
     "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
+    "esbuild": "0.25.12",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
     "vite": "7.3.7",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "wrangler": "4.139.0"
   },
   "overrides": {
     "undici": "7.30.0"

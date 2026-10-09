@@ -24,8 +24,10 @@ Herald (PC du staff) ──nom + code──▶ Serveur Herald (Cloudflare Worker
                                      · profils, rôles, permissions, présence
                                      · brouillons, commentaires, statuts, corbeille, historique, journal
                                      · vérifie les permissions et la validation à plusieurs
-                                     · signe (Ed25519, même clé qu'aujourd'hui) et envoie le contenu sur GitHub
+                                     · prépare la publication et lance GitHub Actions (modifié en S2 : plan A)
                                      · garde les clés des coffres et les délivre à l'heure (§ 6.3)
+                                                 ▼
+                                     GitHub Actions : valide, SIGNE (Ed25519, même clé qu'aujourd'hui), commit
                                                  ▼
                                      GitHub, dossier content/ public (comme aujourd'hui)
                                                  ▼
@@ -37,9 +39,10 @@ Herald (PC du staff) ──nom + code──▶ Serveur Herald (Cloudflare Worker
 - Si le serveur Herald tombe : **aucun effet pour les joueurs** ; le staff ne peut plus publier ; les commandes
   actuelles (`content:feed`, `content:publish`) restent disponibles en secours pour les développeurs.
 - Les calculs lourds (résolution des mods sur Modrinth, préparation du pack, images) se font **dans l'application
-  Herald**, sur le PC du staff ; le serveur vérifie, signe et publie (limite de calcul de l'offre gratuite).
-- La clé privée de signature est copiée par le propriétaire dans les **secrets du serveur** (en plus de sa
-  sauvegarde hors ligne). Même clé : aucune mise à jour du launcher n'est nécessaire pour ce point.
+  Herald**, sur le PC du staff ; le serveur vérifie les droits et prépare ; **GitHub Actions** valide, signe et publie
+  (plan A, choisi en S2 : signer et écrire dans GitHub dépassait la limite de calcul de l'offre gratuite).
+- La clé privée de signature est copiée par le propriétaire dans les **secrets GitHub** du dépôt de contenu (en plus
+  de sa sauvegarde hors ligne). Même clé : aucune mise à jour du launcher n'est nécessaire pour ce point.
 
 ## 3. Coût : 0 € par mois
 
@@ -146,8 +149,8 @@ lisible qu'à son heure (décision du propriétaire en S1, remplace le choix par
 
 ## 7. Urgence
 
-- Le launcher vérifie les nouveautés **toutes les 2 minutes** (au lieu de 10), requête conditionnelle quasi gratuite.
-  Délai d'une urgence imprévue : environ **5 à 7 minutes** (cache GitHub compris).
+- Le launcher vérifie les nouveautés **toutes les 2 minutes** (au lieu de 10) auprès du serveur Herald (« pouls »).
+  Délai d'une urgence imprévue : **2 minutes au plus** (mesuré en S2) ; si le serveur Herald est injoignable, 5 à 7 minutes.
 - Boutons d'urgence, sans revue : **démarrer une maintenance maintenant**, **« le serveur est de nouveau en
   ligne »**, **retirer une publication**.
 
@@ -204,11 +207,12 @@ lisible qu'à son heure (décision du propriétaire en S1, remplace le choix par
 
 ## 13. Sécurité
 
-- La clé privée de signature n'existe que sur le PC du propriétaire (sauvegarde) et dans les secrets du serveur
-  Herald. Jamais dans Herald, jamais dans le dépôt.
+- La clé privée de signature n'existe que sur le PC du propriétaire (sauvegarde) et dans les secrets GitHub du dépôt
+  de contenu. Jamais sur le serveur Herald, jamais dans Herald, jamais dans le dépôt.
 - Codes des profils : générés au hasard, affichés une fois, stockés en empreinte.
 - Le serveur vérifie lui-même rôles et permissions (l'application seule ne suffit pas).
-- Le serveur valide tout avec les schémas zod partagés avant de signer.
+- Le workflow de publication valide tout avec les schémas zod partagés avant de signer ; le serveur ne peut pas
+  écrire de contenu lui-même (son App GitHub peut seulement lancer le workflow).
 - Les brouillons ne sont jamais publics (ils vivent sur le serveur Herald, pas dans le dépôt).
 - Aucune donnée sur les joueurs n'est collectée.
 

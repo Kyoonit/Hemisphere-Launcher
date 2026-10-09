@@ -577,7 +577,7 @@ Meet at /warp spawn on 31 October at 20:00.</textarea>
     </div>
   </div>
   <div class="modal-bg" id="maintModal"><div class="modal">
-    <h2>Start a maintenance now</h2><p class="dim small">Players see it in about 2 to 7 minutes.</p>
+    <h2>Start a maintenance now</h2><p class="dim small">Players see it within 2 minutes.</p>
     <label class="lbl">Message</label><select><option>Template: Quick maintenance (back in ~30 min)</option><option>Template: Crash, we're on it</option><option>Write my own…</option></select>
     <label class="lbl">Expected end (optional)</label><div class="dt"><input type="date" value="2026-10-09"><input type="text" value="21:45"></div>
     <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="maintGo">Start now</button></div>
@@ -964,7 +964,7 @@ function setHero() {
   const h = document.getElementById('hero'); h.className = 'status-hero ' + (liveMaintenance ? 'bad' : 'ok')
   h.querySelector('.dot').style.background = liveMaintenance ? 'var(--red)' : ''
   document.getElementById('heroTitle').textContent = liveMaintenance ? 'Maintenance in progress' : 'Server online'
-  document.getElementById('heroSub').textContent = liveMaintenance ? 'Started 21:14 by Kyonit · players see it within a few minutes · expected end 21:45' : 'Players see the normal Home. Next planned maintenance: Wed 28 Oct 14:00.'
+  document.getElementById('heroSub').textContent = liveMaintenance ? 'Started 21:14 by Kyonit · players see it within 2 minutes · expected end 21:45' : 'Players see the normal Home. Next planned maintenance: Wed 28 Oct 14:00.'
   const b = document.getElementById('heroBtn'); b.className = 'btn ' + (liveMaintenance ? 'primary' : 'danger'); b.textContent = liveMaintenance ? '✓ Server is back online' : '⚡ Start a maintenance now'
 }
 // who is signed in (prototype only)

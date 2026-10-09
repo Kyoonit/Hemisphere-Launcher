@@ -52,13 +52,14 @@ export const REMINDER_MINUTES = 15
 
 const icsDate = (ms: number) => new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 const icsText = (s: string) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
-/** Lines longer than 75 bytes are folded (RFC 5545). */
+/** Lines longer than 75 bytes are folded (RFC 5545). TextEncoder, not Buffer: shared with the Herald server. */
+const byteLength = (s: string) => new TextEncoder().encode(s).length
 const fold = (line: string) => {
   const out: string[] = []
   let rest = line
-  while (Buffer.byteLength(rest) > 75) {
+  while (byteLength(rest) > 75) {
     let cut = 74
-    while (Buffer.byteLength(rest.slice(0, cut)) > 74) cut--
+    while (byteLength(rest.slice(0, cut)) > 74) cut--
     out.push(rest.slice(0, cut))
     rest = ` ${rest.slice(cut)}`
   }

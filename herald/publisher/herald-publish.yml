@@ -1,0 +1,33 @@
+# Herald publish — goes in the CONTENT repository as .github/workflows/herald-publish.yml, next to
+# .github/herald/herald-publish.mjs (built by `npm run herald:publisher:build` in the launcher repository).
+# Started by the Herald server (GitHub App, Actions: write). Validates, signs, commits; the server then points
+# launchers at the new commit. Repository secrets: SIGNING_KEY, PUBLISHER_TOKEN · variable: HERALD_URL.
+name: Herald publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Why (set by the Herald server)
+        required: false
+
+# One publish at a time; a run started meanwhile waits (the publisher always takes the newest state)
+concurrency:
+  group: herald-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate, sign and commit
+        run: node .github/herald/herald-publish.mjs
+        env:
+          HERALD_URL: ${{ vars.HERALD_URL }}
+          PUBLISHER_TOKEN: ${{ secrets.PUBLISHER_TOKEN }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}

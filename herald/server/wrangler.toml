@@ -1,0 +1,28 @@
+# Herald server (Cloudflare Worker). No secret in this file: local ones live in .dev.vars (git-ignored, written by
+# `npm run herald:test-key`), deployed ones are set with `npx wrangler secret put <NAME>`.
+name = "herald-staging"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+HERALD_ENV = "staging"
+# Test content only, in a separate TEST repository: the test GitHub App cannot even reach the launcher repository
+GITHUB_REPO = "Kyoonit/herald-test-content"
+GITHUB_BRANCH = "main"
+CONTENT_DIR = "content"
+# The workflow that validates, signs and commits (herald/publisher/herald-publish.yml, copied into the content repository)
+GITHUB_WORKFLOW = "herald-publish.yml"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "herald-staging"
+# Staging database (Kyonit's Cloudflare account); local dev uses its own copy in herald/server/.wrangler
+database_id = "3f7b9b6a-f63e-4d1b-9f38-ee902cf1d519"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["* * * * *"]
+
+[observability]
+enabled = true
