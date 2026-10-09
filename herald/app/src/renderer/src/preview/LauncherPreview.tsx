@@ -6,13 +6,15 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import i18next, { type i18n } from 'i18next'
 import { I18nextProvider, initReactI18next, useTranslation } from 'react-i18next'
-import { BookOpen, Globe, Images, Map as MapIcon, Minus, Newspaper, Package, Play, Settings, Square, X } from 'lucide-react'
+import { BookOpen, Construction, Globe, Images, Map as MapIcon, Minus, Newspaper, Package, Play, Settings, Square, X } from 'lucide-react'
 import en from '@locales/en.json'
 import fr from '@locales/fr.json'
 import type { FeedView } from '@shared/schedule'
 import { NEWS_CATEGORIES, type NewsItem } from '@shared/feed'
 import { NewsArticle, NewsCard, NewsFeatured, NewsPeekCard } from '@launcher/components/feed/NewsCards'
-import { AnnouncementBanner, WelcomeHeading } from '@launcher/components/feed/HomeNotices'
+import { AnnouncementBanner, MaintenanceNotice, PlannedMaintenance, WelcomeHeading } from '@launcher/components/feed/HomeNotices'
+import { RestartBox } from '@launcher/components/feed/RestartBox'
+import { nextRestart, restartState } from '@shared/restart'
 import logo from '@launcher/assets/logo.png'
 import kingdom from '@launcher/assets/backgrounds/kingdom.webp'
 
@@ -44,6 +46,8 @@ interface Props {
   /** News the player has not opened yet (red badge) */
   badge: number
   playerName?: string | null
+  /** The instant shown (restart countdown, maintenance end); default: now */
+  at?: number
 }
 
 /** The launcher window, scaled to the width it is given */
@@ -90,7 +94,7 @@ class Guard extends Component<{ children: ReactNode }, { error: string | null }>
   }
 }
 
-function Window({ view, lang, screen, onScreen, article, onArticle, badge, playerName, height }: Props & { height: number }) {
+function Window({ view, lang, screen, onScreen, article, onArticle, badge, playerName, height, at }: Props & { height: number }) {
   const { t } = useTranslation()
   const dimmed = screen !== 'home'
   // The launcher sizes Home's title with the window height (vh): same formula with this window's height
@@ -103,7 +107,7 @@ function Window({ view, lang, screen, onScreen, article, onArticle, badge, playe
       {dimmed && <div className="absolute inset-0 bg-gray-900/95" />}
       <TitleBar screen={screen} onScreen={onScreen} badge={screen === 'news' ? 0 : badge} />
       <div className="absolute inset-x-0 top-[52px] bottom-5">
-        {screen === 'home' ? <Home view={view} onOpenNews={() => (onScreen('news'), onArticle(null))} playerName={playerName === undefined ? 'Steve' : playerName} /> : <News view={view} lang={lang} article={article} onArticle={onArticle} />}
+        {screen === 'home' ? <Home view={view} at={at ?? Date.now()} onOpenNews={() => (onScreen('news'), onArticle(null))} playerName={playerName === undefined ? 'Steve' : playerName} /> : <News view={view} lang={lang} article={article} onArticle={onArticle} />}
       </div>
       <p className="pointer-events-none absolute inset-x-0 bottom-0 h-5 truncate px-4 text-center text-[11px] leading-5 text-gray-500">{t('legal.disclaimer')}</p>
     </div>
@@ -158,16 +162,19 @@ function TitleBar({ screen, onScreen, badge }: { screen: PreviewScreen; onScreen
   )
 }
 
-function Home({ view, onOpenNews, playerName }: { view: FeedView; onOpenNews(): void; playerName: string | null }) {
+function Home({ view, at, onOpenNews, playerName }: { view: FeedView; at: number; onOpenNews(): void; playerName: string | null }) {
   const { t } = useTranslation()
   const latest = view.news[0]
   return (
     <div className="relative flex h-full flex-col items-center px-7 pb-3">
+      <ServerCard view={view} at={at} />
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
         {view.banner && <AnnouncementBanner banner={view.banner} />}
         <WelcomeHeading welcome={view.welcome} name={playerName} compact={false} />
         <div className="flex flex-col items-center" style={{ marginTop: 'var(--lp-gap)' }}>
           <button className="play-button">{t('home.play')}</button>
+          {view.maintenance.active && <MaintenanceNotice maintenance={view.maintenance} now={at} />}
+          {view.maintenancePlanned && <PlannedMaintenance planned={view.maintenancePlanned} />}
         </div>
       </section>
       <footer className="relative z-10 flex w-full flex-none items-end justify-between gap-4 pt-4">
@@ -237,5 +244,37 @@ function News({ view, lang, article, onArticle }: { view: FeedView; lang: string
         </>
       )}
     </div>
+  )
+}
+
+/** The server panel of Home (top right): its status and the restart line, at the instant shown (players and ping are live data, not shown) */
+function ServerCard({ view, at }: { view: FeedView; at: number }) {
+  const { t, i18n } = useTranslation()
+  const maintenance = view.maintenance.active
+  const restarting = !maintenance && view.restart ? restartState(at, view.restart).phase === 'restarting' : false
+  const [tone, label] = maintenance ? ['text-amber-400', t('server.maintenance')] : restarting ? ['text-red-400', t('server.restartingShort')] : ['text-green-400', t('server.online')]
+  return (
+    <aside className="glass absolute top-5 right-6 flex w-[268px] flex-col p-4">
+      <p className="text-xs font-bold tracking-[0.08em] text-gray-400 uppercase">{t('server.name')}</p>
+      <div className="mt-2">
+        <span className={`inline-flex items-center gap-2 rounded-full bg-gray-900/75 px-3 py-[5px] text-xs font-bold tracking-[0.06em] uppercase ${tone}`}>
+          <i className="h-2 w-2 rounded-full bg-current shadow-[0_0_8px_currentColor]" />
+          {label}
+        </span>
+      </div>
+      {maintenance ? (
+        <div className="mt-3 flex items-start gap-2.5 rounded-lg bg-amber-900/50 px-3 py-2.5 text-[13px] shadow-[inset_3px_0_0_var(--color-amber-400)]">
+          <Construction size={16} className="mt-0.5 flex-none text-amber-400" />
+          <span className="text-amber-100">
+            {t('server.maintenanceShort')}
+            {view.maintenance.until && Date.parse(view.maintenance.until) > at && (
+              <span className="block text-xs text-amber-200/80">{t('home.maintenanceUntil', { time: new Date(view.maintenance.until).toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) })}</span>
+            )}
+          </span>
+        </div>
+      ) : (
+        view.restart && <RestartBox restart={restarting ? restartState(at, view.restart) : nextRestart(at, view.restart)} live={restarting ? { phase: 'restarting', since: at, checkedAt: at } : null} now={at} />
+      )}
+    </aside>
   )
 }

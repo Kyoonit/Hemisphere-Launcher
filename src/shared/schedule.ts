@@ -20,6 +20,8 @@ export interface FeedView extends Feed {
   /** Remote Home backgrounds in force: `replace` = only these, otherwise added to the built-in ones */
   backgrounds?: { mode: 'add' | 'replace'; items: Pick<Background, 'id' | 'name' | 'image'>[] }
   restartExceptions?: RestartException[]
+  /** The daily restart in force, with its exceptions (days without restart, extra restarts) */
+  restart: (NonNullable<Feed['restart']> & { exceptions?: RestartException[] }) | null
   /** Next instant this view changes by itself (ms), to recompute exactly then; null = nothing scheduled */
   nextChangeAt: number | null
 }
@@ -130,7 +132,7 @@ export function resolveFeed(feed: FeedV2, opened: OpenedItems, now: number, lang
     updatedAt: feed.updatedAt,
     maintenance: running ? { active: true, message: running.message, ...(running.end ? { until: running.end } : {}) } : { active: false, message: { en: '' } },
     ...(planned ? { maintenancePlanned: { message: planned.message, start: planned.start, ...(planned.end ? { end: planned.end } : {}) } } : {}),
-    restart: rule ? { time: rule.time, timeZone: rule.timeZone, durationMin: rule.durationMin } : null,
+    restart: rule ? { time: rule.time, timeZone: rule.timeZone, durationMin: rule.durationMin, ...(exceptions.length ? { exceptions } : {}) } : null,
     restartExceptions: exceptions,
     news: visibleNews,
     events: visibleEvents.slice(0, 50),

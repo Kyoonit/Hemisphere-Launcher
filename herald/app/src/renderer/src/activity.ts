@@ -26,6 +26,20 @@ export function describe(a: ActivityEntry): string {
       return `gave ${name} a new code`
     case 'profile.locked':
       return `${name} was locked after 5 wrong codes`
+    case 'maintenance.plan':
+      return `planned a maintenance (“${a.detail?.message ?? ''}”)`
+    case 'maintenance.update':
+      return `changed a planned maintenance (“${a.detail?.message ?? ''}”)`
+    case 'maintenance.delete':
+      return `removed a planned maintenance (“${a.detail?.message ?? ''}”)`
+    case 'maintenance.start':
+      return `started a maintenance now (“${a.detail?.message ?? ''}”)`
+    case 'maintenance.end':
+      return 'said the server is back online (maintenance ended)'
+    case 'templates.update':
+      return 'changed the maintenance message templates'
+    case 'restart.update':
+      return `changed the daily restart (${a.detail?.time ?? ''} ${a.detail?.timeZone ?? ''})`
   }
   const what = `the ${KIND[a.detail?.kind as string] ?? 'publication'} “${(a.detail?.title as string | undefined) ?? '…'}”`
   switch (a.action) {

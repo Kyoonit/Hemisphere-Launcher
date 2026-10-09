@@ -7,7 +7,7 @@ import DiscordIcon from '../components/DiscordIcon'
 import ServerPanel from '../components/ServerPanel'
 import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
-import { AnnouncementBanner, WelcomeHeading } from '../components/feed/HomeNotices'
+import { AnnouncementBanner, MaintenanceNotice, PlannedMaintenance, WelcomeHeading } from '../components/feed/HomeNotices'
 import PlayZone, { useGameState } from '../components/PlayZone'
 import type { ReportCategory } from '@shared/report'
 import { useClient } from './Mods'
@@ -17,7 +17,6 @@ import type { AppInfo } from '@shared/ipc'
 import { byVersion, displayVersion, LAUNCHER_CHANGELOG, launcherHistory } from '@shared/launcherChangelog'
 import { dayLabel, relativeDay } from '../components/LauncherUpdates'
 import type { Feed } from '@shared/feed'
-import { localize } from '@shared/manifest'
 import { useAccounts } from '../accounts'
 import type { SessionRecap } from '@shared/game'
 
@@ -76,7 +75,8 @@ export default function Home({
             <ServerNotice offline={status?.online === false} feed={feed} />
             {!crashed && <SessionRecapLine onOpenScreenshots={onOpenScreenshots} />}
             {!crashed && <PreflightHints />}
-            {feed?.maintenance.active && <MaintenanceBanner feed={feed} />}
+            {feed?.maintenance.active && <MaintenanceNotice maintenance={feed.maintenance} now={Date.now()} />}
+            {feed?.maintenancePlanned && !crashed && <PlannedMaintenance planned={feed.maintenancePlanned} />}
           </div>
         </div>
       </section>
@@ -265,23 +265,6 @@ function ImportPrompt({ onImport }: { onImport(): void }) {
         <Upload size={13} /> {t('import.settingsButton')}
       </button>
     </aside>
-  )
-}
-
-/** Staff maintenance message (from the signed feed), with the end time in the player's own time zone. */
-function MaintenanceBanner({ feed }: { feed: Feed }) {
-  const { t, i18n } = useTranslation()
-  const until = feed.maintenance.until ? new Date(feed.maintenance.until) : null
-  return (
-    <div className="animate-fade mt-2 flex max-w-[400px] items-center gap-3 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/55 px-4 py-2.5 text-left text-[13px] text-amber-100 backdrop-blur-sm">
-      <TriangleAlert size={16} className="flex-none text-amber-400" />
-      <span>
-        <b className="text-white">{t('server.maintenance')}</b> · {localize(feed.maintenance.message, i18n.language)}
-        {until && until.getTime() > Date.now() && (
-          <> {t('home.maintenanceUntil', { time: until.toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) })}</>
-        )}
-      </span>
-    </div>
   )
 }
 

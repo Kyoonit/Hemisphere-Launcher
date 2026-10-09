@@ -19,6 +19,8 @@ const ALLOWED = [
   /^\/publications$/,
   /^\/publications\/[nbw]-[a-z0-9]{12}(\/(status|publish|unpublish|delete|restore|comments|editing|versions\/\d{1,6}))?$/,
   /^\/publish$/,
+  /^\/server\/(templates|maintenances|maintenance-now|back-online|restart|history)$/,
+  /^\/server\/maintenances\/m-[a-z0-9]{10}\/delete$/,
 ]
 
 let win: BrowserWindow | null = null

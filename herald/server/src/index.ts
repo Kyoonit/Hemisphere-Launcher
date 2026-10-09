@@ -9,6 +9,7 @@
  *   …    /publications           news, banners, welcome messages: edit, statuses, comments, publish (S5)
  *   POST /images, GET /images/:id   pictures of the publications (WebP from the app)
  *   POST /publish                publish the current state again (a failed run, a retry)
+ *   …    /server/…               maintenances (planned, now, back online), daily restart, their history (S6)
  *   GET  /update/<file>          Herald app updates (signed-in staff only), from the private releases repository
  *   GET  /pulse                  PUBLIC: last sequence + commit; launchers read the feed at that exact commit (raw
  *                                 by commit is never cached, plain raw is cached up to 5 min): emergencies in minutes
@@ -28,6 +29,7 @@ import { githubConfigured, latestReleaseFile, startPublishWorkflow, type GithubE
 import { listedFiles, openKeys, sealFuture, type FeedDraft } from './feedV2'
 import { authenticate, bootstrap, createProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
 import * as pubs from './publications'
+import * as server from './serverState'
 
 export interface Env extends GithubEnv {
   DB: D1Database
@@ -161,7 +163,7 @@ async function nextJob(env: Env): Promise<Response> {
   const now = Date.now()
   await env.DB.batch([
     env.DB.prepare("UPDATE publish_jobs SET status = 'superseded', updated_at = ?2 WHERE status = 'queued' AND id != ?1").bind(job.id, now),
-    env.DB.prepare("UPDATE publish_jobs SET status = 'publishing', sequence = ?2, updated_at = ?3 WHERE id = ?1").bind(job.id, sequence, now),
+    env.DB.prepare("UPDATE publish_jobs SET status = 'publishing', sequence = ?2, updated_at = ?3, started_at = ?3 WHERE id = ?1").bind(job.id, sequence, now),
   ])
   return json({ job: { id: job.id, sequence, ...JSON.parse(job.payload) }, contentDir: env.CONTENT_DIR })
 }
@@ -205,7 +207,9 @@ function publisher(env: Env, ctx: ExecutionContext, actor: Actor): pubs.Publishe
 async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, path: string): Promise<Response | null> {
   const one = path.match(/^\/publications\/([nbw]-[a-z0-9]{12})(?:\/(status|publish|unpublish|delete|restore|comments|editing|versions\/(\d{1,6})))?$/)
   const image = path.match(/^\/images\/([0-9a-f]{64})$/)
-  if (path !== '/publications' && path !== '/images' && path !== '/publish' && !one && !image) return null
+  const maintenance = path.match(/^\/server\/maintenances\/(m-[a-z0-9]{10})\/delete$/)
+  const serverPaths = ['/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history']
+  if (path !== '/publications' && path !== '/images' && path !== '/publish' && !one && !image && !maintenance && !serverPaths.includes(path)) return null
   const actor = await authenticate(env, req)
   const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
   const run = publisher(env, ctx, actor)
@@ -217,6 +221,14 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
     if (!actor.permissions.includes('publications.publish')) throw new HttpError(403, 'You cannot publish.')
     return json({ job: await run('publish again') })
   }
+  // Server tab (S6): maintenances, emergencies, daily restart
+  if (req.method === 'GET' && path === '/server/history') return json(await server.serverHistory(env))
+  if (req.method === 'POST' && path === '/server/maintenances') return json(await server.saveMaintenance(env, actor, await body(), run))
+  if (req.method === 'POST' && maintenance) return json(await server.deleteMaintenance(env, actor, maintenance[1], await body(), run))
+  if (req.method === 'POST' && path === '/server/maintenance-now') return json(await server.maintenanceNow(env, actor, await body(), run))
+  if (req.method === 'POST' && path === '/server/back-online') return json(await server.backOnline(env, actor, run))
+  if (req.method === 'POST' && path === '/server/templates') return json(await server.saveTemplates(env, actor, await body()))
+  if (req.method === 'POST' && path === '/server/restart') return json(await server.saveRestart(env, actor, await body(), run))
   if (!one) return json({ error: 'not found' }, 404)
   const [, id, action, version] = one
   if (req.method === 'GET' && !action) return json(await pubs.getPublication(env, actor, id))

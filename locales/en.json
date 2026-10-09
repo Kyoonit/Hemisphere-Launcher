@@ -25,6 +25,7 @@
     "serverOffline": "Hemisphere is offline right now",
     "clientUnknown": "Hemisphere Client",
     "maintenanceUntil": "Back around {{time}}.",
+    "maintenancePlanned": "Maintenance planned {{when}}",
     "preparingBackground": "Getting the next game ready…"
   },
   "links": {
@@ -179,6 +180,7 @@
     "restartIn": "Restart in {{time}}",
     "restarting": "Restarting…",
     "dailyAt": "Daily at {{time}} your time",
+    "extraAt": "Extra restart at {{time}} your time",
     "onlineNow": "Online now",
     "nobody": "Nobody online right now — be the first!",
     "more": "+ {{count}} more",

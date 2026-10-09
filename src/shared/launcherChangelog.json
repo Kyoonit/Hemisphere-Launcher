@@ -5,6 +5,18 @@
       {
         "version": "next",
         "area": "home",
+        "en": "Planned maintenances are announced on Home in advance, in your own time.",
+        "fr": "Les maintenances prévues sont annoncées à l’avance sur l’accueil, à ton heure."
+      },
+      {
+        "version": "next",
+        "area": "home",
+        "en": "The restart countdown knows the days without restart and the extra restarts.",
+        "fr": "Le compte à rebours du restart connaît les jours sans restart et les restarts exceptionnels."
+      },
+      {
+        "version": "next",
+        "area": "home",
         "en": "The team can show a short announcement above the title on Home, and a welcome message for special days (Halloween, Christmas…).",
         "fr": "L’équipe peut afficher une courte annonce au-dessus du titre de l’accueil, et un message de bienvenue pour les jours spéciaux (Halloween, Noël…)."
       },

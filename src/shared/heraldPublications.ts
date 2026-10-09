@@ -234,3 +234,16 @@ export const DEFAULT_FEED_BASE = (restart: { time: string; timeZone: string; dur
   events: [],
   backgrounds: [],
 })
+
+/** Ready-made maintenance messages (Server tab); the staff can change them (permission templates.write) */
+export interface MessageTemplate {
+  id: string
+  name: string
+  text: string
+}
+export const DEFAULT_MAINTENANCE_TEMPLATES: MessageTemplate[] = [
+  { id: 't-quick', name: 'Quick maintenance', text: 'Quick maintenance: back in about 30 minutes.' },
+  { id: 't-crash', name: 'Crash', text: 'The server crashed, we are on it. Back as soon as possible.' },
+  { id: 't-update', name: 'Server update', text: 'Server update in progress: back soon with new content!' },
+  { id: 't-planned', name: 'Planned maintenance', text: 'Planned maintenance: the server will be closed for a while.' },
+]

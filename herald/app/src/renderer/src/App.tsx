@@ -8,10 +8,10 @@ import Team from './screens/Team'
 import MySettings from './screens/MySettings'
 import Publications from './screens/Publications'
 import TimeTravel from './screens/TimeTravel'
+import Server from './screens/Server'
 import { PubsProvider } from './pubs'
 
 const COMING: Partial<Record<Tab, string>> = {
-  server: 'Maintenance, emergency buttons and the daily restart: phase S6.',
   backgrounds: 'Home backgrounds by period: phase S8.',
   pack: 'The mod pack and its approvals: phase S10.',
 }
@@ -54,6 +54,7 @@ function Shell({ staging }: { staging: boolean }) {
         {shown === 'home' && <Home onOpen={goPub} />}
         {shown === 'publications' && <Publications open={openPub} onOpen={setOpenPub} />}
         {shown === 'preview' && <TimeTravel />}
+        {shown === 'server' && <Server />}
         {shown === 'team' && <Team />}
         {shown === 'settings' && <MySettings />}
         {COMING[shown] && (

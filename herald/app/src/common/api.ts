@@ -1,6 +1,6 @@
 /** What the preload script exposes to Herald's interface (window.herald). The session token never leaves main. */
 import type { Permission, Role } from '@shared/heraldRoles'
-import type { FeedBase, ImageRef, Publication, PublicationData, Status } from '@shared/heraldPublications'
+import type { FeedBase, ImageRef, MessageTemplate, Publication, PublicationData, Status } from '@shared/heraldPublications'
 
 export interface Profile {
   id: string
@@ -42,6 +42,9 @@ export interface PublishJob {
   who: string | null
   created_at: number
   updated_at: number
+  /** When GitHub Actions took it */
+  started_at: number | null
+  commit_sha: string | null
 }
 
 export interface PublicationsState {
@@ -51,6 +54,10 @@ export interface PublicationsState {
   /** What launchers read right now */
   live: { sequence: number; commit: string | null; at: number } | null
   jobs: PublishJob[]
+  /** Version of `base`: sent back by the Server tab (a change based on an older one is refused) */
+  baseVersion: number
+  /** Ready-made maintenance messages */
+  maintenanceTemplates: MessageTemplate[]
 }
 
 export interface PublicationDetail {

@@ -173,7 +173,7 @@ export async function sync(env: AccountsEnv, actor: Actor) {
   const people = (await env.DB.prepare('SELECT * FROM profiles WHERE revoked_at IS NULL ORDER BY name_key').all<ProfileRow>()).results.map((p) => publicProfile(p, now))
   const activity = (await env.DB.prepare('SELECT a.id, a.at, a.action, a.target, a.detail, p.name AS who FROM activity a LEFT JOIN profiles p ON p.id = a.profile_id ORDER BY a.id DESC LIMIT 50').all()).results.map((a) => ({ ...a, detail: a.detail ? JSON.parse(a.detail as string) : null }))
   // Changes when a publication or a publish job changes: the app reloads the publications only then
-  const stamp = await env.DB.prepare('SELECT (SELECT count(*) || \'-\' || coalesce(max(updated_at), 0) FROM publications) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM publish_jobs) AS s').first<{ s: string }>()
+  const stamp = await env.DB.prepare('SELECT (SELECT count(*) || \'-\' || coalesce(max(updated_at), 0) FROM publications) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM publish_jobs) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM settings) AS s').first<{ s: string }>()
   return { now, me: publicProfile(actor.profile, now), people, activity, contentStamp: stamp?.s ?? '' }
 }
 

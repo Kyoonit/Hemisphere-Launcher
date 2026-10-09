@@ -578,7 +578,7 @@ function EditorPreview({ pub, data }: { pub: Publication; data: PublicationData 
           Players see another {pub.kind === 'banner' ? 'banner' : 'welcome message'} instead: “{hiddenBy}”. {pub.kind === 'banner' ? 'Only one banner shows at a time: the most important, then the newest.' : 'Only one shows at a time: the newest.'} Take the other one down (or change its importance) to show this one.
         </p>
       )}
-      <LauncherPreview view={view} lang={lang} screen={screen} onScreen={setScreen} article={article} onArticle={setArticle} size={size} badge={badgeAt(state, at, lang, opts, Math.min(at, from) - 1000)} />
+      <LauncherPreview view={view} at={at} lang={lang} screen={screen} onScreen={setScreen} article={article} onArticle={setArticle} size={size} badge={badgeAt(state, at, lang, opts, Math.min(at, from) - 1000)} />
       {pub.kind === 'news' && (
         <div className="mt-2 flex gap-1.5">
           <button className="btn btn-sm btn-ghost" onClick={() => (setScreen('news'), setArticle(null))}>

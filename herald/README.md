@@ -110,3 +110,15 @@ Install window: `herald/app/build/installer.nsh` shows Herald's own window while
 HemiSplash plugin built with Herald's texts and colours, `herald/app/build/x86-unicode/HeraldSplash.dll`, background
 `herald/app/build/installerSplash.bmp`). To change it: `node tools/installer-splash/herald.mjs` (needs Zig:
 `py -m pip install --user ziglang`), then commit the rebuilt DLL and picture.
+
+## Server tab (phase S6)
+
+Maintenances (planned, started now, "back online") and the daily restart (time from a date, days without restart,
+extra restarts) are feed parts kept in `settings` (`feed.base`, `herald/server/src/serverState.ts`); every change is
+kept in `settings_versions` (migration `0006`), journaled, and published at once. Emergencies need
+`maintenance.emergency`, planning `maintenance.write`, the restart `restart.write`.
+
+```bash
+npm run herald:server:reset-local && npm run herald:server:dev    # then, in another terminal:
+npm run herald:e2e-server                                         # emergency, planned, restart, permissions, history
+```

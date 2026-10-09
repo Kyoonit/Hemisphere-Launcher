@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Info, Megaphone, OctagonAlert } from 'lucide-react'
+import { CalendarClock, Info, Megaphone, OctagonAlert, TriangleAlert } from 'lucide-react'
 import type { FeedView } from '@shared/schedule'
 import { localize } from '@shared/manifest'
 
@@ -46,5 +46,38 @@ export function WelcomeHeading({ welcome, name, compact }: { welcome?: FeedView[
       </h1>
       {welcome && !compact && <p className="animate-rise mt-3 max-w-[560px] text-[15px] leading-snug text-gray-200 drop-shadow-md [animation-delay:150ms]">{localize(welcome.text, i18n.language)}</p>}
     </>
+  )
+}
+
+/** Staff maintenance message, with the end time in the player's own time zone (`now`: the instant shown) */
+export function MaintenanceNotice({ maintenance, now }: { maintenance: FeedView['maintenance']; now: number }) {
+  const { t, i18n } = useTranslation()
+  const until = maintenance.until ? new Date(maintenance.until) : null
+  return (
+    <div className="animate-fade mt-2 flex max-w-[400px] items-center gap-3 rounded-lg border-l-[3px] border-amber-400 bg-amber-900/55 px-4 py-2.5 text-left text-[13px] text-amber-100 backdrop-blur-sm">
+      <TriangleAlert size={16} className="flex-none text-amber-400" />
+      <span>
+        <b className="text-white">{t('server.maintenance')}</b> · {localize(maintenance.message, i18n.language)}
+        {until && until.getTime() > now && <> {t('home.maintenanceUntil', { time: until.toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) })}</>}
+      </span>
+    </div>
+  )
+}
+
+/** A maintenance announced in advance: when (the player's time) and why */
+export function PlannedMaintenance({ planned }: { planned: NonNullable<FeedView['maintenancePlanned']> }) {
+  const { t, i18n } = useTranslation()
+  const fmt = (iso: string, withDay: boolean) => new Date(iso).toLocaleString(i18n.language, { ...(withDay ? { weekday: 'long', day: 'numeric', month: 'long' } : {}), hour: '2-digit', minute: '2-digit' })
+  const start = new Date(planned.start)
+  const sameDay = planned.end && new Date(planned.end).toDateString() === start.toDateString()
+  const when = planned.end ? `${fmt(planned.start, true)} → ${fmt(planned.end, !sameDay)}` : fmt(planned.start, true)
+  return (
+    <div className="animate-fade mt-2 flex max-w-[440px] items-start gap-3 rounded-lg border-l-[3px] border-amber-400/70 bg-gray-900/70 px-4 py-2.5 text-left text-[13px] text-gray-200 backdrop-blur-sm">
+      <CalendarClock size={16} className="mt-0.5 flex-none text-amber-400" />
+      <span>
+        <b className="text-white">{t('home.maintenancePlanned', { when })}</b>
+        <span className="block text-gray-300">{localize(planned.message, i18n.language)}</span>
+      </span>
+    </div>
   )
 }

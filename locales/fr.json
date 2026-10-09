@@ -25,6 +25,7 @@
     "serverOffline": "Hemisphere est hors ligne pour le moment",
     "clientUnknown": "Client Hemisphere",
     "maintenanceUntil": "Retour vers {{time}}.",
+    "maintenancePlanned": "Maintenance prévue {{when}}",
     "preparingBackground": "Préparation de la prochaine partie…"
   },
   "links": {
@@ -179,6 +180,7 @@
     "restartIn": "Redémarrage dans {{time}}",
     "restarting": "Redémarrage…",
     "dailyAt": "Tous les jours à {{time}} (ton heure)",
+    "extraAt": "Restart exceptionnel à {{time}} (ton heure)",
     "onlineNow": "En ligne",
     "nobody": "Personne en ligne — sois le premier !",
     "more": "+ {{count}} autres",

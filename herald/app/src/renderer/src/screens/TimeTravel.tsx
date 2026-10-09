@@ -106,7 +106,7 @@ export default function TimeTravel() {
 
       <div className="grid grid-cols-[minmax(0,1fr)_300px] gap-5">
         <div className="min-w-0">
-          <LauncherPreview view={view} lang={lang} screen={screen} onScreen={setScreen} article={article} onArticle={setArticle} size={size} badge={badgeAt(state, at, lang, opts)} />
+          <LauncherPreview view={view} at={at} lang={lang} screen={screen} onScreen={setScreen} article={article} onArticle={setArticle} size={size} badge={badgeAt(state, at, lang, opts)} />
           <p className="mt-2 text-xs text-gray-500">Click Play or News in the preview, and the news cards, to move around like a player. The red badge counts the news a player who last looked a day earlier has not opened.</p>
         </div>
         <div className="card max-h-[620px] overflow-auto">

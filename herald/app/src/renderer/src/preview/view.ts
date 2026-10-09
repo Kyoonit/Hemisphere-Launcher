@@ -89,6 +89,11 @@ export function describeChange(a: FeedView, b: FeedView): string[] {
     else if (was.get(id)!.featured && !n.featured) lines.push(`No longer the big card: “${en(n.title)}”`)
   }
   for (const [id, n] of was) if (!is.has(id)) lines.push(`News removed: “${en(n.title)}”`)
+  if (!a.maintenancePlanned && b.maintenancePlanned) lines.push(`Maintenance announced: “${en(b.maintenancePlanned.message)}”`)
+  if (!a.maintenance.active && b.maintenance.active) lines.push(`Maintenance starts: “${en(b.maintenance.message)}”`)
+  if (a.maintenance.active && !b.maintenance.active) lines.push('Maintenance ends: the server is open again')
+  if (a.restart && b.restart && (a.restart.time !== b.restart.time || a.restart.timeZone !== b.restart.timeZone || a.restart.durationMin !== b.restart.durationMin))
+    lines.push(`Daily restart now ${b.restart.time} ${b.restart.timeZone} (${b.restart.durationMin} min)`)
   if (en(a.banner?.text) !== en(b.banner?.text)) lines.push(b.banner ? `Banner: “${en(b.banner.text)}”` : 'Banner removed')
   if (en(a.welcome?.text) !== en(b.welcome?.text) || en(a.welcome?.title) !== en(b.welcome?.title)) lines.push(b.welcome ? `Welcome message: “${en(b.welcome.title) || en(b.welcome.text)}”` : 'Back to the usual welcome')
   return lines

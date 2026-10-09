@@ -4,7 +4,7 @@
  * moves to the trash (restorable). Publishing sends the whole current state (every published publication + the
  * other feed parts) to the publish queue: see publishAll.
  */
-import { DEFAULT_FEED_BASE, emptyData, feedDraft, ID_PREFIX, MAX_IMAGE_BYTES, problems, PUBLICATION_KINDS, PublicationDataSchema, STATUSES, type FeedBase, type Publication, type PublicationData, type PublicationKind, type Status } from '../../../src/shared/heraldPublications.ts'
+import { DEFAULT_FEED_BASE, DEFAULT_MAINTENANCE_TEMPLATES, emptyData, feedDraft, ID_PREFIX, MAX_IMAGE_BYTES, problems, PUBLICATION_KINDS, PublicationDataSchema, STATUSES, type FeedBase, type Publication, type PublicationData, type PublicationKind, type Status } from '../../../src/shared/heraldPublications.ts'
 import { RESTART_SCHEDULE } from '../../../src/shared/server.ts'
 import type { Permission } from '../../../src/shared/heraldRoles.ts'
 import { HttpError, logActivity, type Actor } from './accounts'
@@ -82,12 +82,15 @@ export async function listPublications(env: PublicationsEnv, actor: Actor) {
   const now = Date.now()
   const rows = (await env.DB.prepare(`${SELECT} ORDER BY pub.updated_at DESC LIMIT 500`).all<Row>()).results
   const state = await env.DB.prepare('SELECT sequence, commit_sha, updated_at FROM publish_state WHERE id = 1').first<{ sequence: number; commit_sha: string | null; updated_at: string }>()
-  const jobs = (await env.DB.prepare('SELECT j.id, j.status, j.error, j.sequence, j.reason, j.created_at, j.updated_at, p.name AS who FROM publish_jobs j LEFT JOIN profiles p ON p.id = j.requested_by ORDER BY j.created_at DESC LIMIT 5').all()).results
+  const jobs = (await env.DB.prepare('SELECT j.id, j.status, j.error, j.sequence, j.reason, j.created_at, j.started_at, j.updated_at, j.commit_sha, p.name AS who FROM publish_jobs j LEFT JOIN profiles p ON p.id = j.requested_by ORDER BY j.created_at DESC LIMIT 12').all()).results
   return {
     now,
     publications: rows.map((r) => toPublication(r, now)).filter((p) => visible(actor, p)),
     base: await feedBase(env.DB),
     live: state ? { sequence: state.sequence, commit: state.commit_sha, at: Date.parse(state.updated_at) } : null,
+    /** Version of `base` (the Server tab sends it back: a stale change is refused) */
+    maintenanceTemplates: JSON.parse((await env.DB.prepare("SELECT value FROM settings WHERE key = 'templates.maintenance'").first<{ value: string }>())?.value ?? JSON.stringify(DEFAULT_MAINTENANCE_TEMPLATES)),
+    baseVersion: (await env.DB.prepare("SELECT updated_at FROM settings WHERE key = 'feed.base'").first<{ updated_at: number }>())?.updated_at ?? 0,
     jobs,
   }
 }

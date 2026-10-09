@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { FeedV2Schema, type FeedV2 } from '../src/shared/feedV2'
 import { resolveFeed, weeklyOccurrences, zonedTime } from '../src/shared/schedule'
-import { restartState } from '../src/shared/restart'
+import { nextRestart, previousRestart, restartState } from '../src/shared/restart'
 
 const base = (over: Partial<FeedV2> = {}): FeedV2 =>
   FeedV2Schema.parse({
@@ -79,14 +79,27 @@ describe('what a player sees (resolveFeed)', () => {
       },
     })
     const before = resolveFeed(feed, {}, T('2026-10-24T12:00:00Z'), 'en')
-    expect(before.restart).toEqual({ time: '17:00', timeZone: 'Europe/Paris', durationMin: 5 })
+    expect(before.restart).toMatchObject({ time: '17:00', timeZone: 'Europe/Paris', durationMin: 5 })
     expect(new Date(restartState(T('2026-10-24T12:00:00Z'), before.restart!).next).toISOString()).toBe('2026-10-24T15:00:00.000Z')
     const after = resolveFeed(feed, {}, T('2026-10-26T12:00:00Z'), 'en')
-    expect(after.restart).toEqual({ time: '15:00', timeZone: 'UTC', durationMin: 5 })
+    expect(after.restart).toMatchObject({ time: '15:00', timeZone: 'UTC', durationMin: 5 })
     // Paris is UTC+1 after 25 October: 15:00 UTC = 16:00 in Paris
     expect(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit' }).format(restartState(T('2026-10-26T12:00:00Z'), after.restart!).next)).toBe('16:00')
     expect(after.restartExceptions).toHaveLength(1)
     expect(before.nextChangeAt).toBe(T('2026-10-25T00:00:00Z'))
+  })
+
+  it('restart exceptions: a day without restart, an extra restart', () => {
+    const daily = { time: '17:00', timeZone: 'Europe/Paris', durationMin: 5 }
+    const s = { ...daily, exceptions: [{ date: '2026-12-24', timeZone: 'Europe/Paris', skip: true }, { date: '2026-12-26', timeZone: 'UTC', extra: { time: '09:30', durationMin: 10 } }] }
+    // 24 December skipped: the next one is on the 25th
+    expect(new Date(nextRestart(T('2026-12-24T10:00:00Z'), s).next).toISOString()).toBe('2026-12-25T16:00:00.000Z')
+    // 26 December: the extra one at 09:30 UTC comes first, then the daily one
+    const extra = nextRestart(T('2026-12-26T08:00:00Z'), s)
+    expect([new Date(extra.next).toISOString(), extra.kind]).toEqual(['2026-12-26T09:30:00.000Z', 'extra'])
+    expect(restartState(T('2026-12-26T09:35:00Z'), s).phase).toBe('restarting')
+    expect(restartState(T('2026-12-26T09:41:00Z'), s).kind).toBe('daily')
+    expect(new Date(previousRestart(T('2026-12-25T10:00:00Z'), s)).toISOString()).toBe('2026-12-23T16:00:00.000Z')
   })
 
   it('banner, welcome message and seasonal backgrounds follow their windows', () => {

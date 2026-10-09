@@ -460,3 +460,36 @@ l'éditeur prévient quand un autre bandeau ou message d'accueil passe devant ; 
 le titre, avec une ligne verte facultative (`accent` : `{player}` = nom du joueur, `{server}` = Hemisphere SMP) ; Preview avance ou recule d'une
 heure ou d'un jour ; l'installateur de Herald a sa propre fenêtre d'installation (même principe que le launcher,
 titre « HERALD », fond et couleurs différents).
+
+## 21. Phase S6 : maintenance, restart, urgence (9 octobre 2026)
+
+- **Onglet Server** de Herald :
+  - état ouvert ou en maintenance, avec les deux boutons d'urgence « Start a maintenance now » (message, fin prévue facultative) et « The server is back online » ;
+  - maintenances programmées : début, fin facultative, annonce aux joueurs à partir d'une date ;
+  - restart quotidien : heure dans un fuseau, changement à partir d'une date, jour sans restart, restart en plus, et les prochains restarts calculés comme le launcher ;
+  - retrait rapide d'une publication ;
+  - historique.
+- **Serveur** (`serverState.ts`, migration `0006`) : ces parties du flux sont dans `settings` et chaque version est gardée pour toujours. Les changements sont publiés aussitôt, sans relecture, car ce sont des outils du staff. Un changement préparé sur un état dépassé est refusé ; une urgence s'applique toujours au dernier état. Droits : urgence `maintenance.emergency` (Moderator inclus), programmation `maintenance.write`, restart `restart.write`.
+- **Coffres** : une maintenance annoncée plus tard et un changement de restart daté sont publiés en avance, verrouillés jusqu'à leur heure.
+- **Launcher** :
+  - la maintenance annoncée s'affiche sous PLAY (« Maintenance prévue samedi 18:00 → 20:00 », à l'heure du joueur) ;
+  - le calcul du restart (`src/shared/restart.ts`) prend les exceptions en compte : jour sauté, restart en plus (« Restart exceptionnel à … ») ;
+  - les alertes de restart et la vérification en direct suivent le même calcul.
+- **Aperçu Herald** : il montre la maintenance (en cours ou annoncée) et le panneau serveur avec le restart, au moment choisi. Le voyage dans le temps liste les débuts et fins de maintenance et les changements de restart.
+
+| Test | Résultat |
+|---|---|
+| Bout en bout local (`herald:e2e-server`) | 19/19 : urgence (début, refus d'une deuxième, retour en ligne), maintenance annoncée puis en cours puis finie, maintenance verrouillée jusqu'à son annonce, changement de restart verrouillé, jour sans restart, droits (Lodge keeper, Moderator, Admin), état dépassé refusé, historique, journal |
+| Staging + vrai launcher de dev | Maintenance annoncée affichée sous PLAY ; « Restart in 23m · Extra restart at 10:57 AM your time » |
+| Herald à l'écran | Onglet Server (exceptions, changement à venir, prochains restarts), urgence par les boutons, aperçu avec maintenance et panneau serveur |
+
+Retours du propriétaire (S6) :
+- **Messages de maintenance en anglais seulement**, aucune traduction : les langues ne servent qu'aux publications.
+- **Modèles de messages** comme sur la maquette (« Quick maintenance », « Crash »…), ou « Write my own… ». Le staff les modifie pour tout le monde (`templates.write`, réglage `templates.maintenance`, sans publication).
+- **Le bouton en haut à droite suit chaque changement en direct**, à la place de l'historique :
+  - le trajet : serveur Herald → GitHub Actions (vérifie, signe) → GitHub (commit) → launchers ;
+  - le temps passé à chaque étape, et le compte à rebours jusqu'à ce que tous les launchers ouverts l'aient (2 min au plus) ;
+  - l'estimation du temps total, à partir des derniers changements ;
+  - le panneau s'ouvre tout seul à chaque nouveau changement ;
+  - la migration `0007` note l'heure où GitHub Actions prend le travail.
+- **Mesuré sur staging** : 8 s avant que GitHub démarre, 1 s pour vérifier et signer, puis jusqu'à 2 min pour les launchers.
