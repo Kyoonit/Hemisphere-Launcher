@@ -32,6 +32,7 @@ import { getContent } from './core/remote/content'
 import { getEnabledMods, reattachMod, setModEnabled } from './core/sync/sync'
 import { getModIcons } from './core/remote/modIcons'
 import { getFeed, startFeedPolling } from './core/remote/feed'
+import { refreshFeedV2View } from './core/remote/feedV2'
 import { installFileLogger } from './core/logging/logger'
 import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemInfo, type FolderKind } from './core/system/system'
 import { detectGpus } from './core/system/gpu'
@@ -730,6 +731,7 @@ function registerIpc(): void {
     const { gameDir: _g, javaPath, ...rest } = (typeof patch === 'object' && patch ? patch : {}) as Record<string, unknown>
     const next = await updateSettings({ ...rest, ...(javaPath === null ? { javaPath: null } : {}) })
     if (rest.backgroundUpdates === true) void prepareInBackground()
+    if ('language' in rest) refreshFeedV2View() // some news only show for some languages
     return next
   })
   handle(IPC.gameRepair, (_e, mode: unknown) => repair(mode === 'full' ? 'full' : 'quick'))

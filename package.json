@@ -29,7 +29,8 @@
     "herald:server:typecheck": "tsc --noEmit -p herald/server/tsconfig.json",
     "herald:server:deploy": "wrangler deploy --config herald/server/wrangler.toml",
     "herald:publisher:build": "esbuild tools/herald/publish-run.ts --bundle --platform=node --format=esm --target=node20 --legal-comments=none --outfile=herald/publisher/dist/herald-publish.mjs",
-    "herald:e2e": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/e2e.ts"
+    "herald:e2e": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/e2e.ts",
+    "herald:e2e-v2": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/e2e-v2.ts"
   },
   "dependencies": {
     "@xmcl/core": "2.15.1",

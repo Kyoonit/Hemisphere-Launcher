@@ -130,7 +130,7 @@ function restartAt(base: number, msFromNow: number) {
   return { time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, durationMin: 10 }
 }
 
-export function devFeed(feed: Feed): Feed {
+export function devFeed<T extends Feed>(feed: T): T {
   if (!devEnabled()) return feed
   const s = state
   return {

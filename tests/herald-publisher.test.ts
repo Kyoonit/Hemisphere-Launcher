@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createPublicKey, generateKeyPairSync, verify } from 'node:crypto'
+import { createHash, createPublicKey, generateKeyPairSync, verify } from 'node:crypto'
 import { FeedSchema } from '../src/shared/feed'
 import { buildRelease, errorText } from '../tools/herald/publisher'
 
@@ -40,5 +40,25 @@ describe('Herald publisher', () => {
 
   it('refuses a content folder that could escape the repository', () => {
     expect(() => buildRelease({ id: 'job-1', sequence: 1, feed }, '../x', privateKey)).toThrow(/bad content folder/)
+  })
+})
+
+describe('Herald publisher, schema 2', () => {
+  const v2 = { news: [], maintenances: [], restart: null, events: [], banners: [], welcome: [], backgrounds: [], vaultKeys: {} }
+  const file = Buffer.from('sealed bytes')
+  const sha = createHash('sha512').update(file).digest('hex')
+  const vault = { id: 'v-1', kind: 'news', opensAt: '2026-10-20T16:00:00Z', file: { path: 'v2/vaults/v-1.bin', sha512: sha, size: file.length }, plainSha256: 'b'.repeat(64) }
+
+  it('writes v2/feed.json, its signature and the vault files listed in the feed', () => {
+    const out = buildRelease({ id: 'j', sequence: 2, schema: 2, feed: { ...v2, vaults: [vault] }, files: [{ path: 'v2/vaults/v-1.bin', b64: file.toString('base64'), sha512: sha }] }, 'content', privateKey)
+    expect(out.map((f) => f.path)).toEqual(['content/v2/feed.json', 'content/v2/feed.json.sig', 'content/v2/vaults/v-1.bin'])
+    expect(verify(null, out[0].bytes, createPublicKey(privateKey), Buffer.from(out[1].bytes.toString().trim(), 'base64'))).toBe(true)
+    expect(JSON.parse(out[0].bytes.toString()).schema).toBe(2)
+  })
+
+  it('refuses a file the signed feed does not list byte for byte', () => {
+    const other = Buffer.from('something else')
+    expect(() => buildRelease({ id: 'j', sequence: 2, schema: 2, feed: { ...v2, vaults: [vault] }, files: [{ path: 'v2/vaults/v-1.bin', b64: other.toString('base64'), sha512: sha }] }, 'content', privateKey)).toThrow(/not listed/)
+    expect(() => buildRelease({ id: 'j', sequence: 2, schema: 2, feed: { ...v2, vaults: [] }, files: [{ path: 'v2/vaults/v-1.bin', b64: file.toString('base64'), sha512: sha }] }, 'content', privateKey)).toThrow(/not listed/)
   })
 })

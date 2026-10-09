@@ -5,6 +5,8 @@ import { join } from 'node:path'
 import { CONTENT_BASE } from '@shared/manifest'
 import { FeedSchema, type Feed } from '@shared/feed'
 import { RESTART_SCHEDULE } from '@shared/server'
+import { viewOfV1, type FeedView } from '@shared/schedule'
+import { getFeedV2View, startFeedV2 } from './feedV2'
 import { CONTENT_PUBLIC_KEY } from './publicKey'
 import { conditionalGet, rememberEtag } from './conditional'
 
@@ -52,7 +54,8 @@ async function download(url: string): Promise<Buffer> {
 
 let current: Feed = FALLBACK_FEED
 
-export const getFeed = () => current
+/** What the launcher shows: the schema 2 feed (Herald) once one is published, else the schema 1 feed. */
+export const getFeed = (): FeedView => getFeedV2View() ?? viewOfV1(current)
 
 async function refresh(): Promise<Feed> {
   const cached = await readCached()
@@ -83,16 +86,18 @@ async function refresh(): Promise<Feed> {
   return current
 }
 
-/** Loads the feed now, then every 10 minutes; `onUpdate` fires whenever it changes. */
-export function startFeedPolling(onUpdate: (feed: Feed) => void): void {
+/** Loads the feeds now, then schema 1 every 10 minutes and schema 2 every 2 (feedV2.ts); `onUpdate` fires whenever
+ *  what the launcher shows changes. */
+export function startFeedPolling(onUpdate: (feed: FeedView) => void): void {
   let lastSequence = -1
   const tick = () =>
     void refresh().then((feed) => {
       if (feed.sequence !== lastSequence) {
         lastSequence = feed.sequence
-        onUpdate(feed)
+        if (!getFeedV2View()) onUpdate(getFeed())
       }
     })
   tick()
   setInterval(tick, REFRESH_MS)
+  void startFeedV2(() => onUpdate(getFeed()))
 }

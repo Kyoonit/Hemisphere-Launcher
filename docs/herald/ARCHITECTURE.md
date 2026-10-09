@@ -191,14 +191,14 @@ une `minLauncher` et Herald refuse de l'utiliser tant que ce launcher n'est pas 
 |---|---|
 | `schema`, `sequence`, `updatedAt` | comme aujourd'hui (`schema: 2`) |
 | `news[]` | champs actuels + `showFrom?`, `showUntil?`, `featuredUntil?`, `langs?` (ne montrer qu'aux joueurs de ces langues) |
-| `maintenances[]` | `{ id, message, announceFrom?, start, end?, showUntil? }` — plusieurs maintenances programmables ; « démarrer maintenant » = `start` à l'instant ; « de nouveau en ligne » = `end` à l'instant |
+| `maintenances[]` | `{ id, message, announceFrom?, start, end? }` — plusieurs maintenances programmables ; « démarrer maintenant » = `start` à l'instant ; « de nouveau en ligne » = `end` à l'instant |
 | `restart` | `{ rules: [{ from, time, timeZone, durationMin }], exceptions: [{ date, timeZone, skip \| extra: { time, durationMin } }] }` — la règle en vigueur est celle dont `from` est la plus récente passée |
 | `events[]` | champs actuels + `showFrom?`, `recurrence?: { weekly: { days, time, timeZone, durationMin, until? } }` |
 | `banners[]` | `{ id, text, level: info \| important \| critical, showFrom?, showUntil? }` |
 | `welcome[]` | `{ id, title?, text, showFrom?, showUntil? }` (le plus récent visible l'emporte, sinon le texte par défaut) |
-| `backgrounds[]` | `{ id, name, image: { url, sha512, size }, showFrom?, showUntil?, mode: add \| replace }` (`replace` = seuls les fonds de la période s'affichent, ex. Noël) |
+| `backgrounds[]` | `{ id, name, image: { path, sha512, size }, showFrom?, showUntil?, mode: add \| replace }` (`replace` = seuls les fonds de la période s'affichent, ex. Noël) |
 | `modPolicy` | conservé tel quel (plus modifiable dans Herald ; repris du flux actuel) |
-| `vaults[]` | coffres : `{ id, kind, opensAt, file: { url, sha512, size }, plainSha256 }` |
+| `vaults[]` | coffres : `{ id, kind, opensAt, file: { path, sha512, size }, plainSha256 }`, fichier `v2/vaults/<id>.bin` à côté du flux ; contenu = un élément de son type, revalidé avec son schéma à l'ouverture |
 | `vaultKeys` | `{ id: clé }` des coffres déjà ouverts (secours) |
 | `support`, `discordAppId`, `staffCode` | inchangés |
 
@@ -385,7 +385,26 @@ demanderait pas de mise à jour spéciale. Si un jour c'est décidé, la marche 
 | Relance automatique | Une publication en attente sans workflow lancé a été publiée par la tâche minute en **36 s** | Une publication demandée n'est jamais perdue |
 | Droits réels de l'App de test | `actions: write`, `contents: read`, dépôt sélectionné uniquement | Le serveur ne peut pas écrire de contenu |
 
-**Point à décider avant S12 (production)** : où vit le contenu de production. Ce dépôt doit devenir privé un jour, et
-un dépôt privé ne peut pas servir les launchers. Recommandation : un **dépôt de contenu public dédié** (comme le dépôt
-de test), qui ne contient que le contenu, le workflow et le programme de publication ; le launcher 1.2 y pointe dès sa
-sortie. À trancher avec le propriétaire en S3.
+**Décidé (S3)** : le contenu de production vit dans un **dépôt public dédié** (`Kyoonit/hemisphere-content`, créé à la
+mise en service), monté comme le dépôt de test (contenu, workflow, programme de publication). Le launcher 1.2 y lit
+le flux v2 (`HERALD_CONTENT_BASE`). Le pack de mods devra y être publié aussi (S10) pour que ce dépôt-ci puisse
+passer en privé : le launcher lira alors le pack à la nouvelle adresse, avec l'ancienne en secours.
+
+## 18. Phase S3 : le launcher lit le format v2 (9 octobre 2026)
+
+Code : `src/shared/feedV2.ts` (le format), `src/shared/schedule.ts` (`resolveFeed` : ce que voit un joueur à un instant),
+`src/shared/herald.ts` (pouls, adresse de commit, horloge), `src/main/core/remote/feedV2.ts` (lecture, coffres, réveil
+à l'instant exact). Le launcher montre le flux v2 dès qu'il existe, sinon le flux v1 (aucun changement pour les
+joueurs tant que rien n'est publié en v2). Un build de développement peut viser l'environnement de test
+(`MAIN_VITE_HERALD_URL`, `MAIN_VITE_HERALD_CONTENT_BASE`, `MAIN_VITE_HERALD_PUBLIC_KEY`) : son cache est séparé
+(`content-cache/v2-test`), le contenu de test ne peut jamais rester dans le vrai.
+
+| Mesure (staging + launcher de dev) | Résultat |
+|---|---|
+| Publication v2 (serveur → GitHub Actions → commit) | 9 s ; la news programmée n'apparaît pas dans le flux, seulement son coffre (303 octets, texte illisible) |
+| Clé avant l'heure / à l'heure | refusée (281 s restantes) / donnée 69 ms après l'ouverture |
+| **Launcher de dev** | news secrète affichée à **08:18:00,564** (heure de Paris) pour une ouverture à 08:18:00, avec badge, carte « à la une », maintenance annoncée et bandeau reçus |
+| Secours (clé republiée dans le flux) | 61 s après l'ouverture |
+
+Pas encore à l'écran (prévu dans les phases suivantes, les données sont déjà là) : bandeau, message d'accueil, fonds
+distants, maintenance annoncée, exceptions de restart, son des news.

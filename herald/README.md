@@ -41,6 +41,7 @@ Server `https://herald-staging.hemisphere-launcher.workers.dev`, database `heral
 npx wrangler d1 migrations apply herald-staging --config herald/server/wrangler.toml --remote   # new migrations
 npm run herald:server:deploy
 npm run herald:e2e -- https://herald-staging.hemisphere-launcher.workers.dev                   # full chain, ~1 min
+npm run herald:e2e-v2 -- https://herald-staging.hemisphere-launcher.workers.dev 4              # schema 2 + a vault opening in 4 min
 ```
 
 Server secrets (`npx wrangler secret put <NAME> --config herald/server/wrangler.toml`): `VAULT_MASTER`,
@@ -59,3 +60,12 @@ Server secrets (`npx wrangler secret put <NAME> --config herald/server/wrangler.
    `.github/workflows/herald-publish.yml` and `herald/publisher/dist/herald-publish.mjs` to
    `.github/herald/herald-publish.mjs` in the content repository, commit, push. Repeat after any change to the
    publisher or the shared schemas.
+
+### A dev launcher on the test content (schema 2)
+
+Build the launcher with the test environment, run it, and it shows the test feed (its cache is separate:
+`content-cache/v2-test`). Rebuild normally afterwards (`npx electron-vite build`).
+
+```bash
+MAIN_VITE_HERALD_URL=https://herald-staging.hemisphere-launcher.workers.dev MAIN_VITE_HERALD_CONTENT_BASE=https://raw.githubusercontent.com/Kyoonit/herald-test-content/main/content/ MAIN_VITE_HERALD_PUBLIC_KEY=$(cat herald/server/test-public-key.txt) npx electron-vite build
+```
