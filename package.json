@@ -23,6 +23,8 @@
     "staff-code": "node tools/staff-code.mjs",
     "herald:test-key": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/test-key.ts",
     "herald:github-app": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/github-app.ts",
+    "herald:import-v1": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/import-v1.ts",
+    "herald:production": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/production-setup.ts",
     "herald:server:dev": "wrangler dev --config herald/server/wrangler.toml --local --port 8787 --test-scheduled --var HERALD_ENV:local",
     "herald:server:migrate": "wrangler d1 migrations apply herald-staging --config herald/server/wrangler.toml --local",
     "herald:server:types": "wrangler types --config herald/server/wrangler.toml herald/server/worker-configuration.d.ts",

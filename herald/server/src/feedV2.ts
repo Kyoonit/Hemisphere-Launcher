@@ -9,6 +9,7 @@
  * repository are not sent again. A vault is reused while its item, content and opening time do not change.
  */
 import { sealVault, sealWithKey, sha256Hex, sha512Hex, toB64, unwrapKey, wrapKey } from './crypto'
+import { sealedPicture } from './sealing'
 
 type Item = Record<string, unknown> & { id?: string }
 export type FeedDraft = Record<string, unknown> & {
@@ -26,7 +27,7 @@ export interface PublishFile {
   sha512: string
   size: number
 }
-type ContentFile = { path: string; sha512: string; size: number }
+type ContentFile = { path: string; sha512: string; size: number; seal?: { key: string; sha512: string; size: number } }
 
 /** Where each kind lives in the draft, and which time opens it. */
 const LISTS = [
@@ -104,13 +105,21 @@ export async function sealFuture(db: D1Database, master: string, draft: FeedDraf
     }
     feed[list] = clear
   }
-  // Pictures of the items already shown: in clear, next to the feed
-  for (const [list, field] of [['news', 'imageFile'], ['backgrounds', 'image']] as const) for (const n of (feed[list] ?? []) as Item[]) {
-    const pic = n[field] as ContentFile | undefined
-    const picId = pic ? imageId(pic.path) : null
-    if (!pic || !picId) continue
-    await db.prepare('INSERT OR IGNORE INTO content_files (path, bytes, sha512, created_at) SELECT ?1, bytes, sha512, ?2 FROM images WHERE id = ?3').bind(pic.path, now, picId).run()
-    addFile(pic)
+  // Pictures of the items already shown: sealed with their own key, which travels inside the (sealed) feed
+  for (const [list, field] of [['news', 'imageFile'], ['backgrounds', 'image']] as const) {
+    const items: Item[] = []
+    for (const n of (feed[list] ?? []) as Item[]) {
+      const pic = n[field] as ContentFile | undefined
+      const picId = pic ? imageId(pic.path) : null
+      if (!pic || !picId) {
+        items.push(n)
+        continue
+      }
+      const sealed = await sealedPicture(db, master, picId, now)
+      items.push({ ...n, [field]: { path: sealed.path, sha512: pic.sha512, size: pic.size, seal: { key: sealed.key, sha512: sealed.sha512, size: sealed.size } } })
+      files.set(sealed.path, { path: sealed.path, sha512: sealed.sha512, size: sealed.size })
+    }
+    feed[list] = items
   }
   if (draft.restart) {
     const rules = draft.restart.rules ?? []
@@ -137,9 +146,10 @@ export async function openKeys(db: D1Database, master: string, feed: Record<stri
 
 /** The files a feed lists (vault files, vault pictures, pictures of news and backgrounds in clear) */
 export function listedFiles(feed: Record<string, unknown>): PublishFile[] {
-  const out: PublishFile[] = []
+  const out: ContentFile[] = []
   for (const v of (feed.vaults ?? []) as { file: ContentFile; image?: ContentFile }[]) out.push(v.file, ...(v.image ? [v.image] : []))
   for (const n of (feed.news ?? []) as Item[]) if (n.imageFile) out.push(n.imageFile as ContentFile)
   for (const b of (feed.backgrounds ?? []) as Item[]) if (b.image) out.push(b.image as ContentFile)
-  return out.map(({ path, sha512, size }) => ({ path, sha512, size }))
+  // A sealed file is checked as stored (its sealed bytes)
+  return out.map((f) => (f.seal ? { path: f.path, sha512: f.seal.sha512, size: f.seal.size } : { path: f.path, sha512: f.sha512, size: f.size }))
 }

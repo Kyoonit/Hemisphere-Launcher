@@ -4,12 +4,9 @@
 # launchers at the new commit. Repository secrets: SIGNING_KEY, PUBLISHER_TOKEN · variable: HERALD_URL.
 name: Herald publish
 
+# No input: the repository is public and so is its run list (nothing about what is published shows there)
 on:
   workflow_dispatch:
-    inputs:
-      reason:
-        description: Why (set by the Herald server)
-        required: false
 
 # One publish at a time; a run started meanwhile waits (the publisher always takes the newest state)
 concurrency:

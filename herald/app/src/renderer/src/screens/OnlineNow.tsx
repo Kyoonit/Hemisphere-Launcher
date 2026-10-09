@@ -45,7 +45,8 @@ export default function OnlineNow() {
   useEffect(() => () => Object.values(blobs).forEach((u) => URL.revokeObjectURL(u)), [blobs])
 
   if (!online) return <div className="text-gray-400">Reading what launchers get…</div>
-  const picture = (f: { path: string; sha512: string } | undefined) => (f ? (blobs[f.sha512] ?? (f.path.startsWith('v2/images/') && online.base ? online.base + f.path : undefined)) : undefined)
+  // Every picture is sealed: Herald opened them (blobs), like a launcher does
+  const picture = (f: { path: string; sha512: string } | undefined) => (f ? blobs[f.sha512] : undefined)
   const view = online.feed ? resolveFeed(online.feed, online.opened, now, lang) : null
   if (view) {
     view.news = view.news.map((n) => ({ ...n, image: picture((n as NewsItemV2).imageFile) ?? n.image }))
@@ -69,8 +70,8 @@ export default function OnlineNow() {
     ],
     [
       'GitHub cache',
-      online.branchSequence === null ? '—' : online.pulse && online.branchSequence < online.pulse.sequence ? `the plain address still serves ${online.branchSequence}: a launcher that missed the pulse catches up within 5 minutes` : '✓ up to date',
-      online.pulse && online.branchSequence !== null && online.branchSequence < online.pulse.sequence ? 'text-amber-200' : 'text-gray-300',
+      online.branchUpToDate === null ? '—' : online.branchUpToDate ? '✓ up to date' : 'the plain address still serves an older feed: a launcher that missed the pulse catches up within 5 minutes',
+      online.branchUpToDate === false ? 'text-amber-200' : 'text-gray-300',
     ],
     ['Vaults', vaults.length ? `${vaults.length - closed.length} opened · ${closed.length} still locked${closed[0] ? ` (next: ${formatWhen(Date.parse(closed[0].opensAt), zone)}, ${closed[0].kind})` : ''}` : 'none', 'text-gray-300'],
     ['Mod pack', online.pack ? `Hemisphere Client ${online.pack.clientVersion} · Minecraft ${online.pack.minecraft} · index ${online.pack.sequence}` : '—', 'text-gray-300'],
@@ -119,7 +120,7 @@ export default function OnlineNow() {
                 ))}
               </select>
             </div>
-            <p className="text-xs text-gray-500">Read from GitHub like a launcher: Herald's drafts and changes not published are not here.</p>
+            <p className="text-xs text-gray-500">Read from GitHub like a launcher (sealed files, opened with the keys the server gives): Herald's drafts and changes not published are not here.</p>
           </div>
           <LauncherPreview view={view} lang={lang} screen={screen} onScreen={setScreen} article={article} onArticle={setArticle} size={size} badge={0} at={now} />
         </>

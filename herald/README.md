@@ -67,7 +67,7 @@ Server secrets (`npx wrangler secret put <NAME> --config herald/server/wrangler.
 ### A dev launcher on the test content (schema 2)
 
 Build the launcher with the test environment, run it, and it shows the test feed and reads the test mod pack. Such a
-build keeps its OWN data folder (`%APPDATA%Hemisphere Launcher-herald-test`: settings, accounts, game folder,
+build keeps its OWN data folder (`%APPDATA%\Hemisphere Launcher-herald-test`: settings, accounts, game folder,
 caches), so a test pack is never installed in the real game, and it runs next to the installed launcher. Put
 `{"backgroundUpdates":false}` in its `settings.json` first to keep it from downloading the game. Rebuild normally
 afterwards (`npx electron-vite build`).
@@ -216,3 +216,12 @@ The pack keeps its format (`src/shared/manifest.ts`); Herald builds the whole ne
 - **Online now** (Preview → Online now): what launchers really get, read like a launcher (feed at the pulse's commit,
   signature checked, vaults whose time has come opened, pictures from GitHub), with the GitHub cache and the mod pack.
 - Tests: `tests/herald-history.test.ts`.
+
+## Sealed content (phase S12)
+
+Nothing in the public content repository can be read, nor in its history: every published file is sealed
+(`src/shared/sealed.ts`), the feed and pack index with a content key the server gives (`GET /content-key/<id>`,
+`herald/server/src/sealing.ts`) only once published, and refuses 15 minutes after it is replaced. Pictures,
+manifests and config files are sealed with keys carried inside. Signatures cover the plaintext. Commits say "Herald
+publish", workflow runs carry no reason, the publisher logs nothing about the content; after a run `content/` holds
+`.bin` files only. Tests: `tests/herald-publisher.test.ts`, `tests/herald-pack.test.ts`.

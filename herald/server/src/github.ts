@@ -56,13 +56,14 @@ async function accessToken(env: GithubEnv): Promise<string> {
 }
 
 /** Starts the publish workflow. GitHub queues at most one run behind the running one: the publisher always takes the
- *  newest queued job, so nothing is lost when runs are merged. */
-export async function startPublishWorkflow(env: GithubEnv, reason: string): Promise<void> {
+ *  newest queued job, so nothing is lost when runs are merged. The reason stays here: a public repository shows its
+ *  runs to everyone, so the run says nothing about what is published. */
+export async function startPublishWorkflow(env: GithubEnv, _reason: string): Promise<void> {
   const token = await accessToken(env)
   await gh(`/repos/${env.GITHUB_REPO}/actions/workflows/${env.GITHUB_WORKFLOW}/dispatches`, token, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ ref: env.GITHUB_BRANCH, inputs: { reason: reason.slice(0, 100) } }),
+    body: JSON.stringify({ ref: env.GITHUB_BRANCH }),
   })
 }
 

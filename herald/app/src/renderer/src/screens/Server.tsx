@@ -5,8 +5,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Maintenance, RestartException, RestartRule } from '@shared/feedV2'
 import { nextRestart } from '@shared/restart'
-import { KIND_LABEL, type MessageTemplate } from '@shared/heraldPublications'
-import { usePubs, shown, titleOf } from '../pubs'
+import type { MessageTemplate } from '@shared/heraldPublications'
+import { usePubs } from '../pubs'
 import { useStore } from '../store'
 import { Modal, ZonePicker } from '../components/ui'
 import { ago, formatDay, formatTime, formatWhen, fromWallInput, toWallInput, zoneLabel } from '../time'
@@ -44,7 +44,6 @@ export default function Server() {
   }
   const running = base.maintenances.find((m) => Date.parse(m.start) <= now && (!m.end || Date.parse(m.end) > now))
   const planned = base.maintenances.filter((m) => Date.parse(m.start) > now).sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
-  const online = state.publications.filter((p) => shown(p, now) === 'online' || shown(p, now) === 'scheduled')
 
   return (
     <div className="animate-fade">
@@ -120,23 +119,6 @@ export default function Server() {
         </div>
 
         <RestartCard rules={base.restart?.rules ?? []} exceptions={base.restart?.exceptions ?? []} busy={busy} onSave={(rules, exceptions) => void send('/server/restart', { restart: { rules, exceptions } })} onAdd={(k) => setModal({ kind: k })} now={now} />
-      </div>
-
-      <div className="card mt-4">
-        <div className="eyebrow mb-2">Take a publication down fast</div>
-        {online.length === 0 && <p className="text-sm text-gray-400">Nothing online or scheduled.</p>}
-        {online.map((p) => (
-          <div key={p.id} className="flex items-center gap-3 border-t border-gray-700/60 py-1.5 text-sm first:border-0">
-            <span className="w-28 shrink-0 text-[11px] font-bold tracking-wider text-gray-400 uppercase">{KIND_LABEL[p.kind]}</span>
-            <b className="min-w-0 flex-1 truncate text-white">{titleOf(p.published ?? p.data)}</b>
-            <span className="text-xs text-gray-400">{shown(p, now) === 'scheduled' ? 'scheduled' : 'online'}</span>
-            {can('publications.publish') && (
-              <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => void act('POST', `/publications/${p.id}/unpublish`, { version: p.version }).then((r) => !r.ok && setError(r.error))}>
-                Take down
-              </button>
-            )}
-          </div>
-        ))}
       </div>
 
       <History />

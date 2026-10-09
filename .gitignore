@@ -17,3 +17,5 @@ herald/app/out/
 herald/app/dist/
 herald/server/.staging-codes.txt
 herald/app/package-lock.json
+herald/server/.production-secrets
+herald/server/.production-codes.txt

@@ -1,0 +1,35 @@
+# Herald server, PRODUCTION (phase S12). The address launchers 1.2 talk to: https://herald.hemisphere-launcher.workers.dev
+# No secret in this file: they are set with
+#   npx wrangler secret put <NAME> --config herald/server/wrangler.production.toml
+# (VAULT_MASTER, CODE_PEPPER, PUBLISHER_TOKEN, BOOTSTRAP_TOKEN — generated in herald/server/.production-secrets, git-ignored;
+#  GITHUB_APP_ID, GITHUB_APP_KEY, GITHUB_INSTALLATION_ID from the production GitHub App). Never a DEV_TOKEN here.
+name = "herald"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+HERALD_ENV = "production"
+# The public content repository launchers read (feed v2, vaults, pictures, mod pack)
+GITHUB_REPO = "Kyoonit/hemisphere-content"
+GITHUB_BRANCH = "main"
+CONTENT_DIR = "content"
+GITHUB_WORKFLOW = "herald-publish.yml"
+# Private repository of the Herald app releases (the App needs Contents: read there too)
+HERALD_RELEASES_REPO = "Kyoonit/herald-releases"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "herald"
+database_id = "fd58b3f0-957b-4b38-82ea-11208ac83d9f"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["* * * * *"]
+
+# Which version of the server answered (GET /health)
+[version_metadata]
+binding = "CF_VERSION"
+
+[observability]
+enabled = true

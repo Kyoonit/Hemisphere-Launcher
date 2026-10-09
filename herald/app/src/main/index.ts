@@ -11,7 +11,8 @@ import { installUpdate, startUpdater, updateState } from './updater'
 import { staffCodeFrom } from '@shared/heraldPublic'
 import { STAFF_CODE_SCRYPT } from '@shared/dev'
 import { CONTENT_BASE, ClientManifestSchema, ContentIndexSchema, PACK_BASES } from '@shared/manifest'
-import { FEED_V2_PATH, FeedV2Schema, VaultItemSchemas, type FeedV2 } from '@shared/feedV2'
+import { FEED_V2_SEALED_PATH, FeedV2Schema, VaultItemSchemas, type FeedV2 } from '@shared/feedV2'
+import { fromB64, keyIdOf, unseal, type SealedDocument } from '@shared/sealed'
 import type { OpenedItems } from '@shared/schedule'
 import { CONTENT_PUBLIC_KEY } from '../../../../src/main/core/remote/publicKey'
 import TEST_PUBLIC_KEY from '../../../server/test-public-key.txt?raw'
@@ -188,18 +189,45 @@ function registerIpc(): void {
   const modrinth = modrinthGetter(`Kyoonit/Hemisphere-Launcher (Herald ${app.getVersion()})`)
   const failed = (err: unknown) => ({ ok: false, status: 0, error: err instanceof Error && err.message.startsWith('Modrinth') ? `${err.message}: try again in a moment.` : 'Modrinth cannot be reached. Check your internet connection.' })
   const mc = (v: unknown) => typeof v === 'string' && /^[0-9][0-9a-z.\-]{0,31}$/.test(v)
+  // Sealed content (S12): opened like a launcher opens it, with the key the Herald server gives while it is online
+  const fetchBytes = async (url: string) => {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000), cache: 'no-store' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return new Uint8Array(await res.arrayBuffer())
+  }
+  const openSealed = async (bytes: Uint8Array): Promise<SealedDocument> => {
+    const id = keyIdOf(bytes)
+    if (!id) throw new Error('not a sealed file')
+    const res = await fetch(`${SERVER}/content-key/${id}`, { signal: AbortSignal.timeout(15_000), cache: 'no-store' })
+    const body = (await res.json().catch(() => ({}))) as { key?: string }
+    if (!res.ok || !body.key) throw new Error(res.status === 410 ? 'its key was replaced (an older copy)' : `its key is not given (HTTP ${res.status})`)
+    return JSON.parse(new TextDecoder().decode(await unseal(bytes, fromB64(body.key)))) as SealedDocument
+  }
+  const openFile = async (url: string, f: { sha512: string; size: number; key: string }) => {
+    const bytes = await fetchBytes(url)
+    if (createHash('sha512').update(bytes).digest('hex') !== f.sha512) throw new Error('file does not match')
+    return Buffer.from(await unseal(bytes, fromB64(f.key)))
+  }
   ipcMain.handle('pack:online', async (_e, base: unknown) => {
-    // Herald's content repository first, then where the pack was published before (until it moves)
+    // Herald's content repository first (sealed), then where the pack was published before (in clear, until it moves)
     const bases = [...new Set([...(typeof base === 'string' && (PACK_BASES as readonly string[]).includes(base) ? [base] : []), CONTENT_BASE])]
     for (const from of bases) {
       try {
-        const get = (path: string) => fetch(from + path, { signal: AbortSignal.timeout(15_000), cache: 'no-store' })
-        const res = await get('index.json')
-        if (!res.ok) continue
-        const index = ContentIndexSchema.parse(await res.json())
-        const bytes = Buffer.from(await (await get(index.latest.manifest)).arrayBuffer())
-        if (createHash('sha512').update(bytes).digest('hex') !== index.latest.sha512) continue
-        return { index, manifest: ClientManifestSchema.parse(JSON.parse(bytes.toString('utf8'))), from }
+        let text: string
+        let manifestBytes: Buffer
+        if (from === CONTENT_BASE) {
+          text = Buffer.from(await fetchBytes(from + 'index.json')).toString('utf8')
+          manifestBytes = Buffer.from(await fetchBytes(from + ContentIndexSchema.parse(JSON.parse(text)).latest.manifest))
+        } else {
+          const doc = await openSealed(await fetchBytes(from + 'index.bin'))
+          text = doc.doc
+          const entry = doc.files?.[ContentIndexSchema.parse(JSON.parse(text)).latest.manifest]
+          if (!entry) continue
+          manifestBytes = await openFile(from + entry.path, entry)
+        }
+        const index = ContentIndexSchema.parse(JSON.parse(text))
+        if (createHash('sha512').update(manifestBytes).digest('hex') !== index.latest.sha512) continue
+        return { index, manifest: ClientManifestSchema.parse(JSON.parse(manifestBytes.toString('utf8'))), from }
       } catch {
         // next place
       }
@@ -282,8 +310,8 @@ function registerIpc(): void {
         headers: { 'content-type': 'application/octet-stream', 'user-agent': `Herald/${app.getVersion()}`, ...(token ? { authorization: `Bearer ${token}` } : {}) },
         body: bytes,
       })
-      const data = (await res.json().catch(() => ({}))) as { sha512: string; size: number; error?: string }
-      return res.ok ? { ok: true, data: { name: basename(pick.filePaths[0]), sha512: data.sha512, size: data.size } } : { ok: false, status: res.status, error: data.error ?? `HTTP ${res.status}` }
+      const data = (await res.json().catch(() => ({}))) as { sha512: string; size: number; url: string; seal: { key: string; sha512: string; size: number }; error?: string }
+      return res.ok ? { ok: true, data: { name: basename(pick.filePaths[0]), sha512: data.sha512, size: data.size, url: data.url, seal: data.seal } } : { ok: false, status: res.status, error: data.error ?? `HTTP ${res.status}` }
     } catch {
       return { ok: false, status: 0, error: 'The Herald server cannot be reached. Check your internet connection.' }
     }
@@ -292,35 +320,45 @@ function registerIpc(): void {
   ipcMain.handle('online:state', async () => {
     const staging = SERVER.includes('staging') || SERVER.includes('127.0.0.1')
     const key = createPublicKey({ key: Buffer.from((staging ? TEST_PUBLIC_KEY : CONTENT_PUBLIC_KEY).trim(), 'base64'), format: 'der', type: 'spki' })
-    const get = (url: string) => fetch(url, { signal: AbortSignal.timeout(15_000), cache: 'no-store' })
-    const out = { checkedAt: Date.now(), pulse: null, feed: null, signed: false, error: null, opened: {}, pictures: {}, base: null, branchSequence: null, pack: null } as {
-      checkedAt: number; pulse: { sequence: number; commit: string | null } | null; feed: FeedV2 | null; signed: boolean; error: string | null; opened: OpenedItems; pictures: Record<string, Uint8Array>; base: string | null; branchSequence: number | null; pack: { clientVersion: string; minecraft: string; sequence: number } | null
+    const out = { checkedAt: Date.now(), pulse: null, feed: null, signed: false, error: null, opened: {}, pictures: {}, base: null, branchUpToDate: null, pack: null } as {
+      checkedAt: number; pulse: { sequence: number; commit: string | null } | null; feed: FeedV2 | null; signed: boolean; error: string | null; opened: OpenedItems; pictures: Record<string, Uint8Array>; base: string | null; branchUpToDate: boolean | null; pack: { clientVersion: string; minecraft: string; sequence: number } | null
     }
     try {
-      const pulse = (await (await get(`${SERVER}/pulse`)).json()) as { sequence: number; commit: string | null; repo: string; dir: string }
+      const pulse = (await (await fetch(`${SERVER}/pulse`, { signal: AbortSignal.timeout(15_000), cache: 'no-store' })).json()) as { sequence: number; commit: string | null; repo: string; dir: string }
       out.pulse = { sequence: pulse.sequence, commit: pulse.commit }
       const branch = `https://raw.githubusercontent.com/${pulse.repo}/main/${pulse.dir}/`
       const base = pulse.commit && /^[0-9a-f]{40}$/.test(pulse.commit) ? `https://raw.githubusercontent.com/${pulse.repo}/${pulse.commit}/${pulse.dir}/` : branch
       out.base = base
-      const [feedRes, sigRes, branchRes, packRes] = await Promise.all([get(base + FEED_V2_PATH), get(`${base}${FEED_V2_PATH}.sig`), get(branch + FEED_V2_PATH), get(branch + 'index.json').then((r) => (r.ok ? r : get(CONTENT_BASE + 'index.json')))])
-      if (branchRes.ok) out.branchSequence = ((await branchRes.json()) as { sequence?: number }).sequence ?? null
-      if (packRes.ok) {
-        const index = ContentIndexSchema.parse(await packRes.json())
+      // The mod pack online (sealed in Herald's repository, else still where it was before)
+      try {
+        const doc = await openSealed(await fetchBytes(branch + 'index.bin')).catch(async () => ({ doc: Buffer.from(await fetchBytes(CONTENT_BASE + 'index.json')).toString('utf8') }) as SealedDocument)
+        const index = ContentIndexSchema.parse(JSON.parse(doc.doc))
         out.pack = { clientVersion: index.latest.clientVersion, minecraft: index.latest.minecraft, sequence: index.sequence }
+      } catch {
+        // no pack readable
       }
-      if (!feedRes.ok) throw new Error(`no feed at that commit (HTTP ${feedRes.status})`)
-      const bytes = Buffer.from(await feedRes.arrayBuffer())
-      out.signed = sigRes.ok && verify(null, bytes, key, Buffer.from((await sigRes.text()).trim(), 'base64'))
+      const sealed = await fetchBytes(base + FEED_V2_SEALED_PATH).catch(() => null)
+      if (!sealed) throw new Error('no feed published at that commit yet')
+      // GitHub's plain address: the same file as the pulse's commit, or an older one still cached (up to 5 minutes)
+      out.branchUpToDate = await fetchBytes(branch + FEED_V2_SEALED_PATH).then((b) => keyIdOf(b) === keyIdOf(sealed)).catch(() => null)
+      const doc = await openSealed(sealed)
+      out.signed = verify(null, Buffer.from(doc.doc, 'utf8'), key, Buffer.from(doc.sig, 'base64'))
       if (!out.signed) throw new Error('the signature does not match: launchers refuse this feed')
-      const feed = FeedV2Schema.parse(JSON.parse(bytes.toString('utf8')))
+      const feed = FeedV2Schema.parse(JSON.parse(doc.doc))
       out.feed = feed
+      // Pictures of the items shown: sealed, opened with the key the feed gives
+      for (const f of [...feed.news.flatMap((n) => (n.imageFile ? [n.imageFile] : [])), ...feed.backgrounds.map((b) => b.image)]) {
+        if (!f.seal || out.pictures[f.sha512]) continue
+        const plain = await openFile(base + f.path, f.seal).catch(() => null)
+        if (plain && createHash('sha512').update(plain).digest('hex') === f.sha512) out.pictures[f.sha512] = new Uint8Array(plain)
+      }
       // Vaults whose time has come (by the server clock): opened with their key, like a launcher at that instant
       for (const v of feed.vaults.filter((x) => Date.parse(x.opensAt) <= Date.now())) {
         try {
-          const keyB64 = feed.vaultKeys[v.id] ?? ((await (await get(`${SERVER}/vault-key/${v.id}`)).json()) as { key?: string }).key
+          const keyB64 = feed.vaultKeys[v.id] ?? ((await (await fetch(`${SERVER}/vault-key/${v.id}`, { cache: 'no-store' })).json()) as { key?: string }).key
           if (!keyB64) continue
           const open = async (file: { path: string; sha512: string }) => {
-            const enc = Buffer.from(await (await get(base + file.path)).arrayBuffer())
+            const enc = Buffer.from(await fetchBytes(base + file.path))
             if (createHash('sha512').update(enc).digest('hex') !== file.sha512) throw new Error('file does not match the feed')
             const d = createDecipheriv('aes-256-gcm', Buffer.from(keyB64, 'base64'), enc.subarray(0, 12))
             d.setAuthTag(enc.subarray(enc.length - 16))

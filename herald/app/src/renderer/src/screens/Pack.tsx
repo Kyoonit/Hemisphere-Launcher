@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { OnlinePack, PackState, PackVersion } from '@herald/api'
 import { CONTENT_BASE, MOD_CATEGORIES, type ClientManifest, type ExtraFile, type Localized, type ModEntry } from '@shared/manifest'
-import { bumpKind, compareVersions, hasChanges, MOD_CATEGORY_LABEL, newerReleases, nextVersion, packChanges, packFileUrl, pickLoader, SEMVER, type ModReadiness, type DraftMod, type MrHit, type PackChanges, type PackProposal, type Resolved } from '@shared/heraldPack'
+import { bumpKind, compareVersions, hasChanges, MOD_CATEGORY_LABEL, newerReleases, nextVersion, packChanges, pickLoader, SEMVER, type ModReadiness, type DraftMod, type MrHit, type PackChanges, type PackProposal, type Resolved } from '@shared/heraldPack'
 import { ClientManifestSchema } from '@shared/manifest'
 import { useStore } from '../store'
 import { Modal } from '../components/ui'
@@ -52,7 +52,7 @@ export default function Pack() {
   const open = pack.proposals.find((p) => OPEN.includes(p.status)) ?? null
   const past = pack.proposals.filter((p) => !OPEN.includes(p.status))
 
-  if (editing && online) return <Editor online={online} contentBase={pack.contentBase} from={editing === 'new' ? null : editing} mc={mc ?? null} target={editing === 'new' ? target : null} onClose={() => (setEditing(null), setTarget(null), void reload())} />
+  if (editing && online) return <Editor online={online} from={editing === 'new' ? null : editing} mc={mc ?? null} target={editing === 'new' ? target : null} onClose={() => (setEditing(null), setTarget(null), void reload())} />
 
   return (
     <div className="animate-fade max-w-5xl">
@@ -395,13 +395,14 @@ interface Draft {
   previousCanJoin: boolean
   changelog: Localized[]
   mods: DraftMod[]
-  files: Omit<ExtraFile, 'url'>[]
+  /** Sealed by the server when sent: their address and key come from it */
+  files: ExtraFile[]
   note: string
 }
 
 const toDraftMod = (m: ModEntry): DraftMod => ({ projectId: m.source!.modrinth.projectId, versionId: m.source!.modrinth.versionId, category: m.category, recommended: m.recommended, defaultEnabled: m.defaultEnabled, description: m.description })
 
-function Editor({ online, contentBase, from, mc, target, onClose }: { online: OnlinePack; contentBase: string; from: PackProposal | null; mc: McInfo | null; target: string | null; onClose(): void }) {
+function Editor({ online, from, mc, target, onClose }: { online: OnlinePack; from: PackProposal | null; mc: McInfo | null; target: string | null; onClose(): void }) {
   const start = from?.manifest ?? online.manifest
   const [draft, setDraft] = useState<Draft>(() => ({
     clientVersion: from?.clientVersion ?? '',
@@ -410,7 +411,7 @@ function Editor({ online, contentBase, from, mc, target, onClose }: { online: On
     previousCanJoin: from?.previousCanJoin ?? online.index.previousCanJoin,
     changelog: from?.manifest.changelog ?? [],
     mods: start.mods.filter((m) => m.source).map(toDraftMod),
-    files: start.files.map(({ url: _u, ...f }) => f),
+    files: start.files,
     note: from?.note ?? '',
   }))
   const [versionTouched, setVersionTouched] = useState(Boolean(from))
@@ -482,7 +483,7 @@ function Editor({ online, contentBase, from, mc, target, onClose }: { online: On
         minecraft: draft.minecraft,
         loader: { type: 'fabric', version: draft.fabricLoader },
         mods: resolved.mods,
-        files: draft.files.map((f) => ({ ...f, url: packFileUrl(contentBase, draft.clientVersion, f.path) })),
+        files: draft.files,
         ...(draft.changelog.length ? { changelog: draft.changelog.map((l) => Object.fromEntries(Object.entries(l).filter(([, v]) => v.trim()))) as Localized[] } : {}),
       }
     : null
@@ -633,7 +634,7 @@ function Editor({ online, contentBase, from, mc, target, onClose }: { online: On
                 setBusy(null)
                 if (!res) return
                 if (!res.ok) return setError(res.error)
-                set({ files: [...draft.files, { path: `config/${res.data.name}`, sha512: res.data.sha512, size: res.data.size, policy: 'default' }] })
+                set({ files: [...draft.files, { path: `config/${res.data.name}`, sha512: res.data.sha512, size: res.data.size, url: res.data.url, seal: res.data.seal, policy: 'default' }] })
               }}
             >
               + Add a config file

@@ -84,6 +84,9 @@ export type ModEntry = z.infer<typeof ModEntrySchema>
 export const ExtraFileSchema = FileRefSchema.extend({
   /** enforced = always reset to this content; default = copied once, then the player owns it */
   policy: z.enum(['enforced', 'default']),
+  /** Stored sealed (Herald): `url` gives the sealed bytes (their SHA-512 and size here), opened with `key`;
+   *  sha512 and size above are the PLAIN file's */
+  seal: z.object({ key: z.string().regex(/^[A-Za-z0-9+/]{43}=$/), sha512, size: z.number().int().positive().max(16 * 1024 * 1024) }).optional(),
 }).refine((f) => !f.path.startsWith('mods/'), 'mods go in "mods", not "files"')
 export type ExtraFile = z.infer<typeof ExtraFileSchema>
 

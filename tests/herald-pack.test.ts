@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createHash, generateKeyPairSync, verify } from 'node:crypto'
+import { createHash, generateKeyPairSync, randomBytes, verify } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { ClientManifestSchema, ContentIndexSchema, HERALD_TEST_CONTENT_BASE, isAllowedDownloadUrl, type ClientManifest } from '../src/shared/manifest'
 import { HERALD_CONTENT_BASE } from '../src/shared/herald'
 import { bumpKind, manifestBytesText, newerReleases, nextVersion, packChanges, packFileUrl, packReadiness, pickLoader, resolvePack, type DraftMod, type ModrinthGet, type MrProject, type MrVersion } from '../src/shared/heraldPack'
-import { buildPack, buildRelease, checkOnModrinth, PackError, type PackJob } from '../tools/herald/publisher'
+import { buildPack, buildRelease, checkOnModrinth, PackError, type PackJob, type PublishJob, type RunKey } from '../tools/herald/publisher'
+import { fromB64, seal, toB64, unseal, type SealedDocument } from '../src/shared/sealed'
 
 const { privateKey, publicKey } = generateKeyPairSync('ed25519')
 const online = ClientManifestSchema.parse(JSON.parse(readFileSync('content/clients/1.0.2/manifest.json', 'utf8')))
@@ -119,51 +120,89 @@ describe('Herald mod pack: changes and versions', () => {
   })
 })
 
-describe('Herald mod pack: publishing', () => {
+describe('Herald mod pack: publishing (sealed)', () => {
   const next: ClientManifest = { ...online, clientVersion: '1.0.3', createdAt: '2026-10-09T12:00:00.000Z' }
   const oldIndex = { schema: 1, sequence: 3, updatedAt: '2026-10-08T00:00:00.000Z', latest: { clientVersion: '1.0.2', minecraft: '26.3', manifest: 'clients/1.0.2/manifest.json', sha512: sha(onlineBytes), size: onlineBytes.length }, previous: null, previousCanJoin: true }
-  const job = (extra: Partial<PackJob> = {}): PackJob => ({ proposalId: 'k-aaaaaaaaaa', manifest: next, basedOn: { sequence: 3, clientVersion: '1.0.2', sha512: sha(onlineBytes) }, previousCanJoin: true, ...extra })
-  const repo = (files: Record<string, unknown>) => (p: string) => (p in files ? Buffer.from(typeof files[p] === 'string' ? (files[p] as string) : JSON.stringify(files[p])) : null)
+  const oldText = JSON.stringify(oldIndex, null, 2) + '\n'
+  const oldSig = 'c2lnbmF0dXJlIG9mIHRoZSBvbGQgaW5kZXg='
+  const key = (kind: string): RunKey => ({ id: `${kind}-${randomBytes(12).toString('hex')}`, key: toB64(randomBytes(32)) })
+  const pack = (extra: Partial<PackJob> = {}): PackJob => ({ proposalId: 'k-aaaaaaaaaa', manifest: next, basedOn: { sequence: 3, clientVersion: '1.0.2', sha512: sha(onlineBytes) }, previousCanJoin: true, ...extra })
+  const job = (extra: Partial<PublishJob>): PublishJob => ({ id: 'j', sequence: 9, schema: 2, feed: {}, ...extra })
+  type Files = Record<string, Buffer>
+  const reader = (files: Files) => (p: string) => files[p] ?? null
+  // The repository before Herald seals it: the pack in clear
+  const clear: Files = { 'content/index.json': Buffer.from(oldText), 'content/index.json.sig': Buffer.from(oldSig + '\n'), 'content/clients/1.0.2/manifest.json': onlineBytes }
   const now = new Date('2026-10-09T12:00:00Z')
+  const open = async (file: Buffer, k: RunKey) => JSON.parse(new TextDecoder().decode(await unseal(new Uint8Array(file), fromB64(k.key)))) as SealedDocument
+  const apply = (files: Files, writes: { path: string; bytes: Buffer }[]) => ({ ...Object.fromEntries(Object.entries(files).filter(([p]) => p.endsWith('.bin'))), ...Object.fromEntries(writes.map((w) => [w.path, w.bytes])) })
 
-  it('writes the manifest and a signed index the launcher accepts, after the pack it replaces', () => {
-    const out = buildPack(job(), 'content', privateKey, repo({ 'content/index.json': oldIndex }), now)
-    expect(out.map((f) => f.path)).toEqual(['content/clients/1.0.3/manifest.json', 'content/index.json', 'content/index.json.sig'])
-    const index = ContentIndexSchema.parse(JSON.parse(out[1].bytes.toString('utf8')))
+  it('seals the pack in clear as it is (same signed bytes), once', async () => {
+    const k = key('pack')
+    const out = await buildPack(job({ seal: { feed: key('feed'), pack: { current: null, next: k } } }), 'content', privateKey, reader(clear), now)
+    expect(out.packSealed).toBe(true)
+    expect(out.writes.every((w) => w.path.endsWith('.bin'))).toBe(true)
+    const index = out.writes.find((w) => w.path === 'content/index.bin')!
+    for (const word of ['1.0.2', 'Sodium', 'clientVersion']) expect(out.writes.some((w) => w.bytes.includes(word))).toBe(false)
+    const doc = await open(index.bytes, k)
+    expect(doc.doc).toBe(oldText)
+    expect(doc.sig).toBe(oldSig)
+    const m = doc.files!['clients/1.0.2/manifest.json']
+    const sealedManifest = apply(clear, out.writes)[`content/${m.path}`]
+    expect(Buffer.from(await unseal(new Uint8Array(sealedManifest), fromB64(m.key))).equals(onlineBytes)).toBe(true)
+    // Already sealed: nothing more
+    expect((await buildPack(job({ seal: { feed: key('feed'), pack: { current: k, next: key('pack') } } }), 'content', privateKey, reader(apply(clear, out.writes)), now)).writes).toEqual([])
+  })
+
+  it('an approved change: new sealed manifest and index, signed, after the pack it replaces (kept as previous)', async () => {
+    const k1 = key('pack')
+    const sealedRepo = apply(clear, (await buildPack(job({ seal: { feed: key('feed'), pack: { current: null, next: k1 } } }), 'content', privateKey, reader(clear), now)).writes)
+    const k2 = key('pack')
+    const out = await buildPack(job({ pack: pack(), seal: { feed: key('feed'), pack: { current: k1, next: k2 } } }), 'content', privateKey, reader(sealedRepo), now)
+    expect(out.packSealed).toBe(true)
+    for (const word of ['1.0.3', 'Sodium', 'sequence']) expect(out.writes.some((w) => w.bytes.includes(word))).toBe(false)
+    const doc = await open(out.writes.find((w) => w.path === 'content/index.bin')!.bytes, k2)
+    expect(verify(null, Buffer.from(doc.doc), publicKey, Buffer.from(doc.sig, 'base64'))).toBe(true)
+    const index = ContentIndexSchema.parse(JSON.parse(doc.doc))
     expect(index.sequence).toBe(4)
-    expect(index.latest).toMatchObject({ clientVersion: '1.0.3', sha512: sha(out[0].bytes), size: out[0].bytes.length })
+    expect(index.latest.clientVersion).toBe('1.0.3')
     expect(index.previous?.clientVersion).toBe('1.0.2')
-    expect(verify(null, out[1].bytes, publicKey, Buffer.from(out[2].bytes.toString('utf8').trim(), 'base64'))).toBe(true)
+    const repo2 = apply(sealedRepo, out.writes)
+    for (const ref of [index.latest, index.previous!]) {
+      const f = doc.files![ref.manifest]
+      const plain = Buffer.from(await unseal(new Uint8Array(repo2[`content/${f.path}`]), fromB64(f.key)))
+      expect(sha(plain)).toBe(ref.sha512)
+    }
+    // published by an earlier job: nothing again
+    expect((await buildPack(job({ pack: pack(), seal: { feed: key('feed'), pack: { current: k2, next: key('pack') } } }), 'content', privateKey, reader(repo2), now)).writes).toEqual([])
   })
 
-  it('first pack in a repository: never a lower sequence than the pack it replaces', () => {
-    const out = buildPack(job(), 'content', privateKey, repo({}), now)
-    const index = ContentIndexSchema.parse(JSON.parse(out[1].bytes.toString('utf8')))
-    expect(index.sequence).toBe(4)
-    expect(index.previous).toBeNull()
+  it('refused when the online pack changed, or the version exists, or without the key to read the sealed index', async () => {
+    const k1 = key('pack')
+    const sealedRepo = apply(clear, (await buildPack(job({ seal: { feed: key('feed'), pack: { current: null, next: k1 } } }), 'content', privateKey, reader(clear), now)).writes)
+    await expect(buildPack(job({ pack: pack({ basedOn: { sequence: 3, clientVersion: '1.0.2', sha512: H('0') } }), seal: { feed: key('feed'), pack: { current: k1, next: key('pack') } } }), 'content', privateKey, reader(sealedRepo), now)).rejects.toThrow(/changed meanwhile/)
+    await expect(buildPack(job({ pack: pack({ manifest: { ...next, clientVersion: '1.0.2' } }), seal: { feed: key('feed'), pack: { current: k1, next: key('pack') } } }), 'content', privateKey, reader(sealedRepo), now)).rejects.toThrow(PackError)
+    await expect(buildPack(job({ pack: pack(), seal: { feed: key('feed'), pack: { current: null, next: key('pack') } } }), 'content', privateKey, reader(sealedRepo), now)).rejects.toThrow(/no key was given/)
   })
 
-  it('nothing again when an earlier job published it; refused when the online pack changed or the version exists', () => {
-    const published = buildPack(job(), 'content', privateKey, repo({ 'content/index.json': oldIndex }), now)
-    const after = repo({ 'content/index.json': published[1].bytes.toString('utf8') })
-    expect(buildPack(job(), 'content', privateKey, after, now)).toEqual([])
-    expect(() => buildPack(job({ basedOn: { sequence: 3, clientVersion: '1.0.2', sha512: H('0') } }), 'content', privateKey, repo({ 'content/index.json': oldIndex }), now)).toThrow(/changed meanwhile/)
-    expect(() => buildPack(job(), 'content', privateKey, repo({ 'content/index.json': oldIndex, 'content/clients/1.0.3/manifest.json': '{}' }), now)).toThrow(/already published/)
-  })
-
-  it('config files: only with the exact bytes the manifest lists', () => {
-    const bytes = Buffer.from('{"a":1}')
-    const file = { path: 'config/a.json', url: packFileUrl(HERALD_TEST_CONTENT_BASE, '1.0.3', 'config/a.json'), sha512: sha(bytes), size: bytes.length, policy: 'default' as const }
+  it('config files: only sealed, with the exact sealed bytes the manifest lists', async () => {
+    const plain = Buffer.from('{"a":1}')
+    const fileKey = randomBytes(32)
+    const sealedFile = Buffer.from(await seal(new Uint8Array(plain), fileKey, 'f', 16 * 1024))
+    const name = 'a'.repeat(32)
+    const file = { path: 'config/a.json', url: `${HERALD_TEST_CONTENT_BASE}clients/files/${name}.bin`, sha512: sha(plain), size: plain.length, policy: 'default' as const, seal: { key: toB64(fileKey), sha512: sha(sealedFile), size: sealedFile.length } }
     const withFile = { ...next, files: [file] }
-    const out = buildPack(job({ manifest: withFile, fileBytes: { [file.sha512]: bytes.toString('base64') } }), 'content', privateKey, repo({}), now)
-    expect(out.find((f) => f.path === 'content/clients/1.0.3/files/config/a.json')?.bytes.equals(bytes)).toBe(true)
-    expect(() => buildPack(job({ manifest: withFile, fileBytes: { [file.sha512]: Buffer.from('other').toString('base64') } }), 'content', privateKey, repo({}), now)).toThrow(/does not match/)
+    const out = await buildPack(job({ pack: pack({ manifest: withFile, fileBytes: { [file.sha512]: sealedFile.toString('base64') } }), seal: { feed: key('feed'), pack: { current: null, next: key('pack') } } }), 'content', privateKey, reader({}), now)
+    expect(out.writes.find((w) => w.path === `content/clients/files/${name}.bin`)?.bytes.equals(sealedFile)).toBe(true)
+    await expect(buildPack(job({ pack: pack({ manifest: withFile, fileBytes: { [file.sha512]: plain.toString('base64') } }), seal: { feed: key('feed'), pack: { current: null, next: key('pack') } } }), 'content', privateKey, reader({}), now)).rejects.toThrow(/does not match/)
+    const { seal: _s, ...unsealed } = file
+    await expect(buildPack(job({ pack: pack({ manifest: { ...next, files: [{ ...unsealed, url: `${HERALD_TEST_CONTENT_BASE}clients/1.0.3/files/config/a.json` }] } }), seal: { feed: key('feed'), pack: { current: null, next: key('pack') } } }), 'content', privateKey, reader({}), now)).rejects.toThrow(/not sealed/)
   })
 
-  it('goes out with the feed in the same commit', () => {
+  it('goes out with the feed in the same commit', async () => {
     const feed = { news: [], maintenances: [], events: [], banners: [], welcome: [], backgrounds: [], vaults: [], vaultKeys: {}, restart: { rules: [{ from: '2026-01-01T00:00:00Z', time: '17:00', timeZone: 'Europe/Paris', durationMin: 5 }], exceptions: [] } }
-    const out = buildRelease({ id: 'j', sequence: 9, schema: 2, feed, pack: job() }, 'content', privateKey, now, repo({ 'content/index.json': oldIndex }))
-    expect(out.map((f) => f.path)).toContain('content/clients/1.0.3/manifest.json')
-    expect(out.map((f) => f.path)).toContain('content/v2/feed.json')
+    const { writes } = await buildRelease({ id: 'j', sequence: 9, schema: 2, feed, pack: pack(), seal: { feed: key('feed'), pack: { current: null, next: key('pack') } } }, 'content', privateKey, now, reader(clear))
+    expect(writes.map((f) => f.path)).toContain('content/index.bin')
+    expect(writes.map((f) => f.path)).toContain('content/v2/feed.bin')
+    expect(writes.every((w) => w.path.endsWith('.bin'))).toBe(true)
   })
 })

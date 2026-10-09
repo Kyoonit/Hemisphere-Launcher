@@ -4,7 +4,7 @@ import type { Publication } from '@herald/api'
 import { fromTemplate, KIND_LABEL, PUBLICATION_KINDS, WRITE_PERMISSION, languagesOut, type PublicationKind, type PublicationTemplate } from '@shared/heraldPublications'
 import { usePubs, shown, SHOWN, pendingChanges, titleOf, type Shown } from '../pubs'
 import { useStore } from '../store'
-import { Avatar } from '../components/ui'
+import { Avatar, Modal } from '../components/ui'
 import { ago, formatWhen } from '../time'
 import { nextOccurrence, repeatLabel } from '../eventTimes'
 import Editor from './Editor'
@@ -160,7 +160,61 @@ export default function Publications({ open, onOpen }: { open: string | null; on
           )
         })}
       </div>
+      <TakeDown now={now} onOpen={onOpen} />
       </>
+      )}
+    </div>
+  )
+}
+
+/** Below the list: everything online or scheduled, each taken down in one click (after a confirmation) */
+function TakeDown({ now, onOpen }: { now: number; onOpen(id: string): void }) {
+  const { state, act } = usePubs()
+  const { can } = useStore()
+  const [confirm, setConfirm] = useState<Publication | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  if (!state || !can('publications.publish')) return null
+  const live = state.publications.filter((p) => shown(p, now) === 'online' || shown(p, now) === 'scheduled')
+  const down = async (p: Publication) => {
+    setBusy(true)
+    setError(null)
+    const res = await act('POST', `/publications/${p.id}/unpublish`, { version: p.version })
+    setBusy(false)
+    setConfirm(null)
+    if (!res.ok) setError(res.error)
+  }
+  return (
+    <div className="card mt-4">
+      <div className="eyebrow mb-2">Take a publication down fast</div>
+      {error && <p className="mb-2 text-sm text-red-300">{error}</p>}
+      {live.length === 0 && <p className="text-sm text-gray-400">Nothing online or scheduled.</p>}
+      {live.map((p) => (
+        <div key={p.id} className="flex items-center gap-3 border-t border-gray-700/60 py-1.5 text-sm first:border-0">
+          <span className="w-28 shrink-0 text-[11px] font-bold tracking-wider text-gray-400 uppercase">{KIND_LABEL[p.kind]}</span>
+          <button className="min-w-0 flex-1 truncate text-left font-semibold text-white hover:underline" onClick={() => onOpen(p.id)}>
+            {titleOf(p.published ?? p.data)}
+          </button>
+          <span className="text-xs text-gray-400">{shown(p, now) === 'scheduled' ? 'scheduled' : 'online'}</span>
+          <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => setConfirm(p)}>
+            Take down
+          </button>
+        </div>
+      ))}
+      {confirm && (
+        <Modal title="Take it down?" onClose={() => setConfirm(null)}>
+          <p className="mb-4 text-sm text-gray-300">
+            “{titleOf(confirm.published ?? confirm.data)}” leaves every launcher within 2 minutes. It stays in Herald (Ready), and can be published again.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button className="btn btn-ghost" onClick={() => setConfirm(null)}>
+              Cancel
+            </button>
+            <button className="btn btn-danger" disabled={busy} onClick={() => void down(confirm)}>
+              Take down
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   )

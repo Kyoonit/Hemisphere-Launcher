@@ -6,13 +6,15 @@
  * One change at a time: a new proposal waits until the open one is published, rejected or withdrawn.
  */
 import { ClientManifestSchema } from '../../../src/shared/manifest.ts'
-import { compareVersions, MAX_PACK_FILE, PackBaseSchema, packFileKey, packFileUrl, type PackProposal, type PackStatus } from '../../../src/shared/heraldPack.ts'
+import { compareVersions, MAX_PACK_FILE, PackBaseSchema, packFileKey, type PackProposal, type PackStatus } from '../../../src/shared/heraldPack.ts'
 import { HttpError, logActivity, type Actor } from './accounts'
 import { sha512Hex } from './crypto'
+import { packFileSeal, sealedPackFile } from './sealing'
 import type { Publisher } from './publications'
 
 export interface PackEnv {
   DB: D1Database
+  VAULT_MASTER: string
   GITHUB_REPO: string
   GITHUB_BRANCH: string
   CONTENT_DIR: string
@@ -93,10 +95,12 @@ export async function proposePack(env: PackEnv, actor: Actor, body: Record<strin
   if (compareVersions(manifest.clientVersion, base.data.clientVersion) <= 0) throw new HttpError(400, `The new version must be higher than the one players have (${base.data.clientVersion}).`)
   const unsourced = manifest.mods.filter((m) => !m.source)
   if (unsourced.length) throw new HttpError(400, `Every mod comes from Modrinth: ${unsourced.map((m) => m.name).join(', ')} does not.`)
+  // Config files: sealed when they were sent (their key and address come from the server, never chosen by the app)
   for (const f of manifest.files) {
-    if (f.url !== packFileUrl(contentBaseOf(env), manifest.clientVersion, f.path)) throw new HttpError(400, `${f.path}: wrong address.`)
+    const expected = await packFileSeal(env.VAULT_MASTER, f.sha512)
     const kept = await env.DB.prepare('SELECT sha512 FROM content_files WHERE path = ?1').bind(packFileKey(f.sha512)).first<{ sha512: string }>()
-    if (kept?.sha512 !== f.sha512) throw new HttpError(400, `${f.path}: the file was not sent to the server. Add it again.`)
+    if (!f.seal || kept?.sha512 !== f.seal.sha512) throw new HttpError(400, `${f.path}: the file was not sent to the server. Add it again.`)
+    if (f.url !== contentBaseOf(env) + expected.repoPath || f.seal.key !== expected.key) throw new HttpError(400, `${f.path}: wrong address.`)
   }
   const note = typeof body.note === 'string' ? body.note.trim().slice(0, 500) : ''
   if (!note) throw new HttpError(400, 'Say in a few words why (shown to whoever approves).')
@@ -154,15 +158,16 @@ export async function withdrawPack(env: PackEnv, actor: Actor, id: string) {
   return getPack(env, actor)
 }
 
-/** A config file for the pack (raw bytes): kept until published, addressed by its SHA-512. */
+/** A config file for the pack (raw bytes): sealed at once and kept until published. Its address and key go in the
+ *  manifest (itself sealed in the repository): nothing of it can be read on GitHub. */
 export async function uploadPackFile(env: PackEnv, actor: Actor, req: Request) {
   if (!actor.permissions.includes('pack.propose')) throw new HttpError(403, 'You cannot change the mod pack.')
   const bytes = new Uint8Array(await req.arrayBuffer())
   if (!bytes.length) throw new HttpError(400, 'The file is empty.')
   if (bytes.length > MAX_PACK_FILE) throw new HttpError(413, 'Files of the pack are limited to 1 MB here (configs).')
   const sha512 = await sha512Hex(bytes)
-  await env.DB.prepare('INSERT OR IGNORE INTO content_files (path, bytes, sha512, created_at) VALUES (?1, ?2, ?3, ?4)').bind(packFileKey(sha512), bytes, sha512, Date.now()).run()
-  return { sha512, size: bytes.length }
+  const sealed = await sealedPackFile(env.DB, env.VAULT_MASTER, bytes, sha512, Date.now())
+  return { sha512, size: bytes.length, url: contentBaseOf(env) + sealed.repoPath, seal: { key: sealed.key, sha512: sealed.sha512, size: sealed.size } }
 }
 
 /** The approved change every publish job carries (until one of them has published it). */

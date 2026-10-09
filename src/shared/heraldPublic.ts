@@ -10,6 +10,8 @@ export const PublicSettingsSchema = z.object({
   support: FeedSchema.shape.support,
   discordAppId: FeedSchema.shape.discordAppId,
   staffCode: FeedSchema.shape.staffCode,
+  /** Not edited in Herald (S1): copied once from the schema 1 feed at go-live, so it moves with the content */
+  modPolicy: FeedSchema.shape.modPolicy,
 })
 export type PublicSettings = z.infer<typeof PublicSettingsSchema>
 

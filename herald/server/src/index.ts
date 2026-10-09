@@ -2,6 +2,8 @@
  * Herald server.
  *   GET  /health, /time          liveness and server clock
  *   GET  /vault-key/:id          PUBLIC: a vault's key, only from its opening time (launchers ask right at that time)
+ *   GET  /content-key/:id        PUBLIC: the key of the sealed feed / pack index online now (S12: nothing in the content
+ *                                 repository can be read without it; a replaced key is refused after 15 minutes)
  *   POST /bootstrap              one-time creation of the Owner / Developer profiles (BOOTSTRAP_TOKEN secret)
  *   POST /login, /logout         staff sign-in (name + code) → session token
  *   GET  /me, /sync              the signed-in profile; presence + activity (the app refreshes every 15 s)
@@ -34,6 +36,7 @@ import { listedFiles, openKeys, sealFuture, type FeedDraft } from './feedV2'
 import { saveBackgrounds } from './backgrounds'
 import { savePublic } from './publicSettings'
 import { listActivity, savePublicationTemplates, settingsHistory } from './history'
+import { contentKey, currentPackKey, KEY_GRACE_MS, newContentKey, publishKeys } from './sealing'
 import { approvePack, getPack, packForJob, packJobFinished, proposePack, rejectPack, uploadPackFile, withdrawPack } from './pack'
 import { authenticate, bootstrap, createProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
 import * as pubs from './publications'
@@ -57,7 +60,7 @@ export interface Env extends GithubEnv {
   CF_VERSION?: { id: string; tag: string; timestamp: string }
 }
 
-type Job = { id: string; payload: string; status: string; sequence: number | null; commit_sha: string | null; error: string | null; pack_id: string | null }
+type Job = { id: string; payload: string; status: string; sequence: number | null; commit_sha: string | null; error: string | null; pack_id: string | null; keys: string | null; vault_ids: string | null }
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } })
 const bearer = (req: Request, token: string | undefined) => Boolean(token) && req.headers.get('authorization') === `Bearer ${token}`
@@ -75,6 +78,11 @@ export default {
       if (content) return content
       const key = path.match(/^\/vault-key\/([a-z0-9-]{1,80})$/)
       if (req.method === 'GET' && key) return await vaultKey(env, key[1])
+      const sealKey = path.match(/^\/content-key\/((?:feed|pack)-[0-9a-f]{24})$/)
+      if (req.method === 'GET' && sealKey) {
+        const r = await contentKey(env.DB, env.VAULT_MASTER, sealKey[1])
+        return json(r.body, r.status)
+      }
       if (path.startsWith('/internal/')) {
         if (!bearer(req, env.PUBLISHER_TOKEN)) return json({ error: 'not found' }, 404)
         if (req.method === 'POST' && path === '/internal/next') return await nextJob(env)
@@ -150,8 +158,9 @@ async function staffRoute(req: Request, env: Env, path: string): Promise<Respons
 
 async function vaultKey(env: Env, id: string): Promise<Response> {
   const now = Date.now()
-  const row = await env.DB.prepare('SELECT opens_at, key_wrapped FROM vaults WHERE id = ?1').bind(id).first<{ opens_at: number; key_wrapped: string }>()
+  const row = await env.DB.prepare('SELECT opens_at, key_wrapped, revoked_at FROM vaults WHERE id = ?1').bind(id).first<{ opens_at: number; key_wrapped: string; revoked_at: number | null }>()
   if (!row) return json({ error: 'unknown vault', now }, 404)
+  if (row.revoked_at !== null && now - row.revoked_at > KEY_GRACE_MS) return json({ error: 'removed', now }, 410)
   // The server's clock decides, never the player's: too early → when to ask again
   if (now < row.opens_at) return json({ error: 'not yet', now, opensAt: row.opens_at, retryInMs: row.opens_at - now }, 425)
   return json({ key: toB64(await unwrapKey(row.key_wrapped, env.VAULT_MASTER)), now })
@@ -172,14 +181,19 @@ async function nextJob(env: Env): Promise<Response> {
   const state = await env.DB.prepare('SELECT sequence FROM publish_state WHERE id = 1').first<{ sequence: number }>()
   const sequence = (state?.sequence ?? 0) + 1
   const now = Date.now()
+  // The keys of this run: a new one for the feed; for the pack, the one in force (to read the index in the repository)
+  // and a new one when the pack changes, or when none is published yet (the index gets sealed)
+  const feedKey = await newContentKey(env.DB, env.VAULT_MASTER, 'feed', now)
+  const current = await currentPackKey(env.DB, env.VAULT_MASTER)
+  const nextPack = job.pack_id || !current ? await newContentKey(env.DB, env.VAULT_MASTER, 'pack', now) : null
   await env.DB.batch([
     env.DB.prepare("UPDATE publish_jobs SET status = 'superseded', updated_at = ?2 WHERE status = 'queued' AND id != ?1").bind(job.id, now),
-    env.DB.prepare("UPDATE publish_jobs SET status = 'publishing', sequence = ?2, updated_at = ?3, started_at = ?3 WHERE id = ?1").bind(job.id, sequence, now),
+    env.DB.prepare("UPDATE publish_jobs SET status = 'publishing', sequence = ?2, updated_at = ?3, started_at = ?3, keys = ?4 WHERE id = ?1").bind(job.id, sequence, now, JSON.stringify({ feed: feedKey.id, pack: nextPack?.id ?? null })),
   ])
-  return json({ job: { id: job.id, sequence, ...JSON.parse(job.payload) }, contentDir: env.CONTENT_DIR })
+  return json({ job: { id: job.id, sequence, ...JSON.parse(job.payload), seal: { feed: feedKey, pack: { current, next: nextPack } } }, contentDir: env.CONTENT_DIR })
 }
 
-async function finishJob(env: Env, body: { id?: string; commit?: string; error?: string; part?: string }, status: 'done' | 'failed'): Promise<Response> {
+async function finishJob(env: Env, body: { id?: string; commit?: string; error?: string; part?: string; packSealed?: boolean }, status: 'done' | 'failed'): Promise<Response> {
   const job = await env.DB.prepare("SELECT * FROM publish_jobs WHERE id = ?1 AND status = 'publishing'").bind(body.id ?? '').first<Job>()
   if (!job) return json({ error: 'no such job being published' }, 404)
   const now = Date.now()
@@ -195,12 +209,18 @@ async function finishJob(env: Env, body: { id?: string; commit?: string; error?:
       .bind(job.sequence, body.commit, new Date(now).toISOString()),
   ])
   if (job.pack_id) await packJobFinished(env.DB, job.pack_id, { commit: body.commit })
+  // Its keys are given from now on (the pack's only if this run wrote a new sealed index); the replaced ones retire
+  const keys = job.keys ? (JSON.parse(job.keys) as { feed: string; pack: string | null }) : null
+  if (keys) await publishKeys(env.DB, [keys.feed, ...(keys.pack && body.packSealed ? [keys.pack] : [])], now)
+  // Vaults this feed no longer lists (item removed, or now in the feed itself): their keys are refused after a while
+  if (job.vault_ids) await env.DB.prepare('UPDATE vaults SET revoked_at = ?2 WHERE revoked_at IS NULL AND listing IS NOT NULL AND id NOT IN (SELECT value FROM json_each(?1))').bind(job.vault_ids, now).run()
   return json({ ok: true })
 }
 
-async function queue(env: Env, payload: unknown, now: number, by: string | null = null, reason: string | null = null, packId: string | null = null): Promise<string> {
+async function queue(env: Env, payload: { feed?: Record<string, unknown> } & Record<string, unknown>, now: number, by: string | null = null, reason: string | null = null, packId: string | null = null): Promise<string> {
   const id = `job-${crypto.randomUUID()}`
-  await env.DB.prepare("INSERT INTO publish_jobs (id, payload, status, created_at, updated_at, requested_by, reason, pack_id) VALUES (?1, ?2, 'queued', ?3, ?3, ?4, ?5, ?6)").bind(id, JSON.stringify(payload), now, by, reason, packId).run()
+  const vaultIds = payload.feed?.vaults ? JSON.stringify((payload.feed.vaults as { id: string }[]).map((v) => v.id)) : null
+  await env.DB.prepare("INSERT INTO publish_jobs (id, payload, status, created_at, updated_at, requested_by, reason, pack_id, vault_ids) VALUES (?1, ?2, 'queued', ?3, ?3, ?4, ?5, ?6, ?7)").bind(id, JSON.stringify(payload), now, by, reason, packId, vaultIds).run()
   return id
 }
 

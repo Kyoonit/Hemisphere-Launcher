@@ -615,3 +615,36 @@ messages de maintenance. Ajouté :
 | Tests unitaires (`tests/herald-history.test.ts`) | Modèles sans dates, événement à son prochain jour et heure, périodes de fonds retirées retrouvées avec qui et quand |
 | Staging | Journal : 100 entrées + page plus ancienne, filtre « pack » ; brouillon de test modifié puis version 2 ramenée (historique « revert », journal) ; modèle enregistré puis retiré, historique des modèles ; brouillon de test mis à la corbeille |
 | Herald | État en ligne : flux signé valide, même séquence que Herald, cache GitHub à jour, coffre « Halloween » encore fermé, rendu du vrai launcher avec le fond de test lu sur GitHub ; journal filtré ; corbeille |
+
+## 27. Contenu scellé : rien de lisible sur GitHub (S12, 9 octobre 2026)
+
+Demande du propriétaire avant la mise en service : le dépôt de contenu est public, mais **rien** de ce qu'il contient,
+ni de son historique, ne doit pouvoir être lu.
+
+- **Tout fichier publié par Herald est scellé** (`src/shared/sealed.ts`, AES-256-GCM, taille arrondie par paliers) :
+  le flux (`v2/feed.bin`), l'index du pack (`index.bin`), les manifestes (`clients/<aléatoire>.bin`), les images
+  (`v2/images/<aléatoire>.bin`), les fichiers de config (`clients/files/<aléatoire>.bin`). Les coffres (contenu
+  programmé) gardent leur propre clé ; leur liste, leur type et leur heure ne sont plus visibles (dans le flux scellé).
+- **Clés de contenu** : une par publication du flux, une par version de l'index du pack. Créées par le serveur quand
+  GitHub Actions prend la publication, données aux launchers (`GET /content-key/<id>`) **seulement une fois publiées**,
+  et **refusées 15 minutes après avoir été remplacées** : les anciennes copies de l'historique ne s'ouvrent plus jamais.
+  Les clés des images, manifestes et configs voyagent à l'intérieur des documents scellés.
+- **Retrait = révocation** : un coffre que le flux publié ne liste plus voit sa clé refusée (après 15 minutes).
+- **Signatures inchangées** : la clé de contenu signe le texte en clair, puis il est scellé. Le serveur, qui détient
+  les clés de scellement, ne peut toujours pas fabriquer de contenu accepté.
+- **Rien dans GitHub ne parle du contenu** : commits « Herald publish », lancement du workflow sans raison, journaux
+  muets (la raison d'un refus ne va qu'au serveur). Après une publication, le dossier `content/` ne contient que des
+  `.bin` (tout autre fichier est supprimé).
+- **Le pack existant** est apporté scellé : à la première publication, le programme lit le pack en vigueur dans
+  l'ancien dépôt du launcher (signature vérifiée) et n'écrit que sa copie scellée, avec les mêmes octets signés.
+- **Limite** : ce qu'un launcher peut afficher, une personne qui a le launcher peut le lire, mais seulement ce qui est
+  en ligne à cet instant. Si le serveur Herald est en panne, un launcher garde ce qu'il a déjà ouvert (sur le disque)
+  et attend pour le nouveau.
+- Ce qui reste visible : le nombre de fichiers, leur taille arrondie, l'heure des commits. L'ancien dépôt du launcher
+  (`content/`, en clair) reste lu par les launchers 1.1 jusqu'à leur disparition.
+
+| Test | Résultat |
+|---|---|
+| Tests unitaires | Ouverture seulement avec la bonne clé, octet changé refusé ; publication : uniquement des `.bin`, aucun mot lisible, signature valide sur le clair ; pack converti sans changer ses octets signés ; changement de pack scellé ; configs scellées |
+| Staging | Dossier de contenu : 12 fichiers, tous scellés, aucun mot lisible (titres, « Sodium », « Halloween », « discord », signature WebP…) ; commits et titre public du run : « Herald publish » ; avec les clés du serveur : flux et pack ouverts, signatures valides ; clé inconnue refusée ; l'ancienne clé du flux retirée après la publication suivante |
+| Launcher de test (caches vidés) | Flux scellé ouvert (news et images, événements, fond, mods interdits), pack scellé ouvert (1.0.3) |

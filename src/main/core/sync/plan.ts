@@ -10,6 +10,8 @@ export interface DesiredFile {
   /** managed = Hemisphere mod jar; enforced = config always reset; default = config copied once */
   policy: 'managed' | 'enforced' | 'default'
   label: string
+  /** A config file stored sealed (Herald): url gives the sealed bytes, opened with this key */
+  seal?: { key: string; sha512: string; size: number }
 }
 
 /** What the launcher remembers about the instance (instance/.hemisphere/state.json). */
@@ -55,7 +57,7 @@ export function desiredFiles(manifest: ClientManifest, choices: Choices, detache
     ...manifest.mods
       .filter((m) => enabled.has(m.id) && !playerOwned.has(m.id))
       .map((m): DesiredFile => ({ ...m.file, policy: 'managed', label: m.name })),
-    ...manifest.files.map((f): DesiredFile => ({ path: f.path, url: f.url, sha512: f.sha512, size: f.size, policy: f.policy, label: f.path })),
+    ...manifest.files.map((f): DesiredFile => ({ path: f.path, url: f.url, sha512: f.sha512, size: f.size, policy: f.policy, label: f.path, ...(f.seal ? { seal: f.seal } : {}) })),
   ]
 }
 

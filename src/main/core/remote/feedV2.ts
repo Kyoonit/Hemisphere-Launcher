@@ -2,9 +2,10 @@ import { app, protocol } from 'electron'
 import { createDecipheriv, createHash, createPublicKey, verify, type KeyObject } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { FEED_V2_PATH, FeedV2Schema, VaultItemSchemas, type Background, type FeedV2, type NewsItemV2, type Vault, type VaultKind } from '@shared/feedV2'
+import { FEED_V2_SEALED_PATH, FeedV2Schema, VaultItemSchemas, type Background, type FeedV2, type NewsItemV2, type Vault, type VaultKind } from '@shared/feedV2'
 import { resolveFeed, type FeedView, type OpenedItems } from '@shared/schedule'
 import { HERALD_CONTENT_BASE, HERALD_URL, PULSE_MS, clockOffset, contentAtCommit } from '@shared/herald'
+import { fromB64, keyIdOf, unseal, type SealedDocument } from '@shared/sealed'
 import { getSettings } from '../settings/settings'
 import { backgroundDownloadsAllowed } from '../system/network'
 import { CONTENT_PUBLIC_KEY } from './publicKey'
@@ -22,6 +23,9 @@ import { conditionalGet, rememberEtag } from './conditional'
  *     scheduled item brings its picture locked with its vault (opened with the same key). The page shows them through
  *     hemi-content://. Backgrounds (big) wait for a normal connection when the player saves data on metered ones.
  * No schema 2 feed published yet → null, and the launcher keeps showing the schema 1 feed.
+ * SEALED (S12): nothing in the content repository can be read without the Herald server. The feed arrives sealed
+ * (src/shared/sealed.ts); its key is asked for (GET /content-key/<id>) and given only while that feed is online. The
+ * opened, verified feed is kept on disk: a launcher that has it keeps showing it when the server cannot be reached.
  */
 
 /** Pictures reach the page through hemi-content://image/<sha512> (only files checked against the signed feed) */
@@ -94,7 +98,27 @@ export function verifyFeedV2(bytes: Buffer, signatureB64: string, k: KeyObject =
   return FeedV2Schema.parse(JSON.parse(bytes.toString('utf8')))
 }
 
-/** Accepts a verified feed if it is newer; keeps it for offline starts. */
+/** The key of a sealed file published by Herald (feed, mod pack index), from the Herald server: given only while it
+ *  is online (src/shared/sealed.ts). */
+export async function contentKey(file: Uint8Array): Promise<Uint8Array> {
+  const id = keyIdOf(file)
+  if (!id) throw new Error('not a sealed file')
+  const sent = Date.now()
+  const res = await fetch(`${heraldUrl()}/content-key/${id}`, { signal: AbortSignal.timeout(10_000), cache: 'no-store' })
+  const body = (await res.json().catch(() => ({}))) as { key?: string; now?: number }
+  if (typeof body.now === 'number') offsetMs = clockOffset(body.now, sent, Date.now())
+  if (!res.ok || typeof body.key !== 'string') throw new Error(`key not given (HTTP ${res.status})`)
+  return fromB64(body.key)
+}
+
+/** A sealed feed (as published): its key from the Herald server, then the signed document inside, checked. */
+async function acceptSealed(file: Buffer): Promise<boolean> {
+  const sealed = new Uint8Array(file)
+  const doc = JSON.parse(new TextDecoder().decode(await unseal(sealed, await contentKey(sealed)))) as SealedDocument
+  return accept(Buffer.from(doc.doc, 'utf8'), doc.sig)
+}
+
+/** Accepts a verified feed if it is newer; keeps it (opened) for offline starts. */
 async function accept(bytes: Buffer, sig: string): Promise<boolean> {
   const next = verifyFeedV2(bytes, sig)
   if (feed && next.sequence <= feed.sequence) return false
@@ -130,7 +154,8 @@ async function vaultFile(v: Vault, base: string): Promise<Buffer> {
 const pictureFile = (sha512: string) => join(cacheDir(), 'images', `${sha512}.webp`)
 const sha512Of = (b: Buffer) => createHash('sha512').update(b).digest('hex')
 
-/** Pictures in clear (news, backgrounds): downloaded once, checked against the signed feed. */
+/** Pictures of the items shown (news, backgrounds): downloaded once, opened with their key (given by the sealed
+ *  feed), checked against the signed feed. */
 async function syncPictures(base: string): Promise<void> {
   const news = (feed?.news ?? []).flatMap((n) => (n.imageFile ? [n.imageFile] : []))
   const backgrounds = (feed?.backgrounds ?? []).map((b) => b.image).filter((f) => !pictures.has(f.sha512))
@@ -138,8 +163,12 @@ async function syncPictures(base: string): Promise<void> {
   for (const f of [...news, ...(bigOk ? backgrounds : [])]) {
     if (pictures.has(f.sha512) || !f.path.startsWith('v2/images/')) continue
     try {
-      const bytes = await download(base + f.path, Math.min(f.size, MAX_PICTURE) + 1024)
-      if (sha512Of(bytes) !== f.sha512) throw new Error('file does not match the feed')
+      let bytes = await download(base + f.path, Math.min(f.seal?.size ?? f.size, MAX_PICTURE + 128 * 1024) + 1024)
+      if (f.seal) {
+        if (sha512Of(bytes) !== f.seal.sha512) throw new Error('file does not match the feed')
+        bytes = Buffer.from(await unseal(new Uint8Array(bytes), fromB64(f.seal.key)))
+      }
+      if (sha512Of(bytes) !== f.sha512) throw new Error('picture does not match the feed')
       await save(`images/${f.sha512}.webp`, bytes)
       pictures.add(f.sha512)
     } catch (err) {
@@ -251,7 +280,7 @@ async function refresh(): Promise<string> {
     const pinned = pulse.commit ? contentAtCommit(contentBase(), pulse.commit) : null
     if (typeof pulse.sequence === 'number' && pulse.sequence > (feed?.sequence ?? 0)) {
       if (!pinned) throw new Error('pulse: no commit address for this content location')
-      await accept(await download(pinned + FEED_V2_PATH, MAX_FEED), (await download(`${pinned}${FEED_V2_PATH}.sig`, 4096)).toString('utf8'))
+      await acceptSealed(await download(pinned + FEED_V2_SEALED_PATH, MAX_FEED))
       return pinned
     }
     return pinned ?? contentBase()
@@ -263,11 +292,11 @@ async function refresh(): Promise<string> {
 }
 
 async function readPlain(): Promise<void> {
-  const url = contentBase() + FEED_V2_PATH
+  const url = contentBase() + FEED_V2_SEALED_PATH
   const cached = await readFile(join(cacheDir(), 'feed.json')).catch(() => null)
   const got = await conditionalGet(url, MAX_FEED, cached ? cached.length : null, 15_000)
   if (got.notModified) return
-  await accept(got.bytes, (await download(`${url}.sig`, 4096)).toString('utf8'))
+  await acceptSealed(got.bytes)
   await rememberEtag(url, got.etag)
 }
 

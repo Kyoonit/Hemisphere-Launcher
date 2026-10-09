@@ -11,7 +11,8 @@ import {
   type ContentIndex,
 } from '@shared/manifest'
 import { CONTENT_PUBLIC_KEY } from './publicKey'
-import { heraldContentBase } from './feedV2'
+import { contentKey, heraldContentBase } from './feedV2'
+import { fromB64, unseal, type SealedDocument } from '@shared/sealed'
 import { conditionalGet, rememberEtag } from './conditional'
 import { savedNotModified } from '../system/network'
 
@@ -23,6 +24,8 @@ import { savedNotModified } from '../system/network'
  * Anything that fails is rejected; the last verified copy on disk is used instead (works offline).
  * Where: Herald's content repository first (Herald publishes the pack there since S10), then this repository's content
  * folder (where it was published before, the fallback until the move is done).
+ * In Herald's repository everything is SEALED (S12): index.bin (its key from the Herald server, while it is online) holds
+ * the signed index and the keys of the sealed manifests. What is kept on disk is the opened, verified copy.
  */
 
 export interface LoadedContent {
@@ -47,6 +50,18 @@ function contentBases(): string[] {
   if (testKey()) return [import.meta.env?.MAIN_VITE_HERALD_CONTENT_BASE || HERALD_TEST_CONTENT_BASE]
   if (dev() && import.meta.env?.MAIN_VITE_CONTENT_BASE) return [import.meta.env.MAIN_VITE_CONTENT_BASE]
   return [...new Set([heraldContentBase(), CONTENT_BASE])]
+}
+
+/** The places before Herald (this repository, a dev folder) are in clear; Herald's are sealed */
+const isSealed = (base: string) => base !== CONTENT_BASE && !(dev() && base === import.meta.env?.MAIN_VITE_CONTENT_BASE)
+type SealedFiles = NonNullable<SealedDocument['files']>
+
+/** A sealed manifest the index lists: downloaded, checked as stored, opened with its key */
+async function sealedFile(base: string, entry: SealedFiles[string] | undefined): Promise<Buffer> {
+  if (!entry) throw new ContentError('the sealed index does not list this file')
+  const bytes = await download(base + entry.path, entry.size)
+  if (bytes.length !== entry.size || createHash('sha512').update(bytes).digest('hex') !== entry.sha512) throw new ContentError('sealed file mismatch')
+  return Buffer.from(await unseal(new Uint8Array(bytes), fromB64(entry.key)))
 }
 
 async function download(url: string, maxBytes: number): Promise<Buffer> {
@@ -111,11 +126,12 @@ export async function getPreviousManifest(): Promise<ClientManifest | null> {
   try {
     return check(await readFile(cached))
   } catch {
-    // from where the index came, else from each place in order
+    // from where the index came, else from each place in order (sealed: located and opened with the index's keys)
     const bases = [...new Set([...(loadedFrom ? [loadedFrom] : []), ...contentBases()])]
+    const files = (await readFile(join(cacheDir(), 'files.json'), 'utf8').then((t) => JSON.parse(t) as SealedFiles).catch(() => ({}))) as SealedFiles
     let bytes: Buffer | null = null
     for (const base of bases) {
-      bytes = await download(`${base}${ref.manifest}`, ref.size).catch(() => null)
+      bytes = await (isSealed(base) ? sealedFile(base, files[ref.manifest]) : download(`${base}${ref.manifest}`, ref.size)).catch(() => null)
       if (bytes) break
     }
     if (!bytes) throw new ContentError('previous manifest unavailable')
@@ -161,6 +177,7 @@ async function loadContent(): Promise<LoadedContent> {
 type Cached = Awaited<ReturnType<typeof readCache>>
 
 async function loadFrom(base: string, cached: Cached): Promise<LoadedContent> {
+  if (isSealed(base)) return loadSealed(base, cached)
   // Unchanged since the copy we kept (and verified again above): nothing else to download.
   const indexUrl = `${base}index.json`
   const got = await conditionalGet(indexUrl, MAX_INDEX_BYTES, cached ? cached.raw[0].length + cached.raw[2].length : null)
@@ -182,6 +199,34 @@ async function loadFrom(base: string, cached: Cached): Promise<LoadedContent> {
     return { index: cached.index, manifest: cached.manifest, source: 'cache' }
   }
   await writeCache(indexBytes, sig, manifestBytes)
+  await rememberEtag(indexUrl, got.etag)
+  return { index, manifest, source: 'network' }
+}
+
+/** Herald's sealed pack: index.bin (key from the Herald server) → signed index + manifest keys → the same checks */
+async function loadSealed(base: string, cached: Cached): Promise<LoadedContent> {
+  const indexUrl = `${base}index.bin`
+  const got = await conditionalGet(indexUrl, 4 * MAX_INDEX_BYTES, cached ? cached.raw[0].length + cached.raw[2].length : null)
+  if (got.notModified && cached) return { index: cached.index, manifest: cached.manifest, source: 'network' }
+  if (got.notModified) throw new ContentError('index unchanged but no cached copy')
+  const file = new Uint8Array(got.bytes)
+  const doc = JSON.parse(new TextDecoder().decode(await unseal(file, await contentKey(file)))) as SealedDocument
+  const indexBytes = Buffer.from(doc.doc, 'utf8')
+  // Peek at the (unverified) index only to know which manifest to open; everything is verified below.
+  const peek = ContentIndexSchema.parse(JSON.parse(doc.doc))
+  const sameManifest = cached && cached.index.latest.sha512 === peek.latest.sha512
+  if (sameManifest) savedNotModified(cached.raw[2].length)
+  const manifestBytes = sameManifest ? cached.raw[2] : await sealedFile(base, doc.files?.[peek.latest.manifest])
+  const { index, manifest } = verifyContent(indexBytes, doc.sig, manifestBytes)
+
+  // Replay protection: never go back to an older signed index than one we already trusted.
+  if (cached && index.sequence < cached.index.sequence) {
+    console.warn(`[content] ignoring older index (sequence ${index.sequence} < ${cached.index.sequence})`)
+    return { index: cached.index, manifest: cached.manifest, source: 'cache' }
+  }
+  await writeCache(indexBytes, doc.sig, manifestBytes)
+  // Where the other manifests are and their keys (the previous client); their bytes are checked against the index
+  await writeFile(join(cacheDir(), 'files.json'), JSON.stringify(doc.files ?? {}))
   await rememberEtag(indexUrl, got.etag)
   return { index, manifest, source: 'network' }
 }

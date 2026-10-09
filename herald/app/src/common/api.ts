@@ -116,8 +116,8 @@ export interface OnlineState {
   pictures: Record<string, Uint8Array>
   /** Where the feed's files are (pictures in clear) */
   base: string | null
-  /** What GitHub's plain address still serves (cached up to 5 min): launchers that missed the pulse read this */
-  branchSequence: number | null
+  /** GitHub's plain address serves the same feed (it caches up to 5 min: launchers that missed the pulse read it) */
+  branchUpToDate: boolean | null
   /** The mod pack online */
   pack: { clientVersion: string; minecraft: string; sequence: number } | null
 }
@@ -182,7 +182,7 @@ export interface HeraldBridge {
     /** Which mods already have a build for this Minecraft */
     readiness(minecraft: string, mods: { id: string; name: string; category: string; source?: { modrinth: { projectId: string; versionId: string } } }[]): Promise<ApiResult<ModReadiness[]>>
     /** Pick a config file on this PC and send it to the server (≤ 1 MB) */
-    addFile(): Promise<ApiResult<{ name: string; sha512: string; size: number }> | null>
+    addFile(): Promise<ApiResult<{ name: string; sha512: string; size: number; url: string; seal: { key: string; sha512: string; size: number } }> | null>
   }
 }
 

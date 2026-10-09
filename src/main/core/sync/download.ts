@@ -1,10 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { createReadStream, createWriteStream, existsSync } from 'node:fs'
-import { mkdir, rename, rm, stat } from 'node:fs/promises'
+import { mkdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { isAllowedDownloadUrl } from '@shared/manifest'
+import { fromB64, unseal } from '@shared/sealed'
 import { throttle } from '../system/network'
 
 /**
@@ -16,6 +17,9 @@ export interface StoreFile {
   url: string
   sha512: string
   size: number
+  /** Stored sealed (a Herald config file, small): url gives the sealed bytes, opened with this key; the store keeps
+   *  the opened file, checked against the plain sha512 and size above */
+  seal?: { key: string; sha512: string; size: number }
 }
 
 export class DownloadError extends Error {
@@ -56,6 +60,7 @@ export async function downloadToStore(
   const { attempts = 4, timeoutMs = 60_000, allowUrl = isAllowedDownloadUrl } = options
   if (!allowUrl(f.url)) throw new DownloadError(`download host not allowed: ${f.url}`, false)
   if (await hasBlob(storeDir, f)) return
+  if (f.seal) return downloadSealed(storeDir, f as StoreFile & { seal: NonNullable<StoreFile['seal']> }, onBytes, timeoutMs)
 
   const part = join(storeDir, '.partial', `${f.sha512}.part`)
   await mkdir(dirname(part), { recursive: true })
@@ -106,6 +111,22 @@ export async function downloadToStore(
     }
   }
   throw lastError instanceof Error ? lastError : new DownloadError(String(lastError), true)
+}
+
+/** A sealed file (small): downloaded whole, checked as stored, opened, checked again, then stored opened. */
+async function downloadSealed(storeDir: string, f: StoreFile & { seal: NonNullable<StoreFile['seal']> }, onBytes: (n: number) => void, timeoutMs: number): Promise<void> {
+  const res = await fetch(f.url, { signal: AbortSignal.timeout(timeoutMs) })
+  if (res.status >= 400) throw new DownloadError(`HTTP ${res.status} for ${f.url}`, res.status >= 500 || res.status === 429)
+  const sealed = Buffer.from(await res.arrayBuffer())
+  onBytes(sealed.length)
+  if (sealed.length !== f.seal.size || createHash('sha512').update(sealed).digest('hex') !== f.seal.sha512) throw new DownloadError(`hash mismatch for ${f.url}`, true)
+  const plain = Buffer.from(await unseal(new Uint8Array(sealed), fromB64(f.seal.key)))
+  if (plain.length !== f.size || createHash('sha512').update(plain).digest('hex') !== f.sha512) throw new DownloadError(`sealed file does not match for ${f.url}`, false)
+  const dest = blobPath(storeDir, f.sha512)
+  await mkdir(dirname(dest), { recursive: true })
+  const tmp = tempNameFor(dest)
+  await writeFile(tmp, plain)
+  await rename(tmp, dest)
 }
 
 /** A unique temp name next to `path` (same folder = same drive, so rename is atomic). */

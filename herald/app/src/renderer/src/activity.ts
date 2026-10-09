@@ -82,6 +82,8 @@ export function describe(a: ActivityEntry): string {
       return `took ${what} down`
     case 'publication.delete':
       return `moved ${what} to the trash`
+    case 'publication.import':
+      return `brought ${what} over from the old launcher feed`
     case 'publication.revert':
       return `brought back version ${a.detail?.version ?? '?'} of ${what}`
     case 'publication.restore':

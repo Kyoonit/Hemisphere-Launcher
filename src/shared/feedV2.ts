@@ -16,6 +16,8 @@ import { ModPolicySchema } from './modBrowser.ts'
 import { EventSchema } from './events.ts'
 
 export const FEED_V2_PATH = 'v2/feed.json'
+/** The feed as published (sealed: src/shared/sealed.ts); FEED_V2_PATH is now only the launcher's cached plaintext */
+export const FEED_V2_SEALED_PATH = 'v2/feed.bin'
 
 const instant = z.string().datetime({ offset: true })
 const id = z.string().regex(/^[a-z0-9-]{1,64}$/)
@@ -35,11 +37,16 @@ const LANGS = z.array(z.string().regex(/^[a-z]{2}$/)).min(1).max(20)
 /** When something is on screen: from `showFrom` (default: always) until `showUntil` (default: until removed). */
 const Window = { showFrom: instant.optional(), showUntil: instant.optional() }
 
-/** A file next to the feed: `path` relative to the content folder, integrity by SHA-512 (the feed is signed) */
+/** How a file is stored when it is sealed: its key (base64), the SHA-512 and size of the bytes on GitHub */
+export const SealInfoSchema = z.object({ key: z.string().regex(/^[A-Za-z0-9+/]{43}=$/), sha512, size: z.number().int().positive().max(16 * 1024 * 1024) })
+
+/** A file next to the feed: `path` relative to the content folder, integrity by SHA-512 (the feed is signed).
+ *  sha512 and size are the PLAIN file's; `seal`: stored sealed (a picture in clear in the feed), opened with its key */
 export const ContentFileSchema = z.object({
   path: z.string().regex(/^v2\/(vaults|backgrounds|images)\/[a-z0-9-]{1,80}\.(bin|webp|avif|png|jpg)$/),
   sha512,
   size: z.number().int().positive().max(15 * 1024 * 1024),
+  seal: SealInfoSchema.optional(),
 })
 
 export const NewsItemV2Schema = NewsItemSchema.extend({

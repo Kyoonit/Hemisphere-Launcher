@@ -55,7 +55,12 @@ async function download(url: string): Promise<Buffer> {
 let current: Feed = FALLBACK_FEED
 
 /** What the launcher shows: the schema 2 feed (Herald) once one is published, else the schema 1 feed. */
-export const getFeed = (): FeedView => getFeedV2View() ?? viewOfV1(current)
+/** Herald's feed once published, else this one. The mod policy is not edited in Herald (S1): this feed's applies until
+ *  Herald's carries one (copied at go-live), so the blocked mods never disappear in between. */
+export const getFeed = (): FeedView => {
+  const v2 = getFeedV2View()
+  return v2 ? { ...v2, ...(!v2.modPolicy && current.modPolicy ? { modPolicy: current.modPolicy } : {}) } : viewOfV1(current)
+}
 
 async function refresh(): Promise<Feed> {
   const cached = await readCached()
