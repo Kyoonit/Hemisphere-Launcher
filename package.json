@@ -1,7 +1,7 @@
 {
   "name": "hemisphere-launcher",
   "productName": "Hemisphere Launcher",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "The official launcher for Hemisphere SMP",
   "author": "Hemisphere SMP",
   "private": true,
@@ -18,7 +18,7 @@
     "content:publish": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/publish.ts",
     "content:feed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/feed.ts",
     "dist": "npm run build && electron-builder --win --publish never",
-    "release": "node tools/release-notes.mjs && npm run build && electron-builder --win --publish always -c.releaseInfo.releaseNotesFile=dist/release-notes.md",
+    "release": "node tools/release-notes.mjs && npm run build && electron-builder --win --publish always -c.releaseInfo.releaseNotesFile=dist/release-notes.md && node tools/release-check.mjs",
     "staff-code": "node tools/staff-code.mjs"
   },
   "dependencies": {

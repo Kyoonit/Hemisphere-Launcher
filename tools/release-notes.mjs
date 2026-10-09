@@ -42,6 +42,13 @@ if (!days.length) fail(`nothing new since ${last}: add the changes to ${file}`)
 
 const section = (lang) => days.map((d) => `### ${d.date}\n\n${d.changes.map((c) => `- ${c[lang]}`).join('\n')}`).join('\n\n')
 mkdirSync('dist', { recursive: true })
-const since = (fr) => (last === '0.0.0' ? '' : fr ? ` depuis ${last}` : ` since ${last}`) // the first release: everything so far
-writeFileSync('dist/release-notes.md', `## What's new${since(false)}\n\n${section('en')}\n\n## Nouveautés${since(true)}\n\n${section('fr')}\n`)
+// The first release: a short introduction (the full history is in the launcher, News > Launcher updates); every later
+// release lists what changed since the previous one.
+const FIRST = `**First release of the Hemisphere Launcher**: Hemisphere SMP's mods installed and kept up to date, news, events and the server status, in one place. For now it's for staff testing.
+
+**Première version du Hemisphere Launcher** : les mods d’Hemisphere SMP installés et tenus à jour, les news, les événements et le statut du serveur, au même endroit. Pour l’instant, elle sert aux tests du staff.
+
+Windows 10 / 11 · download **Hemisphere-Launcher-Setup-${version}.exe** below.
+`
+writeFileSync('dist/release-notes.md', last === '0.0.0' ? FIRST : `## What's new since ${last}\n\n${section('en')}\n\n## Nouveautés depuis ${last}\n\n${section('fr')}\n`)
 console.log(`release-notes: ${version} ✓ (${days.reduce((n, d) => n + d.changes.length, 0)} changes since ${last})`)
