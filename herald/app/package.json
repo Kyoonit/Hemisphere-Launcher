@@ -1,7 +1,7 @@
 {
   "name": "herald",
   "productName": "Herald",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Hemisphere SMP staff publishing tool",
   "author": "Hemisphere SMP",
   "private": true,
