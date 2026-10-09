@@ -6,7 +6,9 @@ import { ago, formatLong, formatTime, formatWhen } from '../time'
 import { pendingChanges, shown, shownFrom, SHOWN, titleOf, usePubs } from '../pubs'
 import { nextOccurrence } from '../eventTimes'
 import { KIND_LABEL, languageName, languagesOut } from '@shared/heraldPublications'
-import type { Publication } from '@herald/api'
+import type { PackState, Publication } from '@herald/api'
+import { useEffect, useState } from 'react'
+import { newerReleases } from '@shared/heraldPack'
 
 /** What needs someone, for everyone in Herald (no alert outside Herald) */
 function attention(pubs: Publication[], now: number, zone: string): { pub: Publication; why: string }[] {
@@ -25,8 +27,9 @@ function attention(pubs: Publication[], now: number, zone: string): { pub: Publi
   return out
 }
 
-export default function Home({ onOpen }: { onOpen(id: string): void }) {
+export default function Home({ onOpen, onPack }: { onOpen(id: string): void; onPack(): void }) {
   const { me, sync, zone } = useStore()
+  const packLines = usePackAttention()
   const { state } = usePubs()
   const now = sync?.now ?? Date.now()
   const online = (sync?.people ?? []).filter((p) => p.online)
@@ -41,7 +44,13 @@ export default function Home({ onOpen }: { onOpen(id: string): void }) {
       <div className="grid grid-cols-[1.25fr_1fr] gap-4">
         <div className="card">
           <div className="eyebrow mb-3">Needs attention</div>
-          {state && attention(state.publications, now, zone).length === 0 && <p className="text-sm text-gray-400">Nothing waits for anyone.</p>}
+          {packLines.map((why) => (
+            <button key={why} className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-gray-700" onClick={onPack}>
+              <span className="w-16 shrink-0 text-[10.5px] font-bold tracking-wider text-gray-400 uppercase">Mod pack</span>
+              <span className="min-w-0 truncate text-gray-200">{why}</span>
+            </button>
+          ))}
+          {state && !packLines.length && attention(state.publications, now, zone).length === 0 && <p className="text-sm text-gray-400">Nothing waits for anyone.</p>}
           {state &&
             attention(state.publications, now, zone).slice(0, 8).map(({ pub, why }) => (
               <button key={pub.id + why} className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-gray-700" onClick={() => onOpen(pub.id)}>
@@ -103,4 +112,34 @@ export default function Home({ onOpen }: { onOpen(id: string): void }) {
       </div>
     </div>
   )
+}
+
+/** Checked at most every 30 minutes: Mojang's releases and the pack online */
+let mcCache: { at: number; minecraft: string | null; newer: string | null } | null = null
+
+/** Mod pack lines for "Needs attention": a change to approve (not mine), a refused publication, a new Minecraft. */
+function usePackAttention(): string[] {
+  const { can, me, sync } = useStore()
+  const allowed = can('pack.propose') || can('pack.approve')
+  const [pack, setPack] = useState<PackState | null>(null)
+  const [mc, setMc] = useState(mcCache)
+  useEffect(() => {
+    if (!allowed) return
+    void window.herald.api<PackState>('GET', '/pack').then((r) => r.ok && setPack(r.data))
+  }, [allowed, sync?.contentStamp])
+  useEffect(() => {
+    if (!allowed || !pack || (mcCache && Date.now() - mcCache.at < 30 * 60_000)) return
+    void Promise.all([window.herald.pack.online(pack.contentBase), window.herald.pack.minecraft()]).then(([online, list]) => {
+      const minecraft = online?.manifest.minecraft ?? null
+      mcCache = { at: Date.now(), minecraft, newer: minecraft && list ? (newerReleases(list.releases, minecraft)[0]?.id ?? null) : null }
+      setMc(mcCache)
+    })
+  }, [allowed, pack])
+  if (!allowed || !pack) return []
+  const open = pack.proposals.find((p) => p.status === 'proposed' || p.status === 'failed' || p.status === 'approved')
+  return [
+    ...(open?.status === 'proposed' && can('pack.approve') && open.proposedBy !== me.id ? [`${open.clientVersion} waits for your approval (${open.proposedByName ?? '?'})`] : []),
+    ...(open?.status === 'failed' ? [`${open.clientVersion}: publishing was refused`] : []),
+    ...(mc?.newer && !open ? [`Minecraft ${mc.newer} is out: the pack is still on ${mc.minecraft}`] : []),
+  ]
 }

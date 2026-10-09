@@ -3,6 +3,8 @@ import type { Permission, Role } from '@shared/heraldRoles'
 import type { FeedBase, ImageRef, MessageTemplate, Publication, PublicationData, Status } from '@shared/heraldPublications'
 import type { Backgrounds } from '@shared/heraldBackgrounds'
 import type { PublicSettings } from '@shared/heraldPublic'
+import type { ClientManifest, ContentIndex } from '@shared/manifest'
+import type { DraftMod, MinecraftRelease, ModReadiness, MrHit, PackProposal, Resolved } from '@shared/heraldPack'
 
 export interface Profile {
   id: string
@@ -74,6 +76,27 @@ export interface PublicSettingsState {
   staffCodeBy: string | null
 }
 
+/** GET /pack: the change waiting (if any) and the last ones; where the pack is published */
+export interface PackState {
+  proposals: PackProposal[]
+  contentBase: string
+}
+
+/** The pack players have now, read from GitHub (Herald's content repository, else where it was published before) */
+export interface OnlinePack {
+  index: ContentIndex
+  manifest: ClientManifest
+  /** Where it was read */
+  from: string
+}
+
+export interface PackVersion {
+  id: string
+  number: string
+  type: 'release' | 'beta' | 'alpha'
+  date: string | null
+}
+
 export interface PublicationDetail {
   publication: Publication
   versions: { version: number; status: Status; action: string; at: number; who: string | null }[]
@@ -112,6 +135,22 @@ export interface HeraldBridge {
     checkDiscord(id: string): Promise<{ ok: true; name: string } | { ok: false; reason: 'notApp' | 'network' }>
     /** The launcher version players get today (latest GitHub release) */
     latest(): Promise<string | null>
+  }
+  /** Mod pack (S10): Modrinth is read from this PC; the server only keeps the proposals */
+  pack: {
+    online(contentBase: string): Promise<OnlinePack | null>
+    search(query: string, minecraft: string): Promise<ApiResult<MrHit[]>>
+    versions(projectId: string, minecraft: string): Promise<ApiResult<PackVersion[]>>
+    resolve(minecraft: string, mods: DraftMod[]): Promise<ApiResult<Resolved>>
+    newest(minecraft: string, mods: { projectId: string; beta?: boolean }[]): Promise<ApiResult<Record<string, { versionId: string; version: string } | null>>>
+    /** Minecraft releases (Mojang), newest first, and the snapshot being tested; null = Mojang unreachable */
+    minecraft(): Promise<{ releases: (MinecraftRelease & { type: string; releaseTime: string })[]; snapshot: string | null } | null>
+    /** Fabric loaders for a Minecraft version, newest first ([] = Fabric not ready yet; null = unreachable) */
+    fabric(minecraft: string): Promise<{ version: string; stable: boolean }[] | null>
+    /** Which mods already have a build for this Minecraft */
+    readiness(minecraft: string, mods: { id: string; name: string; category: string; source?: { modrinth: { projectId: string; versionId: string } } }[]): Promise<ApiResult<ModReadiness[]>>
+    /** Pick a config file on this PC and send it to the server (≤ 1 MB) */
+    addFile(): Promise<ApiResult<{ name: string; sha512: string; size: number }> | null>
   }
 }
 

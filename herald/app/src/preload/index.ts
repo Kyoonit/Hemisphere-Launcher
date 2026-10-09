@@ -33,6 +33,17 @@ const bridge: HeraldBridge = {
     checkDiscord: (id) => ipcRenderer.invoke('launcher:checkDiscord', id),
     latest: () => ipcRenderer.invoke('launcher:latest'),
   },
+  pack: {
+    online: (base) => ipcRenderer.invoke('pack:online', base),
+    search: (query, minecraft) => ipcRenderer.invoke('pack:search', query, minecraft),
+    versions: (projectId, minecraft) => ipcRenderer.invoke('pack:versions', projectId, minecraft),
+    resolve: (minecraft, mods) => ipcRenderer.invoke('pack:resolve', minecraft, mods),
+    newest: (minecraft, mods) => ipcRenderer.invoke('pack:newest', minecraft, mods),
+    addFile: () => ipcRenderer.invoke('pack:addFile'),
+    minecraft: () => ipcRenderer.invoke('pack:minecraft'),
+    fabric: (minecraft) => ipcRenderer.invoke('pack:fabric', minecraft),
+    readiness: (minecraft, mods) => ipcRenderer.invoke('pack:readiness', minecraft, mods),
+  },
 }
 
 contextBridge.exposeInMainWorld('herald', bridge)

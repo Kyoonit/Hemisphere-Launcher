@@ -7,11 +7,17 @@
  * Manifests are DATA ONLY: files to download (with hashes) and where to put them. Never commands.
  */
 import { z } from 'zod'
+import { HERALD_CONTENT_BASE } from './herald.ts'
 
 export const CONTENT_SCHEMA = 1
 
-/** Where the launcher reads content from (GitHub, same repository). */
+/** Where the launcher reads content from (GitHub, same repository). Since Herald (S10), the pack is read first from the
+ *  content repository (HERALD_CONTENT_BASE), this one being the fallback until it moves for good. */
 export const CONTENT_BASE = 'https://raw.githubusercontent.com/Kyoonit/Hemisphere-Launcher/main/content/'
+/** Herald's TEST content repository (dev builds pointed at the test environment; signed with the test key) */
+export const HERALD_TEST_CONTENT_BASE = 'https://raw.githubusercontent.com/Kyoonit/herald-test-content/main/content/'
+/** Where a pack's own files (configs) may come from: the places a pack is published */
+export const PACK_BASES = [CONTENT_BASE, HERALD_CONTENT_BASE, HERALD_TEST_CONTENT_BASE] as const
 
 /** Top-level folders of the game directory that content may write to. */
 export const ALLOWED_ROOTS = ['mods', 'config', 'resourcepacks', 'shaderpacks'] as const
@@ -28,8 +34,8 @@ export function isSafeRelativePath(path: string): boolean {
   return parts.every((p) => p !== '' && p !== '.' && p !== '..' && !p.endsWith('.') && !p.endsWith(' ') && !WINDOWS_RESERVED.test(p))
 }
 
-/** Downloads may only come from Modrinth's CDN or our own content folder. */
-export function isAllowedDownloadUrl(url: string, contentBase = CONTENT_BASE): boolean {
+/** Downloads may only come from Modrinth's CDN or our own content folders. */
+export function isAllowedDownloadUrl(url: string, contentBase: string | readonly string[] = PACK_BASES): boolean {
   let u: URL
   try {
     u = new URL(url)
@@ -38,7 +44,7 @@ export function isAllowedDownloadUrl(url: string, contentBase = CONTENT_BASE): b
   }
   if (u.protocol !== 'https:' || u.username || u.password || u.port) return false
   if (u.hostname === 'cdn.modrinth.com') return true
-  return url.startsWith(contentBase) && !u.pathname.includes('/../')
+  return (typeof contentBase === 'string' ? [contentBase] : contentBase).some((b) => url.startsWith(b)) && !u.pathname.includes('/../')
 }
 
 const sha512 = z.string().regex(/^[0-9a-f]{128}$/, 'sha512 must be 128 lowercase hex chars')

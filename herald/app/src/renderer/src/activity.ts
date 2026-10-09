@@ -40,6 +40,16 @@ export function describe(a: ActivityEntry): string {
       return 'changed the launcher settings (support link, Discord)'
     case 'settings.staffCode':
       return a.detail?.reset ? 'went back to the launcher’s built-in staff code' : 'made a new staff code for the launcher'
+    case 'pack.propose':
+      return `proposed the mod pack ${a.detail?.version ?? ''} (“${a.detail?.note ?? ''}”)`
+    case 'pack.approve':
+      return `approved the mod pack ${a.detail?.version ?? ''}: publishing`
+    case 'pack.retry':
+      return `tried publishing the mod pack ${a.detail?.version ?? ''} again`
+    case 'pack.reject':
+      return `rejected the mod pack ${a.detail?.version ?? ''} (“${a.detail?.note ?? ''}”)`
+    case 'pack.withdraw':
+      return `withdrew the mod pack ${a.detail?.version ?? ''}`
     case 'backgrounds.update': {
       const changed = (a.detail?.changed as string[] | undefined) ?? []
       const removed = (a.detail?.removed as string[] | undefined) ?? []

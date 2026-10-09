@@ -63,8 +63,11 @@ Server secrets (`npx wrangler secret put <NAME> --config herald/server/wrangler.
 
 ### A dev launcher on the test content (schema 2)
 
-Build the launcher with the test environment, run it, and it shows the test feed (its cache is separate:
-`content-cache/v2-test`). Rebuild normally afterwards (`npx electron-vite build`).
+Build the launcher with the test environment, run it, and it shows the test feed and reads the test mod pack. Such a
+build keeps its OWN data folder (`%APPDATA%Hemisphere Launcher-herald-test`: settings, accounts, game folder,
+caches), so a test pack is never installed in the real game, and it runs next to the installed launcher. Put
+`{"backgroundUpdates":false}` in its `settings.json` first to keep it from downloading the game. Rebuild normally
+afterwards (`npx electron-vite build`).
 
 ```bash
 MAIN_VITE_HERALD_URL=https://herald-staging.hemisphere-launcher.workers.dev MAIN_VITE_HERALD_CONTENT_BASE=https://raw.githubusercontent.com/Kyoonit/herald-test-content/main/content/ MAIN_VITE_HERALD_PUBLIC_KEY=$(cat herald/server/test-public-key.txt) npx electron-vite build
@@ -164,3 +167,33 @@ Kept in `settings` ('public', `herald/server/src/publicSettings.ts`), every vers
 - The staff code is made in Herald's main process (same shape and scrypt settings as `npm run staff-code`); only its
   fingerprint goes to the server, the code is shown once. "Back to the built-in code" removes it from the feed.
 - Tests: `tests/herald-public.test.ts`.
+
+## Mod pack (phase S10)
+
+Tab **Mod pack** (permissions `pack.propose`, `pack.approve`): the pack online, the change waiting, the last changes.
+The pack keeps its format (`src/shared/manifest.ts`); Herald builds the whole next client on the staff PC:
+
+- **Editor**: every mod pinned to a Modrinth version (search, version list, "Check for updates", "Update all"), the
+  libraries a mod needs added by themselves, conflicts and versions made for another Minecraft blocking, config files
+  (≤ 1 MB, `default` / `enforced`), "What's new" lines, a version proposed by the pack rule (patch / minor / major).
+  Modrinth logic: `src/shared/heraldPack.ts` (Herald's main process gives it its fetch).
+- **A new Minecraft** (the main use: a pack ready on the right version): the tab compares the pack with Mojang's
+  releases. When a newer one is out, a card shows whether Fabric is ready and which mods already have a build for it
+  (ready / only a beta / not yet), with "Check again"; Home's "Needs attention" says it too. "Prepare the pack for
+  <version>" opens the editor with every mod moved to its newest build for it, Fabric's recommended loader, the mods
+  not ready listed (wait, or leave them out), a major version (2.0.0) and a "What's new" line. Minecraft and Fabric
+  are picked from Mojang's and Fabric's lists. Publish when the server runs the new version: players' launchers then
+  show "Update to <version>" (they can still play the old one alone).
+- **Two people**: one member proposes, ANOTHER member with `pack.approve` approves (never the one who proposed it;
+  Admins propose, Owner and Developer approve by default). One change at a time. `herald/server/src/pack.ts`, table
+  `pack_proposals` (migration 0008).
+- **Publishing**: every publish job carries the approved change until it is published. The publisher checks each mod
+  against Modrinth again (project, version, file address, SHA-512, size), refuses when the online pack changed since
+  the change was made or when the version exists, then writes `clients/<v>/manifest.json`, its files and the signed
+  `index.json` (sequence never lower than the pack it replaces). A refusal caused by the pack takes it out of the next
+  jobs (the news keep being published); an approver can try again or reject it.
+- **Where players read it**: Herald's content repository first, then the launcher repository's `content/` (the
+  fallback until the move, S12). At go-live, copy `content/index.json`, `index.json.sig` and `content/clients/` into
+  the content repository BEFORE the first Herald pack (previous versions and sequence carry over).
+- `npm run content:publish` still works (fallback), but once Herald publishes the pack, launchers read Herald's.
+- Tests: `tests/herald-pack.test.ts`.

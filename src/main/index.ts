@@ -65,6 +65,7 @@ import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, su
 import { installNetMeter, lowEndInfo, perfSnapshot, trimChromium, trimGpuProcess } from './core/system/performance'
 import { isMetered } from './core/system/network'
 import { runCleanup, scanCleanup } from './core/system/cleanup'
+import { CONTENT_PUBLIC_KEY } from './core/remote/publicKey'
 
 const isId = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{32}$/.test(v)
 
@@ -810,6 +811,12 @@ function syncLoginItem(): void {
   if (!app.isPackaged) return
   const want = getSettings().startWithWindows
   if (app.getLoginItemSettings({ args: [AUTOSTART_ARG] }).openAtLogin !== want) app.setLoginItemSettings({ openAtLogin: want, args: [AUTOSTART_ARG] })
+}
+
+// A development build pointed at Herald's TEST environment keeps its own data folder (settings, accounts, game folder):
+// a test mod pack can never be installed in the real game, and it runs next to the installed launcher.
+if (!app.isPackaged && import.meta.env?.MAIN_VITE_HERALD_PUBLIC_KEY && import.meta.env.MAIN_VITE_HERALD_PUBLIC_KEY !== CONTENT_PUBLIC_KEY) {
+  app.setPath('userData', `${app.getPath('userData')}-herald-test`)
 }
 
 // Lighter Chromium, and a count of what the launcher downloads (Developer tab > Performance).

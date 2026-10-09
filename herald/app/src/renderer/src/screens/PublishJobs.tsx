@@ -35,7 +35,7 @@ function whatOf(reason: string | null, titles: Map<string, string>): string {
   if (pub) return `${{ publish: 'Published', unpublish: 'Taken down', delete: 'Removed' }[pub[1]]} “${titles.get(pub[2]) ?? '…'}”`
   if (/^maintenance m-[a-z0-9]+ removed$/.test(r)) return 'Planned maintenance removed'
   if (/^maintenance m-/.test(r)) return 'Maintenance planned'
-  return { 'maintenance now': 'Maintenance started', 'back online': 'Server back online', 'daily restart': 'Daily restart changed', backgrounds: 'Home backgrounds changed', 'launcher settings': 'Launcher settings changed', 'staff code': 'Staff code changed', 'publish again': 'Published again' }[r] ?? (r || 'Change')
+  return { 'maintenance now': 'Maintenance started', 'back online': 'Server back online', 'daily restart': 'Daily restart changed', backgrounds: 'Home backgrounds changed', 'launcher settings': 'Launcher settings changed', 'staff code': 'Staff code changed', 'mod pack': 'Mod pack published', 'publish again': 'Published again' }[r] ?? (r || 'Change')
 }
 
 const ago = (ms: number) => (ms < 60_000 ? 'just now' : ms < 3_600_000 ? `${Math.floor(ms / 60_000)} min ago` : ms < 86_400_000 ? `${Math.floor(ms / 3_600_000)} h ago` : `${Math.floor(ms / 86_400_000)} d ago`)

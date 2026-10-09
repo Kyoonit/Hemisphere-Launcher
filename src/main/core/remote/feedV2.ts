@@ -49,6 +49,8 @@ let notify: (view: FeedView | null) => void = () => {}
 const serverNow = () => Date.now() + offsetMs
 /** Signed move of the content (feed.contentBase) wins, then the dev test location, then the dedicated content repository. */
 const contentBase = () => feed?.contentBase ?? ((dev() && import.meta.env?.MAIN_VITE_HERALD_CONTENT_BASE) || HERALD_CONTENT_BASE)
+/** Where Herald publishes: the mod pack is read there first too (S10) */
+export const heraldContentBase = () => contentBase()
 const language = () => {
   const l = getSettings().language
   return (l === 'auto' ? app.getLocale() : l).slice(0, 2).toLowerCase()

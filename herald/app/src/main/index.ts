@@ -2,14 +2,16 @@
  * Herald, main process. Holds the session token (encrypted by Windows with safeStorage, never given to the page) and
  * talks to the Herald server for the interface. Local settings (time zones) stay on this PC.
  */
-import { app, BrowserWindow, clipboard, ipcMain, safeStorage, shell } from 'electron'
-import { randomBytes, scrypt } from 'node:crypto'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, safeStorage, shell } from 'electron'
+import { createHash, randomBytes, scrypt } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import type { ApiResult, LocalSettings, Profile } from '@herald/api'
 import { installUpdate, startUpdater, updateState } from './updater'
 import { staffCodeFrom } from '@shared/heraldPublic'
 import { STAFF_CODE_SCRYPT } from '@shared/dev'
+import { CONTENT_BASE, ClientManifestSchema, ContentIndexSchema, PACK_BASES } from '@shared/manifest'
+import { compatibleVersions, fabricLoadersUrl, MAX_PACK_FILE, modrinthGetter, MOJANG_VERSIONS, newestVersions, packReadiness, resolvePack, searchMods, type DraftMod } from '@shared/heraldPack'
 
 /** Staging until the production server exists (S12); a build can point elsewhere with MAIN_VITE_HERALD_SERVER. */
 const SERVER = (import.meta.env?.MAIN_VITE_HERALD_SERVER || 'https://herald-staging.hemisphere-launcher.workers.dev').replace(/\/$/, '')
@@ -24,6 +26,8 @@ const ALLOWED = [
   /^\/publish$/,
   /^\/backgrounds$/,
   /^\/settings\/public$/,
+  /^\/pack(\/proposals)?$/,
+  /^\/pack\/proposals\/k-[a-z0-9]{10}\/(approve|reject|withdraw)$/,
   /^\/server\/(templates|maintenances|maintenance-now|back-online|restart|history)$/,
   /^\/server\/maintenances\/m-[a-z0-9]{10}\/delete$/,
 ]
@@ -171,6 +175,110 @@ function registerIpc(): void {
       return res.ok && typeof body.tag_name === 'string' ? body.tag_name.replace(/^v/, '') : null
     } catch {
       return null
+    }
+  })
+  // Mod pack (S10): Modrinth and GitHub are read from this PC (the server's CPU budget is tiny)
+  const modrinth = modrinthGetter(`Kyoonit/Hemisphere-Launcher (Herald ${app.getVersion()})`)
+  const failed = (err: unknown) => ({ ok: false, status: 0, error: err instanceof Error && err.message.startsWith('Modrinth') ? `${err.message}: try again in a moment.` : 'Modrinth cannot be reached. Check your internet connection.' })
+  const mc = (v: unknown) => typeof v === 'string' && /^[0-9][0-9a-z.\-]{0,31}$/.test(v)
+  ipcMain.handle('pack:online', async (_e, base: unknown) => {
+    // Herald's content repository first, then where the pack was published before (until it moves)
+    const bases = [...new Set([...(typeof base === 'string' && (PACK_BASES as readonly string[]).includes(base) ? [base] : []), CONTENT_BASE])]
+    for (const from of bases) {
+      try {
+        const get = (path: string) => fetch(from + path, { signal: AbortSignal.timeout(15_000), cache: 'no-store' })
+        const res = await get('index.json')
+        if (!res.ok) continue
+        const index = ContentIndexSchema.parse(await res.json())
+        const bytes = Buffer.from(await (await get(index.latest.manifest)).arrayBuffer())
+        if (createHash('sha512').update(bytes).digest('hex') !== index.latest.sha512) continue
+        return { index, manifest: ClientManifestSchema.parse(JSON.parse(bytes.toString('utf8'))), from }
+      } catch {
+        // next place
+      }
+    }
+    return null
+  })
+  ipcMain.handle('pack:search', async (_e, query: unknown, minecraft: unknown) => {
+    if (typeof query !== 'string' || !mc(minecraft)) return { ok: false, status: 400, error: 'Bad search.' }
+    try {
+      return { ok: true, data: await searchMods(modrinth, query.slice(0, 80), minecraft as string) }
+    } catch (err) {
+      return failed(err)
+    }
+  })
+  ipcMain.handle('pack:versions', async (_e, projectId: unknown, minecraft: unknown) => {
+    if (typeof projectId !== 'string' || !/^[A-Za-z0-9]{1,16}$/.test(projectId) || !mc(minecraft)) return { ok: false, status: 400, error: 'Bad project.' }
+    try {
+      const list = await compatibleVersions(modrinth, projectId, minecraft as string)
+      return { ok: true, data: list.slice(0, 40).map((v) => ({ id: v.id, number: v.version_number, type: v.version_type, date: v.date_published ?? null })) }
+    } catch (err) {
+      return failed(err)
+    }
+  })
+  ipcMain.handle('pack:resolve', async (_e, minecraft: unknown, mods: unknown) => {
+    if (!mc(minecraft) || !Array.isArray(mods) || mods.length > 300) return { ok: false, status: 400, error: 'Bad pack.' }
+    try {
+      return { ok: true, data: await resolvePack(modrinth, minecraft as string, mods as DraftMod[]) }
+    } catch (err) {
+      return failed(err)
+    }
+  })
+  ipcMain.handle('pack:newest', async (_e, minecraft: unknown, mods: unknown) => {
+    if (!mc(minecraft) || !Array.isArray(mods) || mods.length > 300) return { ok: false, status: 400, error: 'Bad pack.' }
+    try {
+      return { ok: true, data: await newestVersions(modrinth, minecraft as string, mods as { projectId: string; beta?: boolean }[]) }
+    } catch (err) {
+      return failed(err)
+    }
+  })
+  // A new Minecraft: Mojang's releases, Fabric's loaders, which mods are ready
+  ipcMain.handle('pack:minecraft', async () => {
+    try {
+      const res = await fetch(MOJANG_VERSIONS, { signal: AbortSignal.timeout(15_000) })
+      if (!res.ok) return null
+      const j = (await res.json()) as { latest: { snapshot?: string }; versions: { id: string; type: string; releaseTime: string }[] }
+      const releases = j.versions.filter((v) => v.type === 'release').slice(0, 30).map((v) => ({ id: v.id, type: v.type, releaseTime: v.releaseTime, releasedAt: v.releaseTime }))
+      return { releases, snapshot: j.latest.snapshot ?? null }
+    } catch {
+      return null
+    }
+  })
+  ipcMain.handle('pack:fabric', async (_e, minecraft: unknown) => {
+    if (!mc(minecraft)) return null
+    try {
+      const res = await fetch(fabricLoadersUrl(minecraft as string), { signal: AbortSignal.timeout(15_000) })
+      if (res.status === 400 || res.status === 404) return []
+      if (!res.ok) return null
+      return ((await res.json()) as { loader: { version: string; stable: boolean } }[]).map((x) => ({ version: x.loader.version, stable: x.loader.stable }))
+    } catch {
+      return null
+    }
+  })
+  ipcMain.handle('pack:readiness', async (_e, minecraft: unknown, mods: unknown) => {
+    if (!mc(minecraft) || !Array.isArray(mods) || mods.length > 300) return { ok: false, status: 400, error: 'Bad pack.' }
+    try {
+      return { ok: true, data: await packReadiness(modrinth, minecraft as string, mods) }
+    } catch (err) {
+      return failed(err)
+    }
+  })
+  ipcMain.handle('pack:addFile', async () => {
+    const pick = await dialog.showOpenDialog(win!, { title: 'Add a config file to the pack', properties: ['openFile'] })
+    if (pick.canceled || !pick.filePaths[0]) return null
+    const bytes = await readFile(pick.filePaths[0])
+    if (bytes.length > MAX_PACK_FILE) return { ok: false, status: 413, error: 'Files of the pack are limited to 1 MB here (configs).' }
+    try {
+      const res = await fetch(`${SERVER}/pack/files`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(60_000),
+        headers: { 'content-type': 'application/octet-stream', 'user-agent': `Herald/${app.getVersion()}`, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: bytes,
+      })
+      const data = (await res.json().catch(() => ({}))) as { sha512: string; size: number; error?: string }
+      return res.ok ? { ok: true, data: { name: basename(pick.filePaths[0]), sha512: data.sha512, size: data.size } } : { ok: false, status: res.status, error: data.error ?? `HTTP ${res.status}` }
+    } catch {
+      return { ok: false, status: 0, error: 'The Herald server cannot be reached. Check your internet connection.' }
     }
   })
   ipcMain.handle('update:state', () => updateState())

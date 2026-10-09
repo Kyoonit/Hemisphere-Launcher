@@ -10,12 +10,13 @@
  *   POST /images, GET /images/:id   pictures of the publications (WebP from the app)
  *   POST /publish                publish the current state again (a failed run, a retry)
  *   …    /server/…               maintenances (planned, now, back online), daily restart, their history (S6)
+ *   …    /pack…                  mod pack: proposals, approval by another member, config files (S10)
  *   GET  /update/<file>          Herald app updates (signed-in staff only), from the private releases repository
  *   GET  /pulse                  PUBLIC: last sequence + commit; launchers read the feed at that exact commit (raw
  *                                 by commit is never cached, plain raw is cached up to 5 min): emergencies in minutes
  *   POST /internal/next          PUBLISHER: the newest queued job + its sequence (older queued jobs are superseded)
  *   POST /internal/done|failed   PUBLISHER: result of a publish run
- *   GET  /internal/file/<path>   PUBLISHER: a file the job writes next to the feed (vault, picture)
+ *   GET  /internal/file/<path>   PUBLISHER: a file the job writes next to the feed (vault, picture, pack config file)
  *   POST /dev/publish            test: queue a schema 1 feed and start the publish workflow
  *   POST /dev/publish-v2         test: queue a schema 2 feed; items not due yet are locked in vaults
  *   GET  /dev/job/:id            test: where a job is
@@ -29,6 +30,7 @@ import { githubConfigured, latestReleaseFile, startPublishWorkflow, type GithubE
 import { listedFiles, openKeys, sealFuture, type FeedDraft } from './feedV2'
 import { saveBackgrounds } from './backgrounds'
 import { savePublic } from './publicSettings'
+import { approvePack, getPack, packForJob, packJobFinished, proposePack, rejectPack, uploadPackFile, withdrawPack } from './pack'
 import { authenticate, bootstrap, createProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
 import * as pubs from './publications'
 import * as server from './serverState'
@@ -49,7 +51,7 @@ export interface Env extends GithubEnv {
   DEV_TOKEN?: string
 }
 
-type Job = { id: string; payload: string; status: string; sequence: number | null; commit_sha: string | null; error: string | null }
+type Job = { id: string; payload: string; status: string; sequence: number | null; commit_sha: string | null; error: string | null; pack_id: string | null }
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } })
 const bearer = (req: Request, token: string | undefined) => Boolean(token) && req.headers.get('authorization') === `Bearer ${token}`
@@ -72,7 +74,7 @@ export default {
         if (req.method === 'POST' && path === '/internal/next') return await nextJob(env)
         if (req.method === 'POST' && path === '/internal/done') return await finishJob(env, await req.json(), 'done')
         if (req.method === 'POST' && path === '/internal/failed') return await finishJob(env, await req.json(), 'failed')
-        const file = path.match(/^\/internal\/file\/(v2\/(?:vaults|images)\/[a-z0-9-]{1,80}\.(?:bin|webp))$/)
+        const file = path.match(/^\/internal\/file\/(v2\/(?:vaults|images)\/[a-z0-9-]{1,80}\.(?:bin|webp)|pack\/[0-9a-f]{64}\.bin)$/)
         if (req.method === 'GET' && file) return await contentFile(env, file[1])
       }
       if (path.startsWith('/dev/')) {
@@ -170,12 +172,13 @@ async function nextJob(env: Env): Promise<Response> {
   return json({ job: { id: job.id, sequence, ...JSON.parse(job.payload) }, contentDir: env.CONTENT_DIR })
 }
 
-async function finishJob(env: Env, body: { id?: string; commit?: string; error?: string }, status: 'done' | 'failed'): Promise<Response> {
+async function finishJob(env: Env, body: { id?: string; commit?: string; error?: string; part?: string }, status: 'done' | 'failed'): Promise<Response> {
   const job = await env.DB.prepare("SELECT * FROM publish_jobs WHERE id = ?1 AND status = 'publishing'").bind(body.id ?? '').first<Job>()
   if (!job) return json({ error: 'no such job being published' }, 404)
   const now = Date.now()
   if (status === 'failed') {
     await env.DB.prepare("UPDATE publish_jobs SET status = 'failed', error = ?2, updated_at = ?3 WHERE id = ?1").bind(job.id, String(body.error ?? 'unknown error').slice(0, 2000), now).run()
+    if (job.pack_id) await packJobFinished(env.DB, job.pack_id, { error: body.error, part: body.part })
     return json({ ok: true })
   }
   if (!/^[0-9a-f]{40}$/.test(body.commit ?? '') && body.commit !== 'local') return json({ error: 'commit sha expected' }, 400)
@@ -184,22 +187,25 @@ async function finishJob(env: Env, body: { id?: string; commit?: string; error?:
     env.DB.prepare('INSERT INTO publish_state (id, sequence, commit_sha, updated_at) VALUES (1, ?1, ?2, ?3) ON CONFLICT(id) DO UPDATE SET sequence = ?1, commit_sha = ?2, updated_at = ?3')
       .bind(job.sequence, body.commit, new Date(now).toISOString()),
   ])
+  if (job.pack_id) await packJobFinished(env.DB, job.pack_id, { commit: body.commit })
   return json({ ok: true })
 }
 
-async function queue(env: Env, payload: unknown, now: number, by: string | null = null, reason: string | null = null): Promise<string> {
+async function queue(env: Env, payload: unknown, now: number, by: string | null = null, reason: string | null = null, packId: string | null = null): Promise<string> {
   const id = `job-${crypto.randomUUID()}`
-  await env.DB.prepare("INSERT INTO publish_jobs (id, payload, status, created_at, updated_at, requested_by, reason) VALUES (?1, ?2, 'queued', ?3, ?3, ?4, ?5)").bind(id, JSON.stringify(payload), now, by, reason).run()
+  await env.DB.prepare("INSERT INTO publish_jobs (id, payload, status, created_at, updated_at, requested_by, reason, pack_id) VALUES (?1, ?2, 'queued', ?3, ?3, ?4, ?5, ?6)").bind(id, JSON.stringify(payload), now, by, reason, packId).run()
   return id
 }
 
-/** Publishes the whole current state (Herald's publications + the other feed parts): queue + start the workflow. */
+/** Publishes the whole current state (Herald's publications + the other feed parts + an approved change of the mod
+ *  pack not published yet): queue + start the workflow. */
 function publisher(env: Env, ctx: ExecutionContext, actor: Actor): pubs.Publisher {
   return async (reason) => {
     const now = Date.now()
     const { feed, files, vaultKeys } = await pubs.buildFeed(env, now)
     await env.DB.prepare('INSERT INTO feed_v2_state (id, feed, updated_at) VALUES (1, ?1, ?2) ON CONFLICT(id) DO UPDATE SET feed = ?1, updated_at = ?2').bind(JSON.stringify(feed), now).run()
-    const id = await queue(env, { schema: 2, feed: { ...feed, vaultKeys }, files }, now, actor.profile.id, reason)
+    const pack = await packForJob(env.DB)
+    const id = await queue(env, { schema: 2, feed: { ...feed, vaultKeys }, files, ...(pack ? { pack: pack.payload } : {}) }, now, actor.profile.id, reason, pack?.id ?? null)
     if (env.HERALD_ENV !== 'local' && githubConfigured(env)) ctx.waitUntil(startPublishWorkflow(env, reason).catch((err) => console.error('[publish] workflow not started:', err)))
     return id
   }
@@ -210,8 +216,9 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
   const one = path.match(/^\/publications\/([nebw]-[a-z0-9]{12})(?:\/(status|publish|unpublish|delete|restore|comments|editing|versions\/(\d{1,6})))?$/)
   const image = path.match(/^\/images\/([0-9a-f]{64})$/)
   const maintenance = path.match(/^\/server\/maintenances\/(m-[a-z0-9]{10})\/delete$/)
-  const serverPaths = ['/backgrounds', '/settings/public', '/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history']
-  if (path !== '/publications' && path !== '/images' && path !== '/publish' && !one && !image && !maintenance && !serverPaths.includes(path)) return null
+  const packAction = path.match(/^\/pack\/proposals\/(k-[a-z0-9]{10})\/(approve|reject|withdraw)$/)
+  const serverPaths = ['/pack', '/pack/proposals', '/pack/files', '/backgrounds', '/settings/public', '/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history']
+  if (path !== '/publications' && path !== '/images' && path !== '/publish' && !one && !image && !maintenance && !packAction && !serverPaths.includes(path)) return null
   const actor = await authenticate(env, req)
   const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
   const run = publisher(env, ctx, actor)
@@ -231,6 +238,13 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
   if (req.method === 'POST' && path === '/server/back-online') return json(await server.backOnline(env, actor, run))
   if (req.method === 'POST' && path === '/settings/public') return json(await savePublic(env, actor, await body(), run))
   if (req.method === 'POST' && path === '/backgrounds') return json(await saveBackgrounds(env, actor, await body(), run))
+  // Mod pack (S10)
+  if (req.method === 'GET' && path === '/pack') return json(await getPack(env, actor))
+  if (req.method === 'POST' && path === '/pack/proposals') return json(await proposePack(env, actor, await body()))
+  if (req.method === 'POST' && path === '/pack/files') return json(await uploadPackFile(env, actor, req))
+  if (req.method === 'POST' && packAction?.[2] === 'approve') return json(await approvePack(env, actor, packAction[1], run))
+  if (req.method === 'POST' && packAction?.[2] === 'reject') return json(await rejectPack(env, actor, packAction[1], await body()))
+  if (req.method === 'POST' && packAction?.[2] === 'withdraw') return json(await withdrawPack(env, actor, packAction[1]))
   if (req.method === 'POST' && path === '/server/templates') return json(await server.saveTemplates(env, actor, await body()))
   if (req.method === 'POST' && path === '/server/restart') return json(await server.saveRestart(env, actor, await body(), run))
   if (!one) return json({ error: 'not found' }, 404)

@@ -11,12 +11,11 @@ import TimeTravel from './screens/TimeTravel'
 import Server from './screens/Server'
 import Backgrounds from './screens/Backgrounds'
 import LauncherSettings from './screens/LauncherSettings'
+import Pack from './screens/Pack'
 import { PubsProvider } from './pubs'
 import { PublishJobs } from './screens/PublishJobs'
 
-const COMING: Partial<Record<Tab, string>> = {
-  pack: 'The mod pack and its approvals: phase S10.',
-}
+const COMING: Partial<Record<Tab, string>> = {}
 
 export default function App() {
   const [me, setMe] = useState<Profile | null | undefined>(undefined)
@@ -54,11 +53,12 @@ function Shell({ staging }: { staging: boolean }) {
       <TitleBar tab={shown} onTab={(t) => (t === 'publications' && tab === 'publications' && setOpenPub(null), setTab(t))} staging={staging} />
       <PublishJobs />
       <main className="min-h-0 flex-1 overflow-auto px-7 py-6">
-        {shown === 'home' && <Home onOpen={goPub} />}
+        {shown === 'home' && <Home onOpen={goPub} onPack={() => setTab('pack')} />}
         {shown === 'publications' && <Publications open={openPub} onOpen={setOpenPub} />}
         {shown === 'preview' && <TimeTravel />}
         {shown === 'server' && <Server />}
         {shown === 'backgrounds' && <Backgrounds />}
+        {shown === 'pack' && <Pack />}
         {shown === 'team' && <Team />}
         {shown === 'settings' && <MySettings />}
         {shown === 'launcher' && <LauncherSettings />}

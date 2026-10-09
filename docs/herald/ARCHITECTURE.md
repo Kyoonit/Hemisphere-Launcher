@@ -547,3 +547,47 @@ Retours du propriétaire (S6) :
 |---|---|
 | Tests unitaires (`tests/herald-public.test.ts`) | Format du code, code accepté par la même vérification que le launcher (y compris tapé en minuscules), liens Discord seulement, réglages dans le flux et la vue du launcher |
 | Staging | Lien non Discord refusé, version dépassée refusée, support et ID Discord publiés dans le flux de test ; « Make a new code » dans Herald : code vérifié contre l'empreinte du serveur (sans l'afficher), puis retour au code intégré |
+
+## 25. Phase S10 : pack de mods (9 octobre 2026)
+
+- **Onglet Mod pack** (droits `pack.propose`, `pack.approve`) : le pack en ligne, le changement en attente, les derniers
+  changements. Le format du pack ne change pas (`src/shared/manifest.ts`).
+- **Éditeur** (dans Herald, sur le PC du staff) : chaque mod fixé sur une version Modrinth (recherche, liste des
+  versions, « Check for updates », « Update all ») ; bibliothèques nécessaires ajoutées toutes seules ; conflits et
+  versions faites pour un autre Minecraft **bloquants** ; fichiers de config (≤ 1 Mo, `default` / `enforced`) ;
+  « What's new » EN/FR ; numéro proposé selon la règle du pack (patch / mineure / majeure). Logique Modrinth :
+  `src/shared/heraldPack.ts`. (`npm run content:publish` garde sa propre copie : c'est la commande de secours.)
+- **Nouveau Minecraft** (l'usage principal : un pack prêt dans la bonne version du jeu) : l'onglet compare le pack aux
+  versions publiées par Mojang. Dès qu'une version plus récente sort, une carte montre si Fabric est prêt et quels
+  mods ont déjà une version pour elle (prêt / seulement une bêta / pas encore), avec « Check again » ; l'accueil de
+  Herald le signale aussi (« Needs attention »). « Prepare the pack for <version> » ouvre l'éditeur avec chaque mod
+  passé à sa dernière version pour ce Minecraft, le loader Fabric recommandé, la liste des mods pas encore prêts
+  (attendre, ou les laisser de côté), une version majeure (2.0.0) et une ligne « What's new ». Minecraft et Fabric se
+  choisissent dans les listes officielles de Mojang et de Fabric. On publie quand le serveur tourne sur la nouvelle
+  version : le launcher des joueurs affiche alors « Mettre à jour vers <version> » (l'ancienne reste jouable en solo).
+  Mesure réelle (9/10/2026) sur la snapshot 26.4 : Fabric prêt, 3 mods sur 24 seulement.
+- **Validation à deux** : un membre propose, **un autre** membre ayant `pack.approve` approuve, jamais celui qui a
+  proposé. Par défaut, les Admins proposent ; l'Owner et le Developer approuvent. Une seule validation suffit. Un
+  seul changement à la fois. Table `pack_proposals` (migration 0008), journal : proposé, approuvé, refusé, retiré.
+- **Publication** : chaque publication emporte le changement approuvé jusqu'à ce qu'il soit en ligne. GitHub
+  Actions **revérifie chaque mod auprès de Modrinth** (projet, version, adresse, SHA-512, taille), refuse si le pack
+  en ligne a changé depuis le changement ou si la version existe déjà, puis écrit `clients/<v>/manifest.json`, ses
+  fichiers et `index.json` signé. Sa séquence n'est jamais plus basse que celle du pack remplacé. Un refus dû au
+  pack le sort des publications suivantes : les news continuent d'être publiées. Un approbateur peut alors réessayer
+  ou refuser.
+- **Déménagement** : le launcher lit le pack d'abord dans le dépôt de contenu de Herald, puis dans `content/` de ce
+  dépôt (secours, tant que `Kyoonit/hemisphere-content` n'existe pas). **À la mise en service (S12)**, copier
+  `content/index.json`, `index.json.sig` et `content/clients/` dans le dépôt de contenu **avant** le premier pack
+  publié par Herald : les versions précédentes et la séquence suivent.
+- **Launcher de test** : un build pointé sur l'environnement de test a désormais son propre dossier de données
+  (`Hemisphere Launcher-herald-test`). Un pack de test ne peut jamais s'installer dans le vrai jeu, et ce launcher
+  tourne à côté du launcher installé.
+
+| Test | Résultat |
+|---|---|
+| Tests unitaires (`tests/herald-pack.test.ts`) | Bibliothèques ajoutées, conflits, mauvaise version de Minecraft, bibliothèques inutiles ; changements et numéro proposé ; contrôle Modrinth du publieur ; index signé accepté, séquence jamais plus basse, rien de republié deux fois, refus si le pack a changé ou si la version existe, fichiers de config exacts ; adresses autorisées |
+| Staging (dépôt de test seulement) | Un approbateur ne peut pas approuver sa propre proposition, un Admin ne peut pas approuver, un deuxième changement est refusé tant qu'un autre attend ; approuvé par un autre membre → pack de test 1.0.3 publié par GitHub Actions (mods revérifiés sur Modrinth), index signé avec la clé de test, octets identiques à ceux approuvés, fichier de config présent ; changement fait sur l'ancien pack → refusé, et la publication suivante passe sans lui |
+| Vrai cas trouvé | La dernière version de Zoomify demande une bibliothèque qui n'existe pas pour Minecraft 26.3 : Herald le signale comme bloquant |
+| Launcher de test | Pack de test 1.0.3 lu et vérifié (clé de test) dans son propre dossier ; le cache du vrai launcher est resté sur 1.0.2 |
+| Launcher normal | Le dépôt `hemisphere-content` n'existe pas encore (404) : le pack est lu à l'ancienne adresse, sans erreur |
+| Herald | Onglet affiché, éditeur relu sur Modrinth (24 mods, dépendances, avertissement bêta), recherche avec icônes |
