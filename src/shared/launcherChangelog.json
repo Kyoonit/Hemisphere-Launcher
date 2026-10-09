@@ -4,6 +4,12 @@
     "changes": [
       {
         "version": "next",
+        "area": "community",
+        "en": "News, events and maintenances from the team reach your launcher within 2 minutes (it was up to 10).",
+        "fr": "Les news, événements et maintenances de l’équipe arrivent dans ton launcher en moins de 2 minutes (jusqu’à 10 avant)."
+      },
+      {
+        "version": "next",
         "area": "launcher",
         "en": "Each preset now has its own settings: keybinds, video and sound, mod settings and server list switch with it.",
         "fr": "Chaque préréglage a maintenant ses propres réglages : touches, vidéo et son, réglages des mods et liste de serveurs changent avec lui."
