@@ -3,25 +3,25 @@
     "date": "2026-10-09",
     "changes": [
       {
-        "version": "next",
+        "version": "1.1.0",
         "area": "home",
         "en": "Home’s left column: playtime, “Coming from another launcher?” and What’s new one under the other, never on top of each other; What’s new uses the room down to the bottom.",
         "fr": "Colonne de gauche de l’accueil : temps de jeu, « Tu viens d’un autre launcher ? » et Nouveautés l’un sous l’autre, jamais superposés ; les Nouveautés prennent la place jusqu’en bas."
       },
       {
-        "version": "next",
+        "version": "1.1.0",
         "area": "home",
         "en": "What’s new and “Coming from another launcher?” come back every time the launcher starts (closing hides them until then).",
         "fr": "Les Nouveautés et « Tu viens d’un autre launcher ? » reviennent à chaque lancement du launcher (les fermer les cache jusque-là)."
       },
       {
-        "version": "next",
+        "version": "1.1.0",
         "area": "home",
         "en": "Switching account refreshes the whole Home at once.",
         "fr": "Changer de compte rafraîchit tout l’accueil d’un coup."
       },
       {
-        "version": "next",
+        "version": "1.1.0",
         "area": "launcher",
         "en": "Launcher versions now follow releases: 1.1, 1.2…",
         "fr": "Les versions du launcher suivent maintenant les publications : 1.1, 1.2…"
