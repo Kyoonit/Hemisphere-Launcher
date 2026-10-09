@@ -1,27 +1,33 @@
 /**
- * Herald server — phase S2: the test infrastructure only (no staff accounts yet).
+ * Herald server.
  *   GET  /health, /time          liveness and server clock
  *   GET  /vault-key/:id          PUBLIC: a vault's key, only from its opening time (launchers ask right at that time)
  *   POST /bootstrap              one-time creation of the Owner / Developer profiles (BOOTSTRAP_TOKEN secret)
  *   POST /login, /logout         staff sign-in (name + code) → session token
  *   GET  /me, /sync              the signed-in profile; presence + activity (the app refreshes every 15 s)
  *   …    /profiles               create, change, revoke profiles, new codes (permission profiles.manage)
+ *   …    /publications           news, banners, welcome messages: edit, statuses, comments, publish (S5)
+ *   POST /images, GET /images/:id   pictures of the publications (WebP from the app)
+ *   POST /publish                publish the current state again (a failed run, a retry)
  *   GET  /update/<file>          Herald app updates (signed-in staff only), from the private releases repository
  *   GET  /pulse                  PUBLIC: last sequence + commit; launchers read the feed at that exact commit (raw
  *                                 by commit is never cached, plain raw is cached up to 5 min): emergencies in minutes
  *   POST /internal/next          PUBLISHER: the newest queued job + its sequence (older queued jobs are superseded)
  *   POST /internal/done|failed   PUBLISHER: result of a publish run
+ *   GET  /internal/file/<path>   PUBLISHER: a file the job writes next to the feed (vault, picture)
  *   POST /dev/publish            test: queue a schema 1 feed and start the publish workflow
  *   POST /dev/publish-v2         test: queue a schema 2 feed; items not due yet are locked in vaults
  *   GET  /dev/job/:id            test: where a job is
  *   POST /dev/vault              test: seal a payload, keep its key until opensAt
+ *   POST /dev/test-profile       test: the "Herald Test" admin profile, with a new code
  * Plan A: the content signing key is NOT here. GitHub Actions ("Herald publish" workflow of the content repository)
  * validates, signs and commits; this server only says what to publish. /dev/* never exists in production.
  */
 import { sealVault, toB64, unwrapKey, wrapKey } from './crypto'
 import { githubConfigured, latestReleaseFile, startPublishWorkflow, type GithubEnv } from './github'
-import { openKeys, sealFuture, type FeedDraft } from './feedV2'
-import { authenticate, bootstrap, createProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, updateProfile } from './accounts'
+import { listedFiles, openKeys, sealFuture, type FeedDraft } from './feedV2'
+import { authenticate, bootstrap, createProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
+import * as pubs from './publications'
 
 export interface Env extends GithubEnv {
   DB: D1Database
@@ -53,6 +59,8 @@ export default {
       if (req.method === 'GET' && path === '/pulse') return await pulse(env)
       const staff = await staffRoute(req, env, path)
       if (staff) return staff
+      const content = await publicationRoute(req, env, ctx, path)
+      if (content) return content
       const key = path.match(/^\/vault-key\/([a-z0-9-]{1,80})$/)
       if (req.method === 'GET' && key) return await vaultKey(env, key[1])
       if (path.startsWith('/internal/')) {
@@ -60,6 +68,8 @@ export default {
         if (req.method === 'POST' && path === '/internal/next') return await nextJob(env)
         if (req.method === 'POST' && path === '/internal/done') return await finishJob(env, await req.json(), 'done')
         if (req.method === 'POST' && path === '/internal/failed') return await finishJob(env, await req.json(), 'failed')
+        const file = path.match(/^\/internal\/file\/(v2\/(?:vaults|images)\/[a-z0-9-]{1,80}\.(?:bin|webp))$/)
+        if (req.method === 'GET' && file) return await contentFile(env, file[1])
       }
       if (path.startsWith('/dev/')) {
         if (env.HERALD_ENV === 'production' || !bearer(req, env.DEV_TOKEN)) return json({ error: 'not found' }, 404)
@@ -68,6 +78,7 @@ export default {
         const job = path.match(/^\/dev\/job\/([a-z0-9-]{1,80})$/)
         if (req.method === 'GET' && job) return await jobStatus(env, job[1])
         if (req.method === 'POST' && path === '/dev/vault') return await devVault(env, await req.json())
+        if (req.method === 'POST' && path === '/dev/test-profile') return json(await testProfile(env))
       }
       return json({ error: 'not found' }, 404)
     } catch (err) {
@@ -88,10 +99,13 @@ export default {
       const state = await env.DB.prepare('SELECT feed FROM feed_v2_state WHERE id = 1').first<{ feed: string }>()
       if (state) {
         const feed = JSON.parse(state.feed) as Record<string, unknown>
-        await queue(env, { schema: 2, feed: { ...feed, vaultKeys: await openKeys(env.DB, env.VAULT_MASTER, feed, now) }, files: [] }, now)
+        await queue(env, { schema: 2, feed: { ...feed, vaultKeys: await openKeys(env.DB, env.VAULT_MASTER, feed, now) }, files: listedFiles(feed) }, now, null, 'vault keys')
         if (env.HERALD_ENV !== 'local' && githubConfigured(env)) await startPublishWorkflow(env, 'vault keys (cron)')
       }
     }
+    // Vault files opened a week ago are in the content repository for good: no need to keep them here too
+    if (new Date(now).getUTCMinutes() === 0)
+      await env.DB.prepare("DELETE FROM content_files WHERE path LIKE 'v2/vaults/%' AND substr(path, 11, 20) IN (SELECT id FROM vaults WHERE released_at < ?1)").bind(now - 7 * 86_400_000).run()
     const waiting = await env.DB.prepare("SELECT count(*) AS n FROM publish_jobs WHERE status = 'queued' AND created_at < ?1").bind(now - 90_000).first<{ n: number }>()
     if (waiting?.n && env.HERALD_ENV !== 'local' && githubConfigured(env)) {
       console.log(`[cron] ${waiting.n} job(s) still queued: starting the publish workflow again`)
@@ -169,17 +183,68 @@ async function finishJob(env: Env, body: { id?: string; commit?: string; error?:
   return json({ ok: true })
 }
 
-async function queue(env: Env, payload: unknown, now: number): Promise<string> {
+async function queue(env: Env, payload: unknown, now: number, by: string | null = null, reason: string | null = null): Promise<string> {
   const id = `job-${crypto.randomUUID()}`
-  await env.DB.prepare("INSERT INTO publish_jobs (id, payload, status, created_at, updated_at) VALUES (?1, ?2, 'queued', ?3, ?3)").bind(id, JSON.stringify(payload), now).run()
+  await env.DB.prepare("INSERT INTO publish_jobs (id, payload, status, created_at, updated_at, requested_by, reason) VALUES (?1, ?2, 'queued', ?3, ?3, ?4, ?5)").bind(id, JSON.stringify(payload), now, by, reason).run()
   return id
+}
+
+/** Publishes the whole current state (Herald's publications + the other feed parts): queue + start the workflow. */
+function publisher(env: Env, ctx: ExecutionContext, actor: Actor): pubs.Publisher {
+  return async (reason) => {
+    const now = Date.now()
+    const { feed, files, vaultKeys } = await pubs.buildFeed(env, now)
+    await env.DB.prepare('INSERT INTO feed_v2_state (id, feed, updated_at) VALUES (1, ?1, ?2) ON CONFLICT(id) DO UPDATE SET feed = ?1, updated_at = ?2').bind(JSON.stringify(feed), now).run()
+    const id = await queue(env, { schema: 2, feed: { ...feed, vaultKeys }, files }, now, actor.profile.id, reason)
+    if (env.HERALD_ENV !== 'local' && githubConfigured(env)) ctx.waitUntil(startPublishWorkflow(env, reason).catch((err) => console.error('[publish] workflow not started:', err)))
+    return id
+  }
+}
+
+/** Publications routes (null = not one of them). */
+async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, path: string): Promise<Response | null> {
+  const one = path.match(/^\/publications\/([nbw]-[a-z0-9]{12})(?:\/(status|publish|unpublish|delete|restore|comments|editing|versions\/(\d{1,6})))?$/)
+  const image = path.match(/^\/images\/([0-9a-f]{64})$/)
+  if (path !== '/publications' && path !== '/images' && path !== '/publish' && !one && !image) return null
+  const actor = await authenticate(env, req)
+  const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
+  const run = publisher(env, ctx, actor)
+  if (req.method === 'GET' && path === '/publications') return json(await pubs.listPublications(env, actor))
+  if (req.method === 'POST' && path === '/publications') return json(await pubs.createPublication(env, actor, await body()))
+  if (req.method === 'POST' && path === '/images') return json(await pubs.uploadImage(env, actor, req))
+  if (req.method === 'GET' && image) return await pubs.imageFile(env, image[1])
+  if (req.method === 'POST' && path === '/publish') {
+    if (!actor.permissions.includes('publications.publish')) throw new HttpError(403, 'You cannot publish.')
+    return json({ job: await run('publish again') })
+  }
+  if (!one) return json({ error: 'not found' }, 404)
+  const [, id, action, version] = one
+  if (req.method === 'GET' && !action) return json(await pubs.getPublication(env, actor, id))
+  if (req.method === 'GET' && version) return json(await pubs.getVersion(env, actor, id, Number(version)))
+  if (req.method === 'PATCH' && !action) return json(await pubs.savePublication(env, actor, id, await body()))
+  if (req.method !== 'POST') return json({ error: 'not found' }, 404)
+  if (action === 'status') return json(await pubs.setStatus(env, actor, id, await body()))
+  if (action === 'publish') return json(await pubs.publishPublication(env, actor, id, await body(), run))
+  if (action === 'unpublish') return json(await pubs.unpublishPublication(env, actor, id, await body(), run))
+  if (action === 'delete') return json(await pubs.deletePublication(env, actor, id, await body(), run))
+  if (action === 'restore') return json(await pubs.restorePublication(env, actor, id, await body()))
+  if (action === 'comments') return json(await pubs.addComment(env, actor, id, await body()))
+  if (action === 'editing') return json(await pubs.setEditing(env, actor, id, await body()))
+  return json({ error: 'not found' }, 404)
+}
+
+/** A file of a publish job, for the publisher (it checks it against the signed feed before writing it). */
+async function contentFile(env: Env, path: string): Promise<Response> {
+  const row = await env.DB.prepare('SELECT bytes FROM content_files WHERE path = ?1').bind(path).first<{ bytes: ArrayBuffer }>()
+  // D1 gives BLOBs back as arrays of numbers
+  return row ? new Response(new Uint8Array(row.bytes), { headers: { 'content-type': 'application/octet-stream', 'cache-control': 'no-store' } }) : json({ error: 'unknown file' }, 404)
 }
 
 async function devPublishV2(env: Env, ctx: ExecutionContext, body: { feed?: FeedDraft }): Promise<Response> {
   const now = Date.now()
   const { feed, files } = await sealFuture(env.DB, env.VAULT_MASTER, body.feed ?? {}, now)
   await env.DB.prepare('INSERT INTO feed_v2_state (id, feed, updated_at) VALUES (1, ?1, ?2) ON CONFLICT(id) DO UPDATE SET feed = ?1, updated_at = ?2').bind(JSON.stringify(feed), now).run()
-  const id = await queue(env, { schema: 2, feed: { ...feed, vaultKeys: await openKeys(env.DB, env.VAULT_MASTER, feed, now) }, files }, now)
+  const id = await queue(env, { schema: 2, feed: { ...feed, vaultKeys: await openKeys(env.DB, env.VAULT_MASTER, feed, now) }, files }, now, null, 'test')
   const workflow = env.HERALD_ENV !== 'local' && githubConfigured(env)
   if (workflow) ctx.waitUntil(startPublishWorkflow(env, `test v2 ${id}`).catch((err) => console.error('[publish] workflow not started:', err)))
   return json({ job: id, workflow, vaults: (feed.vaults as { id: string; opensAt: string }[]).map((v) => ({ id: v.id, opensAt: v.opensAt })) })

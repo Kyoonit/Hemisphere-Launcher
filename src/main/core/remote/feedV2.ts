@@ -1,8 +1,8 @@
-import { app } from 'electron'
+import { app, protocol } from 'electron'
 import { createDecipheriv, createHash, createPublicKey, verify, type KeyObject } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { FEED_V2_PATH, FeedV2Schema, VaultItemSchemas, type FeedV2, type Vault, type VaultKind } from '@shared/feedV2'
+import { FEED_V2_PATH, FeedV2Schema, VaultItemSchemas, type FeedV2, type NewsItemV2, type Vault, type VaultKind } from '@shared/feedV2'
 import { resolveFeed, type FeedView, type OpenedItems } from '@shared/schedule'
 import { HERALD_CONTENT_BASE, HERALD_URL, PULSE_MS, clockOffset, contentAtCommit } from '@shared/herald'
 import { getSettings } from '../settings/settings'
@@ -17,8 +17,14 @@ import { conditionalGet, rememberEtag } from './conditional'
  *   · scheduled items arrive early, locked in VAULTS; at the opening time (by the SERVER's clock, learnt from its
  *     answers) the launcher asks for the key, opens the vault and shows the item at once.
  *   · the view is recomputed exactly when something is due (resolveFeed's nextChangeAt), not only every 2 minutes.
+ *   · news pictures (Herald) are files next to the feed, checked by SHA-512 and kept: a scheduled news brings its
+ *     picture locked with its vault (opened with the same key). The page shows them through hemi-content://.
  * No schema 2 feed published yet → null, and the launcher keeps showing the schema 1 feed.
  */
+
+/** News pictures reach the page through hemi-content://image/<sha512> (only files checked against the signed feed) */
+export const CONTENT_SCHEME = 'hemi-content'
+const MAX_PICTURE = 2 * 1024 * 1024
 
 const MAX_FEED = 512 * 1024
 const dev = () => !app.isPackaged
@@ -32,6 +38,8 @@ const key = () => (publicKey ??= createPublicKey({ key: Buffer.from(keyB64(), 'b
 let feed: FeedV2 | null = null
 let offsetMs = 0 // server clock − this PC's clock
 const opened = new Map<string, { kind: VaultKind; item: unknown }>()
+/** SHA-512 of the pictures checked and kept on disk */
+const pictures = new Set<string>()
 let lastView = ''
 let wakeTimer: NodeJS.Timeout | null = null
 let notify: (view: FeedView | null) => void = () => {}
@@ -48,7 +56,13 @@ export function getFeedV2View(): FeedView | null {
   if (!feed) return null
   const items: OpenedItems = {}
   for (const { kind, item } of opened.values()) (items[kind] ??= []).push(item)
-  return resolveFeed(feed, items, serverNow(), language())
+  const view = resolveFeed(feed, items, serverNow(), language())
+  // A picture not downloaded yet: the news shows the built-in screenshot meanwhile
+  view.news = view.news.map((n) => {
+    const file = (n as NewsItemV2).imageFile
+    return file ? { ...n, image: pictures.has(file.sha512) ? `${CONTENT_SCHEME}://image/${file.sha512}` : undefined } : n
+  })
+  return view
 }
 
 // ------------------------------------------------------------------------------------------------ files
@@ -105,6 +119,66 @@ async function vaultFile(v: Vault, base: string): Promise<Buffer> {
   return bytes
 }
 
+// ------------------------------------------------------------------------------------------------ pictures
+
+const pictureFile = (sha512: string) => join(cacheDir(), 'images', `${sha512}.webp`)
+const sha512Of = (b: Buffer) => createHash('sha512').update(b).digest('hex')
+
+/** Pictures of the news in clear: downloaded once, checked against the signed feed. */
+async function syncPictures(base: string): Promise<void> {
+  for (const n of feed?.news ?? []) {
+    const f = n.imageFile
+    if (!f || pictures.has(f.sha512) || !f.path.startsWith('v2/images/')) continue
+    try {
+      const bytes = await download(base + f.path, Math.min(f.size, MAX_PICTURE) + 1024)
+      if (sha512Of(bytes) !== f.sha512) throw new Error('file does not match the feed')
+      await save(`images/${f.sha512}.webp`, bytes)
+      pictures.add(f.sha512)
+    } catch (err) {
+      console.warn(`[feed v2] picture ${f.path}:`, err instanceof Error ? err.message : err)
+    }
+  }
+}
+
+/** A vault's picture (locked with the vault's key): downloaded with the vault, opened with it. */
+async function vaultPicture(v: Vault, base: string): Promise<Buffer | null> {
+  if (!v.image) return null
+  const name = `vaults/${v.id}-img.bin`
+  const cached = await readFile(join(cacheDir(), name)).catch(() => null)
+  if (cached && sha512Of(cached) === v.image.sha512) return cached
+  const bytes = await download(base + v.image.path, Math.min(v.image.size, MAX_PICTURE + 64) + 1024)
+  if (sha512Of(bytes) !== v.image.sha512) throw new Error(`vault ${v.id}: picture does not match the feed`)
+  await save(name, bytes)
+  return bytes
+}
+
+async function openVaultPicture(file: Buffer, keyB64: string, item: unknown): Promise<void> {
+  const f = (item as NewsItemV2).imageFile
+  if (!f || pictures.has(f.sha512)) return
+  const decipher = createDecipheriv('aes-256-gcm', Buffer.from(keyB64, 'base64'), file.subarray(0, 12))
+  decipher.setAuthTag(file.subarray(file.length - 16))
+  const plain = Buffer.concat([decipher.update(file.subarray(12, file.length - 16)), decipher.final()])
+  if (sha512Of(plain) !== f.sha512) throw new Error('vault picture does not match its item')
+  await save(`images/${f.sha512}.webp`, plain)
+  pictures.add(f.sha512)
+}
+
+/** Must be registered before the app is ready, with the other schemes (all at once). */
+export const contentScheme = { scheme: CONTENT_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } }
+
+export function serveContentPictures(): void {
+  protocol.handle(CONTENT_SCHEME, async (request) => {
+    const url = new URL(request.url)
+    const sha = url.pathname.replace(/^\//, '')
+    if (url.hostname !== 'image' || !/^[0-9a-f]{128}$/.test(sha) || !pictures.has(sha)) return new Response('not found', { status: 404 })
+    try {
+      return new Response(await readFile(pictureFile(sha)), { headers: { 'Content-Type': 'image/webp', 'Cache-Control': 'max-age=31536000' } })
+    } catch {
+      return new Response('not found', { status: 404 })
+    }
+  })
+}
+
 /** Asks the Herald server for a due vault's key. The server's clock decides: "not yet" carries how long to wait. */
 async function fetchKey(id: string): Promise<{ key: string } | { retryInMs: number } | null> {
   const sent = Date.now()
@@ -129,6 +203,10 @@ async function syncVaults(base: string): Promise<number | null> {
     if (opened.has(v.id)) continue
     try {
       const file = await vaultFile(v, base)
+      const picture = await vaultPicture(v, base).catch((err) => {
+        console.warn('[feed v2]', err instanceof Error ? err.message : err)
+        return null
+      })
       const opensAt = Date.parse(v.opensAt)
       let k = feed.vaultKeys[v.id] ?? null
       if (!k && serverNow() >= opensAt - 1000) {
@@ -138,6 +216,7 @@ async function syncVaults(base: string): Promise<number | null> {
       } else if (!k) later(opensAt)
       if (!k) continue
       const item = openVaultFile(file, k, v)
+      if (picture) await openVaultPicture(picture, k, item).catch((err) => console.warn(`[feed v2] vault ${v.id}:`, err instanceof Error ? err.message : err))
       opened.set(v.id, { kind: v.kind, item })
       await save(`opened/${v.id}.json`, JSON.stringify({ kind: v.kind, item }))
     } catch (err) {
@@ -210,6 +289,10 @@ async function cycle(poll: boolean): Promise<void> {
     const base = poll ? await refresh() : contentBase()
     const retryAt = await syncVaults(base)
     emit()
+    if (poll) {
+      await syncPictures(base)
+      emit()
+    }
     const next = [retryAt, getFeedV2View()?.nextChangeAt ?? null].filter((t): t is number => t !== null)
     wakeAt(next.length ? Math.min(...next) : null)
   } finally {
@@ -218,6 +301,10 @@ async function cycle(poll: boolean): Promise<void> {
 }
 
 async function loadCache(): Promise<void> {
+  for (const name of await readdir(join(cacheDir(), 'images')).catch(() => [] as string[])) {
+    const sha = name.replace(/\.webp$/, '')
+    if (/^[0-9a-f]{128}$/.test(sha)) pictures.add(sha)
+  }
   try {
     feed = verifyFeedV2(await readFile(join(cacheDir(), 'feed.json')), await readFile(join(cacheDir(), 'feed.json.sig'), 'utf8'))
   } catch {

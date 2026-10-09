@@ -112,6 +112,15 @@ export async function bootstrap(env: AccountsEnv, body: { token?: string; name?:
   return { profile: created.id, code: created.code }
 }
 
+/** Tests only (/dev routes, never in production): the "Herald Test" admin profile with a fresh code, created once. */
+export async function testProfile(env: AccountsEnv) {
+  const existing = await env.DB.prepare("SELECT id FROM profiles WHERE name_key = 'herald test'").first<{ id: string }>()
+  if (!existing) return insertProfile(env, 'Herald Test', 'admin', [], [], null)
+  const code = newCode()
+  await env.DB.prepare('UPDATE profiles SET code_hash = ?2, revoked_at = NULL, failed_logins = 0, locked_until = NULL WHERE id = ?1').bind(existing.id, await hashCode(env.CODE_PEPPER, code)).run()
+  return { id: existing.id, code }
+}
+
 export async function login(env: AccountsEnv, body: { name?: unknown; code?: unknown }) {
   const name = cleanName(body.name)
   const code = typeof body.code === 'string' ? body.code : ''
@@ -163,7 +172,9 @@ export async function sync(env: AccountsEnv, actor: Actor) {
   const now = Date.now()
   const people = (await env.DB.prepare('SELECT * FROM profiles WHERE revoked_at IS NULL ORDER BY name_key').all<ProfileRow>()).results.map((p) => publicProfile(p, now))
   const activity = (await env.DB.prepare('SELECT a.id, a.at, a.action, a.target, a.detail, p.name AS who FROM activity a LEFT JOIN profiles p ON p.id = a.profile_id ORDER BY a.id DESC LIMIT 50').all()).results.map((a) => ({ ...a, detail: a.detail ? JSON.parse(a.detail as string) : null }))
-  return { now, me: publicProfile(actor.profile, now), people, activity }
+  // Changes when a publication or a publish job changes: the app reloads the publications only then
+  const stamp = await env.DB.prepare('SELECT (SELECT count(*) || \'-\' || coalesce(max(updated_at), 0) FROM publications) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM publish_jobs) AS s').first<{ s: string }>()
+  return { now, me: publicProfile(actor.profile, now), people, activity, contentStamp: stamp?.s ?? '' }
 }
 
 // ------------------------------------------------------------------------------------------------ managing profiles

@@ -20,9 +20,9 @@ const thumbDir = () => join(app.getPath('userData'), 'screenshot-thumbs')
 /** A screenshot file name as Minecraft writes it (no folders, no odd characters). */
 export const isScreenshotName = (name: string) => /^[\w .()+-]{1,120}\.png$/i.test(name) && !name.startsWith('.')
 
-/** Must be called before the app is ready. */
-export function registerScreenshotScheme(): void {
-  protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } }])
+/** Must be called before the app is ready, once, with every other privileged scheme. */
+export function registerScreenshotScheme(others: Electron.CustomScheme[] = []): void {
+  protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } }, ...others])
 }
 
 export function serveScreenshots(): void {

@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+/* The launcher's own pieces, for the faithful preview: its look and its components' classes */
+@import '../../../../../src/renderer/src/styles/look.css';
+@source '../../../../../src/renderer/src/components/feed';
+@source '../../../../../src/renderer/src/components/NewsImage.tsx';
 
 /* Same palette as the launcher and the website (Tailwind v3 hex values) */
 @theme {
@@ -15,6 +19,7 @@
   --color-gray-950: #0b0f19;
   --color-green-300: #86efac;
   --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
   --color-green-600: #16a34a;
   --color-green-700: #15803d;
   --color-amber-400: #fbbf24;
@@ -23,6 +28,12 @@
   --color-red-400: #f87171;
   --color-red-600: #dc2626;
   --color-orange-600: #ea580c;
+  --color-discord: #4f46e5;
+  --ease-hemi: cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-rise: rise 0.6s var(--ease-hemi) both;
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+  }
   --animate-fade: fade 0.2s ease both;
   @keyframes fade {
     from { opacity: 0; transform: translateY(3px); }
@@ -56,4 +67,9 @@
   .card { @apply rounded-lg border border-white/5 bg-gray-800 p-4; }
   .eyebrow { @apply text-xs font-bold tracking-widest text-green-400 uppercase; }
   .label { @apply mb-1.5 block text-xs font-semibold text-gray-300; }
+}
+
+/* The launcher preview sizes Home's title with ITS window height, not Herald's (see LauncherPreview) */
+.launcher-preview .home-title {
+  font-size: var(--lp-title);
 }

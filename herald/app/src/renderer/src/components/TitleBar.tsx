@@ -30,6 +30,8 @@ export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Ta
   // Other staff online (your own avatar is already the profile button)
   const online = (sync?.people ?? []).filter((p) => p.online && p.id !== me?.id)
   const [update, setUpdate] = useState<UpdateState>({ phase: 'idle' })
+  const [version, setVersion] = useState('')
+  useEffect(() => void window.herald.info().then((i) => setVersion(i.version)), [])
   useEffect(() => {
     void window.herald.update.state().then(setUpdate)
     return window.herald.update.onState(setUpdate)
@@ -85,6 +87,7 @@ export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Ta
                   <button className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onClick={() => void signOut()}>
                     Sign out
                   </button>
+                  <div className="px-2.5 pt-1 pb-0.5 text-[11px] text-gray-500">Herald {version.replace(/\.0$/, '')}</div>
                 </div>
               )}
             </div>

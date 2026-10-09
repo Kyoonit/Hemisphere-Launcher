@@ -19,8 +19,7 @@ export const sha256Hex = async (bytes: Uint8Array) => hex(await crypto.subtle.di
 const IV_BYTES = 12
 
 /** Vault file = IV (12 bytes) + AES-256-GCM ciphertext. plainSha256 goes in the signed feed: only one key opens it. */
-export async function sealVault(plain: Uint8Array) {
-  const raw = crypto.getRandomValues(new Uint8Array(32))
+export async function sealVault(plain: Uint8Array, raw = crypto.getRandomValues(new Uint8Array(32))) {
   const file = await sealWith(plain, raw)
   return { key: raw, file, sha512: await sha512Hex(file), plainSha256: await sha256Hex(plain) }
 }
@@ -37,6 +36,9 @@ export async function wrapKey(rawKey: Uint8Array, masterB64: string): Promise<st
 export async function unwrapKey(wrappedB64: string, masterB64: string): Promise<Uint8Array> {
   return openVault(fromB64(wrappedB64), fromB64(masterB64))
 }
+
+/** Same format with a given key (a vault's picture is locked with the vault's own key) */
+export const sealWithKey = (plain: Uint8Array, raw: Uint8Array) => sealWith(plain, raw)
 
 async function sealWith(plain: Uint8Array, raw: Uint8Array): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt'])

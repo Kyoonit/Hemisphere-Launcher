@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* Cards, PLAY button, Home title sizes (shared with Herald's preview) */
+@import './look.css';
 
 /* Short window (under 640 px tall): a few blocks use their compact layout. */
 @custom-variant short (@media (max-height: 640px));
@@ -88,45 +90,6 @@
 }
 
 @layer components {
-  /* Glass card used across the launcher (website: bg-gray-800/50 + backdrop-blur-sm) */
-  .glass {
-    @apply rounded-lg bg-gray-800/55 shadow-lg backdrop-blur-sm;
-  }
-
-  /* The hero PLAY button: website green with a soft glow */
-  .play-button {
-    @apply w-[300px] rounded-lg py-[18px] text-[30px] font-extrabold tracking-[0.14em] text-white;
-    background: linear-gradient(180deg, var(--color-green-500), var(--color-green-600));
-    box-shadow:
-      0 10px 15px -3px rgb(0 0 0 / 0.25),
-      inset 0 0 0 1px rgb(134 239 172 / 0.3),
-      0 0 36px rgb(34 197 94 / 0.3);
-    transition: all 300ms var(--ease-hemi);
-  }
-  .play-button:hover {
-    transform: scale(1.03);
-    box-shadow:
-      0 10px 15px -3px rgb(0 0 0 / 0.25),
-      inset 0 0 0 1px rgb(134 239 172 / 0.45),
-      0 0 52px rgb(34 197 94 / 0.45);
-  }
-  .play-button-update {
-    @apply text-[22px] tracking-[0.08em];
-    background: linear-gradient(180deg, #fbbf24, #d97706);
-    box-shadow:
-      0 10px 15px -3px rgb(0 0 0 / 0.25),
-      inset 0 0 0 1px rgb(253 230 138 / 0.35),
-      0 0 36px rgb(251 191 36 / 0.28);
-  }
-  .play-button-update:hover {
-    box-shadow:
-      0 10px 15px -3px rgb(0 0 0 / 0.25),
-      0 0 52px rgb(251 191 36 / 0.45);
-  }
-  .play-button:active {
-    transform: scale(0.99);
-  }
-
   .drag {
     -webkit-app-region: drag;
   }
@@ -210,21 +173,6 @@ html.lite .glass {
   to {
     background-position: -200% 0;
   }
-}
-
-/* Home scales smoothly with the window height (600 px window -> compact, 760 px and up -> full size)
-   instead of jumping at a breakpoint. */
-.home-title {
-  font-size: clamp(34px, calc(6.25vh - 3.5px), 44px);
-}
-.home-gap {
-  margin-top: clamp(20px, calc(7.5vh - 25px), 32px);
-}
-.home-pad {
-  padding-bottom: clamp(8px, calc(5vh - 22px), 16px); /* + the 20 px disclaimer strip below */
-}
-.home-title-compact {
-  font-size: clamp(20px, calc(5vh - 10px), 32px);
 }
 
 /* News badge appearing */

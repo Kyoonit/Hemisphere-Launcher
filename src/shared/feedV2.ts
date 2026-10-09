@@ -35,8 +35,18 @@ const LANGS = z.array(z.string().regex(/^[a-z]{2}$/)).min(1).max(20)
 /** When something is on screen: from `showFrom` (default: always) until `showUntil` (default: until removed). */
 const Window = { showFrom: instant.optional(), showUntil: instant.optional() }
 
+/** A file next to the feed: `path` relative to the content folder, integrity by SHA-512 (the feed is signed) */
+export const ContentFileSchema = z.object({
+  path: z.string().regex(/^v2\/(vaults|backgrounds|images)\/[a-z0-9-]{1,80}\.(bin|webp|avif|png|jpg)$/),
+  sha512,
+  size: z.number().int().positive().max(15 * 1024 * 1024),
+})
+
 export const NewsItemV2Schema = NewsItemSchema.extend({
   ...Window,
+  /** Picture published next to the feed (Herald), instead of `image`: v2/images/… in clear, or locked with its vault
+   *  (v2/vaults/…-img.bin, listed as the vault's `image`); sha512 and size are the PLAIN picture's */
+  imageFile: ContentFileSchema.optional(),
   /** Big card at the top of News until then (overrides `featured`) */
   featuredUntil: instant.optional(),
   /** Only for players using one of these languages (default: everyone) */
@@ -88,13 +98,8 @@ export const EventV2Schema = EventSchema.and(
 export type EventV2 = z.infer<typeof EventV2Schema>
 
 export const BannerSchema = z.object({ id, text: LocalizedSchema, level: z.enum(['info', 'important', 'critical']), ...Window })
-export const WelcomeSchema = z.object({ id, title: LocalizedSchema.optional(), text: LocalizedSchema, ...Window })
-/** A file next to the feed: `path` relative to the content folder, integrity by SHA-512 (the feed is signed) */
-export const ContentFileSchema = z.object({
-  path: z.string().regex(/^v2\/(vaults|backgrounds|images)\/[a-z0-9-]{1,80}\.(bin|webp|avif|png|jpg)$/),
-  sha512,
-  size: z.number().int().positive().max(15 * 1024 * 1024),
-})
+/** `title` replaces Home's whole heading; `accent` is its second, green line ({player} = the player's name) */
+export const WelcomeSchema = z.object({ id, title: LocalizedSchema.optional(), accent: LocalizedSchema.optional(), text: LocalizedSchema, ...Window })
 export const BackgroundSchema = z.object({ id, name: LocalizedSchema, image: ContentFileSchema, mode: z.enum(['add', 'replace']), ...Window })
 export type Banner = z.infer<typeof BannerSchema>
 export type Welcome = z.infer<typeof WelcomeSchema>
@@ -122,6 +127,8 @@ export const VaultSchema = z.object({
   file: ContentFileSchema.refine((f) => f.path.startsWith('v2/vaults/') && f.path.endsWith('.bin'), 'vault files live in v2/vaults/*.bin'),
   /** SHA-256 of the decrypted content: only the right key gives it */
   plainSha256: sha256,
+  /** The item's picture, locked with the same key (downloaded in advance like the vault) */
+  image: ContentFileSchema.refine((f) => f.path.startsWith('v2/vaults/') && f.path.endsWith('.bin'), 'vault files live in v2/vaults/*.bin').optional(),
 })
 export type Vault = z.infer<typeof VaultSchema>
 

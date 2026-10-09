@@ -1,4 +1,5 @@
 /** Time zones and dates, always in the staff member's chosen zone (My settings). */
+import { zonedTime } from '@shared/schedule'
 
 export const pcZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
 
@@ -50,3 +51,18 @@ export function ago(at: number | null, now = Date.now()): string {
   const d = Math.round(h / 24)
   return d === 1 ? 'yesterday' : `${d} days ago`
 }
+
+/** "2026-10-24T18:00" (for a datetime-local field) of an instant, as the wall time in a zone */
+export function toWallInput(at: number, zone: string): string {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: zone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(at).map((x) => [x.type, x.value]))
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`
+}
+
+/** The instant of a wall time in a zone ("2026-10-24T18:00" in Europe/Paris), daylight saving included */
+export function fromWallInput(value: string, zone: string): number | null {
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/)
+  return m ? zonedTime(+m[1], +m[2], +m[3], `${m[4]}:${m[5]}`, zone) : null
+}
+
+/** "Sat 24 Oct, 18:00" */
+export const formatWhen = (at: number, zone: string) => `${formatDay(at, zone)}, ${formatTime(at, zone)}`

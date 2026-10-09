@@ -32,7 +32,7 @@ import { getContent } from './core/remote/content'
 import { getEnabledMods, reattachMod, setModEnabled } from './core/sync/sync'
 import { getModIcons } from './core/remote/modIcons'
 import { getFeed, startFeedPolling } from './core/remote/feed'
-import { refreshFeedV2View } from './core/remote/feedV2'
+import { contentScheme, refreshFeedV2View, serveContentPictures } from './core/remote/feedV2'
 import { installFileLogger } from './core/logging/logger'
 import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemInfo, type FolderKind } from './core/system/system'
 import { detectGpus } from './core/system/gpu'
@@ -816,8 +816,8 @@ function syncLoginItem(): void {
 trimChromium()
 installNetMeter()
 
-// Screenshot images reach the page through hemi-shot:// (registered before the app is ready).
-registerScreenshotScheme()
+// Screenshot images reach the page through hemi-shot://, news pictures through hemi-content:// (before ready).
+registerScreenshotScheme([contentScheme])
 
 // One launcher at a time: a second start focuses the existing window.
 if (!app.requestSingleInstanceLock()) {
@@ -832,6 +832,7 @@ if (!app.requestSingleInstanceLock()) {
     // would otherwise work even though the window shows no menu
     if (app.isPackaged) Menu.setApplicationMenu(null)
     serveScreenshots()
+    serveContentPictures()
     app.setAppUserModelId('club.hemispheresurvival.launcher')
     await loadAccounts()
     onAccountsChanged(() => toWindow(IPC.authChanged, getAccountsState()))

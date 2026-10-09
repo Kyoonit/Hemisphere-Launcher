@@ -2,7 +2,7 @@ import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport, SessionRecap } from './game'
 import type { PreflightWarning, Settings, SystemInfo } from './settings'
-import type { Feed } from './feed'
+import type { FeedView } from './schedule'
 import type { ImportOptions, ImportProgress, ImportReport, ImportSource } from './importer'
 import type { ClientSummary } from './client'
 import type { LauncherUpdateState } from './launcherUpdate'
@@ -303,8 +303,8 @@ export interface HemisphereApi {
   }
   /** News, maintenance and restart schedule (signed staff feed) */
   feed: {
-    get(): Promise<Feed>
-    onChange(cb: (feed: Feed) => void): () => void
+    get(): Promise<FeedView>
+    onChange(cb: (feed: FeedView) => void): () => void
     /** Opens a news item's button link (looked up by id in the verified feed, never a raw URL) */
     openLink(newsId: string): void
   }

@@ -12,7 +12,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "paths": { "@shared/*": ["../../src/shared/*"], "@herald/*": ["./src/common/*"] }
+    "resolveJsonModule": true,
+    "paths": { "@shared/*": ["../../src/shared/*"], "@herald/*": ["./src/common/*"], "@launcher/*": ["../../src/renderer/src/*"], "@locales/*": ["../../locales/*"] }
   },
   "include": ["src/renderer/src/**/*", "src/common/**/*"]
 }

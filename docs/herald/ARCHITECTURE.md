@@ -422,3 +422,41 @@ distants, maintenance annoncée, exceptions de restart, son des news.
   dépôt privé `herald-releases`, réservées aux sessions valides, bouton orange comme le launcher.
 - Testé : 21 vérifications de comptes de bout en bout ; l'application pilotée comme un utilisateur (connexion,
   session retrouvée après redémarrage, création d'un profil, éditeur de profil, vue Lodge keeper).
+
+## 20. Phase S5 : news, bandeau, message d'accueil (9 octobre 2026)
+
+- **Modèle partagé** (`src/shared/heraldPublications.ts`) : textes par langue (anglais obligatoire, autres langues
+  ajoutées à la main avec leur statut « à faire / terminé » ; seules les terminées partent aux joueurs), image,
+  lien, « à la une » pendant N jours, catégorie, importance du bandeau, « Quand » (dès la publication ou à une heure,
+  dans un fuseau au choix ; jusqu'à quand), visibilité du brouillon. `feedItem` en fait l'élément du flux v2.
+- **Serveur** (`publications.ts`, migration `0005`) : statuts Brouillon → En relecture → Prête (verrouillée) →
+  Publiée, chaque version gardée pour toujours, enregistrement refusé s'il part d'une version dépassée, verrou souple
+  « X est en train de modifier », commentaires, corbeille, journal. Nouvelle permission `publications.approve`
+  (marquer « Prête ») : un Lodge keeper écrit et envoie en relecture, le staff valide et publie (proposition).
+- **Images** : réduites et converties en WebP dans Herald (≤ 1,5 Mo), stockées dans D1. Une news visible a son image
+  en clair (`v2/images/<sha256>.webp`) ; une news programmée a son image **chiffrée avec la clé de son coffre**
+  (`v2/vaults/<id>-img.bin`, listée dans le coffre). Le launcher la télécharge en avance, la vérifie (SHA-512), la
+  déchiffre à l'heure et la garde sur le PC (`hemi-content://`).
+- **Publication** : l'état complet est republié ; un coffre est **réutilisé** tant que son élément, son contenu et son
+  heure ne changent pas (aucun nouveau fichier). Le publieur récupère les fichiers sur le serveur et ne renvoie pas
+  ceux déjà présents dans le dépôt.
+- **Launcher** : bandeau d'annonce et message d'accueil sur l'accueil, images des news Herald. Les cartes de news, la
+  page de lecture, le bandeau et l'accueil sont des composants partagés (`src/renderer/src/components/feed/`) :
+  Herald les affiche tels quels dans ses aperçus.
+- **Herald** : onglet Publications (liste, filtres, corbeille, éditeur avec aperçu aux moments clés, commentaires,
+  historique, état de la publication en cours), onglet **Preview** (voyage dans le temps : n'importe quelle date,
+  fuseau, langue, taille de fenêtre, liste des changements à venir), Home (« Needs attention », « Coming up »).
+
+| Test | Résultat |
+|---|---|
+| Bout en bout local (`herald:e2e-publications`) | 33/33 : droits, versions, image, publication, programmation + image chiffrée ouverte à l'heure, réutilisation du coffre, retrait, corbeille, commentaires, historique, brouillon restreint, journal |
+| Staging + vrai launcher de dev | News avec image, bandeau, message d'accueil affichés ; news programmée ouverte à son heure avec son image déchiffrée |
+| Herald à l'écran | Création, éditeur, image (49 Ko WebP), Ready, publication, voyage dans le temps (message programmé visible au bon moment) |
+
+Pas encore : événements dans l'aperçu (S7), maintenance (S6), fonds d'écran (S8), modèles et relances avancées (S11).
+
+Retours du propriétaire (S5) : un seul bandeau s'affiche à la fois (le plus important, puis le plus récent) et
+l'éditeur prévient quand un autre bandeau ou message d'accueil passe devant ; le message d'accueil peut remplacer tout
+le titre, avec une ligne verte facultative (`accent` : `{player}` = nom du joueur, `{server}` = Hemisphere SMP) ; Preview avance ou recule d'une
+heure ou d'un jour ; l'installateur de Herald a sa propre fenêtre d'installation (même principe que le launcher,
+titre « HERALD », fond et couleurs différents).

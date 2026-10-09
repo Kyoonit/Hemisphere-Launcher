@@ -87,3 +87,26 @@ created in Herald (Team → New profile). Local test: `npm run herald:server:res
 
 Updates: installed apps ask the Herald server (`/update/…`, signed-in staff only), which relays the latest release of
 the PRIVATE repository `Kyoonit/herald-releases` (the GitHub App needs it in its installation, Contents: read).
+
+## Publications (phase S5)
+
+News, banners and welcome messages are edited in Herald (Publications tab) and stored on the server
+(`herald/server/src/publications.ts`, migration `0005`); the shared model is `src/shared/heraldPublications.ts`.
+Life: draft → in review → Ready (locked) → published. Publishing sends the WHOLE current state: every published
+publication + the feed parts Herald does not edit yet (`settings` key `feed.base`), future items locked in vaults.
+Pictures (WebP, made by the app, ≤ 1.5 MB) and vault files are kept in D1 (`content_files`) and fetched by the
+publisher from `/internal/file/…`; files already in the content repository are not sent again.
+
+```bash
+npm run herald:server:reset-local && npm run herald:server:dev    # then, in another terminal:
+npm run herald:e2e-publications                                   # statuses, pictures, schedule, vault reuse, trash…
+```
+
+Staging tests without a staff code: `POST /dev/test-profile` (DEV_TOKEN, never in production) gives the
+"Herald Test" admin profile a new code. After a change to the publisher or the shared schemas, rebuild it and copy it
+into the test content repository again (see "Content repository setup").
+
+Install window: `herald/app/build/installer.nsh` shows Herald's own window while it installs (the launcher's
+HemiSplash plugin built with Herald's texts and colours, `herald/app/build/x86-unicode/HeraldSplash.dll`, background
+`herald/app/build/installerSplash.bmp`). To change it: `node tools/installer-splash/herald.mjs` (needs Zig:
+`py -m pip install --user ziglang`), then commit the rebuilt DLL and picture.

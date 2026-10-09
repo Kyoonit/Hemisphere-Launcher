@@ -7,6 +7,7 @@ import DiscordIcon from '../components/DiscordIcon'
 import ServerPanel from '../components/ServerPanel'
 import PlaytimeCard from '../components/PlaytimeCard'
 import NewsPeek from '../components/NewsPeek'
+import { AnnouncementBanner, WelcomeHeading } from '../components/feed/HomeNotices'
 import PlayZone, { useGameState } from '../components/PlayZone'
 import type { ReportCategory } from '@shared/report'
 import { useClient } from './Mods'
@@ -66,14 +67,8 @@ export default function Home({
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center-safe text-center">
         {active?.status === 'expired' && <ExpiredBanner />}
-        {/* one compact line while the crash card needs the room */}
-        <h1
-          className={`${crashed ? 'home-title-compact' : 'home-title'} animate-rise leading-[1.05] font-bold text-white uppercase drop-shadow-lg [animation-delay:100ms]`}
-        >
-          {active ? t('home.welcomeBack') : t('home.welcomeTo')}
-          {crashed ? ' ' : <br />}
-          <span className="text-green-400">{active ? active.name : t('app.name')}</span>
-        </h1>
+        {feed?.banner && !crashed && <AnnouncementBanner banner={feed.banner} />}
+        <WelcomeHeading welcome={feed?.welcome} name={active?.name ?? null} compact={crashed} />
 
         <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-2' : 'home-gap'}`}>
           <PlayZone client={client ?? null} onRepair={onRepair} onOpenMods={onOpenMods} onReport={onReport} />

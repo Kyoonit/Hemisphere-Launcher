@@ -7,7 +7,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // Paths from the repository root (the scripts run there; this config is bundled elsewhere before it runs)
 const here = (p: string) => resolve('herald/app', p)
-const alias = { '@shared': resolve('src/shared'), '@herald': here('src/common') }
+const alias = { '@shared': resolve('src/shared'), '@herald': here('src/common'), '@launcher': resolve('src/renderer/src'), '@locales': resolve('locales') }
 
 export default defineConfig({
   main: {

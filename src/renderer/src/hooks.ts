@@ -1,7 +1,7 @@
 import type { LiveRestart } from '@shared/restart'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PlaytimeSummary, ServerStatus } from '@shared/server'
-import type { Feed } from '@shared/feed'
+import type { FeedView } from '@shared/schedule'
 import type { Settings } from '@shared/settings'
 
 /** Live launcher settings + an update function that returns an error message or null. */
@@ -58,9 +58,9 @@ export function useServerStatus(): ServerStatus | null {
   return status
 }
 
-/** Signed staff feed (news, maintenance, restart time); updates live. */
-export function useFeed(): Feed | null {
-  const [feed, setFeed] = useState<Feed | null>(null)
+/** Signed staff feed (news, maintenance, restart time, banner, welcome message); updates live. */
+export function useFeed(): FeedView | null {
+  const [feed, setFeed] = useState<FeedView | null>(null)
   useEffect(() => {
     window.hemisphere.feed.get().then(setFeed)
     return window.hemisphere.feed.onChange(setFeed)

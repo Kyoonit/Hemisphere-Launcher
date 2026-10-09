@@ -3,6 +3,18 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "next",
+        "area": "home",
+        "en": "The team can show a short announcement above the title on Home, and a welcome message for special days (Halloween, Christmas…).",
+        "fr": "L’équipe peut afficher une courte annonce au-dessus du titre de l’accueil, et un message de bienvenue pour les jours spéciaux (Halloween, Noël…)."
+      },
+      {
+        "version": "next",
+        "area": "community",
+        "en": "News pictures are downloaded once, checked, and kept on your PC; scheduled news appear at the exact minute, picture included.",
+        "fr": "Les images des news sont téléchargées une seule fois, vérifiées et gardées sur ton PC ; les news programmées apparaissent à la minute près, image comprise."
+      },
+      {
         "version": "1.1.0",
         "area": "home",
         "en": "Home’s left column: playtime, “Coming from another launcher?” and What’s new one under the other, never on top of each other; What’s new uses the room down to the bottom.",

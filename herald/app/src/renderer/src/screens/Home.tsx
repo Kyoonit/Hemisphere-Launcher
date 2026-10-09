@@ -2,10 +2,31 @@ import { ROLE_LABEL } from '@shared/heraldRoles'
 import { useStore } from '../store'
 import { Avatar } from '../components/ui'
 import { describe } from '../activity'
-import { ago, formatLong, formatTime } from '../time'
+import { ago, formatLong, formatTime, formatWhen } from '../time'
+import { pendingChanges, shown, SHOWN, titleOf, usePubs } from '../pubs'
+import { KIND_LABEL, languageName, languagesOut } from '@shared/heraldPublications'
+import type { Publication } from '@herald/api'
 
-export default function Home() {
+/** What needs someone, for everyone in Herald (no alert outside Herald) */
+function attention(pubs: Publication[], now: number, zone: string): { pub: Publication; why: string }[] {
+  const out: { pub: Publication; why: string }[] = []
+  for (const p of pubs) {
+    if (p.deletedAt) continue
+    const from = p.data.schedule.from ? Date.parse(p.data.schedule.from) : null
+    if (p.status === 'review') out.push({ pub: p, why: 'waits for a review' })
+    else if (p.status === 'ready' && !p.published) out.push({ pub: p, why: 'is Ready: it can be published' })
+    else if (p.status === 'ready' && pendingChanges(p)) out.push({ pub: p, why: 'has changes Ready to publish' })
+    else if (p.status === 'draft' && from && from > now && from - now < 2 * 86_400_000) out.push({ pub: p, why: `should appear ${formatWhen(from, zone)} but is still a draft` })
+    else if (p.status === 'draft' && now - p.updatedAt > 7 * 86_400_000) out.push({ pub: p, why: `draft untouched for ${Math.floor((now - p.updatedAt) / 86_400_000)} days` })
+    const todo = Object.keys(p.data.texts).filter((l) => l !== 'en' && !languagesOut(p.kind, p.data).includes(l))
+    if (todo.length && p.status !== 'ready') out.push({ pub: p, why: `translation to do: ${todo.map(languageName).join(', ')}` })
+  }
+  return out
+}
+
+export default function Home({ onOpen }: { onOpen(id: string): void }) {
   const { me, sync, zone } = useStore()
+  const { state } = usePubs()
   const now = sync?.now ?? Date.now()
   const online = (sync?.people ?? []).filter((p) => p.online)
   return (
@@ -19,7 +40,16 @@ export default function Home() {
       <div className="grid grid-cols-[1.25fr_1fr] gap-4">
         <div className="card">
           <div className="eyebrow mb-3">Needs attention</div>
-          <p className="text-sm text-gray-400">Drafts waiting too long and publications due soon will show here (next phase: publications).</p>
+          {state && attention(state.publications, now, zone).length === 0 && <p className="text-sm text-gray-400">Nothing waits for anyone.</p>}
+          {state &&
+            attention(state.publications, now, zone).slice(0, 8).map(({ pub, why }) => (
+              <button key={pub.id + why} className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-gray-700" onClick={() => onOpen(pub.id)}>
+                <span className="w-16 shrink-0 text-[10.5px] font-bold tracking-wider text-gray-400 uppercase">{KIND_LABEL[pub.kind]}</span>
+                <span className="min-w-0 truncate">
+                  <b className="text-white">{titleOf(pub.data)}</b> <span className="text-gray-400">{why}</span>
+                </span>
+              </button>
+            ))}
         </div>
         <div className="card">
           <div className="eyebrow mb-3">In Herald now · {online.length}</div>
@@ -33,6 +63,23 @@ export default function Home() {
           ))}
         </div>
       </div>
+      {state && (
+        <div className="card mt-4">
+          <div className="eyebrow mb-2">Coming up</div>
+          {(() => {
+            const soon = state.publications.filter((p) => shown(p, now) === 'scheduled').sort((a, b) => Date.parse(a.published!.schedule.from!) - Date.parse(b.published!.schedule.from!))
+            if (!soon.length) return <p className="text-sm text-gray-400">Nothing scheduled.</p>
+            return soon.slice(0, 6).map((p) => (
+              <button key={p.id} className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-gray-700" onClick={() => onOpen(p.id)}>
+                <span className="w-36 shrink-0 text-xs font-semibold text-green-300">{formatWhen(Date.parse(p.published!.schedule.from!), zone)}</span>
+                <span className="w-16 shrink-0 text-[10.5px] font-bold tracking-wider text-gray-400 uppercase">{KIND_LABEL[p.kind]}</span>
+                <b className="truncate text-white">{titleOf(p.published!)}</b>
+                <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${SHOWN.scheduled.tone}`}>Scheduled</span>
+              </button>
+            ))
+          })()}
+        </div>
+      )}
       <div className="card mt-4">
         <div className="eyebrow mb-2">Latest activity</div>
         {(sync?.activity ?? []).slice(0, 8).map((a) => (

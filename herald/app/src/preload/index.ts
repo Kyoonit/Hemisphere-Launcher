@@ -18,6 +18,7 @@ const bridge: HeraldBridge = {
   // Wrapped: contextBridge functions must not be passed straight to React handlers (they would receive the event)
   window: { minimize: () => ipcRenderer.send('window:minimize'), toggleMaximize: () => ipcRenderer.send('window:toggleMaximize'), close: () => ipcRenderer.send('window:close') },
   copy: (text) => ipcRenderer.send('copy', text),
+  images: { upload: (bytes, width, height) => ipcRenderer.invoke('image:upload', bytes, width, height), get: (id) => ipcRenderer.invoke('image:get', id) },
   update: {
     state: () => ipcRenderer.invoke('update:state'),
     onState: (cb) => {

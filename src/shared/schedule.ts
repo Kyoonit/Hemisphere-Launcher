@@ -16,7 +16,7 @@ export interface FeedView extends Feed {
   /** A maintenance announced in advance, not started yet */
   maintenancePlanned?: { message: Localized; start: string; end?: string }
   banner?: { text: Localized; level: Banner['level'] }
-  welcome?: { title?: Localized; text: Localized }
+  welcome?: { title?: Localized; accent?: Localized; text: Localized }
   /** Remote Home backgrounds in force: `replace` = only these, otherwise added to the built-in ones */
   backgrounds?: { mode: 'add' | 'replace'; items: Pick<Background, 'id' | 'name' | 'image'>[] }
   restartExceptions?: RestartException[]
@@ -135,7 +135,7 @@ export function resolveFeed(feed: FeedV2, opened: OpenedItems, now: number, lang
     news: visibleNews,
     events: visibleEvents.slice(0, 50),
     ...(banner ? { banner: { text: banner.text, level: banner.level } } : {}),
-    ...(welcome ? { welcome: { ...(welcome.title ? { title: welcome.title } : {}), text: welcome.text } } : {}),
+    ...(welcome ? { welcome: { ...(welcome.title ? { title: welcome.title } : {}), ...(welcome.accent ? { accent: welcome.accent } : {}), text: welcome.text } } : {}),
     ...(bgs.length ? { backgrounds: { mode: replacing.length ? 'replace' : 'add', items: (replacing.length ? replacing : bgs).map(({ id, name, image }) => ({ id, name, image })) } } : {}),
     ...(feed.modPolicy ? { modPolicy: feed.modPolicy } : {}),
     ...(feed.support ? { support: feed.support } : {}),

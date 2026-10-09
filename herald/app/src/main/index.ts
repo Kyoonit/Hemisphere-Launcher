@@ -11,7 +11,15 @@ import { installUpdate, startUpdater, updateState } from './updater'
 /** Staging until the production server exists (S12); a build can point elsewhere with MAIN_VITE_HERALD_SERVER. */
 const SERVER = (import.meta.env?.MAIN_VITE_HERALD_SERVER || 'https://herald-staging.hemisphere-launcher.workers.dev').replace(/\/$/, '')
 /** Only these server routes can be called from the interface. */
-const ALLOWED = [/^\/me$/, /^\/sync$/, /^\/profiles$/, /^\/profiles\/p-[a-z0-9-]{1,20}(\/code)?$/]
+const ALLOWED = [
+  /^\/me$/,
+  /^\/sync$/,
+  /^\/profiles$/,
+  /^\/profiles\/p-[a-z0-9-]{1,20}(\/code)?$/,
+  /^\/publications$/,
+  /^\/publications\/[nbw]-[a-z0-9]{12}(\/(status|publish|unpublish|delete|restore|comments|editing|versions\/\d{1,6}))?$/,
+  /^\/publish$/,
+]
 
 let win: BrowserWindow | null = null
 let token: string | null = null
@@ -84,6 +92,36 @@ function registerIpc(): void {
   ipcMain.handle('api', async (_e, method: unknown, path: unknown, body: unknown) => {
     if (!['GET', 'POST', 'PATCH'].includes(method as string) || typeof path !== 'string' || !ALLOWED.some((r) => r.test(path))) return { ok: false, status: 400, error: 'Not allowed.' }
     return call(method as string, path, body)
+  })
+  // Pictures: raw bytes both ways (a JSON body would cost the server's CPU budget)
+  ipcMain.handle('image:upload', async (_e, bytes: unknown, width: unknown, height: unknown) => {
+    if (!(bytes instanceof Uint8Array) || typeof width !== 'number' || typeof height !== 'number') return { ok: false, status: 400, error: 'Picture expected.' }
+    try {
+      const res = await fetch(`${SERVER}/images`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(60_000),
+        headers: { 'content-type': 'image/webp', 'x-width': String(width), 'x-height': String(height), 'user-agent': `Herald/${app.getVersion()}`, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: bytes,
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      return res.ok ? { ok: true, data } : { ok: false, status: res.status, error: data.error ?? `HTTP ${res.status}` }
+    } catch {
+      return { ok: false, status: 0, error: 'The Herald server cannot be reached. Check your internet connection.' }
+    }
+  })
+  const pictures = new Map<string, Uint8Array>()
+  ipcMain.handle('image:get', async (_e, id: unknown) => {
+    if (typeof id !== 'string' || !/^[0-9a-f]{64}$/.test(id)) return null
+    if (pictures.has(id)) return pictures.get(id)
+    try {
+      const res = await fetch(`${SERVER}/images/${id}`, { signal: AbortSignal.timeout(30_000), headers: token ? { authorization: `Bearer ${token}` } : {} })
+      if (!res.ok) return null
+      const bytes = new Uint8Array(await res.arrayBuffer())
+      pictures.set(id, bytes)
+      return bytes
+    } catch {
+      return null
+    }
   })
   ipcMain.handle('settings:get', () => readSettings())
   ipcMain.handle('settings:set', async (_e, patch: Partial<LocalSettings>) => {

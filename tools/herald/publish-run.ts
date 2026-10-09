@@ -5,7 +5,8 @@
 //   HERALD_NO_GIT=1   write the files but do not commit/push (local tests); reports commit "local"
 import { execFileSync } from 'node:child_process'
 import { createPrivateKey } from 'node:crypto'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { buildRelease, errorText, type PublishJob } from './publisher.ts'
 
@@ -27,8 +28,20 @@ async function main() {
   console.log(`Publishing ${job.id} as sequence ${job.sequence}`)
   try {
     const key = createPrivateKey({ key: Buffer.from(env('SIGNING_KEY'), 'base64'), format: 'der', type: 'pkcs8' })
-    const files = buildRelease(job, contentDir, key)
     const repo = process.env.HERALD_REPO_DIR ?? process.cwd()
+    // Files of the job: already in the repository as listed → kept; otherwise fetched from the server (checked below)
+    for (const f of job.files ?? []) {
+      if (f.b64 || !/^v2\/(vaults|images)\/[a-z0-9-]{1,80}\.(bin|webp)$/.test(f.path)) continue
+      const local = join(repo, contentDir, f.path)
+      if (existsSync(local) && createHash('sha512').update(readFileSync(local)).digest('hex') === f.sha512) {
+        f.keep = true
+        continue
+      }
+      const res = await fetch(`${server}/internal/file/${f.path}`, { signal: AbortSignal.timeout(60_000), headers: { authorization: `Bearer ${env('PUBLISHER_TOKEN')}` } })
+      if (!res.ok) throw new Error(`Herald server: file ${f.path}: HTTP ${res.status}`)
+      f.b64 = Buffer.from(await res.arrayBuffer()).toString('base64')
+    }
+    const files = buildRelease(job, contentDir, key)
     for (const f of files) {
       mkdirSync(dirname(join(repo, f.path)), { recursive: true })
       writeFileSync(join(repo, f.path), f.bytes)

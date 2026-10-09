@@ -6,10 +6,11 @@ import SignIn from './screens/SignIn'
 import Home from './screens/Home'
 import Team from './screens/Team'
 import MySettings from './screens/MySettings'
+import Publications from './screens/Publications'
+import TimeTravel from './screens/TimeTravel'
+import { PubsProvider } from './pubs'
 
 const COMING: Partial<Record<Tab, string>> = {
-  publications: 'News, events, banners and welcome messages: phase S5.',
-  preview: 'The launcher at any date and in any time zone: phase S5.',
   server: 'Maintenance, emergency buttons and the daily restart: phase S6.',
   backgrounds: 'Home backgrounds by period: phase S8.',
   pack: 'The mod pack and its approvals: phase S10.',
@@ -28,7 +29,9 @@ export default function App() {
   if (me === null) return <SignIn staging={staging} onSignedIn={setMe} />
   return (
     <StoreProvider me={me} onSignedOut={signedOut}>
-      <Shell staging={staging} />
+      <PubsProvider>
+        <Shell staging={staging} />
+      </PubsProvider>
     </StoreProvider>
   )
 }
@@ -36,14 +39,21 @@ export default function App() {
 function Shell({ staging }: { staging: boolean }) {
   const { can } = useStore()
   const [tab, setTab] = useState<Tab>('home')
+  const [openPub, setOpenPub] = useState<string | null>(null)
+  const goPub = (id: string | null) => {
+    setOpenPub(id)
+    setTab('publications')
+  }
   // A permission removed meanwhile: back to Home
   const allowed = tab === 'settings' || TABS.some((t) => t.id === tab && (!t.needs || t.needs.some(can)))
   const shown = allowed ? tab : 'home'
   return (
     <div className="flex h-full flex-col">
-      <TitleBar tab={shown} onTab={setTab} staging={staging} />
+      <TitleBar tab={shown} onTab={(t) => (t === 'publications' && tab === 'publications' && setOpenPub(null), setTab(t))} staging={staging} />
       <main className="min-h-0 flex-1 overflow-auto px-7 py-6">
-        {shown === 'home' && <Home />}
+        {shown === 'home' && <Home onOpen={goPub} />}
+        {shown === 'publications' && <Publications open={openPub} onOpen={setOpenPub} />}
+        {shown === 'preview' && <TimeTravel />}
         {shown === 'team' && <Team />}
         {shown === 'settings' && <MySettings />}
         {COMING[shown] && (

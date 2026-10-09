@@ -12,6 +12,7 @@ export const ROLE_LABEL: Record<Role, string> = { owner: 'Owner', developer: 'De
 export const PERMISSIONS = [
   'news.write', // create and edit news
   'events.write',
+  'publications.approve', // mark a publication "Ready" (it is then locked until reopened)
   'publications.publish', // schedule / publish / unpublish news and events
   'publications.delete',
   'publications.restore', // trash
@@ -32,7 +33,7 @@ export const PERMISSIONS = [
 export type Permission = (typeof PERMISSIONS)[number]
 
 const ALL = [...PERMISSIONS]
-const STAFF_CONTENT: Permission[] = ['news.write', 'events.write', 'publications.publish', 'publications.delete', 'publications.restore', 'banner.write', 'welcome.write', 'templates.write']
+const STAFF_CONTENT: Permission[] = ['news.write', 'events.write', 'publications.approve', 'publications.publish', 'publications.delete', 'publications.restore', 'banner.write', 'welcome.write', 'templates.write']
 
 export const ROLE_DEFAULTS: Record<Role, readonly Permission[]> = {
   owner: ALL,

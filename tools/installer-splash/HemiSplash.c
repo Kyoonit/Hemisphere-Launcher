@@ -6,6 +6,9 @@
  *
  * The window lives on its own thread (it keeps painting while files are extracted), hides the installer's
  * own windows, and follows the installer's progress bar. It closes when the installer ends.
+ *
+ * Herald (the staff tool) builds the same source with its own texts and colours (SPLASH_* defines, see
+ * tools/installer-splash/herald.mjs): its Setup looks related but clearly different.
  */
 #define WIN32_LEAN_AND_MEAN
 #define UNICODE
@@ -61,6 +64,21 @@ static double g_shown; /* progress drawn, eased towards the real one */
 static double g_target;
 static int g_dpi = 96;
 
+/* What the window says, and its colours (the launcher's by default) */
+#ifndef SPLASH_TITLE
+#define SPLASH_TITLE L"HEMISPHERE SMP"
+#endif
+#ifndef SPLASH_TITLE_COLOR
+#define SPLASH_TITLE_COLOR C_GREEN_400
+#endif
+#ifndef SPLASH_WINDOW
+#define SPLASH_WINDOW L"Hemisphere Launcher"
+#endif
+#ifndef SPLASH_CLASS
+#define SPLASH_CLASS L"HemisphereSetupSplash"
+#endif
+/* SPLASH_SUBTITLE (optional): a small line under the title, in SPLASH_SUBTITLE_COLOR */
+
 /* Hemisphere palette (Tailwind v3 values used by the launcher) */
 #define C_GREEN_400 RGB(0x4a, 0xde, 0x80)
 #define C_GREEN_500 RGB(0x22, 0xc5, 0x5e)
@@ -74,20 +92,26 @@ static int S(int v) { return MulDiv(v, g_dpi, 96); }
 /* ---------------------------------------------------------------- the installer's own windows */
 static BOOL CALLBACK collectBars(HWND h, LPARAM lp) {
   WCHAR cls[32];
+  int i;
   (void)lp;
+  for (i = 0; i < g_barCount; i++)
+    if (g_bars[i] == h) return TRUE;
   if (g_barCount < MAX_BARS && GetClassNameW(h, cls, 32) && lstrcmpiW(cls, L"msctls_progress32") == 0) g_bars[g_barCount++] = h;
   return TRUE;
 }
 
-/* Every visible window of this installer right now (main window, progress banner): hidden for good. */
+/* Every visible window of this installer (main window, progress banner): hidden for good. Also run on every tick:
+   a window the installer opens after the splash (shown early, from .onInit) is hidden within a frame. */
 static BOOL CALLBACK collectInstallerWindows(HWND h, LPARAM lp) {
   DWORD pid = 0;
+  int i;
   (void)lp;
   GetWindowThreadProcessId(h, &pid);
-  if (pid == GetCurrentProcessId() && h != g_win && IsWindowVisible(h) && g_hiddenCount < MAX_HIDDEN) {
-    g_hidden[g_hiddenCount++] = h;
-    EnumChildWindows(h, collectBars, 0);
-  }
+  if (pid != GetCurrentProcessId() || h == g_win || !IsWindowVisible(h)) return TRUE;
+  for (i = 0; i < g_hiddenCount; i++)
+    if (g_hidden[i] == h) return TRUE;
+  if (g_hiddenCount < MAX_HIDDEN) g_hidden[g_hiddenCount++] = h;
+  EnumChildWindows(h, collectBars, 0);
   return TRUE;
 }
 
@@ -184,8 +208,20 @@ static void paint(HWND hwnd, HDC target) {
   title = makeFont(30, FW_HEAVY);
   status = makeFont(13, FW_SEMIBOLD);
   SetTextCharacterExtra(dc, S(1));
-  centeredText(dc, L"HEMISPHERE SMP", S(150), S(190), w, title, C_GREEN_400, TRUE);
+  centeredText(dc, SPLASH_TITLE, S(150), S(190), w, title, SPLASH_TITLE_COLOR, TRUE);
   SetTextCharacterExtra(dc, 0);
+#ifdef SPLASH_SUBTITLE
+  {
+    HFONT sub = makeFont(11, FW_BOLD);
+    SetTextCharacterExtra(dc, S(2));
+    centeredText(dc, SPLASH_SUBTITLE, S(186), S(204), w, sub, SPLASH_SUBTITLE_COLOR, TRUE);
+    SetTextCharacterExtra(dc, 0);
+    DeleteObject(sub);
+  }
+#define STATUS_TOP 206
+#else
+#define STATUS_TOP 198
+#endif
 
   if (g_target < 0)
     lstrcpyW(text, g_french ? L"Installation\x2026" : L"Installing\x2026");
@@ -193,12 +229,12 @@ static void paint(HWND hwnd, HDC target) {
     lstrcpyW(text, g_french ? L"Lancement\x2026" : L"Starting\x2026");
   else
     wsprintfW(text, g_french ? L"Installation\x2026 %d %%" : L"Installing\x2026 %d%%", (int)(g_shown * 100));
-  centeredText(dc, text, S(198), S(222), w, status, C_GRAY_300, TRUE);
+  centeredText(dc, text, S(STATUS_TOP), S(STATUS_TOP + 24), w, status, C_GRAY_300, TRUE);
 
   /* progress bar: Hemisphere green on a dark track; a sliding segment until the first progress arrives */
   barL = S(70);
   barR = w - S(70);
-  barT = S(238);
+  barT = S(STATUS_TOP + 40);
   barB = barT + S(6);
   fillRound(dc, barL, barT, barR, barB, C_TRACK);
   if (g_target < 0) {
@@ -244,7 +280,9 @@ static void placeWindow(HWND hwnd) {
 static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
   switch (msg) {
     case WM_TIMER: {
-      double p = installerProgress();
+      double p;
+      if (!g_closing) EnumWindows(collectInstallerWindows, 0);
+      p = installerProgress();
       hideInstallerWindows();
       if (p >= 0) {
         if (g_target < 0) g_shown = 0;
@@ -304,10 +342,15 @@ static DWORD WINAPI splashThread(LPVOID unused) {
   wc.hInstance = g_inst;
   wc.hCursor = LoadCursorW(NULL, (LPCWSTR)IDC_ARROW);
   wc.hIcon = LoadIconW(GetModuleHandleW(NULL), MAKEINTRESOURCEW(103)); /* the Setup's icon */
-  wc.lpszClassName = L"HemisphereSetupSplash";
+  wc.lpszClassName = SPLASH_CLASS;
   RegisterClassExW(&wc);
 
-  g_win = CreateWindowExW(WS_EX_APPWINDOW, wc.lpszClassName, L"Hemisphere Launcher", WS_POPUP, 0, 0, BASE_W, BASE_H, NULL, NULL, g_inst, NULL);
+#ifdef SPLASH_TOPMOST
+  /* above the installer's own windows from the start (shown from .onInit, before they exist) */
+  g_win = CreateWindowExW(WS_EX_APPWINDOW | WS_EX_TOPMOST, wc.lpszClassName, SPLASH_WINDOW, WS_POPUP, 0, 0, BASE_W, BASE_H, NULL, NULL, g_inst, NULL);
+#else
+  g_win = CreateWindowExW(WS_EX_APPWINDOW, wc.lpszClassName, SPLASH_WINDOW, WS_POPUP, 0, 0, BASE_W, BASE_H, NULL, NULL, g_inst, NULL);
+#endif
   if (!g_win) {
     SetEvent(g_ready);
     return 0;

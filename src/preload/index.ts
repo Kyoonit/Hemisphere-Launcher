@@ -4,7 +4,7 @@ import type { ServerStatus } from '@shared/server'
 import type { AccountsState } from '@shared/auth'
 import type { GameState } from '@shared/game'
 import type { Settings } from '@shared/settings'
-import type { Feed } from '@shared/feed'
+import type { FeedView } from '@shared/schedule'
 import type { ImportProgress } from '@shared/importer'
 import type { LauncherUpdateState } from '../shared/launcherUpdate'
 
@@ -129,7 +129,7 @@ const api: HemisphereApi = {
   feed: {
     get: () => ipcRenderer.invoke(IPC.feedGet),
     onChange: (cb) => {
-      const listener = (_e: unknown, feed: Feed): void => cb(feed)
+      const listener = (_e: unknown, feed: FeedView): void => cb(feed)
       ipcRenderer.on(IPC.feedChanged, listener)
       return () => ipcRenderer.removeListener(IPC.feedChanged, listener)
     },

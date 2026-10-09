@@ -9,7 +9,7 @@
  */
 import { createHash, sign, type KeyObject } from 'node:crypto'
 import { FeedSchema } from '../../src/shared/feed.ts'
-import { FEED_V2_PATH, FeedV2Schema } from '../../src/shared/feedV2.ts'
+import { FEED_V2_PATH, FeedV2Schema, type FeedV2 } from '../../src/shared/feedV2.ts'
 
 export interface PublishJob {
   id: string
@@ -17,8 +17,14 @@ export interface PublishJob {
   /** 2 = Herald feed (content/v2/), absent = schema 1 feed */
   schema?: 2
   feed: Record<string, unknown>
-  /** Schema 2: new vault files, each listed in the feed with the same path and SHA-512 */
-  files?: { path: string; b64: string; sha512: string }[]
+  /** Schema 2: files next to the feed (vaults, pictures), each listed in the signed feed with the same path, SHA-512
+   *  and size. `b64` = the bytes; `keep` = already in the repository as listed (publish-run checked), not written */
+  files?: { path: string; sha512: string; size?: number; b64?: string; keep?: boolean }[]
+}
+
+/** Every file a schema 2 feed lists: vault files, their pictures, pictures of the news in clear */
+export function listedFiles(feed: FeedV2): { path: string; sha512: string; size: number }[] {
+  return [...feed.vaults.flatMap((v) => [v.file, ...(v.image ? [v.image] : [])]), ...feed.news.flatMap((n) => (n.imageFile?.path.startsWith('v2/images/') ? [n.imageFile] : []))]
 }
 
 /** Files to write (paths relative to the repository root) for one job. Throws if the content is invalid. */
@@ -46,13 +52,16 @@ function buildV2(job: PublishJob, contentDir: string, key: KeyObject, now: Date)
     { path: `${contentDir}/${FEED_V2_PATH}`, bytes },
     { path: `${contentDir}/${FEED_V2_PATH}.sig`, bytes: Buffer.from(sign(null, bytes, key).toString('base64') + '\n') },
   ]
+  const listed = listedFiles(feed)
   for (const f of job.files ?? []) {
-    const listed = feed.vaults.find((v) => v.file.path === f.path)
-    const file = Buffer.from(f.b64, 'base64')
+    const entry = listed.find((l) => l.path === f.path)
+    if (f.keep && entry && entry.sha512 === f.sha512) continue
+    const file = Buffer.from(f.b64 ?? '', 'base64')
     const sha = createHash('sha512').update(file).digest('hex')
     // Only files the signed feed lists, byte for byte: nothing else can reach the content folder
-    if (!listed || listed.file.sha512 !== sha || listed.file.size !== file.length) throw new Error(`file ${f.path} is not listed in the feed as sent`)
+    if (!entry || entry.sha512 !== sha || entry.size !== file.length) throw new Error(`file ${f.path} is not listed in the feed as sent`)
     out.push({ path: `${contentDir}/${f.path}`, bytes: file })
   }
+  for (const l of listed) if (!(job.files ?? []).some((f) => f.path === l.path)) throw new Error(`file ${l.path} is listed but missing from the job`)
   return out
 }
