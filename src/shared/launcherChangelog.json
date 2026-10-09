@@ -3,19 +3,19 @@
     "date": "2026-10-10",
     "changes": [
       {
-        "version": "next",
+        "version": "1.2.0",
         "area": "community",
         "en": "News, events and maintenances from the team reach your launcher within 2 minutes (it was up to 10).",
         "fr": "Les news, événements et maintenances de l’équipe arrivent dans ton launcher en moins de 2 minutes (jusqu’à 10 avant)."
       },
       {
-        "version": "next",
+        "version": "1.2.0",
         "area": "launcher",
         "en": "Each preset now has its own settings: keybinds, video and sound, mod settings and server list switch with it.",
         "fr": "Chaque préréglage a maintenant ses propres réglages : touches, vidéo et son, réglages des mods et liste de serveurs changent avec lui."
       },
       {
-        "version": "next",
+        "version": "1.2.0",
         "area": "launcher",
         "en": "Importing from another launcher asks where your mods and packs go: a new preset, named after the modpack (rename it whenever you like), or in place of the current one. Nothing piles up twice anymore: a pack you already have is used as it is.",
         "fr": "L’import depuis un autre launcher demande où mettre tes mods et packs : un nouveau préréglage, au nom du modpack (renommable quand tu veux), ou à la place de l’actuel. Plus rien en double : un pack que tu as déjà est utilisé tel quel."
@@ -26,31 +26,31 @@
     "date": "2026-10-09",
     "changes": [
       {
-        "version": "next",
+        "version": "1.2.0",
         "area": "home",
         "en": "Home’s pictures change with the seasons: the team adds new ones and special sets for Halloween, Christmas… Downloaded once and kept; on a metered connection they wait for a normal one.",
         "fr": "Les images de l’accueil changent avec les saisons : l’équipe en ajoute et prépare des séries pour Halloween, Noël… Téléchargées une seule fois et gardées ; sur une connexion limitée, elles attendent une connexion normale."
       },
       {
-        "version": "next",
+        "version": "1.2.0",
         "area": "home",
         "en": "Planned maintenances are announced on Home in advance, in your own time.",
         "fr": "Les maintenances prévues sont annoncées à l’avance sur l’accueil, à ton heure."
       },
       {
-        "version": "next",
+        "version": "1.2.0",
         "area": "home",
         "en": "The restart countdown knows the days without restart and the extra restarts.",
         "fr": "Le compte à rebours du restart connaît les jours sans restart et les restarts exceptionnels."
       },
       {
-        "version": "next",
+        "version": "1.2.0",
         "area": "home",
         "en": "The team can show a short announcement above the title on Home, and a welcome message for special days (Halloween, Christmas…).",
         "fr": "L’équipe peut afficher une courte annonce au-dessus du titre de l’accueil, et un message de bienvenue pour les jours spéciaux (Halloween, Noël…)."
       },
       {
-        "version": "next",
+        "version": "1.2.0",
         "area": "community",
         "en": "News pictures are downloaded once, checked, and kept on your PC; scheduled news appear at the exact minute, picture included.",
         "fr": "Les images des news sont téléchargées une seule fois, vérifiées et gardées sur ton PC ; les news programmées apparaissent à la minute près, image comprise."
