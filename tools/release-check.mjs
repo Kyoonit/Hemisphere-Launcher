@@ -7,6 +7,17 @@ import { createHash } from 'node:crypto'
 import { readFileSync, statSync } from 'node:fs'
 
 class Stop extends Error {}
+/** fetch, tried again when the connection drops (GitHub closes idle connections) */
+const get = async (url, init, attempts = 4) => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(url, init)
+    } catch (err) {
+      if (attempt >= attempts) throw err
+      await new Promise((r) => setTimeout(r, 2000 * attempt))
+    }
+  }
+}
 const fail = (msg) => {
   console.error(`\n✗ release-check: ${msg}\n`)
   console.error('Fix: run npm run release:fix (same token) to upload what is missing.\n')
@@ -17,7 +28,7 @@ async function main() {
   const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
   const exe = `Hemisphere-Launcher-Setup-${version}.exe`
   const headers = { 'User-Agent': 'hemisphere-release-check', ...(process.env.GH_TOKEN ? { Authorization: `Bearer ${process.env.GH_TOKEN}` } : {}) }
-  const res = await fetch(`${process.env.RELEASE_API ?? 'https://api.github.com'}/repos/Kyoonit/Hemisphere-Launcher/releases/tags/v${version}`, { headers })
+  const res = await get(`${process.env.RELEASE_API ?? 'https://api.github.com'}/repos/Kyoonit/Hemisphere-Launcher/releases/tags/v${version}`, { headers })
   if (!res.ok) fail(`release v${version} not found on GitHub (HTTP ${res.status})`)
   const release = await res.json()
   const asset = (name) => release.assets.find((a) => a.name === name && a.state === 'uploaded')
@@ -29,7 +40,7 @@ async function main() {
   if (!asset(`${exe}.blockmap`)) fail(`${exe}.blockmap is missing from the release`)
   if (!asset('latest.yml')) fail('latest.yml is missing from the release: installed launchers would never see this update')
 
-  const yml = await (await fetch(asset('latest.yml').browser_download_url, { headers: { 'User-Agent': 'hemisphere-release-check' } })).text()
+  const yml = await (await get(asset('latest.yml').browser_download_url, { headers: { 'User-Agent': 'hemisphere-release-check' } })).text()
   const sha = createHash('sha512').update(readFileSync(`dist/${exe}`)).digest('base64')
   if (!yml.includes(`version: ${version}`) || !yml.includes(sha)) fail('latest.yml on GitHub doesn’t match this installer (version or hash)')
   if (release.draft) fail('the release is still a draft: publish it on GitHub')

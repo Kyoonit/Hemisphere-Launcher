@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 
 const REPO = 'Kyoonit/Hemisphere-Launcher'
-// RELEASE_API / RELEASE_UPLOADS / RELEASE_NO_GIT: only for a rehearsal against a local stand-in for GitHub
+// RELEASE_API / RELEASE_UPLOADS / RELEASE_NO_GIT / RELEASE_SKIP_BUILD: only for a rehearsal against a local stand-in for GitHub
 const API = process.env.RELEASE_API ?? 'https://api.github.com'
 const UPLOADS = process.env.RELEASE_UPLOADS ?? 'https://uploads.github.com'
 const noGit = process.env.RELEASE_NO_GIT === '1'
@@ -33,12 +33,23 @@ const cmp = (a, b) => {
 }
 const short = (v) => v.replace(/\.0$/, '') // 1.1.0 -> 1.1
 const run = (cmd) => execSync(cmd, { stdio: 'inherit' })
-const api = async (path, init = {}) => {
-  const res = await fetch(path.startsWith('http') ? path : `${API}/repos/${REPO}${path}`, {
-    ...init,
-    headers: { 'User-Agent': 'hemisphere-release', Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, ...init.headers },
-  })
-  return res
+/**
+ * A GitHub request, tried again when the connection drops ("fetch failed": GitHub closes idle connections, e.g. while
+ * the installer builds, and the next request on that connection fails). HTTP answers (even errors) are returned.
+ */
+const api = async (path, init = {}, attempts = 4) => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(path.startsWith('http') ? path : `${API}/repos/${REPO}${path}`, {
+        ...init,
+        headers: { 'User-Agent': 'hemisphere-release', Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, ...init.headers },
+      })
+    } catch (err) {
+      if (attempt >= attempts) throw err
+      console.log(`  (connection to GitHub dropped: ${err?.cause?.code ?? err?.message}, trying again)`)
+      await new Promise((r) => setTimeout(r, 2000 * attempt))
+    }
+  }
 }
 const readJson = (f) => JSON.parse(readFileSync(f, 'utf8'))
 
@@ -68,7 +79,7 @@ async function upload(release, name, data, contentType, replace = false) {
       method: 'POST',
       headers: { 'Content-Type': contentType },
       body: data,
-    }).catch((err) => ({ ok: false, status: String(err?.cause?.code ?? err) }))
+    }, 1).catch((err) => ({ ok: false, status: String(err?.cause?.code ?? err) }))
     if (res.ok) return console.log('uploaded')
     console.log(`failed (${res.status})${attempt < 3 ? ', trying again' : ''}`)
     if (res.status === 422) {
@@ -117,8 +128,10 @@ async function main() {
       }
     }
     console.log(`\nrelease: building Hemisphere Launcher ${short(version)} (v${version})\n`)
-    run('npm run build')
-    run('npx electron-builder --win --publish never')
+    if (process.env.RELEASE_SKIP_BUILD !== '1') {
+      run('npm run build')
+      run('npx electron-builder --win --publish never')
+    }
   }
 
   const exe = `Hemisphere-Launcher-Setup-${version}.exe`
@@ -135,8 +148,13 @@ async function main() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tag_name: `v${version}`, target_commitish: 'main', name: `Hemisphere Launcher ${short(version)}`, body: notes(version, log, last === null), draft: false, prerelease: false }),
     })
-    if (!res.ok) fail(`GitHub refused to create the release (HTTP ${res.status}: ${(await res.text()).slice(0, 200)})`)
-    release = await res.json()
+    if (res.status === 422) {
+      // already created (a dropped connection hid the answer): use it
+      const again = await api(`/releases/tags/v${version}`)
+      if (again.ok) release = await again.json()
+    }
+    if (!release && !res.ok) fail(`GitHub refused to create the release (HTTP ${res.status}: ${(await res.text()).slice(0, 200)})`)
+    release ??= await res.json()
   }
   console.log(`\nrelease: uploading to ${release.html_url}`)
   await upload(release, exe, readFileSync(`dist/${exe}`), 'application/octet-stream')
