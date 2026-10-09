@@ -13,6 +13,10 @@ import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 
 const REPO = 'Kyoonit/Hemisphere-Launcher'
+// RELEASE_API / RELEASE_UPLOADS / RELEASE_NO_GIT: only for a rehearsal against a local stand-in for GitHub
+const API = process.env.RELEASE_API ?? 'https://api.github.com'
+const UPLOADS = process.env.RELEASE_UPLOADS ?? 'https://uploads.github.com'
+const noGit = process.env.RELEASE_NO_GIT === '1'
 const CHANGELOG = 'src/shared/launcherChangelog.json'
 const fix = process.argv.includes('--fix')
 const token = process.env.GH_TOKEN
@@ -30,7 +34,7 @@ const cmp = (a, b) => {
 const short = (v) => v.replace(/\.0$/, '') // 1.1.0 -> 1.1
 const run = (cmd) => execSync(cmd, { stdio: 'inherit' })
 const api = async (path, init = {}) => {
-  const res = await fetch(path.startsWith('http') ? path : `https://api.github.com/repos/${REPO}${path}`, {
+  const res = await fetch(path.startsWith('http') ? path : `${API}/repos/${REPO}${path}`, {
     ...init,
     headers: { 'User-Agent': 'hemisphere-release', Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, ...init.headers },
   })
@@ -53,16 +57,16 @@ function notes(version, log, first) {
   return `## What's new in ${short(version)}\n\n${changes.map((c) => `- ${c.en}`).join('\n')}\n\n## Nouveautés de la ${short(version)}\n\n${changes.map((c) => `- ${c.fr}`).join('\n')}\n`
 }
 
-async function upload(release, name, data, contentType) {
+async function upload(release, name, data, contentType, replace = false) {
   for (const old of release.assets.filter((a) => a.name === name)) {
-    if (old.state === 'uploaded' && old.size === data.length) return console.log(`  ${name}: already online`)
+    if (!replace && old.state === 'uploaded' && old.size === data.length) return console.log(`  ${name}: already online`)
     await api(`/releases/assets/${old.id}`, { method: 'DELETE' }) // a broken or different copy: replaced
   }
   for (let attempt = 1; attempt <= 3; attempt++) {
     process.stdout.write(`  ${name} (${Math.round(data.length / 1e6) || '<1'} MB)… `)
-    const res = await api(`https://uploads.github.com/repos/${REPO}/releases/${release.id}/assets?name=${encodeURIComponent(name)}`, {
+    const res = await api(`${UPLOADS}/repos/${REPO}/releases/${release.id}/assets?name=${encodeURIComponent(name)}`, {
       method: 'POST',
-      headers: { 'Content-Type': contentType, 'Content-Length': String(data.length) },
+      headers: { 'Content-Type': contentType },
       body: data,
     }).catch((err) => ({ ok: false, status: String(err?.cause?.code ?? err) }))
     if (res.ok) return console.log('uploaded')
@@ -80,6 +84,8 @@ async function upload(release, name, data, contentType) {
 async function main() {
   if (!token) fail('GH_TOKEN is missing: $env:GH_TOKEN = "<token>" first (see docs/RELEASE.md)')
   const latestRes = await api('/releases/latest')
+  // 404 = nothing published yet; anything else (expired token, missing permission, GitHub down) stops here
+  if (!latestRes.ok && latestRes.status !== 404) fail(`GitHub answered ${latestRes.status} (${latestRes.status === 401 ? 'the token is wrong or expired' : latestRes.status === 403 ? 'the token lacks Contents: read and write on this repository' : 'try again later'})`)
   const last = latestRes.ok ? String((await latestRes.json()).tag_name).replace(/^v/, '') : null
   const pkg = readJson('package.json')
   const log = readJson(CHANGELOG)
@@ -104,9 +110,11 @@ async function main() {
       lock.version = version
       if (lock.packages?.['']) lock.packages[''].version = version
       writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n')
-      run(`git add package.json package-lock.json ${CHANGELOG}`)
-      run(`git commit -m "Release v${version}"`)
-      run('git push')
+      if (!noGit) {
+        run(`git add package.json package-lock.json ${CHANGELOG}`)
+        run(`git commit -m "Release v${version}"`)
+        run('git push')
+      }
     }
     console.log(`\nrelease: building Hemisphere Launcher ${short(version)} (v${version})\n`)
     run('npm run build')
@@ -133,7 +141,7 @@ async function main() {
   console.log(`\nrelease: uploading to ${release.html_url}`)
   await upload(release, exe, readFileSync(`dist/${exe}`), 'application/octet-stream')
   await upload(release, `${exe}.blockmap`, readFileSync(`dist/${exe}.blockmap`), 'application/octet-stream')
-  await upload(release, 'latest.yml', readFileSync('dist/latest.yml'), 'text/yaml')
+  await upload(release, 'latest.yml', readFileSync('dist/latest.yml'), 'text/yaml', true) // always this installer's
   console.log('')
   try {
     run('node tools/release-check.mjs')

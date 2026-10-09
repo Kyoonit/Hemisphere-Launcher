@@ -9,7 +9,7 @@ import { readFileSync, statSync } from 'node:fs'
 class Stop extends Error {}
 const fail = (msg) => {
   console.error(`\n✗ release-check: ${msg}\n`)
-  console.error('Fix: on GitHub, delete this release (and its tag), then run npm run release again with the window kept open.\n')
+  console.error('Fix: run npm run release:fix (same token) to upload what is missing.\n')
   throw new Stop(msg)
 }
 
@@ -17,7 +17,7 @@ async function main() {
   const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
   const exe = `Hemisphere-Launcher-Setup-${version}.exe`
   const headers = { 'User-Agent': 'hemisphere-release-check', ...(process.env.GH_TOKEN ? { Authorization: `Bearer ${process.env.GH_TOKEN}` } : {}) }
-  const res = await fetch(`https://api.github.com/repos/Kyoonit/Hemisphere-Launcher/releases/tags/v${version}`, { headers })
+  const res = await fetch(`${process.env.RELEASE_API ?? 'https://api.github.com'}/repos/Kyoonit/Hemisphere-Launcher/releases/tags/v${version}`, { headers })
   if (!res.ok) fail(`release v${version} not found on GitHub (HTTP ${res.status})`)
   const release = await res.json()
   const asset = (name) => release.assets.find((a) => a.name === name && a.state === 'uploaded')
