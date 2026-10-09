@@ -205,7 +205,7 @@ function publisher(env: Env, ctx: ExecutionContext, actor: Actor): pubs.Publishe
 
 /** Publications routes (null = not one of them). */
 async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, path: string): Promise<Response | null> {
-  const one = path.match(/^\/publications\/([nbw]-[a-z0-9]{12})(?:\/(status|publish|unpublish|delete|restore|comments|editing|versions\/(\d{1,6})))?$/)
+  const one = path.match(/^\/publications\/([nebw]-[a-z0-9]{12})(?:\/(status|publish|unpublish|delete|restore|comments|editing|versions\/(\d{1,6})))?$/)
   const image = path.match(/^\/images\/([0-9a-f]{64})$/)
   const maintenance = path.match(/^\/server\/maintenances\/(m-[a-z0-9]{10})\/delete$/)
   const serverPaths = ['/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history']

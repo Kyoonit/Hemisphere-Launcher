@@ -494,3 +494,24 @@ Retours du propriétaire (S6) :
   - un changement fait par un autre membre du staff y apparaît en quelques secondes ;
   - la migration `0007` note l'heure où GitHub Actions prend le travail.
 - **Mesuré sur staging** : 8 s avant que GitHub démarre, 1 s pour vérifier et signer, puis jusqu'à 2 min pour les launchers.
+
+## 22. Phase S7 : événements et calendrier (9 octobre 2026)
+
+- **Événements** : quatrième type de publication (identifiants `e-…`, droit `events.write`, donc aussi les Lodge keepers). Champs :
+  - titre, lieu dans le jeu, description et bouton de lien, traduisibles comme les news ;
+  - début dans un fuseau et durée ;
+  - une seule fois, ou **chaque semaine** les jours choisis, jusqu'à une date ou jusqu'au retrait ;
+  - « Announced » : dès la publication, ou à partir d'une date (envoyé en avance dans un coffre, illisible avant). Un événement n'est jamais caché pendant qu'il a lieu.
+- **Flux** : `feedItem` produit l'`EventV2` existant. Un événement hebdomadaire garde l'heure murale de son fuseau (`recurrence.weekly`), il ne bouge pas au changement d'heure. Les événements finis depuis plus de 7 jours quittent le flux ; 50 au plus, les plus proches d'abord.
+- **Launcher** : rien ne change pour les joueurs. La liste des événements (page News) et la ligne « prochain événement » (panneau serveur de l'accueil) sont devenues des composants partagés (`components/feed/EventCards.tsx`), dessinés aussi par l'aperçu de Herald. Le début et la fin d'un événement comptent maintenant comme des changements de la vue (`nextChangeAt`).
+- **Herald** :
+  - éditeur : bloc « When » propre aux événements (jours de la semaine, dernière date, annonce), avec les vérifications (premier jour hors des jours choisis, déjà fini, annoncé après son début) ;
+  - aperçu aux moments clés : annonce, la veille, pendant (« Live now »), après ;
+  - **Publications → Calendar** : deux semaines dans le fuseau du membre, une ligne par type, plus les maintenances (annonce hachurée) et les restarts ; pointillés = pas encore publié ; clic = ouvrir ; avertissement pour chaque événement pendant une maintenance ou un restart ;
+  - accueil « Coming up » : les publications qui apparaissent et les événements qui commencent dans les 14 jours ; voyage dans le temps : annonce, début et fin de chaque date.
+
+| Test | Résultat |
+|---|---|
+| Tests unitaires (`tests/herald-events.test.ts`) | Format du flux accepté par le launcher, traductions, annonce, hebdomadaire à 20:00 Paris avant et après le 25 octobre (18:00 puis 19:00 UTC), vérifications, ordre et nettoyage du flux, restarts sur deux semaines |
+| Staging (contenu de test) | Un événement hebdomadaire en clair dans le flux ; un événement annoncé 10 min plus tard dans un coffre `event`, son texte absent du flux en clair ; publication complète en 10 s |
+| Herald à l'écran | Calendrier avec l'avertissement « Party pendant le restart de 17:00 », éditeur et aperçu (liste des événements du launcher, Live now), accueil, voyage dans le temps |

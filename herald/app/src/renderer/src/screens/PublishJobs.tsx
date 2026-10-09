@@ -31,7 +31,7 @@ function stepOf(j: PublishJob, now: number): Step {
 /** The last change in words: "Maintenance started", "Published “Season 3”"… */
 function whatOf(reason: string | null, titles: Map<string, string>): string {
   const r = reason ?? ''
-  const pub = r.match(/^(publish|unpublish|delete) ([nbw]-[a-z0-9]{12})$/)
+  const pub = r.match(/^(publish|unpublish|delete) ([nebw]-[a-z0-9]{12})$/)
   if (pub) return `${{ publish: 'Published', unpublish: 'Taken down', delete: 'Removed' }[pub[1]]} “${titles.get(pub[2]) ?? '…'}”`
   if (/^maintenance m-[a-z0-9]+ removed$/.test(r)) return 'Planned maintenance removed'
   if (/^maintenance m-/.test(r)) return 'Maintenance planned'

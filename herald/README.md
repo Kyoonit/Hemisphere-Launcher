@@ -122,3 +122,19 @@ kept in `settings_versions` (migration `0006`), journaled, and published at once
 npm run herald:server:reset-local && npm run herald:server:dev    # then, in another terminal:
 npm run herald:e2e-server                                         # emergency, planned, restart, permissions, history
 ```
+
+## Events and calendar (phase S7)
+
+Events are a fourth kind of publication (`e-…` ids, permission `events.write`, so Lodge keepers write them too): title,
+place, description, link, a start in a zone, a length, once or every week on chosen days (until a date or until taken
+down), and when players first see it ("announced"; later = sent now in a vault). `feedItem` turns one into the feed's
+`EventV2` (a weekly one gets `recurrence.weekly` with the start's wall time in its zone, so it does not move when the
+clocks change); the launcher's list, reminder and calendar file are unchanged.
+
+- Publications → **Calendar**: two weeks in the staff member's zone, one lane per kind plus maintenances and restarts
+  (`restartsBetween`, `src/shared/restart.ts`), dashed = not published yet, and a warning for each event that happens
+  while the server is closed (maintenance or restart).
+- The preview draws the launcher's own event pieces (`src/renderer/src/components/feed/EventCards.tsx`, shared with the
+  launcher's News page and server panel); time travel lists when each event is announced, starts and ends.
+- Tests: `tests/herald-events.test.ts` (feed item, translations, announce time, weekly across the October clock
+  change, checks, feed order, restarts over a period).

@@ -116,7 +116,12 @@ export function resolveFeed(feed: FeedV2, opened: OpenedItems, now: number, lang
 
   const rule = rules.filter((r) => Date.parse(r.from) <= now).sort((a, b) => Date.parse(b.from) - Date.parse(a.from))[0]
 
-  const visibleEvents = events.filter((e) => (at(e.showFrom) ?? -Infinity) <= now).flatMap((e) => weeklyOccurrences(e, now - DAY, now + 28 * DAY))
+  const visibleEvents = events
+    .filter((e) => (at(e.showFrom) ?? -Infinity) <= now)
+    .flatMap((e) => weeklyOccurrences(e, now - DAY, now + 28 * DAY))
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+  // an event starting or ending changes the view too (live badge, the list)
+  for (const e of visibleEvents) mark(e.start, e.end)
 
   const LEVEL = { critical: 3, important: 2, info: 1 }
   const banner = banners.filter((b) => inWindow(b, now)).sort((a, b) => LEVEL[b.level] - LEVEL[a.level] || (at(b.showFrom) ?? 0) - (at(a.showFrom) ?? 0))[0]

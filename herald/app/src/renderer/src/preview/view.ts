@@ -3,6 +3,7 @@ import type { PublicationsState } from '@herald/api'
 import { clearFeed, feedDraft, type PublicationData, type PublicationKind, type PublishedPublication } from '@shared/heraldPublications'
 import { resolveFeed, type FeedView } from '@shared/schedule'
 import type { NewsItemV2 } from '@shared/feedV2'
+import { eventPhase, upcomingEvents } from '@shared/events'
 
 export interface ViewOptions {
   /** A publication shown as if it were published with this data (the editor's preview) */
@@ -17,7 +18,8 @@ export function withPlaceholders(kind: PublicationKind, data: PublicationData): 
   if (kind === 'news') {
     en.title = en.title?.trim() || '(No title yet)'
     en.body = en.body?.trim() || '(No text yet)'
-  } else en.text = en.text?.trim() || '(No text yet)'
+  } else if (kind === 'event') en.title = en.title?.trim() || '(No title yet)'
+  else en.text = en.text?.trim() || '(No text yet)'
   return { ...data, texts: { ...data.texts, en } }
 }
 
@@ -67,12 +69,14 @@ export function upcomingChanges(state: PublicationsState, from: number, lang: st
   const feed = clearFeed(draft)
   const out: Change[] = []
   let prev = resolveFeed(feed, {}, from, lang)
+  let prevAt = from
   let t = prev.nextChangeAt
   while (t !== null && out.length < max) {
     const next = resolveFeed(feed, {}, t, lang)
-    const lines = describeChange(prev, next)
+    const lines = describeChange(prev, next, prevAt, t)
     if (lines.length) out.push({ at: t, lines })
     prev = next
+    prevAt = t
     t = next.nextChangeAt
   }
   return out
@@ -80,8 +84,21 @@ export function upcomingChanges(state: PublicationsState, from: number, lang: st
 
 const en = (x: { en: string } | undefined) => x?.en ?? ''
 
-export function describeChange(a: FeedView, b: FeedView): string[] {
+/** What changed between two views (taken at `ta` and `tb`) */
+export function describeChange(a: FeedView, b: FeedView, ta: number, tb: number): string[] {
   const lines: string[] = []
+  // Events: in the list (announced), live, gone
+  const evA = new Map(upcomingEvents(a.events, ta).map((e) => [e.id, e]))
+  const evB = new Map(upcomingEvents(b.events, tb).map((e) => [e.id, e]))
+  // a weekly event's next dates (id-YYYYMMDD) are not "announced" again
+  const base = (id: string) => id.match(/^[nebw]-[a-z0-9]{12}/)?.[0] ?? id
+  const knownA = new Set([...evA.keys()].map(base))
+  for (const [id, e] of evB) {
+    const live = eventPhase(e, tb) === 'live'
+    if (!evA.has(id) && !live && !knownA.has(base(id))) lines.push(`Event announced: “${en(e.title)}”`)
+    else if (live && (!evA.has(id) || eventPhase(evA.get(id)!, ta) !== 'live')) lines.push(`Event starts: “${en(e.title)}”`)
+  }
+  for (const [id, e] of evA) if (!evB.has(id) && eventPhase(e, ta) === 'live') lines.push(`Event ends: “${en(e.title)}”`)
   const was = new Map(a.news.map((n) => [n.id, n]))
   const is = new Map(b.news.map((n) => [n.id, n]))
   for (const [id, n] of is) {

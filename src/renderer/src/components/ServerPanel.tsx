@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bell, BellRing, CalendarDays, Construction, Signal } from 'lucide-react'
-import { eventPhase, upcomingEvents } from '@shared/events'
-import { localize } from '@shared/manifest'
-import { relativeTime } from './Events'
+import { Bell, BellRing, Construction, Signal } from 'lucide-react'
 import type { ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
 import { nextRestart, type RestartSchedule } from '@shared/restart'
 import { RestartBox } from './feed/RestartBox'
+import { NextEvent } from './feed/EventCards'
 import { useLiveRestart, useNow, useRoomAboveFooter } from '../hooks'
 
 export default function ServerPanel({ status, feed, onOpenNews }: { status: ServerStatus | null; feed: Feed | null; onOpenNews?: () => void }) {
@@ -21,7 +19,6 @@ export default function ServerPanel({ status, feed, onOpenNews }: { status: Serv
   const maintenance = feed?.maintenance.active === true
   const online = status?.online === true && !restarting && !maintenance
   const room = useRoomAboveFooter()
-  const next = upcomingEvents(feed?.events, now).find((e) => Date.parse(e.start) - now < 7 * 24 * 3600_000)
 
   return (
     <aside ref={room.ref} style={{ maxHeight: room.max }} className="glass animate-rise absolute top-5 right-6 flex w-[268px] flex-col p-4 [animation-delay:300ms] [&>*]:flex-none">
@@ -53,19 +50,7 @@ export default function ServerPanel({ status, feed, onOpenNews }: { status: Serv
         restart && <RestartBox restart={restart} live={live} now={now} />
       )}
 
-      {next && (
-        <button
-          onClick={onOpenNews}
-          title={localize(next.title, i18n.language)}
-          className={`mt-2.5 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[12.5px] transition-colors ${eventPhase(next, now) === 'live' ? 'bg-green-900/45 text-green-100 hover:bg-green-900/60' : 'bg-gray-900/55 text-gray-300 hover:bg-gray-800/80'}`}
-        >
-          <CalendarDays size={15} className="flex-none text-green-400" />
-          <span className="min-w-0 flex-1 truncate">
-            <b className="font-semibold text-white">{localize(next.title, i18n.language)}</b>
-          </span>
-          <span className="flex-none text-[11.5px] text-gray-400">{eventPhase(next, now) === 'live' ? t('events.live') : relativeTime(Date.parse(next.start), now, i18n.language)}</span>
-        </button>
-      )}
+      <NextEvent events={feed?.events} now={now} onOpen={onOpenNews} />
 
       {online && <PlayerList status={status} />}
     </aside>

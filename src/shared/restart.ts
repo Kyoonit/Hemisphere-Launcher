@@ -88,6 +88,13 @@ function restartsAround(now: number, s: RestartSchedule): { at: number; duration
   return out.sort((a, b) => a.at - b.at)
 }
 
+/** Every restart (daily and extra) between two instants: the calendar's restart lane and its overlap warnings. */
+export function restartsBetween(from: number, to: number, s: RestartSchedule): { at: number; duration: number; kind: 'daily' | 'extra' }[] {
+  const seen = new Map<number, { at: number; duration: number; kind: 'daily' | 'extra' }>()
+  for (let t = from; t < to + 4 * 86_400_000; t += 3 * 86_400_000) for (const r of restartsAround(t, s)) if (r.at + r.duration > from && r.at < to) seen.set(r.at, r)
+  return [...seen.values()].sort((a, b) => a.at - b.at)
+}
+
 export function restartState(now: number, s: RestartSchedule): RestartState {
   for (const r of restartsAround(now, s)) {
     if (now >= r.at && now < r.at + r.duration) return { phase: 'restarting', next: r.at, msLeft: r.at + r.duration - now, kind: r.kind }

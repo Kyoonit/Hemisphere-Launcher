@@ -14,6 +14,7 @@ import { NEWS_CATEGORIES, type NewsItem } from '@shared/feed'
 import { NewsArticle, NewsCard, NewsFeatured, NewsPeekCard } from '@launcher/components/feed/NewsCards'
 import { AnnouncementBanner, MaintenanceNotice, PlannedMaintenance, WelcomeHeading } from '@launcher/components/feed/HomeNotices'
 import { RestartBox } from '@launcher/components/feed/RestartBox'
+import { EventList, NextEvent } from '@launcher/components/feed/EventCards'
 import { nextRestart, restartState } from '@shared/restart'
 import logo from '@launcher/assets/logo.png'
 import kingdom from '@launcher/assets/backgrounds/kingdom.webp'
@@ -107,7 +108,7 @@ function Window({ view, lang, screen, onScreen, article, onArticle, badge, playe
       {dimmed && <div className="absolute inset-0 bg-gray-900/95" />}
       <TitleBar screen={screen} onScreen={onScreen} badge={screen === 'news' ? 0 : badge} />
       <div className="absolute inset-x-0 top-[52px] bottom-5">
-        {screen === 'home' ? <Home view={view} at={at ?? Date.now()} onOpenNews={() => (onScreen('news'), onArticle(null))} playerName={playerName === undefined ? 'Steve' : playerName} /> : <News view={view} lang={lang} article={article} onArticle={onArticle} />}
+        {screen === 'home' ? <Home view={view} at={at ?? Date.now()} onOpenNews={() => (onScreen('news'), onArticle(null))} playerName={playerName === undefined ? 'Steve' : playerName} /> : <News view={view} lang={lang} at={at ?? Date.now()} article={article} onArticle={onArticle} />}
       </div>
       <p className="pointer-events-none absolute inset-x-0 bottom-0 h-5 truncate px-4 text-center text-[11px] leading-5 text-gray-500">{t('legal.disclaimer')}</p>
     </div>
@@ -199,7 +200,7 @@ function Home({ view, at, onOpenNews, playerName }: { view: FeedView; at: number
   )
 }
 
-function News({ view, lang, article, onArticle }: { view: FeedView; lang: string; article: string | null; onArticle(id: string | null): void }) {
+function News({ view, lang, at, article, onArticle }: { view: FeedView; lang: string; at: number; article: string | null; onArticle(id: string | null): void }) {
   const { t } = useTranslation()
   const open = view.news.find((n) => n.id === article)
   if (open) return <NewsArticle item={open} lang={lang} onBack={() => onArticle(null)} onOpenLink={() => {}} />
@@ -227,6 +228,7 @@ function News({ view, lang, article, onArticle }: { view: FeedView; lang: string
         <span className="-mb-px flex items-center gap-2 border-b-2 border-green-400 px-3.5 pb-2 text-[14px] font-semibold text-white">{t('news.tabs.server')}</span>
         <span className="-mb-px flex items-center gap-2 border-b-2 border-transparent px-3.5 pb-2 text-[14px] font-semibold text-gray-400">{t('news.tabs.launcher')}</span>
       </div>
+      <EventList events={view.events} now={at} lang={lang} />
       {!featured ? (
         <div className="grid h-[60%] place-items-center text-gray-400">
           <p className="flex items-center gap-2">
@@ -275,6 +277,7 @@ function ServerCard({ view, at }: { view: FeedView; at: number }) {
       ) : (
         view.restart && <RestartBox restart={restarting ? restartState(at, view.restart) : nextRestart(at, view.restart)} live={restarting ? { phase: 'restarting', since: at, checkedAt: at } : null} now={at} />
       )}
+      <NextEvent events={view.events} now={at} />
     </aside>
   )
 }

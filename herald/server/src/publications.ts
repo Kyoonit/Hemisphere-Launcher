@@ -4,7 +4,7 @@
  * moves to the trash (restorable). Publishing sends the whole current state (every published publication + the
  * other feed parts) to the publish queue: see publishAll.
  */
-import { DEFAULT_FEED_BASE, DEFAULT_MAINTENANCE_TEMPLATES, emptyData, feedDraft, ID_PREFIX, MAX_IMAGE_BYTES, problems, PUBLICATION_KINDS, PublicationDataSchema, STATUSES, type FeedBase, type Publication, type PublicationData, type PublicationKind, type Status } from '../../../src/shared/heraldPublications.ts'
+import { DEFAULT_FEED_BASE, DEFAULT_MAINTENANCE_TEMPLATES, emptyData, feedDraft, ID_PREFIX, WRITE_PERMISSION, MAX_IMAGE_BYTES, problems, PUBLICATION_KINDS, PublicationDataSchema, STATUSES, type FeedBase, type Publication, type PublicationData, type PublicationKind, type Status } from '../../../src/shared/heraldPublications.ts'
 import { RESTART_SCHEDULE } from '../../../src/shared/server.ts'
 import type { Permission } from '../../../src/shared/heraldRoles.ts'
 import { HttpError, logActivity, type Actor } from './accounts'
@@ -35,7 +35,7 @@ interface Row {
   deleted_at: number | null
 }
 
-const WRITE: Record<PublicationKind, Permission> = { news: 'news.write', banner: 'banner.write', welcome: 'welcome.write' }
+const WRITE = WRITE_PERMISSION
 const LOCK_MS = 45_000
 
 const toPublication = (r: Row, now = Date.now()): Publication => ({

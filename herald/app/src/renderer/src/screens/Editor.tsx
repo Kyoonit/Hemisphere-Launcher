@@ -4,8 +4,10 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PublicationDetail } from '@herald/api'
-import { FIELDS, KIND_LABEL, LIMITS, TEXT_LANGUAGES, languageName, languagesOut, problems, type Publication, type PublicationData } from '@shared/heraldPublications'
-import { usePubs, shown, SHOWN, pendingChanges, titleOf } from '../pubs'
+import { FIELDS, KIND_LABEL, LIMITS, TEXT_LANGUAGES, WRITE_PERMISSION, languageName, languagesOut, problems, type Publication, type PublicationData } from '@shared/heraldPublications'
+import { usePubs, shown, shownFrom, SHOWN, pendingChanges, titleOf } from '../pubs'
+import { EventWhen, LinkField } from './EventFields'
+import { nextOccurrence, repeatLabel } from '../eventTimes'
 import { useStore } from '../store'
 import { Avatar, Modal, ZonePicker } from '../components/ui'
 import { ago, formatWhen, fromWallInput, toWallInput, zoneLabel } from '../time'
@@ -57,7 +59,7 @@ export default function Editor({ id, onClose }: { id: string; onClose(): void })
     }
   }, [id])
 
-  const editable = !!pub && !pub.deletedAt && pub.status !== 'ready' && can(pub.kind === 'news' ? 'news.write' : pub.kind === 'banner' ? 'banner.write' : 'welcome.write')
+  const editable = !!pub && !pub.deletedAt && pub.status !== 'ready' && can(WRITE_PERMISSION[pub.kind])
 
   // Saves by itself a second after the last change
   const latest = useRef({ pub, data })
@@ -113,7 +115,9 @@ export default function Editor({ id, onClose }: { id: string; onClose(): void })
   const issues = problems(pub.kind, data)
   const state0 = shown(pub)
   const otherEditor = pub.editing && pub.editing.by !== me.id ? pub.editing : null
-  const scheduledLater = data.schedule.from && Date.parse(data.schedule.from) > Date.now()
+  const appearsAt = shownFrom(pub.kind, data)
+  const scheduledLater = appearsAt !== null && appearsAt > Date.now()
+  const firstStart = pub.kind === 'event' ? nextOccurrence(pub.id, data, Date.now())?.start : undefined
 
   return (
     <div className="animate-fade">
@@ -166,7 +170,8 @@ export default function Editor({ id, onClose }: { id: string; onClose(): void })
                 </div>
               </div>
             )}
-            {lang === 'en' && <When data={data} onChange={change} defaultZone={zone} />}
+            {pub.kind === 'event' && lang === 'en' && <LinkField data={data} onChange={change} />}
+            {lang === 'en' && (pub.kind === 'event' ? <EventWhen data={data} onChange={change} defaultZone={zone} /> : <When data={data} onChange={change} defaultZone={zone} />)}
             {lang === 'en' && (
               <label className="flex items-center gap-2 text-sm text-gray-300">
                 <input type="checkbox" checked={!!data.visibleTo?.length} onChange={(e) => change({ visibleTo: e.target.checked ? ['owner', 'developer', 'admin', 'moderator'] : [] })} />
@@ -205,8 +210,8 @@ export default function Editor({ id, onClose }: { id: string; onClose(): void })
           <p className="mb-4 text-sm text-gray-300">
             {confirm === 'publish'
               ? scheduledLater
-                ? `Players will see it from ${formatWhen(Date.parse(data.schedule.from!), zone)} (your time). It is sent now, locked: nobody can read it before.`
-                : 'Players will see it within 2 minutes.'
+                ? `Players will see it from ${formatWhen(appearsAt!, zone)} (your time). It is sent now, locked: nobody can read it before.${firstStart ? ` It starts ${formatWhen(firstStart, zone)}.` : ''}`
+                : `Players will see it within 2 minutes.${firstStart ? ` It starts ${formatWhen(firstStart, zone)} (your time)${repeatLabel(data, zone) ? `, then ${repeatLabel(data, zone)}` : ''}.` : ''}`
               : confirm === 'unpublish'
                 ? 'It disappears from the launchers within 2 minutes. It stays here; you can publish it again.'
                 : pub.published
@@ -238,7 +243,7 @@ export default function Editor({ id, onClose }: { id: string; onClose(): void })
 
 function Actions({ pub, issues, busy, scheduledLater, onStatus, onConfirm, onRestore }: { pub: Publication; issues: string[]; busy: boolean; scheduledLater: boolean; onStatus(s: 'draft' | 'review' | 'ready'): void; onConfirm(c: 'publish' | 'unpublish' | 'delete'): void; onRestore(): void }) {
   const { can } = useStore()
-  const write = can(pub.kind === 'news' ? 'news.write' : pub.kind === 'banner' ? 'banner.write' : 'welcome.write')
+  const write = can(WRITE_PERMISSION[pub.kind])
   if (pub.deletedAt)
     return (
       <div className="mb-4 flex items-center gap-2 rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300">
@@ -358,7 +363,7 @@ function Languages({ data, kind, lang, onLang, onChange }: { data: PublicationDa
   )
 }
 
-const FIELD_LABEL: Record<string, string> = { title: 'Title', body: 'Text', linkLabel: 'Button text (when there is a link)', text: 'Text' }
+const FIELD_LABEL: Record<string, string> = { title: 'Title', body: 'Text', linkLabel: 'Button text (when there is a link)', text: 'Text', where: 'Where in the game (optional: “Spawn”, “/warp contest”…)' }
 
 function Texts({ kind, data, lang, onText }: { kind: Publication['kind']; data: PublicationData; lang: string; onText(field: string, value: string): void }) {
   const en = data.texts.en ?? {}
@@ -369,14 +374,15 @@ function Texts({ kind, data, lang, onText }: { kind: Publication['kind']; data: 
         if (f === 'accent' && !en.title?.trim()) return null
         const value = data.texts[lang]?.[f] ?? ''
         const long = f === 'body'
+        const label = kind === 'event' && f === 'body' ? 'Description (optional; the list shows its first two lines)' : FIELD_LABEL[f]
         const max = LIMITS[f]
         return (
           <div key={f}>
             <label className="label">
-              {kind === 'welcome' && f === 'title' ? 'Title (replaces the whole “Welcome back …” heading; optional)' : kind === 'welcome' && f === 'accent' ? 'Green line under the title (optional; {player} = the player’s name, {server} = Hemisphere SMP)' : FIELD_LABEL[f]} <span className={`font-normal ${value.length > max ? 'text-red-400' : 'text-gray-500'}`}>{value.length}/{max}</span>
+              {kind === 'welcome' && f === 'title' ? 'Title (replaces the whole “Welcome back …” heading; optional)' : kind === 'welcome' && f === 'accent' ? 'Green line under the title (optional; {player} = the player’s name, {server} = Hemisphere SMP)' : label} <span className={`font-normal ${value.length > max ? 'text-red-400' : 'text-gray-500'}`}>{value.length}/{max}</span>
             </label>
             {long ? (
-              <textarea className="field min-h-[180px] resize-y" value={value} placeholder={lang === 'en' ? 'Blank lines separate paragraphs.' : en[f]} onChange={(e) => onText(f, e.target.value)} />
+              <textarea className={`field resize-y ${kind === 'event' ? 'min-h-[90px]' : 'min-h-[180px]'}`} value={value} placeholder={lang === 'en' ? 'Blank lines separate paragraphs.' : en[f]} onChange={(e) => onText(f, e.target.value)} />
             ) : (
               <input className="field" value={value} placeholder={lang === 'en' ? '' : en[f]} onChange={(e) => onText(f, e.target.value)} />
             )}
@@ -455,10 +461,7 @@ function NewsOptions({ data, onChange }: { data: PublicationData; onChange(p: Pa
         </div>
         <p className="mt-1 text-xs text-gray-500">Made smaller and converted to WebP here (at most 1.5 MB). The launcher crops it to each card: check the preview.</p>
       </div>
-      <div>
-        <label className="label">Link (a button under the text, opens the player's browser)</label>
-        <input className="field" placeholder="https://…" value={data.linkUrl ?? ''} onChange={(e) => onChange({ linkUrl: e.target.value.trim() ? e.target.value.trim() : null })} />
-      </div>
+      <LinkField data={data} onChange={onChange} />
     </>
   )
 }
@@ -521,18 +524,24 @@ function EditorPreview({ pub, data }: { pub: Publication; data: PublicationData 
   const { state } = usePubs()
   const { zone } = useStore()
   const now = Date.now()
-  const from = data.schedule.from ? Date.parse(data.schedule.from) : (pub.publishedAt ?? now)
+  const from = shownFrom(pub.kind, data) ?? pub.publishedAt ?? now
+  const first = pub.kind === 'event' ? nextOccurrence(pub.id, data, now) : null
   const moments = useMemo(() => {
     const out: { label: string; at: number; hint: string }[] = [{ label: 'Right now', at: now, hint: from > now ? 'What players see today: it is not shown yet.' : 'What players see today.' }]
-    if (from > now + 60_000) out.push({ label: 'When it appears', at: from + 1000, hint: 'The first second it is shown.' })
+    if (from > now + 60_000) out.push({ label: pub.kind === 'event' ? 'When it is announced' : 'When it appears', at: from + 1000, hint: pub.kind === 'event' ? 'It joins the events list on the News page; Home shows it a week before.' : 'The first second it is shown.' })
+    if (first && first.start > now) {
+      out.push({ label: 'The day before', at: Math.max(now, first.start - 86_400_000 + 60_000), hint: '“In 24 hours”: Home shows it under the server.' })
+      out.push({ label: 'While it happens', at: first.start + 60_000, hint: 'Live now: highlighted in green.' })
+    }
+    if (first && pub.kind === 'event') out.push({ label: 'After it ends', at: first.end + 60_000, hint: data.event?.repeat ? 'This date is over: the next one shows.' : 'It leaves the list.' })
     if (pub.kind === 'news' && (data.featuredDays ?? 0) > 0) out.push({ label: 'After the big-card days', at: from + (data.featuredDays ?? 0) * DAY + 60_000, hint: 'It becomes a small card, unless it is still the newest news (the newest one is always the big card).' })
     if (data.schedule.until) out.push({ label: 'After it ends', at: Date.parse(data.schedule.until) + 60_000, hint: 'It is gone.' })
     return out
-  }, [from, data.featuredDays, data.schedule.until, pub.kind])
-  const [moment, setMoment] = useState(() => Math.max(0, moments.findIndex((m) => m.label === 'When it appears')))
+  }, [from, data.featuredDays, data.schedule.until, pub.kind, first?.start, first?.end, data.event?.repeat])
+  const [moment, setMoment] = useState(() => Math.max(0, moments.findIndex((m) => m.label === 'When it appears' || m.label === 'While it happens')))
   const langs = languagesOut(pub.kind, data)
   const [lang, setLang] = useState('en')
-  const [screen, setScreen] = useState<PreviewScreen>(pub.kind === 'news' ? 'news' : 'home')
+  const [screen, setScreen] = useState<PreviewScreen>(pub.kind === 'news' || pub.kind === 'event' ? 'news' : 'home')
   const [article, setArticle] = useState<string | null>(null)
   const [size, setSize] = useState<WindowSize>('normal')
   const ids = useMemo(() => (state ? pictureIds(state, data) : {}), [state, data])
@@ -542,7 +551,7 @@ function EditorPreview({ pub, data }: { pub: Publication; data: PublicationData 
   const opts = { override: { id: pub.id, kind: pub.kind, data: withPlaceholders(pub.kind, data), publishedAt: pub.publishedAt ?? Math.min(now, from) } }
   const view = viewAt(state, at, lang, opts, urls, ids)
   const mine = withPlaceholders(pub.kind, data).texts.en
-  const visible = pub.kind === 'news' ? view.news.some((n) => n.id === pub.id) : pub.kind === 'banner' ? view.banner?.text.en === mine.text : view.welcome?.text.en === mine.text
+  const visible = pub.kind === 'news' ? view.news.some((n) => n.id === pub.id) : pub.kind === 'event' ? (view.events ?? []).some((e) => e.id.startsWith(pub.id) && Date.parse(e.end ?? e.start) > at) : pub.kind === 'banner' ? view.banner?.text.en === mine.text : view.welcome?.text.en === mine.text
   // Only one banner and one welcome message at a time: another one may win (more important, or newer)
   const hiddenBy = !visible && from <= at && (!data.schedule.until || at < Date.parse(data.schedule.until)) ? (pub.kind === 'banner' ? view.banner?.text.en : pub.kind === 'welcome' ? view.welcome?.text.en : undefined) : undefined
   const current = moments[Math.min(moment, moments.length - 1)]
@@ -579,6 +588,16 @@ function EditorPreview({ pub, data }: { pub: Publication; data: PublicationData 
         </p>
       )}
       <LauncherPreview view={view} at={at} lang={lang} screen={screen} onScreen={setScreen} article={article} onArticle={setArticle} size={size} badge={badgeAt(state, at, lang, opts, Math.min(at, from) - 1000)} />
+      {pub.kind === 'event' && (
+        <div className="mt-2 flex gap-1.5">
+          <button className="btn btn-sm btn-ghost" onClick={() => (setScreen('news'), setArticle(null))}>
+            News page (events list)
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={() => setScreen('home')}>
+            Home (server panel)
+          </button>
+        </div>
+      )}
       {pub.kind === 'news' && (
         <div className="mt-2 flex gap-1.5">
           <button className="btn btn-sm btn-ghost" onClick={() => (setScreen('news'), setArticle(null))}>

@@ -1,7 +1,7 @@
 /** The publications, reloaded whenever the server says something changed (sync's contentStamp, every 15 s). */
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { ApiResult, Publication, PublicationsState } from '@herald/api'
-import type { PublicationData } from '@shared/heraldPublications'
+import { publicationEnd, type PublicationData } from '@shared/heraldPublications'
 import { useStore } from './store'
 
 interface Pubs {
@@ -53,9 +53,10 @@ export const SHOWN: Record<Shown, { label: string; tone: string }> = {
 export function shown(p: Publication, now = Date.now()): Shown {
   if (p.deletedAt) return 'deleted'
   if (p.published) {
-    const { from, until } = p.published.schedule
-    if (until && Date.parse(until) <= now) return 'ended'
-    if (from && Date.parse(from) > now) return 'scheduled'
+    const end = publicationEnd(p.kind, p.published)
+    const from = shownFrom(p.kind, p.published)
+    if (end !== null && end <= now) return 'ended'
+    if (from !== null && from > now) return 'scheduled'
     return 'online'
   }
   return p.status
@@ -63,5 +64,12 @@ export function shown(p: Publication, now = Date.now()): Shown {
 
 /** The published version differs from the one being edited */
 export const pendingChanges = (p: Publication) => p.published !== null && JSON.stringify(p.published) !== JSON.stringify(p.data)
+
+/** When players first see it (null = as soon as it is published); an event shows at the latest when it starts */
+export function shownFrom(kind: Publication['kind'], data: PublicationData): number | null {
+  const from = data.schedule.from ? Date.parse(data.schedule.from) : null
+  if (kind !== 'event' || !data.event) return from
+  return from === null ? null : Math.min(from, Date.parse(data.event.start))
+}
 
 export const titleOf = (data: PublicationData) => data.texts.en?.title?.trim() || data.texts.en?.text?.trim() || 'Untitled'

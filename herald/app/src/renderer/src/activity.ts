@@ -1,7 +1,7 @@
 import type { ActivityEntry } from '@herald/api'
 import { ROLE_LABEL, type Role } from '@shared/heraldRoles'
 
-const KIND: Record<string, string> = { news: 'news', banner: 'banner', welcome: 'welcome message' }
+const KIND: Record<string, string> = { news: 'news', event: 'event', banner: 'banner', welcome: 'welcome message' }
 
 /** One readable line per journal entry. */
 export function describe(a: ActivityEntry): string {

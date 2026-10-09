@@ -1,15 +1,23 @@
-/** News, banners and welcome messages: the list (filters, trash), "New", and the editor of the one opened. */
+/** News, events, banners and welcome messages: the list (filters, trash) or the calendar, "New", and the editor of the one opened. */
 import { useEffect, useRef, useState } from 'react'
 import type { Publication } from '@herald/api'
-import { KIND_LABEL, languagesOut, type PublicationKind } from '@shared/heraldPublications'
-import type { Permission } from '@shared/heraldRoles'
+import { KIND_LABEL, PUBLICATION_KINDS, WRITE_PERMISSION, languagesOut, type PublicationKind } from '@shared/heraldPublications'
 import { usePubs, shown, SHOWN, pendingChanges, titleOf, type Shown } from '../pubs'
 import { useStore } from '../store'
 import { Avatar } from '../components/ui'
 import { ago, formatWhen } from '../time'
+import { nextOccurrence, repeatLabel } from '../eventTimes'
 import Editor from './Editor'
+import Calendar from './Calendar'
 
-const WRITE: Record<PublicationKind, Permission> = { news: 'news.write', banner: 'banner.write', welcome: 'welcome.write' }
+const WRITE = WRITE_PERMISSION
+const NEW_HINT: Record<PublicationKind, string> = {
+  news: 'An article in News (and on Home)',
+  event: 'A date in the events list (News), on Home a week before',
+  banner: 'One short line above the title on Home',
+  welcome: 'Replaces “Welcome back” on Home',
+}
+const PLURAL: Record<PublicationKind, string> = { news: 'News', event: 'Events', banner: 'Banners', welcome: 'Welcome messages' }
 type KindFilter = 'all' | PublicationKind
 type StateFilter = 'all' | 'work' | 'online' | 'scheduled' | 'ended' | 'deleted'
 const STATE_FILTERS: { id: StateFilter; label: string; match(s: Shown): boolean }[] = [
@@ -27,6 +35,7 @@ export default function Publications({ open, onOpen }: { open: string | null; on
   const people = sync?.people ?? []
   const [kind, setKind] = useState<KindFilter>('all')
   const [filter, setFilter] = useState<StateFilter>('all')
+  const [view, setView] = useState<'list' | 'calendar'>('list')
   const [menu, setMenu] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const menuBox = useRef<HTMLDivElement>(null)
@@ -43,7 +52,7 @@ export default function Publications({ open, onOpen }: { open: string | null; on
   const now = state.now
   const name = (id: string | null) => people.find((p) => p.id === id)?.name ?? '?'
   const rows = state.publications.filter((p) => (kind === 'all' || p.kind === kind) && STATE_FILTERS.find((f) => f.id === filter)!.match(shown(p, now)))
-  const creatable = (['news', 'banner', 'welcome'] as const).filter((k) => can(WRITE[k]))
+  const creatable = PUBLICATION_KINDS.filter((k) => can(WRITE[k]))
   const create = async (k: PublicationKind) => {
     setMenu(false)
     const res = await act<Publication>('POST', '/publications', { kind: k, zone })
@@ -59,6 +68,13 @@ export default function Publications({ open, onOpen }: { open: string | null; on
           <h1 className="text-[26px] font-extrabold text-white">Publications</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <span className="flex rounded-lg bg-gray-800 p-0.5">
+            {(['list', 'calendar'] as const).map((v) => (
+              <button key={v} className={`rounded-md px-3 py-1 text-[13px] font-semibold ${view === v ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-gray-200'}`} onClick={() => setView(v)}>
+                {v === 'list' ? 'List' : 'Calendar'}
+              </button>
+            ))}
+          </span>
           {creatable.length > 0 && (
             <div ref={menuBox} className="relative">
               <button className="btn btn-primary" onClick={() => setMenu(!menu)}>
@@ -69,7 +85,7 @@ export default function Publications({ open, onOpen }: { open: string | null; on
                   {creatable.map((k) => (
                     <button key={k} className="block w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-700" onClick={() => void create(k)}>
                       {KIND_LABEL[k]}
-                      <span className="block text-xs text-gray-400">{k === 'news' ? 'An article in News (and on Home)' : k === 'banner' ? 'One short line above the title on Home' : 'Replaces “Welcome back” on Home'}</span>
+                      <span className="block text-xs text-gray-400">{NEW_HINT[k]}</span>
                     </button>
                   ))}
                 </div>
@@ -80,10 +96,14 @@ export default function Publications({ open, onOpen }: { open: string | null; on
       </div>
       {error && <p className="mb-3 text-sm text-red-300">{error}</p>}
 
+      {view === 'calendar' ? (
+        <Calendar onOpen={onOpen} />
+      ) : (
+      <>
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
-        {(['all', 'news', 'banner', 'welcome'] as const).map((k) => (
+        {(['all', ...PUBLICATION_KINDS] as const).map((k) => (
           <button key={k} className={`rounded-lg px-3 py-1.5 text-[13px] font-medium ${kind === k ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`} onClick={() => setKind(k)}>
-            {k === 'all' ? 'Everything' : k === 'welcome' ? 'Welcome messages' : `${KIND_LABEL[k]}${k === 'news' ? '' : 's'}`}
+            {k === 'all' ? 'Everything' : PLURAL[k]}
           </button>
         ))}
         <span className="mx-2 h-5 w-px bg-gray-700" />
@@ -107,8 +127,8 @@ export default function Publications({ open, onOpen }: { open: string | null; on
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-semibold text-white">{titleOf(p.data)}</span>
                 <span className="block truncate text-xs text-gray-400">
-                  {sched.from ? `From ${formatWhen(Date.parse(sched.from), zone)}` : p.publishedAt ? `Since ${formatWhen(p.publishedAt, zone)}` : 'As soon as published'}
-                  {sched.until ? ` · until ${formatWhen(Date.parse(sched.until), zone)}` : ''}
+                  {p.kind === 'event' ? eventLine(p.id, p.published ?? p.data, now, zone) : sched.from ? `From ${formatWhen(Date.parse(sched.from), zone)}` : p.publishedAt ? `Since ${formatWhen(p.publishedAt, zone)}` : 'As soon as published'}
+                  {p.kind !== 'event' && sched.until ? ` · until ${formatWhen(Date.parse(sched.until), zone)}` : ''}
                   {others.length > 0 && ` · EN ✓ ${others.map((l) => `${l.toUpperCase()} ${done.includes(l) ? '✓' : '…'}`).join(' ')}`}
                 </span>
               </span>
@@ -122,6 +142,17 @@ export default function Publications({ open, onOpen }: { open: string | null; on
           )
         })}
       </div>
+      </>
+      )}
     </div>
   )
+}
+
+/** "Sat 24 Oct, 20:00 · every Saturday 20:00" */
+function eventLine(id: string, data: Publication['data'], now: number, zone: string): string {
+  if (!data.event) return ''
+  const next = nextOccurrence(id, data, now)
+  const repeat = repeatLabel(data, data.schedule.zone)
+  const when = next ? `${next.start <= now ? 'Now, until ' + formatWhen(next.end, zone) : formatWhen(next.start, zone)}` : `Was ${formatWhen(Date.parse(data.event.start), zone)}`
+  return repeat ? `${when} · ${repeat} (${data.schedule.zone})` : when
 }

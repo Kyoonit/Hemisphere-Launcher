@@ -3,7 +3,8 @@ import { useStore } from '../store'
 import { Avatar } from '../components/ui'
 import { describe } from '../activity'
 import { ago, formatLong, formatTime, formatWhen } from '../time'
-import { pendingChanges, shown, SHOWN, titleOf, usePubs } from '../pubs'
+import { pendingChanges, shown, shownFrom, SHOWN, titleOf, usePubs } from '../pubs'
+import { nextOccurrence } from '../eventTimes'
 import { KIND_LABEL, languageName, languagesOut } from '@shared/heraldPublications'
 import type { Publication } from '@herald/api'
 
@@ -12,7 +13,7 @@ function attention(pubs: Publication[], now: number, zone: string): { pub: Publi
   const out: { pub: Publication; why: string }[] = []
   for (const p of pubs) {
     if (p.deletedAt) continue
-    const from = p.data.schedule.from ? Date.parse(p.data.schedule.from) : null
+    const from = shownFrom(p.kind, p.data) ?? (p.kind === 'event' && p.data.event ? Date.parse(p.data.event.start) : null)
     if (p.status === 'review') out.push({ pub: p, why: 'waits for a review' })
     else if (p.status === 'ready' && !p.published) out.push({ pub: p, why: 'is Ready: it can be published' })
     else if (p.status === 'ready' && pendingChanges(p)) out.push({ pub: p, why: 'has changes Ready to publish' })
@@ -67,14 +68,22 @@ export default function Home({ onOpen }: { onOpen(id: string): void }) {
         <div className="card mt-4">
           <div className="eyebrow mb-2">Coming up</div>
           {(() => {
-            const soon = state.publications.filter((p) => shown(p, now) === 'scheduled').sort((a, b) => Date.parse(a.published!.schedule.from!) - Date.parse(b.published!.schedule.from!))
+            // publications appearing later, and the events starting in the next two weeks
+            const soon: { at: number; pub: Publication; what: 'appears' | 'starts' }[] = []
+            for (const p of state.publications) {
+              if (p.deletedAt || !p.published) continue
+              if (shown(p, now) === 'scheduled') soon.push({ at: shownFrom(p.kind, p.published)!, pub: p, what: 'appears' })
+              const next = p.kind === 'event' ? nextOccurrence(p.id, p.published, now) : null
+              if (next && next.start > now && next.start - now < 14 * 86_400_000) soon.push({ at: next.start, pub: p, what: 'starts' })
+            }
+            soon.sort((a, b) => a.at - b.at)
             if (!soon.length) return <p className="text-sm text-gray-400">Nothing scheduled.</p>
-            return soon.slice(0, 6).map((p) => (
-              <button key={p.id} className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-gray-700" onClick={() => onOpen(p.id)}>
-                <span className="w-36 shrink-0 text-xs font-semibold text-green-300">{formatWhen(Date.parse(p.published!.schedule.from!), zone)}</span>
+            return soon.slice(0, 8).map(({ at, pub: p, what }) => (
+              <button key={p.id + what} className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-gray-700" onClick={() => onOpen(p.id)}>
+                <span className="w-36 shrink-0 text-xs font-semibold text-green-300">{formatWhen(at, zone)}</span>
                 <span className="w-16 shrink-0 text-[10.5px] font-bold tracking-wider text-gray-400 uppercase">{KIND_LABEL[p.kind]}</span>
                 <b className="truncate text-white">{titleOf(p.published!)}</b>
-                <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${SHOWN.scheduled.tone}`}>Scheduled</span>
+                <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${what === 'starts' ? SHOWN.online.tone : SHOWN.scheduled.tone}`}>{what === 'starts' ? 'Event starts' : 'Appears'}</span>
               </button>
             ))
           })()}
