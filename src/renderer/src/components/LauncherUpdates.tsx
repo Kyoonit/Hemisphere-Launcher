@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, Gauge, House, Image, Package, Play, Rocket, Settings, Sparkles, Users, type LucideIcon } from 'lucide-react'
-import { byArea, byVersion, LAUNCHER_CHANGELOG, launcherHistory, versionRange, type ChangeArea, type LauncherChange, type LauncherDay } from '@shared/launcherChangelog'
+import { byArea, byVersion, displayVersion, LAUNCHER_CHANGELOG, launcherHistory, versionRange, type ChangeArea, type LauncherChange, type LauncherDay } from '@shared/launcherChangelog'
 
 export const AREA_ICONS: Record<ChangeArea, LucideIcon> = {
   play: Play,
@@ -27,11 +27,11 @@ export const dayLabel = (date: string, lang: string, style: 'long' | 'short') =>
 
 /** The history up to the running launcher version. */
 export function useLauncherHistory(): LauncherDay[] | null {
-  const [version, setVersion] = useState<string | null>(null)
+  const [app, setApp] = useState<{ version: string; packaged: boolean } | null>(null)
   useEffect(() => {
-    window.hemisphere.appInfo().then((a) => setVersion(a.version))
+    window.hemisphere.appInfo().then(setApp)
   }, [])
-  return version === null ? null : launcherHistory(LAUNCHER_CHANGELOG, version)
+  return app === null ? null : launcherHistory(LAUNCHER_CHANGELOG, app.version, null, !app.packaged)
 }
 
 /** News > Launcher: everything that changed in the launcher, one card per day (the latest two open). */
@@ -84,7 +84,7 @@ function Day({ day, open: openAtFirst }: { day: LauncherDay; open: boolean }) {
               <div key={v.version} className="mb-3">
                 {versions.length > 1 && (
                   <p className="mb-2 flex items-center gap-2 text-[12px] font-bold text-white tabular-nums">
-                    <span className="rounded bg-gray-700/80 px-1.5 py-0.5">{t('launcherNews.version', { version: v.version })}</span>
+                    <span className="rounded bg-gray-700/80 px-1.5 py-0.5">{t('launcherNews.version', { version: displayVersion(v.version) })}</span>
                     <span className="h-px flex-1 bg-gray-700/60" />
                   </p>
                 )}

@@ -84,7 +84,7 @@ export default function App() {
         account={<AccountMenu onAddAccount={() => setAddingAccount(true)} onManage={() => openSettings('account')} />}
       />
       {state && (
-        <main key={showLogin ? 'login' : `${screen}-${settingsSection}`} className="animate-fade absolute inset-x-0 top-[52px] bottom-5">
+        <main key={showLogin ? 'login' : `${screen}-${settingsSection}-${screen === 'home' ? state.activeId : ''}`} className="animate-fade absolute inset-x-0 top-[52px] bottom-5">
           {showLogin ? (
             <Login onBack={needsLogin ? undefined : () => setAddingAccount(false)} />
           ) : (

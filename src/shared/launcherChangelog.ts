@@ -1,15 +1,16 @@
 import data from './launcherChangelog.json'
 
 /**
- * The launcher's history in src/shared/launcherChangelog.json: one entry per DAY (newest first), each change tagged
- * with the launcher version that brought it. Every push raises the version (1.0.2, 1.0.3…), so a day can hold several
- * versions; they're shown newest first.
- * Shown in News > Launcher updates (everything) and in Home's "What's new" card (the last 2 days not seen yet).
+ * The launcher's history in src/shared/launcherChangelog.json: one entry per DAY (newest first). Each change carries
+ * the release that brought it (1.0.19, then 1.1.0, 1.2.0… shown as 1.1, 1.2), or "next" until `npm run release`
+ * publishes it (players never see "next"; development builds show it as the running version).
+ * Shown in News > Launcher updates (everything) and in Home's "What's new" card (the last 2 days).
  */
 export const CHANGE_AREAS = ['play', 'home', 'content', 'screenshots', 'community', 'settings', 'performance', 'launcher'] as const
 export type ChangeArea = (typeof CHANGE_AREAS)[number]
 
 export interface LauncherChange {
+  /** x.y.z, or "next" (not released yet) */
   version: string
   area: ChangeArea
   en: string
@@ -31,16 +32,22 @@ export function compareVersions(a: string, b: string): number {
   return 0
 }
 
-/** Only the changes up to the running version (and, with `after`, newer than it); days left empty are dropped. */
-export function launcherHistory(log: LauncherDay[], current: string, after: string | null = null): LauncherDay[] {
-  return log
-    .map((d) => ({ ...d, changes: d.changes.filter((c) => compareVersions(c.version, current) <= 0 && (after === null || compareVersions(c.version, after) > 0)) }))
-    .filter((d) => d.changes.length > 0)
-}
+/** How players see a version: 1.1.0 -> "1.1", 1.0.19 -> "1.0.19". */
+export const displayVersion = (v: string) => v.replace(/^(\d+\.\d+)\.0$/, '$1')
 
-/** The days with changes a player hasn't seen yet (newer than `seen`). Nothing on a first start (seen = null). */
-export function launcherNotesSince(log: LauncherDay[], seen: string | null, current: string): LauncherDay[] {
-  return seen === null ? [] : launcherHistory(log, current, seen)
+/**
+ * The changes up to the running version (newer than `after` when given), days left empty dropped. "next" changes
+ * count as the running version in development builds only.
+ */
+export function launcherHistory(log: LauncherDay[], current: string, after: string | null = null, includeNext = false): LauncherDay[] {
+  return log
+    .map((d) => ({
+      ...d,
+      changes: d.changes
+        .map((c) => (c.version === 'next' ? (includeNext ? { ...c, version: current } : null) : c))
+        .filter((c): c is LauncherChange => !!c && compareVersions(c.version, current) <= 0 && (after === null || compareVersions(c.version, after) > 0)),
+    }))
+    .filter((d) => d.changes.length > 0)
 }
 
 /** A day's versions, newest first, each with its changes. */
@@ -54,8 +61,8 @@ export function byArea(changes: LauncherChange[]): { area: ChangeArea; changes: 
   return CHANGE_AREAS.map((area) => ({ area, changes: changes.filter((c) => c.area === area) })).filter((g) => g.changes.length > 0)
 }
 
-/** "1.0.2" or "1.0.1 – 1.0.2" */
+/** "1.1" or "1.1 – 1.2" */
 export function versionRange(day: LauncherDay): string {
-  const v = byVersion(day).map((g) => g.version)
+  const v = byVersion(day).map((g) => displayVersion(g.version))
   return v.length === 1 ? v[0] : `${v[v.length - 1]} – ${v[0]}`
 }

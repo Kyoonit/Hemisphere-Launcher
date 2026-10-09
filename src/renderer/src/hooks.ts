@@ -1,5 +1,5 @@
 import type { LiveRestart } from '@shared/restart'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PlaytimeSummary, ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
 import type { Settings } from '@shared/settings'
@@ -108,3 +108,22 @@ export function useLightMode(): boolean {
   if (!settings || settings.lightMode === 'off') return false
   return settings.lightMode === 'on' || modest || window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
+
+/** A Home column that stops above the footer (news card, links): its scrolling part gets whatever room is left. */
+export function useRoomAboveFooter<T extends HTMLElement = HTMLElement>() {
+  const ref = useRef<T>(null)
+  const [max, setMax] = useState<number | undefined>(undefined)
+  useLayoutEffect(() => {
+    const parent = ref.current?.parentElement
+    const footer = parent?.querySelector(':scope > footer')
+    if (!parent || !(footer instanceof HTMLElement)) return
+    const measure = () => setMax(Math.max(160, footer.offsetTop - (ref.current?.offsetTop ?? 0) - 10))
+    const observer = new ResizeObserver(measure)
+    observer.observe(parent)
+    observer.observe(footer)
+    measure()
+    return () => observer.disconnect()
+  }, [])
+  return { ref, max }
+}
+

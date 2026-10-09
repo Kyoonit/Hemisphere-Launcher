@@ -10,11 +10,10 @@ import NewsPeek from '../components/NewsPeek'
 import PlayZone, { useGameState } from '../components/PlayZone'
 import type { ReportCategory } from '@shared/report'
 import { useClient } from './Mods'
-import { useFeed, useNow, usePlaytime, useServerStatus, useSettings, useLiveRestart } from '../hooks'
-import type { ClientSummary } from '@shared/client'
-import type { PreflightWarning, Settings } from '@shared/settings'
+import { useFeed, useNow, usePlaytime, useServerStatus, useLiveRestart, useRoomAboveFooter } from '../hooks'
+import type { PreflightWarning } from '@shared/settings'
 import type { AppInfo } from '@shared/ipc'
-import { byVersion, LAUNCHER_CHANGELOG, launcherNotesSince } from '@shared/launcherChangelog'
+import { byVersion, displayVersion, LAUNCHER_CHANGELOG, launcherHistory } from '@shared/launcherChangelog'
 import { dayLabel, relativeDay } from '../components/LauncherUpdates'
 import type { Feed } from '@shared/feed'
 import { localize } from '@shared/manifest'
@@ -53,12 +52,16 @@ export default function Home({
   // Reload client info whenever a launch/repair finishes (an update may have just been installed).
   const client = useClient(game?.phase === 'preparing' ? 'busy' : `${game?.phase}-${game?.background}`)
   const crashed = game?.error?.code === 'crashed'
+  const left = useRoomAboveFooter<HTMLDivElement>()
 
   return (
     <div className="home-pad relative flex h-full flex-col items-center px-7">
-      <PlaytimeCard key={active?.id} />
-      <ImportPrompt onImport={onImport} />
-      <WhatsNew client={client ?? null} onSeeMore={onOpenLauncherNews} />
+      {/* left column: one card under the other (never on top of each other), down to the footer */}
+      <div ref={left.ref} style={{ maxHeight: left.max }} className="absolute top-11 left-6 flex w-[210px] flex-col gap-3 [&>*]:flex-none">
+        <PlaytimeCard />
+        <ImportPrompt onImport={onImport} />
+        <WhatsNew onSeeMore={onOpenLauncherNews} />
+      </div>
       <ServerPanel status={status} feed={feed} onOpenNews={onOpenNews} />
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center-safe text-center">
@@ -126,33 +129,29 @@ function ExpiredBanner() {
   )
 }
 
+/** Closed this run only: both cards come back the next time the launcher starts. */
+let whatsNewClosed = false
+let importClosed = false
+
 /**
- * "What's new": once after the launcher updates itself (its notes come with each GitHub release) and once after a
- * Hemisphere Client update, until closed. Nothing on a first start.
+ * "What's new": the launcher's last 2 days of changes, at every start until closed (the whole history, by area, is in
+ * News > Launcher updates). Grows down to the footer; only its list scrolls.
  */
-function WhatsNew({ client, onSeeMore }: { client: ClientSummary | null; onSeeMore(): void }) {
+function WhatsNew({ onSeeMore }: { onSeeMore(): void }) {
   const { t, i18n } = useTranslation()
-  const [settings, update] = useSettings()
   const [app, setApp] = useState<AppInfo | null>(null)
+  const [closed, setClosed] = useState(whatsNewClosed)
   useEffect(() => {
     window.hemisphere.appInfo().then(setApp)
   }, [])
-  const installed = client?.installedVersion ?? null
-  useEffect(() => {
-    // First start (or first time with this feature): remember the current versions without showing anything.
-    if (!settings) return
-    const patch: Partial<Settings> = {}
-    if (installed && settings.seenChangelog === null) patch.seenChangelog = installed
-    if (app && settings.seenLauncherVersion === null) patch.seenLauncherVersion = app.version
-    if (Object.keys(patch).length) void update(patch)
-  }, [settings, installed, app])
-  if (!settings || !app) return null
+  if (!app || closed) return null
   const fr = i18n.language.startsWith('fr')
-  const launcher = launcherNotesSince(LAUNCHER_CHANGELOG, settings.seenLauncherVersion, app.version)
-  // only the last 2 days of changes here; the whole history (by area, easier to read) is in News > Launcher
-  const days = launcher.slice(0, 2)
-  if (launcher.length === 0) return null
-  const close = () => void update({ seenLauncherVersion: app.version, ...(installed ? { seenChangelog: installed } : {}) })
+  const days = launcherHistory(LAUNCHER_CHANGELOG, app.version, null, !app.packaged).slice(0, 2)
+  if (days.length === 0) return null
+  const close = () => {
+    whatsNewClosed = true
+    setClosed(true)
+  }
   const Section = ({ sub, lines }: { sub: string; lines: string[] }) => (
     <>
       <p className="mt-1.5 text-[10.5px] font-bold tracking-[0.08em] text-green-400 uppercase first:mt-0">{sub}</p>
@@ -167,28 +166,28 @@ function WhatsNew({ client, onSeeMore }: { client: ClientSummary | null; onSeeMo
     </>
   )
   return (
-    <aside className="glass animate-rise absolute top-[232px] left-6 w-[210px] px-4 py-3.5 [animation-delay:450ms]">
+    <aside className="glass animate-rise flex min-h-0 shrink! flex-col px-4 py-3.5 [animation-delay:450ms]">
       {/* title and close button above the scrolling list (its scrollbar never sits under the button) */}
       <div className="mb-1.5 flex items-start gap-1.5">
         <Sparkles size={14} className="mt-0.5 flex-none text-green-400" />
-        <p className="min-w-0 flex-1 text-[13px] font-semibold text-white">{t('whatsNew.launcherTitle', { version: byVersion(days[0])[0].version })}</p>
+        <p className="min-w-0 flex-1 text-[13px] font-semibold text-white">{t('whatsNew.launcherTitle', { version: displayVersion(byVersion(days[0])[0].version) })}</p>
         <button onClick={close} aria-label={t('whatsNew.close')} className="-mt-0.5 -mr-1.5 flex-none rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white">
           <X size={14} />
         </button>
       </div>
-      <div className="max-h-[150px] overflow-y-auto pr-1 [scrollbar-color:var(--color-gray-600)_transparent] [scrollbar-width:thin]">
+      <div className="min-h-[60px] flex-1 overflow-y-auto pr-1 [scrollbar-color:var(--color-gray-600)_transparent] [scrollbar-width:thin]">
         {days.flatMap((d) =>
           byVersion(d).map((v) => (
             <Section
               key={v.version}
-              sub={`${relativeDay(d.date) ? t(`launcherNews.${relativeDay(d.date)}`) : dayLabel(d.date, i18n.language, 'short')} · ${v.version}`}
+              sub={`${relativeDay(d.date) ? t(`launcherNews.${relativeDay(d.date)}`) : dayLabel(d.date, i18n.language, 'short')} · ${displayVersion(v.version)}`}
               lines={v.changes.map((c) => (fr ? c.fr : c.en))}
             />
           )),
         )}
       </div>
-      {launcher.length > 0 && (
-        <button onClick={onSeeMore} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-gray-700/70 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-gray-600">
+      {(
+        <button onClick={onSeeMore} className="mt-2 flex w-full flex-none items-center justify-center gap-1.5 rounded-md bg-gray-700/70 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-gray-600">
           {t('whatsNew.seeMore')} <ArrowRight size={13} />
         </button>
       )}
@@ -250,21 +249,18 @@ function PreflightHints() {
   )
 }
 
-/** One-time card for new players coming from another launcher (dismissible; hidden after the first game). */
+/** For new players coming from another launcher: at every start until closed, gone for good after the first game. */
 function ImportPrompt({ onImport }: { onImport(): void }) {
   const { t } = useTranslation()
   const playtime = usePlaytime()
-  const [dismissed, setDismissed] = useState(true)
-  useEffect(() => {
-    window.hemisphere.settings.get().then((s) => setDismissed(s.importPromptDismissed))
-  }, [])
+  const [dismissed, setDismissed] = useState(importClosed)
   if (dismissed || !playtime || playtime.sessions > 0) return null
   const dismiss = () => {
+    importClosed = true
     setDismissed(true)
-    void window.hemisphere.settings.set({ importPromptDismissed: true })
   }
   return (
-    <aside className="glass animate-rise absolute top-[232px] left-6 w-[210px] px-4 py-3.5 [animation-delay:450ms]">
+    <aside className="glass animate-rise relative px-4 py-3.5 [animation-delay:400ms]">
       <button onClick={dismiss} aria-label={t('import.dismiss')} className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white">
         <X size={14} />
       </button>

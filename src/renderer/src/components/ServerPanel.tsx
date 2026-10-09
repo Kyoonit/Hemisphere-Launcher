@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bell, BellRing, CalendarDays, Clock, Construction, Signal } from 'lucide-react'
 import { eventPhase, upcomingEvents } from '@shared/events'
@@ -7,25 +7,7 @@ import { relativeTime } from './Events'
 import type { ServerStatus } from '@shared/server'
 import type { Feed } from '@shared/feed'
 import { nextRestart, type LiveRestart, type RestartSchedule, type RestartState } from '@shared/restart'
-import { splitDuration, useLiveRestart, useNow } from '../hooks'
-
-/** The panel stops above Home's footer (news card, links): the player list scrolls in whatever room is left. */
-function useRoomAboveFooter() {
-  const ref = useRef<HTMLElement>(null)
-  const [max, setMax] = useState<number | undefined>(undefined)
-  useLayoutEffect(() => {
-    const parent = ref.current?.parentElement
-    const footer = parent?.querySelector(':scope > footer')
-    if (!parent || !(footer instanceof HTMLElement)) return
-    const measure = () => setMax(Math.max(160, footer.offsetTop - (ref.current?.offsetTop ?? 0) - 10))
-    const observer = new ResizeObserver(measure)
-    observer.observe(parent)
-    observer.observe(footer)
-    measure()
-    return () => observer.disconnect()
-  }, [])
-  return { ref, max }
-}
+import { splitDuration, useLiveRestart, useNow, useRoomAboveFooter } from '../hooks'
 
 export default function ServerPanel({ status, feed, onOpenNews }: { status: ServerStatus | null; feed: Feed | null; onOpenNews?: () => void }) {
   const { t, i18n } = useTranslation()

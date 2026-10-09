@@ -11,7 +11,7 @@ export default function PlaytimeCard() {
 
   return (
     <aside
-      className="glass animate-rise absolute top-11 left-6 w-[210px] px-4 py-3.5 [animation-delay:300ms]"
+      className="glass animate-rise px-4 py-3.5 [animation-delay:300ms]"
       title={t('playtime.tooltip')}
     >
       <p className="text-xs font-bold tracking-[0.08em] text-gray-400 uppercase">{t('playtime.title')}</p>

@@ -18,7 +18,8 @@
     "content:publish": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/publish.ts",
     "content:feed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/feed.ts",
     "dist": "npm run build && electron-builder --win --publish never",
-    "release": "node tools/release-notes.mjs && npm run build && electron-builder --win --publish always -c.releaseInfo.releaseNotesFile=dist/release-notes.md && node tools/release-check.mjs",
+    "release": "node tools/release.mjs",
+    "release:fix": "node tools/release.mjs --fix",
     "staff-code": "node tools/staff-code.mjs"
   },
   "dependencies": {

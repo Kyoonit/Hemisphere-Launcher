@@ -3,103 +3,127 @@
     "date": "2026-10-09",
     "changes": [
       {
+        "version": "next",
+        "area": "home",
+        "en": "Home’s left column: playtime, “Coming from another launcher?” and What’s new one under the other, never on top of each other; What’s new uses the room down to the bottom.",
+        "fr": "Colonne de gauche de l’accueil : temps de jeu, « Tu viens d’un autre launcher ? » et Nouveautés l’un sous l’autre, jamais superposés ; les Nouveautés prennent la place jusqu’en bas."
+      },
+      {
+        "version": "next",
+        "area": "home",
+        "en": "What’s new and “Coming from another launcher?” come back every time the launcher starts (closing hides them until then).",
+        "fr": "Les Nouveautés et « Tu viens d’un autre launcher ? » reviennent à chaque lancement du launcher (les fermer les cache jusque-là)."
+      },
+      {
+        "version": "next",
+        "area": "home",
+        "en": "Switching account refreshes the whole Home at once.",
+        "fr": "Changer de compte rafraîchit tout l’accueil d’un coup."
+      },
+      {
+        "version": "next",
+        "area": "launcher",
+        "en": "Launcher versions now follow releases: 1.1, 1.2…",
+        "fr": "Les versions du launcher suivent maintenant les publications : 1.1, 1.2…"
+      },
+      {
         "version": "1.0.19",
         "area": "launcher",
         "en": "First release of the launcher on GitHub, for staff testing.",
         "fr": "Première version du launcher publiée sur GitHub, pour les tests du staff."
       },
       {
-        "version": "1.0.18",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "No more “Update failed” warning when you’re offline or GitHub doesn’t answer: the launcher simply checks again later.",
         "fr": "Plus d’alerte « Échec de la mise à jour » quand tu es hors ligne ou que GitHub ne répond pas : le launcher revérifie simplement plus tard."
       },
       {
-        "version": "1.0.17",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "The installer now shows a Hemisphere window with its progress, instead of the small Windows box.",
         "fr": "L’installeur affiche maintenant une fenêtre Hemisphere avec sa progression, au lieu de la petite fenêtre Windows."
       },
       {
-        "version": "1.0.16",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "Hidden browser shortcuts (like reloading the page) are turned off in the installed launcher.",
         "fr": "Les raccourcis cachés du navigateur (comme recharger la page) sont désactivés dans le launcher installé."
       },
       {
-        "version": "1.0.15",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "Better protection of the launcher’s private settings.",
         "fr": "Meilleure protection des réglages privés du launcher."
       },
       {
-        "version": "1.0.14",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "Sign-in screen: clearer field names.",
         "fr": "Écran de connexion : noms de champs plus clairs."
       },
       {
-        "version": "1.0.13",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "Sign-in screen tidied up for the first release.",
         "fr": "Écran de connexion nettoyé pour la première version."
       },
       {
-        "version": "1.0.12",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "First release notes on GitHub list everything the launcher can do.",
         "fr": "Les notes de la première version sur GitHub listent tout ce que le launcher sait faire."
       },
       {
-        "version": "1.0.11",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "Ready for the first release: the launcher can now be installed and tested by the staff.",
         "fr": "Prêt pour la première version : le launcher peut maintenant être installé et testé par le staff."
       },
       {
-        "version": "1.0.10",
+        "version": "1.0.19",
         "area": "community",
         "en": "Discord status is now available to everyone: Settings > Launcher > show “Playing on Hemisphere SMP” in Discord (off by default).",
         "fr": "Le statut Discord est maintenant disponible pour tous : Paramètres > Launcher > afficher « Joue sur Hemisphere SMP » sur Discord (désactivé par défaut)."
       },
       {
-        "version": "1.0.9",
+        "version": "1.0.19",
         "area": "community",
         "en": "Hemisphere SMP now has its own Discord application, with the server logo and banner, for the “Playing on Hemisphere SMP” status.",
         "fr": "Hemisphere SMP a maintenant sa propre application Discord, avec le logo et la bannière du serveur, pour le statut « Joue sur Hemisphere SMP »."
       },
       {
-        "version": "1.0.8",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "A page that couldn’t load (for example right after an update) reloads by itself instead of staying blank.",
         "fr": "Une page qui n’a pas pu se charger (par exemple juste après une mise à jour) se recharge toute seule au lieu de rester vide."
       },
       {
-        "version": "1.0.7",
+        "version": "1.0.19",
         "area": "settings",
         "en": "Free up space (Settings > Installation): old logs and crash reports, unfinished downloads and unused Minecraft versions, in one click. Worlds, screenshots, mods and settings are never touched.",
         "fr": "Libérer de l’espace (Paramètres > Installation) : anciens logs et rapports de crash, téléchargements inachevés et versions de Minecraft inutilisées, en un clic. Les mondes, captures, mods et réglages ne sont jamais touchés."
       },
       {
-        "version": "1.0.7",
+        "version": "1.0.19",
         "area": "community",
         "en": "Server full? Ask to be told when a place frees up: one notification, then it’s over.",
         "fr": "Serveur plein ? Demande à être prévenu quand une place se libère : une seule notification, et c’est tout."
       },
       {
-        "version": "1.0.7",
+        "version": "1.0.19",
         "area": "settings",
         "en": "Test your microphone for voice chat before joining (Settings > Game). Nothing is recorded.",
         "fr": "Teste ton micro pour le chat vocal avant de rejoindre (Paramètres > Jeu). Rien n’est enregistré."
       },
       {
-        "version": "1.0.7",
+        "version": "1.0.19",
         "area": "settings",
         "en": "Text size: bigger text and buttons everywhere in the launcher (Settings > Launcher).",
         "fr": "Taille du texte : texte et boutons plus grands partout dans le launcher (Paramètres > Launcher)."
       },
       {
-        "version": "1.0.7",
+        "version": "1.0.19",
         "area": "home",
         "en": "After playing, Home shows how long you played and the screenshots you took.",
         "fr": "Après une partie, l’accueil montre combien de temps tu as joué et les captures que tu as prises."
@@ -110,241 +134,241 @@
     "date": "2026-10-08",
     "changes": [
       {
-        "version": "1.0.6",
+        "version": "1.0.19",
         "area": "home",
         "en": "What’s new: the close button no longer overlaps the scrollbar.",
         "fr": "Nouveautés : le bouton de fermeture ne chevauche plus la barre de défilement."
       },
       {
-        "version": "1.0.5",
+        "version": "1.0.19",
         "area": "play",
         "en": "The launcher never changes your in-game settings: it only decides how much memory Minecraft gets and how Java runs.",
         "fr": "Le launcher ne change jamais tes réglages en jeu : il décide seulement de la mémoire donnée à Minecraft et du fonctionnement de Java."
       },
       {
-        "version": "1.0.5",
+        "version": "1.0.19",
         "area": "play",
         "en": "If Minecraft runs out of memory, the crash card says so and can give it the recommended memory in one click.",
         "fr": "Si Minecraft manque de mémoire, la carte de crash le dit et peut lui donner la mémoire conseillée en un clic."
       },
       {
-        "version": "1.0.4",
+        "version": "1.0.19",
         "area": "play",
         "en": "Automatic memory adapts to what’s free when you press PLAY, so Windows doesn’t slow down when other programs are open.",
         "fr": "La mémoire automatique s’adapte à ce qui est libre quand tu appuies sur JOUER, pour que Windows ne ralentisse pas quand d’autres programmes sont ouverts."
       },
       {
-        "version": "1.0.4",
+        "version": "1.0.19",
         "area": "play",
         "en": "Smoother frame times: Minecraft gets the same Java memory settings as the official launcher.",
         "fr": "Des images plus régulières : Minecraft reçoit les mêmes réglages mémoire Java que le launcher officiel."
       },
       {
-        "version": "1.0.4",
+        "version": "1.0.19",
         "area": "settings",
         "en": "Downloads are limited to 5 MB/s by default, so the rest of your connection stays smooth (Settings > Launcher).",
         "fr": "Les téléchargements sont limités à 5 Mo/s par défaut, pour que le reste de ta connexion reste fluide (Paramètres > Launcher)."
       },
       {
-        "version": "1.0.4",
+        "version": "1.0.19",
         "area": "home",
         "en": "What’s new only shows the launcher’s own updates.",
         "fr": "Les nouveautés ne montrent que les mises à jour du launcher."
       },
       {
-        "version": "1.0.3",
+        "version": "1.0.19",
         "area": "performance",
         "en": "News and the mod list are only downloaded again when they changed: much less data while the launcher is open.",
         "fr": "Les news et la liste des mods ne sont retéléchargées que si elles ont changé : beaucoup moins de données pendant que le launcher est ouvert."
       },
       {
-        "version": "1.0.3",
+        "version": "1.0.19",
         "area": "performance",
         "en": "Minecraft files another launcher on this PC already has (official launcher, Prism, Modrinth App, CurseForge) are reused instead of downloaded: up to 1 GB saved on the first install.",
         "fr": "Les fichiers Minecraft déjà présents dans un autre launcher de ce PC (launcher officiel, Prism, Modrinth App, CurseForge) sont réutilisés au lieu d’être téléchargés : jusqu’à 1 Go économisé à la première installation."
       },
       {
-        "version": "1.0.3",
+        "version": "1.0.19",
         "area": "settings",
         "en": "Download speed limit (Settings > Launcher), to keep your connection smooth for everything else.",
         "fr": "Limite de vitesse de téléchargement (Paramètres > Launcher), pour garder ta connexion fluide pour le reste."
       },
       {
-        "version": "1.0.3",
+        "version": "1.0.19",
         "area": "settings",
         "en": "On a phone hotspot or 4G, nothing is downloaded in the background: updates wait until you press PLAY.",
         "fr": "En partage de connexion ou en 4G, rien n’est téléchargé en arrière-plan : les mises à jour attendent que tu appuies sur JOUER."
       },
       {
-        "version": "1.0.2",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "Every launcher update now has its own version number. What’s new shows the newest one first, and Hemisphere Client (mods) updates are labeled as such.",
         "fr": "Chaque mise à jour du launcher a maintenant son numéro de version. Les nouveautés montrent la plus récente en premier, et les mises à jour du Hemisphere Client (mods) sont indiquées comme telles."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "play",
         "en": "Hemisphere’s mods are installed and kept up to date by the launcher: press PLAY and everything is ready.",
         "fr": "Les mods d’Hemisphere sont installés et tenus à jour par le launcher : appuie sur JOUER et tout est prêt."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "play",
         "en": "Updates are prepared in the background while the launcher is open, so PLAY starts right away.",
         "fr": "Les mises à jour se préparent en arrière-plan quand le launcher est ouvert : JOUER démarre tout de suite."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "play",
         "en": "Join the server automatically when the game starts (optional), and your playtime is counted.",
         "fr": "Rejoindre le serveur automatiquement au lancement (au choix), et ton temps de jeu est compté."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "play",
         "en": "If Minecraft crashes, Home explains what happened and how to fix it: incompatible mods, launch without your mods, crash reports.",
         "fr": "Si Minecraft plante, l’accueil explique ce qui s’est passé et comment réparer : mods incompatibles, lancer sans tes mods, rapports de crash."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "play",
         "en": "Repair: a quick check or a full reset of the game files.",
         "fr": "Réparer : une vérification rapide ou une remise à zéro des fichiers du jeu."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "play",
         "en": "Hints before playing when disk space or memory is low; on PCs with two graphics chips, Minecraft uses the powerful one.",
         "fr": "Des conseils avant de jouer quand l’espace disque ou la mémoire manque ; sur les PC à deux puces graphiques, Minecraft utilise la plus puissante."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "home",
         "en": "News, events and maintenance notices from the staff, with a red badge for what you haven’t read.",
         "fr": "Les news, événements et maintenances du staff, avec une pastille rouge pour ce que tu n’as pas lu."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "home",
         "en": "Events calendar: add an event to your own calendar, or get a reminder shortly before it starts.",
         "fr": "Calendrier des événements : ajoute un événement à ton agenda, ou reçois un rappel juste avant qu’il commence."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "home",
         "en": "The daily restart is followed live: Home shows when the server is restarting and when it’s back.",
         "fr": "Le restart quotidien est suivi en direct : l’accueil montre quand le serveur redémarre et quand il est de retour."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "home",
         "en": "Online now: up to 6 players with their heads, the rest scrolls.",
         "fr": "En ligne : jusqu’à 6 joueurs avec leur tête, les autres défilent."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "home",
         "en": "“What’s new” after each update, and the launcher’s whole history in News > Launcher, day by day.",
         "fr": "« Nouveautés » après chaque mise à jour, et tout l’historique du launcher dans News > Launcher, jour par jour."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "content",
         "en": "Content page: your mods, resource packs and shaders in one place.",
         "fr": "Page Contenu : tes mods, packs de ressources et shaders au même endroit."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "content",
         "en": "Find mods on Modrinth safely (mods the server forbids are flagged), pick any version and lock it.",
         "fr": "Trouve des mods sur Modrinth en sécurité (ceux interdits par le serveur sont signalés), choisis n’importe quelle version et verrouille-la."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "content",
         "en": "Filters and sorting: Added by you, Disabled, Updates, By name, Last added; duplicates are detected.",
         "fr": "Filtres et tris : Ajoutés par toi, Désactivés, Mises à jour, Par nom, Derniers ajoutés ; les doublons sont détectés."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "content",
         "en": "Presets: save mods, resource packs and shaders together, switch in one click (also from under PLAY) and share them with a code.",
         "fr": "Presets : enregistre mods, packs de ressources et shaders ensemble, change en un clic (aussi sous JOUER) et partage-les avec un code."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "content",
         "en": "Safety nets: a history to undo version changes, restore points, and export/import of your whole setup.",
         "fr": "Filets de sécurité : un historique pour annuler les changements de version, des points de restauration, et l’export/import de toute ta configuration."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "content",
         "en": "Turn on shaders (Iris) in one click.",
         "fr": "Active les shaders (Iris) en un clic."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "content",
         "en": "Import your mods, packs and options from another launcher.",
         "fr": "Importe tes mods, packs et options depuis un autre launcher."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "screenshots",
         "en": "Screenshots gallery: view, copy, delete, and select several at once.",
         "fr": "Galerie de captures d’écran : regarde, copie, supprime, et sélectionne-en plusieurs à la fois."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "community",
         "en": "Report a problem: the launcher builds a report for the staff and opens a Discord ticket.",
         "fr": "Signaler un problème : le launcher prépare un rapport pour le staff et ouvre un ticket Discord."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "community",
         "en": "Optional notifications: before the daily restart (15 min, 1 min), when it starts and when it’s back, and after a maintenance.",
         "fr": "Notifications au choix : avant le restart quotidien (15 min, 1 min), quand il commence et quand il est fini, et après une maintenance."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "community",
         "en": "Keep the launcher in the system tray with the server status, and show “Playing on Hemisphere SMP” in Discord (optional).",
         "fr": "Garde le launcher dans la zone de notification avec le statut du serveur, et affiche « Joue sur Hemisphere SMP » sur Discord (au choix)."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "settings",
         "en": "Full settings: memory, window size, game folder, Java, JVM arguments, English or French, start with Windows.",
         "fr": "Paramètres complets : mémoire, taille de fenêtre, dossier du jeu, Java, arguments JVM, anglais ou français, démarrage avec Windows."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "performance",
         "en": "Lighter while you play: the launcher closes its window to give its memory to Minecraft and comes back when you quit the game. Notifications and reminders keep working.",
         "fr": "Plus léger pendant que tu joues : le launcher ferme sa fenêtre pour laisser sa mémoire à Minecraft et revient quand tu quittes le jeu. Les notifications et rappels continuent de fonctionner."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "performance",
         "en": "Light interface for modest PCs (no blur or animations), turned on by itself with 8 GB of RAM or less. Settings > Launcher.",
         "fr": "Interface légère pour les PC modestes (sans flou ni animations), activée toute seule avec 8 Go de RAM ou moins. Paramètres > Launcher."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "performance",
         "en": "Less downloading and smaller pictures: the launcher stays quiet when nobody is looking at it.",
         "fr": "Moins de téléchargements et des images plus légères : le launcher reste discret quand personne ne le regarde."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "Windows installer, and the launcher updates itself: an orange button next to the window buttons when an update is ready.",
         "fr": "Installateur Windows, et le launcher se met à jour tout seul : un bouton orange à côté des boutons de la fenêtre quand une mise à jour est prête."
       },
       {
-        "version": "1.0.1",
+        "version": "1.0.19",
         "area": "launcher",
         "en": "Everything the launcher installs (mods, news) is signed by Hemisphere: nobody can slip anything else in.",
         "fr": "Tout ce que le launcher installe (mods, news) est signé par Hemisphere : personne ne peut y glisser autre chose."
@@ -355,19 +379,19 @@
     "date": "2026-10-07",
     "changes": [
       {
-        "version": "1.0.0",
+        "version": "1.0.19",
         "area": "home",
         "en": "First Home screen: the PLAY button, the server status with online players, the daily restart countdown and your playtime.",
         "fr": "Premier écran d’accueil : le bouton JOUER, le statut du serveur avec les joueurs en ligne, le compte à rebours du restart quotidien et ton temps de jeu."
       },
       {
-        "version": "1.0.0",
+        "version": "1.0.19",
         "area": "play",
         "en": "Sign in with your Microsoft account; add several accounts and switch from the title bar.",
         "fr": "Connexion avec ton compte Microsoft ; ajoute plusieurs comptes et change depuis la barre du haut."
       },
       {
-        "version": "1.0.0",
+        "version": "1.0.19",
         "area": "play",
         "en": "Installs and launches Minecraft 26.3 with Fabric and its own Java: nothing to set up.",
         "fr": "Installe et lance Minecraft 26.3 avec Fabric et son propre Java : rien à configurer."

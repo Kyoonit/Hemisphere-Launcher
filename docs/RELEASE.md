@@ -24,32 +24,33 @@ While it installs, the Setup shows Hemisphere's own window (artwork, logo, green
 
 ## Launcher history and "What's new" (required for every release)
 
-**Every push raises the launcher version** (`"version"` in `package.json`: 1.0.2, then 1.0.3…). The launcher's history
-lives in `src/shared/launcherChangelog.json`: **one entry per day**, newest first; each change has the version of the
-push that brought it, an area (play, home, content, screenshots, community, settings, performance, launcher) and its
-English and French text. Players see it in **News > Launcher updates** (a day's versions newest first), and the last 2
-days they haven't seen yet in the **What's new** card on Home (with **See more** leading to the full history).
+**The version only changes with a release**: 1.0.19 (the first one), then **1.1, 1.2…** (`1.1.0`, `1.2.0` in
+`package.json`). The launcher's history lives in `src/shared/launcherChangelog.json`: **one entry per day**, newest
+first; each change has an area (play, home, content, screenshots, community, settings, performance, launcher), its
+English and French text, and the release that brought it, or **`"next"`** until the next release. Players see it in
+**News > Launcher updates**, and the last 2 days in the **What's new** card on Home (at every start, until closed),
+never the `"next"` changes (development builds show them).
 
-- With each push: raise the version, and add its changes to today's entry (a new day = a new entry at the top). A test
-  checks that the newest change is the version in `package.json`.
-- `npm run release` takes every change since the latest GitHub release for the release text, and **refuses to
-  publish** when there's nothing new or a change is incomplete.
+- With each push: add its changes to today's entry with `"version": "next"` (a new day = a new entry at the top).
+  `package.json` doesn't change.
+- `npm run release` gives the `"next"` changes the new version, and **refuses to publish** when there's nothing new.
 
 ## Publish a release (players get it automatically)
 
-1. Check that the last push raised `"version"` in `package.json` and added its changes to
-   `src/shared/launcherChangelog.json` (both are done with every push).
-2. Create a GitHub token with **Contents: read and write** on this repository
+1. Create a GitHub token: fine-grained, **Contents: read and write** on this repository only
    (GitHub → Settings → Developer settings → Fine-grained tokens).
-3. In PowerShell:
+2. In PowerShell, in the project folder, with the window kept open until the end:
    ```powershell
-   $env:GH_TOKEN = "<token>"
-   npm run release
+   $env:GH_TOKEN = "<token>"; npm run release
    ```
-   This creates the GitHub release `v<version>` and uploads the installer, `latest.yml` and the `.blockmap` file.
-   It is published right away.
-4. Within 4 hours, every open launcher downloads the update in the background and shows **Restart to update**.
-   Players who ignore it get it the next time they close the launcher. A running game is never interrupted.
+   It picks the version (the next 1.x after the latest release), stamps the `"next"` changes, commits and pushes that,
+   builds the installer, creates the GitHub release and uploads the 3 files one by one (retried): the installer, its
+   `.blockmap` and `latest.yml`. Then it checks them online: the last line must be **release-check: v… ✓**.
+3. If something stopped half-way (connection, closed window): `npm run release:fix` uploads what's missing to that
+   version's release without rebuilding (same token).
+4. `Remove-Item Env:GH_TOKEN`. Within 4 hours, every open launcher downloads the update in the background and shows
+   **Restart to update**. Players who ignore it get it the next time they close the launcher. A running game is never
+   interrupted.
 
 Never delete `latest.yml` from a release: launchers read it to find updates.
 
