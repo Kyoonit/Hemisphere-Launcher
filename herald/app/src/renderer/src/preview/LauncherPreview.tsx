@@ -6,7 +6,7 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import i18next, { type i18n } from 'i18next'
 import { I18nextProvider, initReactI18next, useTranslation } from 'react-i18next'
-import { BookOpen, Construction, Globe, Images, Map as MapIcon, Minus, Newspaper, Package, Play, Settings, Square, X } from 'lucide-react'
+import { BookOpen, Construction, Globe, Images, Map as MapIcon, MapPin, Minus, Newspaper, Package, Play, Settings, Square, X } from 'lucide-react'
 import en from '@locales/en.json'
 import fr from '@locales/fr.json'
 import type { FeedView } from '@shared/schedule'
@@ -17,7 +17,7 @@ import { RestartBox } from '@launcher/components/feed/RestartBox'
 import { EventList, NextEvent } from '@launcher/components/feed/EventCards'
 import { nextRestart, restartState } from '@shared/restart'
 import logo from '@launcher/assets/logo.png'
-import kingdom from '@launcher/assets/backgrounds/kingdom.webp'
+import { homePictures } from '@launcher/components/feed/homePictures'
 
 const instances = new Map<string, i18n>()
 /** One translation instance per language shown (several previews can show different languages side by side) */
@@ -49,6 +49,8 @@ interface Props {
   playerName?: string | null
   /** The instant shown (restart countdown, maintenance end); default: now */
   at?: number
+  /** Home's picture (its URL); default: the team's first one in force, else the first built-in one */
+  background?: string
 }
 
 /** The launcher window, scaled to the width it is given */
@@ -95,17 +97,25 @@ class Guard extends Component<{ children: ReactNode }, { error: string | null }>
   }
 }
 
-function Window({ view, lang, screen, onScreen, article, onArticle, badge, playerName, height, at }: Props & { height: number }) {
+function Window({ view, lang, screen, onScreen, article, onArticle, badge, playerName, height, at, background }: Props & { height: number }) {
   const { t } = useTranslation()
+  const pictures = homePictures(view.backgrounds, lang, t)
+  const picture = pictures.find((p) => p.src === background) ?? pictures.find((p) => view.backgrounds?.items.some((b) => b.src === p.src)) ?? pictures[0]
   const dimmed = screen !== 'home'
   // The launcher sizes Home's title with the window height (vh): same formula with this window's height
   const vh = height / 100
   const style = { '--lp-title': `${Math.min(44, Math.max(34, 6.25 * vh - 3.5))}px`, '--lp-gap': `${Math.min(32, Math.max(20, 7.5 * vh - 25))}px` } as React.CSSProperties
   return (
     <div className="absolute inset-0" style={style}>
-      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${kingdom})` }} />
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${picture.src}")` }} />
       <div className="absolute inset-0 bg-gradient-to-b from-gray-900/75 via-gray-800/60 to-gray-900/95" />
       {dimmed && <div className="absolute inset-0 bg-gray-900/95" />}
+      {!dimmed && (
+        <div className="absolute top-[66px] left-5 z-10 flex items-center gap-1.5 text-xs text-white/55">
+          <MapPin size={13} />
+          {picture.caption}
+        </div>
+      )}
       <TitleBar screen={screen} onScreen={onScreen} badge={screen === 'news' ? 0 : badge} />
       <div className="absolute inset-x-0 top-[52px] bottom-5">
         {screen === 'home' ? <Home view={view} at={at ?? Date.now()} onOpenNews={() => (onScreen('news'), onArticle(null))} playerName={playerName === undefined ? 'Steve' : playerName} /> : <News view={view} lang={lang} at={at ?? Date.now()} article={article} onArticle={onArticle} />}

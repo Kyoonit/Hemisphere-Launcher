@@ -138,3 +138,18 @@ clocks change); the launcher's list, reminder and calendar file are unchanged.
   launcher's News page and server panel); time travel lists when each event is announced, starts and ends.
 - Tests: `tests/herald-events.test.ts` (feed item, translations, announce time, weekly across the October clock
   change, checks, feed order, restarts over a period).
+
+## Backgrounds (phase S8)
+
+Home pictures by period (`src/shared/heraldBackgrounds.ts`): "All year" (shown with the launcher's built-in pictures)
+and dated periods (first and last day, midnight to midnight in a zone) showing only their pictures or adding them to
+the others. Kept in `settings` ('backgrounds', every version in `settings_versions`, permission `backgrounds.write`),
+published at once by `POST /backgrounds` (`herald/server/src/backgrounds.ts`). `backgroundItems` turns them into the
+feed's `backgrounds[]`; a period still to come is locked in vaults with its pictures (like a scheduled news picture).
+
+- The pictures are uploaded WebP images (up to 2560 × 1440, ≤ 1.5 MB), written next to the feed as `v2/images/…`:
+  the publisher lists them too (copy the rebuilt publisher to the content repository after this phase).
+- Launcher: pictures downloaded once, checked by SHA-512, kept, shown through `hemi-content://`; on a metered
+  connection (when "save data" is on) they wait for a normal one. Until a picture is on disk, the built-in ones show.
+  The rule picking Home's pictures is shared with Herald's preview (`components/feed/homePictures.ts`).
+- Tests: `tests/herald-backgrounds.test.ts`; staging check: `node <scratchpad>/stg-s8.mjs set|clean` style scripts.

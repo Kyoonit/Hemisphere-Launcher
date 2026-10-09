@@ -1,6 +1,7 @@
 /** What the preload script exposes to Herald's interface (window.herald). The session token never leaves main. */
 import type { Permission, Role } from '@shared/heraldRoles'
 import type { FeedBase, ImageRef, MessageTemplate, Publication, PublicationData, Status } from '@shared/heraldPublications'
+import type { Backgrounds } from '@shared/heraldBackgrounds'
 
 export interface Profile {
   id: string
@@ -58,6 +59,9 @@ export interface PublicationsState {
   baseVersion: number
   /** Ready-made maintenance messages */
   maintenanceTemplates: MessageTemplate[]
+  /** Home pictures by period, and their version (a change based on an older one is refused) */
+  backgrounds: Backgrounds
+  backgroundsVersion: number
 }
 
 export interface PublicationDetail {

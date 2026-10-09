@@ -22,9 +22,13 @@ export interface PublishJob {
   files?: { path: string; sha512: string; size?: number; b64?: string; keep?: boolean }[]
 }
 
-/** Every file a schema 2 feed lists: vault files, their pictures, pictures of the news in clear */
+/** Every file a schema 2 feed lists: vault files, their pictures, pictures of the news and backgrounds in clear */
 export function listedFiles(feed: FeedV2): { path: string; sha512: string; size: number }[] {
-  return [...feed.vaults.flatMap((v) => [v.file, ...(v.image ? [v.image] : [])]), ...feed.news.flatMap((n) => (n.imageFile?.path.startsWith('v2/images/') ? [n.imageFile] : []))]
+  return [
+    ...feed.vaults.flatMap((v) => [v.file, ...(v.image ? [v.image] : [])]),
+    ...feed.news.flatMap((n) => (n.imageFile?.path.startsWith('v2/images/') ? [n.imageFile] : [])),
+    ...feed.backgrounds.flatMap((b) => (b.image.path.startsWith('v2/images/') ? [b.image] : [])),
+  ]
 }
 
 /** Files to write (paths relative to the repository root) for one job. Throws if the content is invalid. */

@@ -6,6 +6,7 @@
 import { useMemo, useState } from 'react'
 import type { Publication } from '@herald/api'
 import { publicationEnd, type PublicationKind } from '@shared/heraldPublications'
+import { ALL_YEAR, periodWindow, type Backgrounds } from '@shared/heraldBackgrounds'
 import { restartsBetween } from '@shared/restart'
 import { shownFrom, titleOf, usePubs } from '../pubs'
 import { useStore } from '../store'
@@ -15,12 +16,13 @@ import { formatDay, formatTime, formatWhen, fromWallInput, toWallInput, zoneLabe
 const DAYS = 14
 /** Short items (a 2-hour event) are drawn at least this long, to stay readable; overlaps use their real times */
 const SHORT_MS = 36 * 3_600_000
-type Lane = 'news' | 'event' | 'banner' | 'welcome' | 'maintenance' | 'restart'
+type Lane = 'news' | 'event' | 'banner' | 'welcome' | 'background' | 'maintenance' | 'restart'
 const LANES: { id: Lane; label: string }[] = [
   { id: 'news', label: 'News' },
   { id: 'event', label: 'Events' },
   { id: 'banner', label: 'Banners' },
   { id: 'welcome', label: 'Welcome' },
+  { id: 'background', label: 'Backgrounds' },
   { id: 'maintenance', label: 'Maintenance' },
   { id: 'restart', label: 'Restarts' },
 ]
@@ -29,6 +31,7 @@ const TONE: Record<string, string> = {
   event: 'bg-green-400/20 text-green-200 border-green-400/45',
   banner: 'bg-amber-400/20 text-amber-100 border-amber-400/45',
   welcome: 'bg-violet-400/20 text-violet-100 border-violet-400/45',
+  background: 'bg-orange-400/20 text-orange-100 border-orange-400/45',
   maintenance: 'bg-red-400/25 text-red-100 border-red-400/55',
   announce: 'text-red-200 border-red-400/50 border-dashed bg-[repeating-linear-gradient(45deg,rgba(248,113,113,.07)_0_6px,rgba(248,113,113,.15)_6px_12px)]',
   restart: 'bg-gray-400/30 border-gray-400/50',
@@ -65,7 +68,7 @@ export default function Calendar({ onOpen }: { onOpen(id: string): void }) {
   const start = days[0]
   const end = days[DAYS]
 
-  const bars = useMemo(() => (state ? barsOf(state.publications, state.base, start, end, now, zone) : []), [state, start, end, now, zone])
+  const bars = useMemo(() => (state ? barsOf(state.publications, state.base, state.backgrounds, start, end, now, zone) : []), [state, start, end, now, zone])
   if (!state) return null
 
   // Where an instant is, in % of the width (day by day: a 23- or 25-hour day keeps its column)
@@ -149,8 +152,14 @@ export default function Calendar({ onOpen }: { onOpen(id: string): void }) {
 }
 
 /** Every bar of the period */
-function barsOf(pubs: Publication[], base: NonNullable<ReturnType<typeof usePubs>['state']>['base'], start: number, end: number, now: number, zone: string): Bar[] {
+function barsOf(pubs: Publication[], base: NonNullable<ReturnType<typeof usePubs>['state']>['base'], backgrounds: Backgrounds, start: number, end: number, now: number, zone: string): Bar[] {
   const out: Bar[] = []
+  for (const p of backgrounds.periods) {
+    if (p.id === ALL_YEAR || !p.pictures.length) continue
+    const w = periodWindow(p)
+    if (w.from === null || w.until === null) continue
+    out.push({ key: p.id, lane: 'background', from: w.from, to: w.until, label: p.name, tip: `Backgrounds “${p.name}” (${p.pictures.length} picture${p.pictures.length === 1 ? '' : 's'}, ${p.mode === 'replace' ? 'only these' : 'with the all-year ones'})\n${formatWhen(w.from, zone)} – ${formatWhen(w.until, zone)}`, tone: TONE.background })
+  }
   for (const p of pubs) {
     if (p.deletedAt) continue
     const data = p.published ?? p.data

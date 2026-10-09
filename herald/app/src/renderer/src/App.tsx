@@ -9,11 +9,11 @@ import MySettings from './screens/MySettings'
 import Publications from './screens/Publications'
 import TimeTravel from './screens/TimeTravel'
 import Server from './screens/Server'
+import Backgrounds from './screens/Backgrounds'
 import { PubsProvider } from './pubs'
 import { PublishJobs } from './screens/PublishJobs'
 
 const COMING: Partial<Record<Tab, string>> = {
-  backgrounds: 'Home backgrounds by period: phase S8.',
   pack: 'The mod pack and its approvals: phase S10.',
 }
 
@@ -57,6 +57,7 @@ function Shell({ staging }: { staging: boolean }) {
         {shown === 'publications' && <Publications open={openPub} onOpen={setOpenPub} />}
         {shown === 'preview' && <TimeTravel />}
         {shown === 'server' && <Server />}
+        {shown === 'backgrounds' && <Backgrounds />}
         {shown === 'team' && <Team />}
         {shown === 'settings' && <MySettings />}
         {COMING[shown] && (

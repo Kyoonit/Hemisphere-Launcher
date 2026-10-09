@@ -1,7 +1,8 @@
 /**
  * Schema 2 publishing on the server side: every item whose time has not come yet is LOCKED in a vault (its own AES
- * key, kept wrapped in D1 until the opening time) and only the vault is listed in the feed. A news picture goes with
- * its item: locked with the same key when the news is scheduled, in clear (v2/images/) otherwise.
+ * key, kept wrapped in D1 until the opening time) and only the vault is listed in the feed. A picture goes with its
+ * item (a news's `imageFile`, a background's `image`): locked with the same key when the item is scheduled, in clear
+ * (v2/images/) otherwise.
  * No validation here (CPU budget): the publisher validates the whole feed with the shared schema before signing.
  *
  * Files are kept in D1 (content_files) and fetched by the publisher by path; files already in the content
@@ -39,6 +40,8 @@ const LISTS = [
 
 const utf8 = (s: string) => new TextEncoder().encode(s)
 const imageId = (path: string) => path.match(/^v2\/images\/([0-9a-f]{64})\.webp$/)?.[1] ?? null
+/** The field holding an item's picture: news → imageFile, background → image */
+const PICTURE_FIELD: Record<string, string> = { news: 'imageFile', background: 'image' }
 
 async function keepFile(db: D1Database, path: string, bytes: Uint8Array, sha512: string, now: number): Promise<void> {
   await db.prepare('INSERT OR IGNORE INTO content_files (path, bytes, sha512, created_at) VALUES (?1, ?2, ?3, ?4)').bind(path, bytes, sha512, now).run()
@@ -66,8 +69,9 @@ export async function sealFuture(db: D1Database, master: string, draft: FeedDraf
     const key = crypto.getRandomValues(new Uint8Array(32))
     let content: Item = item
     let image: ContentFile | undefined
-    // A scheduled news picture is locked with the same key: nobody sees it before its time either
-    const pic = item.imageFile as ContentFile | undefined
+    // A scheduled item's picture is locked with the same key: nobody sees it before its time either
+    const field = PICTURE_FIELD[kind]
+    const pic = field ? (item[field] as ContentFile | undefined) : undefined
     const picId = pic ? imageId(pic.path) : null
     if (pic && picId) {
       const row = await db.prepare('SELECT bytes FROM images WHERE id = ?1').bind(picId).first<{ bytes: ArrayBuffer }>()
@@ -75,7 +79,7 @@ export async function sealFuture(db: D1Database, master: string, draft: FeedDraf
       const sealedPic = await sealWithKey(new Uint8Array(row.bytes), key)
       image = { path: `v2/vaults/${id}-img.bin`, sha512: await sha512Hex(sealedPic), size: sealedPic.length }
       await keepFile(db, image.path, sealedPic, image.sha512, now)
-      content = { ...item, imageFile: { path: image.path, sha512: pic.sha512, size: pic.size } }
+      content = { ...item, [field]: { path: image.path, sha512: pic.sha512, size: pic.size } }
     }
     const sealed = await sealVault(utf8(JSON.stringify(content)), key)
     const file = { path: `v2/vaults/${id}.bin`, sha512: sealed.sha512, size: sealed.file.length }
@@ -100,9 +104,9 @@ export async function sealFuture(db: D1Database, master: string, draft: FeedDraf
     }
     feed[list] = clear
   }
-  // Pictures of the news already shown: in clear, next to the feed
-  for (const n of feed.news as Item[]) {
-    const pic = n.imageFile as ContentFile | undefined
+  // Pictures of the items already shown: in clear, next to the feed
+  for (const [list, field] of [['news', 'imageFile'], ['backgrounds', 'image']] as const) for (const n of (feed[list] ?? []) as Item[]) {
+    const pic = n[field] as ContentFile | undefined
     const picId = pic ? imageId(pic.path) : null
     if (!pic || !picId) continue
     await db.prepare('INSERT OR IGNORE INTO content_files (path, bytes, sha512, created_at) SELECT ?1, bytes, sha512, ?2 FROM images WHERE id = ?3').bind(pic.path, now, picId).run()
@@ -131,10 +135,11 @@ export async function openKeys(db: D1Database, master: string, feed: Record<stri
   return keys
 }
 
-/** The files a feed lists (vault files, vault pictures, pictures of news in clear) */
+/** The files a feed lists (vault files, vault pictures, pictures of news and backgrounds in clear) */
 export function listedFiles(feed: Record<string, unknown>): PublishFile[] {
   const out: PublishFile[] = []
   for (const v of (feed.vaults ?? []) as { file: ContentFile; image?: ContentFile }[]) out.push(v.file, ...(v.image ? [v.image] : []))
   for (const n of (feed.news ?? []) as Item[]) if (n.imageFile) out.push(n.imageFile as ContentFile)
+  for (const b of (feed.backgrounds ?? []) as Item[]) if (b.image) out.push(b.image as ContentFile)
   return out.map(({ path, sha512, size }) => ({ path, sha512, size }))
 }

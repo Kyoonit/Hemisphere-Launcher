@@ -5,6 +5,12 @@
       {
         "version": "next",
         "area": "home",
+        "en": "Home’s pictures change with the seasons: the team adds new ones and special sets for Halloween, Christmas… Downloaded once and kept; on a metered connection they wait for a normal one.",
+        "fr": "Les images de l’accueil changent avec les saisons : l’équipe en ajoute et prépare des séries pour Halloween, Noël… Téléchargées une seule fois et gardées ; sur une connexion limitée, elles attendent une connexion normale."
+      },
+      {
+        "version": "next",
+        "area": "home",
         "en": "Planned maintenances are announced on Home in advance, in your own time.",
         "fr": "Les maintenances prévues sont annoncées à l’avance sur l’accueil, à ton heure."
       },

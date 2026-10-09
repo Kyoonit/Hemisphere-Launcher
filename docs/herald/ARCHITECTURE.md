@@ -515,3 +515,20 @@ Retours du propriétaire (S6) :
 | Tests unitaires (`tests/herald-events.test.ts`) | Format du flux accepté par le launcher, traductions, annonce, hebdomadaire à 20:00 Paris avant et après le 25 octobre (18:00 puis 19:00 UTC), vérifications, ordre et nettoyage du flux, restarts sur deux semaines |
 | Staging (contenu de test) | Un événement hebdomadaire en clair dans le flux ; un événement annoncé 10 min plus tard dans un coffre `event`, son texte absent du flux en clair ; publication complète en 10 s |
 | Herald à l'écran | Calendrier avec l'avertissement « Party pendant le restart de 17:00 », éditeur et aperçu (liste des événements du launcher, Live now), accueil, voyage dans le temps |
+
+## 23. Phase S8 : fonds d'écran de l'accueil (9 octobre 2026)
+
+- **Par période**, comme sur la maquette :
+  - « All year » : les images de l'équipe s'ajoutent aux 4 images intégrées au launcher, qui restent le secours (pas d'internet, image pas encore téléchargée) ;
+  - des périodes datées (Halloween, Noël…) : premier et dernier jour, de minuit à minuit dans un fuseau ; « Only these pictures » (seulement celles-là) ou « Add them to the all-year ones » ;
+  - chaque image porte le lieu affiché en bas à gauche de l'accueil, comme les images intégrées.
+- **Herald, onglet Backgrounds** : périodes à gauche, à droite la période choisie (nom, dates, mode, images, lieu de chaque image), ajout de plusieurs images à la fois (redimensionnées à 2560 × 1440 au plus et converties en WebP dans l'application, 1,5 Mo au plus), aperçu sur le vrai accueil avec l'image cliquée. Les changements sont préparés puis publiés en une fois (« Publish the changes »), comme l'onglet Server ; chaque version est gardée et le journal dit quelles périodes ont changé. Une ligne « Backgrounds » s'ajoute au calendrier.
+- **Serveur** : réglage `backgrounds`, droit `backgrounds.write` ; une période à venir part dans des coffres, images chiffrées comprises (personne ne voit les images de Noël en avance).
+- **Launcher (joueurs)** : images téléchargées une seule fois, vérifiées (SHA-512) et gardées ; sur une connexion limitée (option « économie de données »), elles attendent une connexion normale. Le changement de période se fait à la seconde près (début et fin comptent comme des changements de la vue). La règle de choix des images est partagée avec l'aperçu de Herald. Entrée « next » ajoutée aux nouveautés du launcher.
+- **Publisher** : il accepte les images de fond comme fichiers à écrire à côté du flux ; copié dans le dépôt de test (`1c8515f`).
+
+| Test | Résultat |
+|---|---|
+| Tests unitaires (`tests/herald-backgrounds.test.ts`) | Fenêtre d'une période au changement d'heure (20 oct. 00:00 Paris = 22:00 UTC, 3 nov. 00:00 = 23:00 UTC), éléments du flux, « only these » pendant Halloween et « All year » le reste du temps, périodes finies retirées, vérifications, fichiers listés par le publisher |
+| Staging (contenu de test) | Image « All year » publiée en clair à côté du flux, SHA-512 conforme ; période de demain dans un coffre `background` avec son image chiffrée, légende absente du flux en clair |
+| Herald à l'écran | Onglet Backgrounds (All year avec les images intégrées, période Halloween), aperçu du vrai accueil avec l'image et sa légende |

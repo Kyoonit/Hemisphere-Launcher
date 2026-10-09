@@ -2,10 +2,11 @@ import { app, protocol } from 'electron'
 import { createDecipheriv, createHash, createPublicKey, verify, type KeyObject } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { FEED_V2_PATH, FeedV2Schema, VaultItemSchemas, type FeedV2, type NewsItemV2, type Vault, type VaultKind } from '@shared/feedV2'
+import { FEED_V2_PATH, FeedV2Schema, VaultItemSchemas, type Background, type FeedV2, type NewsItemV2, type Vault, type VaultKind } from '@shared/feedV2'
 import { resolveFeed, type FeedView, type OpenedItems } from '@shared/schedule'
 import { HERALD_CONTENT_BASE, HERALD_URL, PULSE_MS, clockOffset, contentAtCommit } from '@shared/herald'
 import { getSettings } from '../settings/settings'
+import { backgroundDownloadsAllowed } from '../system/network'
 import { CONTENT_PUBLIC_KEY } from './publicKey'
 import { conditionalGet, rememberEtag } from './conditional'
 
@@ -17,12 +18,13 @@ import { conditionalGet, rememberEtag } from './conditional'
  *   · scheduled items arrive early, locked in VAULTS; at the opening time (by the SERVER's clock, learnt from its
  *     answers) the launcher asks for the key, opens the vault and shows the item at once.
  *   · the view is recomputed exactly when something is due (resolveFeed's nextChangeAt), not only every 2 minutes.
- *   · news pictures (Herald) are files next to the feed, checked by SHA-512 and kept: a scheduled news brings its
- *     picture locked with its vault (opened with the same key). The page shows them through hemi-content://.
+ *   · pictures (Herald: news pictures, Home backgrounds) are files next to the feed, checked by SHA-512 and kept: a
+ *     scheduled item brings its picture locked with its vault (opened with the same key). The page shows them through
+ *     hemi-content://. Backgrounds (big) wait for a normal connection when the player saves data on metered ones.
  * No schema 2 feed published yet → null, and the launcher keeps showing the schema 1 feed.
  */
 
-/** News pictures reach the page through hemi-content://image/<sha512> (only files checked against the signed feed) */
+/** Pictures reach the page through hemi-content://image/<sha512> (only files checked against the signed feed) */
 export const CONTENT_SCHEME = 'hemi-content'
 const MAX_PICTURE = 2 * 1024 * 1024
 
@@ -62,6 +64,8 @@ export function getFeedV2View(): FeedView | null {
     const file = (n as NewsItemV2).imageFile
     return file ? { ...n, image: pictures.has(file.sha512) ? `${CONTENT_SCHEME}://image/${file.sha512}` : undefined } : n
   })
+  // Home backgrounds: only the pictures already on disk (the built-in ones show meanwhile)
+  if (view.backgrounds) view.backgrounds.items = view.backgrounds.items.map((b) => (pictures.has(b.image.sha512) ? { ...b, src: `${CONTENT_SCHEME}://image/${b.image.sha512}` } : b))
   return view
 }
 
@@ -124,11 +128,13 @@ async function vaultFile(v: Vault, base: string): Promise<Buffer> {
 const pictureFile = (sha512: string) => join(cacheDir(), 'images', `${sha512}.webp`)
 const sha512Of = (b: Buffer) => createHash('sha512').update(b).digest('hex')
 
-/** Pictures of the news in clear: downloaded once, checked against the signed feed. */
+/** Pictures in clear (news, backgrounds): downloaded once, checked against the signed feed. */
 async function syncPictures(base: string): Promise<void> {
-  for (const n of feed?.news ?? []) {
-    const f = n.imageFile
-    if (!f || pictures.has(f.sha512) || !f.path.startsWith('v2/images/')) continue
+  const news = (feed?.news ?? []).flatMap((n) => (n.imageFile ? [n.imageFile] : []))
+  const backgrounds = (feed?.backgrounds ?? []).map((b) => b.image).filter((f) => !pictures.has(f.sha512))
+  const bigOk = backgrounds.length ? await backgroundDownloadsAllowed() : false
+  for (const f of [...news, ...(bigOk ? backgrounds : [])]) {
+    if (pictures.has(f.sha512) || !f.path.startsWith('v2/images/')) continue
     try {
       const bytes = await download(base + f.path, Math.min(f.size, MAX_PICTURE) + 1024)
       if (sha512Of(bytes) !== f.sha512) throw new Error('file does not match the feed')
@@ -153,7 +159,7 @@ async function vaultPicture(v: Vault, base: string): Promise<Buffer | null> {
 }
 
 async function openVaultPicture(file: Buffer, keyB64: string, item: unknown): Promise<void> {
-  const f = (item as NewsItemV2).imageFile
+  const f = (item as NewsItemV2).imageFile ?? (item as Partial<Background>).image
   if (!f || pictures.has(f.sha512)) return
   const decipher = createDecipheriv('aes-256-gcm', Buffer.from(keyB64, 'base64'), file.subarray(0, 12))
   decipher.setAuthTag(file.subarray(file.length - 16))

@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react'
 import { MAX_IMAGE_BYTES } from '@shared/heraldPublications'
 
-/** Wide enough for the reading page of the biggest launcher window, light enough for players */
-const MAX_WIDTH = 1600
-const MAX_HEIGHT = 1000
+/** News: wide enough for the reading page of the biggest launcher window, light enough for players.
+ *  Backgrounds: the whole window, sharp on big screens. */
+export const PICTURE_SIZES = { news: { width: 1600, height: 1000 }, background: { width: 2560, height: 1440 } }
 
 export interface Prepared {
   bytes: Uint8Array
@@ -14,7 +14,9 @@ export interface Prepared {
   originalSize: number
 }
 
-export async function prepareWebp(file: File): Promise<Prepared> {
+export async function prepareWebp(file: File, size: { width: number; height: number } = PICTURE_SIZES.news): Promise<Prepared> {
+  const MAX_WIDTH = size.width
+  const MAX_HEIGHT = size.height
   const bitmap = await createImageBitmap(file).catch(() => {
     throw new Error('This file is not a picture Herald can read (PNG, JPEG, WebP, GIF, AVIF).')
   })

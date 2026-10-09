@@ -294,7 +294,7 @@ export interface PublishedPublication {
 }
 
 /** The feed content (before vaults) made of the published publications and the other parts. */
-export function feedDraft(pubs: PublishedPublication[], base: FeedBase, now: number) {
+export function feedDraft(pubs: PublishedPublication[], base: FeedBase, now: number, backgrounds?: Record<string, unknown>[]) {
   const items = { news: [] as Record<string, unknown>[], events: [] as Record<string, unknown>[], banners: [] as Record<string, unknown>[], welcome: [] as Record<string, unknown>[] }
   const list = { news: items.news, event: items.events, banner: items.banners, welcome: items.welcome }
   for (const p of [...pubs].sort((a, b) => b.publishedAt - a.publishedAt)) {
@@ -305,7 +305,7 @@ export function feedDraft(pubs: PublishedPublication[], base: FeedBase, now: num
   }
   // at most 50 in the feed: soonest first (weekly ones started long ago come first, they keep going)
   const events = [...(base.events ?? []), ...items.events].sort((a, b) => Date.parse(String(a.start)) - Date.parse(String(b.start))).slice(0, 50)
-  return { ...base, events, news: items.news.slice(0, 100), banners: items.banners.slice(0, 20), welcome: items.welcome.slice(0, 20) }
+  return { ...base, events, news: items.news.slice(0, 100), banners: items.banners.slice(0, 20), welcome: items.welcome.slice(0, 20), ...(backgrounds ? { backgrounds } : {}) }
 }
 
 /** A feed with everything in clear (no vaults), for Herald's preview and time travel: resolveFeed shows it as a player would. */

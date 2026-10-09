@@ -36,6 +36,11 @@ export function describe(a: ActivityEntry): string {
       return `started a maintenance now (“${a.detail?.message ?? ''}”)`
     case 'maintenance.end':
       return 'said the server is back online (maintenance ended)'
+    case 'backgrounds.update': {
+      const changed = (a.detail?.changed as string[] | undefined) ?? []
+      const removed = (a.detail?.removed as string[] | undefined) ?? []
+      return `changed the Home backgrounds (${[...changed, ...removed.map((n) => `${n} removed`)].join(', ') || 'no change'})`
+    }
     case 'templates.update':
       return 'changed the maintenance message templates'
     case 'restart.update':

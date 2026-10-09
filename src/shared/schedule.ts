@@ -18,7 +18,7 @@ export interface FeedView extends Feed {
   banner?: { text: Localized; level: Banner['level'] }
   welcome?: { title?: Localized; accent?: Localized; text: Localized }
   /** Remote Home backgrounds in force: `replace` = only these, otherwise added to the built-in ones */
-  backgrounds?: { mode: 'add' | 'replace'; items: Pick<Background, 'id' | 'name' | 'image'>[] }
+  backgrounds?: { mode: 'add' | 'replace'; items: (Pick<Background, 'id' | 'name' | 'image'> & { /** Where the page loads it (set by the launcher once the picture is on disk) */ src?: string })[] }
   restartExceptions?: RestartException[]
   /** The daily restart in force, with its exceptions (days without restart, extra restarts) */
   restart: (NonNullable<Feed['restart']> & { exceptions?: RestartException[] }) | null

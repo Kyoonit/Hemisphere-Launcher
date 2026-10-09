@@ -27,6 +27,7 @@
 import { sealVault, toB64, unwrapKey, wrapKey } from './crypto'
 import { githubConfigured, latestReleaseFile, startPublishWorkflow, type GithubEnv } from './github'
 import { listedFiles, openKeys, sealFuture, type FeedDraft } from './feedV2'
+import { saveBackgrounds } from './backgrounds'
 import { authenticate, bootstrap, createProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
 import * as pubs from './publications'
 import * as server from './serverState'
@@ -208,7 +209,7 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
   const one = path.match(/^\/publications\/([nebw]-[a-z0-9]{12})(?:\/(status|publish|unpublish|delete|restore|comments|editing|versions\/(\d{1,6})))?$/)
   const image = path.match(/^\/images\/([0-9a-f]{64})$/)
   const maintenance = path.match(/^\/server\/maintenances\/(m-[a-z0-9]{10})\/delete$/)
-  const serverPaths = ['/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history']
+  const serverPaths = ['/backgrounds', '/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history']
   if (path !== '/publications' && path !== '/images' && path !== '/publish' && !one && !image && !maintenance && !serverPaths.includes(path)) return null
   const actor = await authenticate(env, req)
   const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
@@ -227,6 +228,7 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
   if (req.method === 'POST' && maintenance) return json(await server.deleteMaintenance(env, actor, maintenance[1], await body(), run))
   if (req.method === 'POST' && path === '/server/maintenance-now') return json(await server.maintenanceNow(env, actor, await body(), run))
   if (req.method === 'POST' && path === '/server/back-online') return json(await server.backOnline(env, actor, run))
+  if (req.method === 'POST' && path === '/backgrounds') return json(await saveBackgrounds(env, actor, await body(), run))
   if (req.method === 'POST' && path === '/server/templates') return json(await server.saveTemplates(env, actor, await body()))
   if (req.method === 'POST' && path === '/server/restart') return json(await server.saveRestart(env, actor, await body(), run))
   if (!one) return json({ error: 'not found' }, 404)

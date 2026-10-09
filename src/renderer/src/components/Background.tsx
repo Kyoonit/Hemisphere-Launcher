@@ -1,18 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapPin } from 'lucide-react'
-import kingdom from '../assets/backgrounds/kingdom.webp'
-import hempshire from '../assets/backgrounds/hempshire.avif'
-import playerBases from '../assets/backgrounds/player-bases.webp'
-import community from '../assets/backgrounds/community.avif'
+import { useFeed } from '../hooks'
+import { homePictures } from './feed/homePictures'
 
-/** Bundled inside the app (not editable on disk). Add a picture: import it and append it here. */
-const BACKGROUNDS = [
-  { src: kingdom, name: 'backgrounds.kingdom' },
-  { src: hempshire, name: 'backgrounds.hempshire' },
-  { src: playerBases, name: 'backgrounds.playerBases' },
-  { src: community, name: 'backgrounds.community' },
-]
 const ROTATE_MS = 60_000
 
 /**
@@ -20,32 +11,38 @@ const ROTATE_MS = 60_000
  * it fades out) is loaded: the others aren't kept in memory.
  */
 export default function Background({ dimmed, still }: { dimmed: boolean; still: boolean }) {
-  const { t } = useTranslation()
-  const [index, setIndex] = useState(() => Math.floor(Math.random() * BACKGROUNDS.length))
-  const [previous, setPrevious] = useState<number | null>(null)
-  const current = useRef(index)
+  const { t, i18n } = useTranslation()
+  const feed = useFeed()
+  const list = useMemo(
+    () => homePictures(feed?.backgrounds, i18n.language, t),
+    [feed?.backgrounds, i18n.language, t],
+  )
+  const [current, setCurrent] = useState(() => list[Math.floor(Math.random() * list.length)].src)
+  const [previous, setPrevious] = useState<string | null>(null)
+  const shown = useRef(current)
 
+  // The set changed (a period starts or ends, a picture arrived): stay on the same picture if it is still there
+  const index = Math.max(0, list.findIndex((p) => p.src === current))
+  useEffect(() => {
+    if (!list.some((p) => p.src === current)) setCurrent(list[Math.floor(Math.random() * list.length)].src)
+  }, [list, current])
   useEffect(() => {
     if (still) return
-    const timer = setInterval(() => setIndex((i) => (i + 1) % BACKGROUNDS.length), ROTATE_MS)
+    const timer = setInterval(() => setCurrent((c) => list[(list.findIndex((p) => p.src === c) + 1) % list.length].src), ROTATE_MS)
     return () => clearInterval(timer)
-  }, [still])
+  }, [still, list])
   useEffect(() => {
-    if (current.current === index) return
-    setPrevious(current.current)
-    current.current = index
+    if (shown.current === current) return
+    setPrevious(shown.current)
+    shown.current = current
     const done = setTimeout(() => setPrevious(null), 2500) // after the cross-fade
     return () => clearTimeout(done)
-  }, [index])
+  }, [current])
 
   return (
     <div className="absolute inset-0" aria-hidden>
-      {BACKGROUNDS.map((bg, i) => (
-        <div
-          key={bg.src}
-          className={`bg-slide ${i === index ? 'is-active' : ''}`}
-          style={i === index || i === previous ? { backgroundImage: `url(${bg.src})` } : undefined}
-        />
+      {list.map(({ src }) => (
+        <div key={src} className={`bg-slide ${src === current ? 'is-active' : ''}`} style={src === current || src === previous ? { backgroundImage: `url("${src}")` } : undefined} />
       ))}
       {/* Gradient always there; the dark layer for other screens fades in/out the same way in both directions
           (a gradient can't be animated into a plain colour: switching it directly gave a one-way fade). */}
@@ -57,7 +54,7 @@ export default function Background({ dimmed, still }: { dimmed: boolean; still: 
         }`}
       >
         <MapPin size={13} />
-        {t(BACKGROUNDS[index].name)}
+        {list[index].caption}
       </div>
     </div>
   )

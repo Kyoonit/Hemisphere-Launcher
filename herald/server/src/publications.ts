@@ -8,6 +8,8 @@ import { DEFAULT_FEED_BASE, DEFAULT_MAINTENANCE_TEMPLATES, emptyData, feedDraft,
 import { RESTART_SCHEDULE } from '../../../src/shared/server.ts'
 import type { Permission } from '../../../src/shared/heraldRoles.ts'
 import { HttpError, logActivity, type Actor } from './accounts'
+import { getBackgrounds } from './backgrounds'
+import { backgroundItems } from '../../../src/shared/heraldBackgrounds.ts'
 import { sha256Hex, sha512Hex } from './crypto'
 import { openKeys, sealFuture } from './feedV2'
 
@@ -89,6 +91,10 @@ export async function listPublications(env: PublicationsEnv, actor: Actor) {
     base: await feedBase(env.DB),
     live: state ? { sequence: state.sequence, commit: state.commit_sha, at: Date.parse(state.updated_at) } : null,
     /** Version of `base` (the Server tab sends it back: a stale change is refused) */
+    ...(await (async () => {
+      const b = await getBackgrounds(env.DB)
+      return { backgrounds: b.backgrounds, backgroundsVersion: b.version }
+    })()),
     maintenanceTemplates: JSON.parse((await env.DB.prepare("SELECT value FROM settings WHERE key = 'templates.maintenance'").first<{ value: string }>())?.value ?? JSON.stringify(DEFAULT_MAINTENANCE_TEMPLATES)),
     baseVersion: (await env.DB.prepare("SELECT updated_at FROM settings WHERE key = 'feed.base'").first<{ updated_at: number }>())?.updated_at ?? 0,
     jobs,
@@ -253,7 +259,7 @@ export async function setEditing(env: PublicationsEnv, actor: Actor, id: string,
 
 /** A WebP picture made by the app (≤ 1.5 MB). Same bytes = same id: uploading twice stores it once. */
 export async function uploadImage(env: PublicationsEnv, actor: Actor, req: Request) {
-  if (!PUBLICATION_KINDS.some((k) => actor.permissions.includes(WRITE[k]))) throw new HttpError(403, 'You cannot add pictures.')
+  if (!PUBLICATION_KINDS.some((k) => actor.permissions.includes(WRITE[k])) && !actor.permissions.includes('backgrounds.write')) throw new HttpError(403, 'You cannot add pictures.')
   const bytes = new Uint8Array(await req.arrayBuffer())
   const width = Number(req.headers.get('x-width'))
   const height = Number(req.headers.get('x-height'))
@@ -280,7 +286,7 @@ export type Publisher = (reason: string) => Promise<string>
 /** The whole current state: every published publication + the other feed parts, future items locked in vaults. */
 export async function buildFeed(env: PublicationsEnv, now: number) {
   const rows = (await env.DB.prepare('SELECT id, kind, published, published_at FROM publications WHERE published IS NOT NULL AND deleted_at IS NULL').all<{ id: string; kind: PublicationKind; published: string; published_at: number }>()).results
-  const draft = feedDraft(rows.map((r) => ({ id: r.id, kind: r.kind, data: JSON.parse(r.published), publishedAt: r.published_at })), await feedBase(env.DB), now)
+  const draft = feedDraft(rows.map((r) => ({ id: r.id, kind: r.kind, data: JSON.parse(r.published), publishedAt: r.published_at })), await feedBase(env.DB), now, backgroundItems((await getBackgrounds(env.DB)).backgrounds, now))
   const { feed, files } = await sealFuture(env.DB, env.VAULT_MASTER, draft, now)
   return { feed, files, vaultKeys: await openKeys(env.DB, env.VAULT_MASTER, feed, now) }
 }

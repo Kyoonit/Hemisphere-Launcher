@@ -1,6 +1,7 @@
 /** What a player sees at an instant, computed like the launcher does (feedDraft → resolveFeed), for Herald's previews. */
 import type { PublicationsState } from '@herald/api'
 import { clearFeed, feedDraft, type PublicationData, type PublicationKind, type PublishedPublication } from '@shared/heraldPublications'
+import { backgroundItems, type Backgrounds } from '@shared/heraldBackgrounds'
 import { resolveFeed, type FeedView } from '@shared/schedule'
 import type { NewsItemV2 } from '@shared/feedV2'
 import { eventPhase, upcomingEvents } from '@shared/events'
@@ -10,7 +11,12 @@ export interface ViewOptions {
   override?: { id: string; kind: PublicationKind; data: PublicationData; publishedAt: number }
   /** Also show the Ready publications that are not published yet */
   includeReady?: boolean
+  /** Backgrounds as if they were published (the Backgrounds tab's changes not published yet) */
+  backgrounds?: Backgrounds
 }
+
+/** The draft feed at an instant: published publications, the server parts, the backgrounds by period */
+const draftAt = (state: PublicationsState, at: number, opts: ViewOptions) => feedDraft(publishedSet(state, at, opts), state.base, at, backgroundItems(opts.backgrounds ?? state.backgrounds, at))
 
 /** A draft still missing its English texts, shown with placeholders (the launcher never receives such a draft) */
 export function withPlaceholders(kind: PublicationKind, data: PublicationData): PublicationData {
@@ -34,27 +40,28 @@ export function publishedSet(state: PublicationsState, now: number, opts: ViewOp
   return out
 }
 
-/** sha512 → picture id, for every picture any publication uses */
-export function pictureIds(state: PublicationsState, extra?: PublicationData): Record<string, string> {
+/** sha512 → picture id, for every picture any publication or background uses */
+export function pictureIds(state: PublicationsState, extra?: PublicationData, backgrounds?: Backgrounds): Record<string, string> {
   const map: Record<string, string> = {}
   for (const d of [...state.publications.flatMap((p) => [p.data, p.published]), extra]) if (d?.image) map[d.image.sha512] = d.image.id
+  for (const b of [state.backgrounds, backgrounds]) for (const period of b?.periods ?? []) for (const pic of period.pictures) map[pic.image.sha512] = pic.image.id
   return map
 }
 
 export function viewAt(state: PublicationsState, at: number, lang: string, opts: ViewOptions, urls: Record<string, string>, ids: Record<string, string>): FeedView {
-  const pubs = publishedSet(state, at, opts)
-  const view = resolveFeed(clearFeed(feedDraft(pubs, state.base, at)), {}, at, lang)
+  const view = resolveFeed(clearFeed(draftAt(state, at, opts)), {}, at, lang)
   view.news = view.news.map((n) => {
     const f = (n as NewsItemV2).imageFile
     return f ? { ...n, image: urls[ids[f.sha512]] } : n
   })
+  if (view.backgrounds) view.backgrounds.items = view.backgrounds.items.map((b) => ({ ...b, src: urls[ids[b.image.sha512]] }))
   return view
 }
 
 /** News a player who last opened News at `seenAt` (default: a day earlier) has not seen yet (the red badge) */
 export function badgeAt(state: PublicationsState, at: number, lang: string, opts: ViewOptions, seenAt = at - 86_400_000): number {
-  const before = new Set(resolveFeed(clearFeed(feedDraft(publishedSet(state, at, opts), state.base, seenAt)), {}, seenAt, lang).news.map((n) => n.id))
-  return resolveFeed(clearFeed(feedDraft(publishedSet(state, at, opts), state.base, at)), {}, at, lang).news.filter((n) => !before.has(n.id)).length
+  const before = new Set(resolveFeed(clearFeed(draftAt(state, seenAt, opts)), {}, seenAt, lang).news.map((n) => n.id))
+  return resolveFeed(clearFeed(draftAt(state, at, opts)), {}, at, lang).news.filter((n) => !before.has(n.id)).length
 }
 
 export interface Change {
@@ -64,9 +71,7 @@ export interface Change {
 
 /** The instants the launcher changes by itself from `from` on, and what changes then (time travel's list) */
 export function upcomingChanges(state: PublicationsState, from: number, lang: string, opts: ViewOptions, max = 25): Change[] {
-  const pubs = publishedSet(state, from, opts)
-  const draft = feedDraft(pubs, state.base, from)
-  const feed = clearFeed(draft)
+  const feed = clearFeed(draftAt(state, from, opts))
   const out: Change[] = []
   let prev = resolveFeed(feed, {}, from, lang)
   let prevAt = from
@@ -111,6 +116,9 @@ export function describeChange(a: FeedView, b: FeedView, ta: number, tb: number)
   if (a.maintenance.active && !b.maintenance.active) lines.push('Maintenance ends: the server is open again')
   if (a.restart && b.restart && (a.restart.time !== b.restart.time || a.restart.timeZone !== b.restart.timeZone || a.restart.durationMin !== b.restart.durationMin))
     lines.push(`Daily restart now ${b.restart.time} ${b.restart.timeZone} (${b.restart.durationMin} min)`)
+  const pics = (v: FeedView) => (v.backgrounds?.items ?? []).map((x) => x.id).join()
+  if (pics(a) !== pics(b) || a.backgrounds?.mode !== b.backgrounds?.mode)
+    lines.push(!b.backgrounds ? 'Home backgrounds: the built-in pictures only' : `Home backgrounds: ${b.backgrounds.items.length} picture${b.backgrounds.items.length > 1 ? 's' : ''} from the team${b.backgrounds.mode === 'replace' ? ' only' : ', with the built-in ones'}`)
   if (en(a.banner?.text) !== en(b.banner?.text)) lines.push(b.banner ? `Banner: “${en(b.banner.text)}”` : 'Banner removed')
   if (en(a.welcome?.text) !== en(b.welcome?.text) || en(a.welcome?.title) !== en(b.welcome?.title)) lines.push(b.welcome ? `Welcome message: “${en(b.welcome.title) || en(b.welcome.text)}”` : 'Back to the usual welcome')
   return lines
