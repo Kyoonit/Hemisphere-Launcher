@@ -36,6 +36,10 @@ export function describe(a: ActivityEntry): string {
       return `started a maintenance now (“${a.detail?.message ?? ''}”)`
     case 'maintenance.end':
       return 'said the server is back online (maintenance ended)'
+    case 'settings.public':
+      return 'changed the launcher settings (support link, Discord)'
+    case 'settings.staffCode':
+      return a.detail?.reset ? 'went back to the launcher’s built-in staff code' : 'made a new staff code for the launcher'
     case 'backgrounds.update': {
       const changed = (a.detail?.changed as string[] | undefined) ?? []
       const removed = (a.detail?.removed as string[] | undefined) ?? []

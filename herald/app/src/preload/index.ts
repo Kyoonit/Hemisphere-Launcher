@@ -28,6 +28,11 @@ const bridge: HeraldBridge = {
     },
     install: () => ipcRenderer.send('update:install'),
   },
+  launcher: {
+    newStaffCode: (version) => ipcRenderer.invoke('launcher:newStaffCode', version),
+    checkDiscord: (id) => ipcRenderer.invoke('launcher:checkDiscord', id),
+    latest: () => ipcRenderer.invoke('launcher:latest'),
+  },
 }
 
 contextBridge.exposeInMainWorld('herald', bridge)

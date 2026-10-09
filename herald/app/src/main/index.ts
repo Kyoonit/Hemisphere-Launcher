@@ -3,10 +3,13 @@
  * talks to the Herald server for the interface. Local settings (time zones) stay on this PC.
  */
 import { app, BrowserWindow, clipboard, ipcMain, safeStorage, shell } from 'electron'
+import { randomBytes, scrypt } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { ApiResult, LocalSettings, Profile } from '@herald/api'
 import { installUpdate, startUpdater, updateState } from './updater'
+import { staffCodeFrom } from '@shared/heraldPublic'
+import { STAFF_CODE_SCRYPT } from '@shared/dev'
 
 /** Staging until the production server exists (S12); a build can point elsewhere with MAIN_VITE_HERALD_SERVER. */
 const SERVER = (import.meta.env?.MAIN_VITE_HERALD_SERVER || 'https://herald-staging.hemisphere-launcher.workers.dev').replace(/\/$/, '')
@@ -20,6 +23,7 @@ const ALLOWED = [
   /^\/publications\/[nebw]-[a-z0-9]{12}(\/(status|publish|unpublish|delete|restore|comments|editing|versions\/\d{1,6}))?$/,
   /^\/publish$/,
   /^\/backgrounds$/,
+  /^\/settings\/public$/,
   /^\/server\/(templates|maintenances|maintenance-now|back-online|restart|history)$/,
   /^\/server\/maintenances\/m-[a-z0-9]{10}\/delete$/,
 ]
@@ -139,6 +143,36 @@ function registerIpc(): void {
   ipcMain.on('window:toggleMaximize', () => (win?.isMaximized() ? win.unmaximize() : win?.maximize()))
   ipcMain.on('window:close', () => win?.close())
   ipcMain.on('copy', (_e, text: unknown) => typeof text === 'string' && clipboard.writeText(text))
+  // Launcher settings: the staff code is made here; only its fingerprint goes to the server, the code is shown once
+  ipcMain.handle('launcher:newStaffCode', async (_e, version: unknown) => {
+    const code = staffCodeFrom(randomBytes(12))
+    const salt = randomBytes(16).toString('hex')
+    const { N, r, p, keylen } = STAFF_CODE_SCRYPT
+    const hash = await new Promise<string>((resolve, reject) => scrypt(code, salt, keylen, { N, r, p }, (err, key) => (err ? reject(err) : resolve(key.toString('hex')))))
+    const res = await call<Record<string, unknown>>('POST', '/settings/public', { version, part: 'staffCode', settings: { staffCode: { salt, hash } } })
+    return res.ok ? { ok: true, data: { ...res.data, code } } : res
+  })
+  ipcMain.handle('launcher:checkDiscord', async (_e, id: unknown) => {
+    if (typeof id !== 'string' || !/^\d{17,20}$/.test(id)) return { ok: false, reason: 'notApp' }
+    try {
+      const res = await fetch(`https://discord.com/api/v10/applications/${id}/rpc`, { signal: AbortSignal.timeout(8000) })
+      if (res.status === 404 || res.status === 400) return { ok: false, reason: 'notApp' }
+      if (!res.ok) return { ok: false, reason: 'network' }
+      const body = (await res.json()) as { name?: unknown }
+      return { ok: true, name: typeof body.name === 'string' ? body.name.slice(0, 64) : id }
+    } catch {
+      return { ok: false, reason: 'network' }
+    }
+  })
+  ipcMain.handle('launcher:latest', async () => {
+    try {
+      const res = await fetch('https://api.github.com/repos/Kyoonit/Hemisphere-Launcher/releases/latest', { signal: AbortSignal.timeout(8000), headers: { accept: 'application/vnd.github+json', 'user-agent': `Herald/${app.getVersion()}` } })
+      const body = (await res.json()) as { tag_name?: unknown }
+      return res.ok && typeof body.tag_name === 'string' ? body.tag_name.replace(/^v/, '') : null
+    } catch {
+      return null
+    }
+  })
   ipcMain.handle('update:state', () => updateState())
   ipcMain.on('update:install', () => installUpdate())
 }

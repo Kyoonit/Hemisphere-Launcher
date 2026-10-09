@@ -10,6 +10,7 @@ import Publications from './screens/Publications'
 import TimeTravel from './screens/TimeTravel'
 import Server from './screens/Server'
 import Backgrounds from './screens/Backgrounds'
+import LauncherSettings from './screens/LauncherSettings'
 import { PubsProvider } from './pubs'
 import { PublishJobs } from './screens/PublishJobs'
 
@@ -46,7 +47,7 @@ function Shell({ staging }: { staging: boolean }) {
     setTab('publications')
   }
   // A permission removed meanwhile: back to Home
-  const allowed = tab === 'settings' || TABS.some((t) => t.id === tab && (!t.needs || t.needs.some(can)))
+  const allowed = tab === 'settings' || (tab === 'launcher' && (can('settings.public') || can('settings.staffCode'))) || TABS.some((t) => t.id === tab && (!t.needs || t.needs.some(can)))
   const shown = allowed ? tab : 'home'
   return (
     <div className="flex h-full flex-col">
@@ -60,6 +61,7 @@ function Shell({ staging }: { staging: boolean }) {
         {shown === 'backgrounds' && <Backgrounds />}
         {shown === 'team' && <Team />}
         {shown === 'settings' && <MySettings />}
+        {shown === 'launcher' && <LauncherSettings />}
         {COMING[shown] && (
           <div className="grid h-full place-items-center text-center">
             <div>

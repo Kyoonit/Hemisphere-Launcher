@@ -9,6 +9,7 @@ import { RESTART_SCHEDULE } from '../../../src/shared/server.ts'
 import type { Permission } from '../../../src/shared/heraldRoles.ts'
 import { HttpError, logActivity, type Actor } from './accounts'
 import { getBackgrounds } from './backgrounds'
+import { getPublic } from './publicSettings'
 import { backgroundItems } from '../../../src/shared/heraldBackgrounds.ts'
 import { sha256Hex, sha512Hex } from './crypto'
 import { openKeys, sealFuture } from './feedV2'
@@ -93,7 +94,8 @@ export async function listPublications(env: PublicationsEnv, actor: Actor) {
     /** Version of `base` (the Server tab sends it back: a stale change is refused) */
     ...(await (async () => {
       const b = await getBackgrounds(env.DB)
-      return { backgrounds: b.backgrounds, backgroundsVersion: b.version }
+      const pub = await getPublic(env.DB)
+      return { backgrounds: b.backgrounds, backgroundsVersion: b.version, publicSettings: pub }
     })()),
     maintenanceTemplates: JSON.parse((await env.DB.prepare("SELECT value FROM settings WHERE key = 'templates.maintenance'").first<{ value: string }>())?.value ?? JSON.stringify(DEFAULT_MAINTENANCE_TEMPLATES)),
     baseVersion: (await env.DB.prepare("SELECT updated_at FROM settings WHERE key = 'feed.base'").first<{ updated_at: number }>())?.updated_at ?? 0,
@@ -287,6 +289,9 @@ export type Publisher = (reason: string) => Promise<string>
 export async function buildFeed(env: PublicationsEnv, now: number) {
   const rows = (await env.DB.prepare('SELECT id, kind, published, published_at FROM publications WHERE published IS NOT NULL AND deleted_at IS NULL').all<{ id: string; kind: PublicationKind; published: string; published_at: number }>()).results
   const draft = feedDraft(rows.map((r) => ({ id: r.id, kind: r.kind, data: JSON.parse(r.published), publishedAt: r.published_at })), await feedBase(env.DB), now, backgroundItems((await getBackgrounds(env.DB)).backgrounds, now))
-  const { feed, files } = await sealFuture(env.DB, env.VAULT_MASTER, draft, now)
+  // The launcher settings (support link, Discord id, staff code) replace the base's
+  const { support: _s, discordAppId: _d, staffCode: _c, ...rest } = draft
+  const { settings } = await getPublic(env.DB)
+  const { feed, files } = await sealFuture(env.DB, env.VAULT_MASTER, { ...rest, ...settings }, now)
   return { feed, files, vaultKeys: await openKeys(env.DB, env.VAULT_MASTER, feed, now) }
 }

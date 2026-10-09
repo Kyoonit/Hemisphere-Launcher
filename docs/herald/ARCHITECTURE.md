@@ -532,3 +532,18 @@ Retours du propriétaire (S6) :
 | Tests unitaires (`tests/herald-backgrounds.test.ts`) | Fenêtre d'une période au changement d'heure (20 oct. 00:00 Paris = 22:00 UTC, 3 nov. 00:00 = 23:00 UTC), éléments du flux, « only these » pendant Halloween et « All year » le reste du temps, périodes finies retirées, vérifications, fichiers listés par le publisher |
 | Staging (contenu de test) | Image « All year » publiée en clair à côté du flux, SHA-512 conforme ; période de demain dans un coffre `background` avec son image chiffrée, légende absente du flux en clair |
 | Herald à l'écran | Onglet Backgrounds (All year avec les images intégrées, période Halloween), aperçu du vrai accueil avec l'image et sa légende |
+
+## 24. Phase S9 : réglages du launcher et code staff (9 octobre 2026)
+
+- **Menu du profil → Launcher settings** (droits `settings.public` et `settings.staffCode`) :
+  - **quel launcher ont les joueurs** : dernière version publiée sur GitHub ; tant qu'elle est antérieure à 1.2.0, Herald le dit clairement (ce qui est publié ici n'atteint pas encore les joueurs) ;
+  - **support** : lien Discord uniquement (règle du flux), texte « comment demander de l'aide » ;
+  - **Discord** : ID de l'application, avec un bouton « Check » qui demande son nom à Discord ;
+  - **code staff** de l'onglet Developer du launcher : « Make a new code » ou « Back to the built-in code ».
+- **Code staff** : fabriqué dans le processus principal de Herald, même forme et mêmes réglages scrypt que `npm run staff-code`. **Seule son empreinte part au serveur** ; le code est affiché une seule fois et n'est gardé nulle part. (Le calcul scrypt dépasserait aussi le budget CPU du serveur gratuit.) Les PC déjà déverrouillés le restent.
+- **Serveur** : réglage `public` (versions gardées, journal sans jamais le code), publié aussitôt ; ces valeurs remplacent celles de la base du flux. Valeurs de départ = celles du launcher actuel (ID Discord).
+
+| Test | Résultat |
+|---|---|
+| Tests unitaires (`tests/herald-public.test.ts`) | Format du code, code accepté par la même vérification que le launcher (y compris tapé en minuscules), liens Discord seulement, réglages dans le flux et la vue du launcher |
+| Staging | Lien non Discord refusé, version dépassée refusée, support et ID Discord publiés dans le flux de test ; « Make a new code » dans Herald : code vérifié contre l'empreinte du serveur (sans l'afficher), puis retour au code intégré |

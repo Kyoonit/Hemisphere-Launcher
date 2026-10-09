@@ -153,3 +153,14 @@ feed's `backgrounds[]`; a period still to come is locked in vaults with its pict
   connection (when "save data" is on) they wait for a normal one. Until a picture is on disk, the built-in ones show.
   The rule picking Home's pictures is shared with Herald's preview (`components/feed/homePictures.ts`).
 - Tests: `tests/herald-backgrounds.test.ts`; staging check: `node <scratchpad>/stg-s8.mjs set|clean` style scripts.
+
+## Launcher settings (phase S9)
+
+Profile menu → **Launcher settings** (permissions `settings.public`, `settings.staffCode`): the support link (a Discord
+link only) and how to ask for help, the Discord application id (with a check against Discord), the staff code of the
+launcher's Developer tab, and which launcher players have (latest GitHub release; Herald's content needs 1.2.0).
+Kept in `settings` ('public', `herald/server/src/publicSettings.ts`), every version kept, published at once.
+
+- The staff code is made in Herald's main process (same shape and scrypt settings as `npm run staff-code`); only its
+  fingerprint goes to the server, the code is shown once. "Back to the built-in code" removes it from the feed.
+- Tests: `tests/herald-public.test.ts`.

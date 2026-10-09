@@ -2,6 +2,7 @@
 import type { Permission, Role } from '@shared/heraldRoles'
 import type { FeedBase, ImageRef, MessageTemplate, Publication, PublicationData, Status } from '@shared/heraldPublications'
 import type { Backgrounds } from '@shared/heraldBackgrounds'
+import type { PublicSettings } from '@shared/heraldPublic'
 
 export interface Profile {
   id: string
@@ -62,6 +63,15 @@ export interface PublicationsState {
   /** Home pictures by period, and their version (a change based on an older one is refused) */
   backgrounds: Backgrounds
   backgroundsVersion: number
+  /** Launcher settings: support link, Discord id, staff code fingerprint (when and by whom it last changed) */
+  publicSettings: PublicSettingsState
+}
+
+export interface PublicSettingsState {
+  settings: PublicSettings
+  version: number
+  staffCodeAt: number | null
+  staffCodeBy: string | null
 }
 
 export interface PublicationDetail {
@@ -95,6 +105,14 @@ export interface HeraldBridge {
   copy(text: string): void
   images: { upload(bytes: Uint8Array, width: number, height: number): Promise<ApiResult<ImageRef>>; get(id: string): Promise<Uint8Array | null> }
   update: { state(): Promise<UpdateState>; onState(cb: (s: UpdateState) => void): () => void; install(): void }
+  launcher: {
+    /** A new staff code: made and fingerprinted on this PC, only the fingerprint is sent; the code comes back once */
+    newStaffCode(version: number): Promise<ApiResult<PublicSettingsState & { code: string; job: string }>>
+    /** The Discord application behind an id (its name), for "Playing on Hemisphere SMP" */
+    checkDiscord(id: string): Promise<{ ok: true; name: string } | { ok: false; reason: 'notApp' | 'network' }>
+    /** The launcher version players get today (latest GitHub release) */
+    latest(): Promise<string | null>
+  }
 }
 
 export type UpdateState = { phase: 'idle' } | { phase: 'downloading'; version: string } | { phase: 'ready'; version: string }

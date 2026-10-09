@@ -4,7 +4,7 @@ import { ROLE_LABEL, type Permission } from '@shared/heraldRoles'
 import { useStore } from '../store'
 import { Avatar } from './ui'
 
-export type Tab = 'home' | 'publications' | 'preview' | 'server' | 'backgrounds' | 'pack' | 'team' | 'settings'
+export type Tab = 'home' | 'publications' | 'preview' | 'server' | 'backgrounds' | 'pack' | 'team' | 'settings' | 'launcher'
 
 /** The tabs a profile sees: hidden when none of their permissions uses them (Lodge keepers see four). */
 export const TABS: { id: Tab; label: string; needs?: Permission[] }[] = [
@@ -83,6 +83,11 @@ export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Ta
                   <button className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onClick={() => (onTab('settings'), setMenu(false))}>
                     My time zone…
                   </button>
+                  {(can('settings.public') || can('settings.staffCode')) && (
+                    <button className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onClick={() => (onTab('launcher'), setMenu(false))}>
+                      Launcher settings…
+                    </button>
+                  )}
                   <hr className="my-1 border-gray-700" />
                   <button className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onClick={() => void signOut()}>
                     Sign out
