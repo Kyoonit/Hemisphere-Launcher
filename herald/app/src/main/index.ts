@@ -18,8 +18,8 @@ import { CONTENT_PUBLIC_KEY } from '../../../../src/main/core/remote/publicKey'
 import TEST_PUBLIC_KEY from '../../../server/test-public-key.txt?raw'
 import { compatibleVersions, fabricLoadersUrl, MAX_PACK_FILE, modrinthGetter, MOJANG_VERSIONS, newestVersions, packReadiness, resolvePack, searchMods, type DraftMod } from '@shared/heraldPack'
 
-/** Staging until the production server exists (S12); a build can point elsewhere with MAIN_VITE_HERALD_SERVER. */
-const SERVER = (import.meta.env?.MAIN_VITE_HERALD_SERVER || 'https://herald-staging.hemisphere-launcher.workers.dev').replace(/\/$/, '')
+/** The production server (releases); a test build points elsewhere with MAIN_VITE_HERALD_SERVER (staging, local). */
+const SERVER = (import.meta.env?.MAIN_VITE_HERALD_SERVER || 'https://herald.hemisphere-launcher.workers.dev').replace(/\/$/, '')
 /** Only these server routes can be called from the interface. */
 const ALLOWED = [
   /^\/me$/,

@@ -84,8 +84,9 @@ npm run herald:dist                                  # herald/app/dist/Herald-Se
 npm run herald:release                               # GH_TOKEN with Contents: read and write on Kyoonit/herald-releases
 ```
 
-A build talks to the staging server unless `MAIN_VITE_HERALD_SERVER` says otherwise (e.g. `http://127.0.0.1:8787`
-with `npm run herald:server:dev`). The session token is kept by Windows (safeStorage), never given to the page.
+A build talks to the production server unless `MAIN_VITE_HERALD_SERVER` says otherwise: staging
+(`https://herald-staging.hemisphere-launcher.workers.dev`) or local (`http://127.0.0.1:8787` with
+`npm run herald:server:dev`). Releases (`npm run herald:release`) are always production builds. The session token is kept by Windows (safeStorage), never given to the page.
 
 Accounts: `POST /bootstrap` (one-time `BOOTSTRAP_TOKEN` secret) creates the Owner and the Developer; everyone else is
 created in Herald (Team → New profile). Local test: `npm run herald:server:reset-local`, then

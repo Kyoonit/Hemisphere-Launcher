@@ -66,6 +66,8 @@ async function upload(release, name, data, contentType) {
 
 async function main() {
   if (!token) fail('GH_TOKEN is missing: $env:GH_TOKEN = "<token>" first')
+  // A release always talks to the production server: a test address left in this terminal would ship to the staff
+  if (process.env.MAIN_VITE_HERALD_SERVER) fail('MAIN_VITE_HERALD_SERVER is set (a test build address): close this terminal or remove it, then run npm run herald:release again')
   const latestRes = await api('/releases/latest')
   if (!latestRes.ok && latestRes.status !== 404) fail(`GitHub answered ${latestRes.status} (${latestRes.status === 401 ? 'the token is wrong or expired' : latestRes.status === 403 ? 'the token lacks Contents: read and write on herald-releases' : 'try again later'})`)
   const last = latestRes.ok ? String((await latestRes.json()).tag_name).replace(/^v/, '') : null
