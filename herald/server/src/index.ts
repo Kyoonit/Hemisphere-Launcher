@@ -11,6 +11,9 @@
  *   POST /publish                publish the current state again (a failed run, a retry)
  *   …    /server/…               maintenances (planned, now, back online), daily restart, their history (S6)
  *   …    /pack…                  mod pack: proposals, approval by another member, config files (S10)
+ *   GET  /activity               the full shared journal (filters, older pages) (S11)
+ *   GET  /settings/history/<key> every version of a setting Herald edits (backgrounds, launcher settings, templates)
+ *   POST /templates/publications publication templates (S11)
  *   GET  /update/<file>          Herald app updates (signed-in staff only), from the private releases repository
  *   GET  /pulse                  PUBLIC: last sequence + commit; launchers read the feed at that exact commit (raw
  *                                 by commit is never cached, plain raw is cached up to 5 min): emergencies in minutes
@@ -30,6 +33,7 @@ import { githubConfigured, latestReleaseFile, startPublishWorkflow, type GithubE
 import { listedFiles, openKeys, sealFuture, type FeedDraft } from './feedV2'
 import { saveBackgrounds } from './backgrounds'
 import { savePublic } from './publicSettings'
+import { listActivity, savePublicationTemplates, settingsHistory } from './history'
 import { approvePack, getPack, packForJob, packJobFinished, proposePack, rejectPack, uploadPackFile, withdrawPack } from './pack'
 import { authenticate, bootstrap, createProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
 import * as pubs from './publications'
@@ -49,6 +53,8 @@ export interface Env extends GithubEnv {
   /** One-time secret to create the Owner and Developer profiles (removed afterwards) */
   BOOTSTRAP_TOKEN?: string
   DEV_TOKEN?: string
+  /** The version of this server that answers (wrangler.toml [version_metadata]) */
+  CF_VERSION?: { id: string; tag: string; timestamp: string }
 }
 
 type Job = { id: string; payload: string; status: string; sequence: number | null; commit_sha: string | null; error: string | null; pack_id: string | null }
@@ -60,7 +66,7 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const path = new URL(req.url).pathname
     try {
-      if (req.method === 'GET' && path === '/health') return json({ ok: true, env: env.HERALD_ENV, now: Date.now() })
+      if (req.method === 'GET' && path === '/health') return json({ ok: true, env: env.HERALD_ENV, version: env.CF_VERSION?.id ?? null, now: Date.now() })
       if (req.method === 'GET' && path === '/time') return json({ now: Date.now() })
       if (req.method === 'GET' && path === '/pulse') return await pulse(env)
       const staff = await staffRoute(req, env, path)
@@ -127,13 +133,14 @@ async function staffRoute(req: Request, env: Env, path: string): Promise<Respons
   if (req.method === 'POST' && path === '/login') return json(await login(env, await body()))
   const profile = path.match(/^\/profiles\/(p-[a-z0-9-]{1,20})(\/code)?$/)
   const update = path.match(/^\/update\/(latest\.yml|Herald-Setup-\d+\.\d+\.\d+\.exe)$/)
-  if (!['/me', '/logout', '/sync', '/profiles'].includes(path) && !profile && !update) return null
+  if (!['/me', '/logout', '/sync', '/profiles', '/activity'].includes(path) && !profile && !update) return null
   const actor = await authenticate(env, req)
   // Herald's own updates: only for signed-in staff, from the private releases repository
   if (req.method === 'GET' && update) return githubConfigured(env) ? await latestReleaseFile(env, env.HERALD_RELEASES_REPO, update[1]) : json({ error: 'not available' }, 404)
   if (req.method === 'GET' && path === '/me') return json((await sync(env, actor)).me)
   if (req.method === 'POST' && path === '/logout') return json(await logout(env, req, actor).then(() => ({ ok: true })))
   if (req.method === 'GET' && path === '/sync') return json(await sync(env, actor))
+  if (req.method === 'GET' && path === '/activity') return json(await listActivity(env.DB, new URL(req.url)))
   if (req.method === 'GET' && path === '/profiles') return json(await listProfiles(env, actor))
   if (req.method === 'POST' && path === '/profiles') return json(await createProfile(env, actor, await body()))
   if (req.method === 'PATCH' && profile && !profile[2]) return json(await updateProfile(env, actor, profile[1], await body()))
@@ -217,8 +224,9 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
   const image = path.match(/^\/images\/([0-9a-f]{64})$/)
   const maintenance = path.match(/^\/server\/maintenances\/(m-[a-z0-9]{10})\/delete$/)
   const packAction = path.match(/^\/pack\/proposals\/(k-[a-z0-9]{10})\/(approve|reject|withdraw)$/)
-  const serverPaths = ['/pack', '/pack/proposals', '/pack/files', '/backgrounds', '/settings/public', '/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history']
-  if (path !== '/publications' && path !== '/images' && path !== '/publish' && !one && !image && !maintenance && !packAction && !serverPaths.includes(path)) return null
+  const history = path.match(/^\/settings\/history\/(backgrounds|public|templates\.publications)$/)
+  const serverPaths = ['/templates/publications', '/pack', '/pack/proposals', '/pack/files', '/backgrounds', '/settings/public', '/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history']
+  if (path !== '/publications' && path !== '/images' && path !== '/publish' && !one && !image && !maintenance && !packAction && !history && !serverPaths.includes(path)) return null
   const actor = await authenticate(env, req)
   const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
   const run = publisher(env, ctx, actor)
@@ -238,6 +246,9 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
   if (req.method === 'POST' && path === '/server/back-online') return json(await server.backOnline(env, actor, run))
   if (req.method === 'POST' && path === '/settings/public') return json(await savePublic(env, actor, await body(), run))
   if (req.method === 'POST' && path === '/backgrounds') return json(await saveBackgrounds(env, actor, await body(), run))
+  // Traceability (S11)
+  if (req.method === 'GET' && history) return json(await settingsHistory(env.DB, actor, history[1]))
+  if (req.method === 'POST' && path === '/templates/publications') return json(await savePublicationTemplates(env.DB, actor, await body()))
   // Mod pack (S10)
   if (req.method === 'GET' && path === '/pack') return json(await getPack(env, actor))
   if (req.method === 'POST' && path === '/pack/proposals') return json(await proposePack(env, actor, await body()))

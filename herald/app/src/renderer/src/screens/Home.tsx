@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react'
 import { newerReleases } from '@shared/heraldPack'
 
 /** What needs someone, for everyone in Herald (no alert outside Herald) */
-function attention(pubs: Publication[], now: number, zone: string): { pub: Publication; why: string }[] {
+export function attention(pubs: Publication[], now: number, zone: string): { pub: Publication; why: string }[] {
   const out: { pub: Publication; why: string }[] = []
   for (const p of pubs) {
     if (p.deletedAt) continue

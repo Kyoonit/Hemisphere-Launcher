@@ -11,6 +11,7 @@ import en from '@locales/en.json'
 import { usePubs } from '../pubs'
 import { useStore } from '../store'
 import { ZonePicker } from '../components/ui'
+import { SettingHistory } from '../components/SettingHistory'
 import { formatBytes, PICTURE_SIZES, prepareWebp, usePicture, usePictures } from '../pictures'
 import { formatDay, toWallInput, zoneLabel } from '../time'
 import { LauncherPreview } from '../preview/LauncherPreview'
@@ -28,6 +29,7 @@ export default function Backgrounds() {
   const [selected, setSelected] = useState<string>(ALL_YEAR)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [history, setHistory] = useState(false)
   const dirty = !!state && !!draft && JSON.stringify(draft) !== JSON.stringify(state.backgrounds)
 
   // Someone else published meanwhile: take it, unless there are changes here
@@ -70,6 +72,9 @@ export default function Backgrounds() {
           <h1 className="text-[26px] font-extrabold text-white">Backgrounds</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <button className="btn btn-ghost" onClick={() => setHistory(true)}>
+            History
+          </button>
           {dirty && <span className="text-sm text-amber-300">Changes not published yet</span>}
           {dirty && (
             <button className="btn btn-ghost" disabled={busy} onClick={() => (setDraft(state.backgrounds), setError(null))}>
@@ -81,6 +86,24 @@ export default function Backgrounds() {
           </button>
         </div>
       </div>
+      {history && (
+        <SettingHistory<BackgroundsData>
+          setting="backgrounds"
+          title="Backgrounds: every version"
+          onClose={() => setHistory(false)}
+          onLoad={(v) => setDraft(v)}
+          describe={(v, prev) => {
+            const names = (b: BackgroundsData | null) => new Map((b?.periods ?? []).map((x) => [x.id, x]))
+            const [now, before] = [names(v), names(prev)]
+            const lines = [
+              ...[...now.values()].filter((x) => !before.has(x.id)).map((x) => `${x.name} added`),
+              ...[...before.values()].filter((x) => !now.has(x.id)).map((x) => `${x.name} removed`),
+              ...[...now.values()].filter((x) => before.has(x.id) && JSON.stringify(before.get(x.id)) !== JSON.stringify(x)).map((x) => `${x.name} changed`),
+            ]
+            return prev ? lines.join(', ') || 'no visible change' : `${v.periods.length} period${v.periods.length === 1 ? '' : 's'}`
+          }}
+        />
+      )}
       {stale && dirty && <p className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">Someone published other background changes meanwhile: undo yours and redo them on the new version.</p>}
       {error && <p className="mb-3 rounded-lg border border-red-400/30 bg-red-600/10 px-3 py-2 text-sm text-red-300">{error}</p>}
       {problems.length > 0 && <p className="mb-3 rounded-lg border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-sm text-amber-200">{problems.join(' ')}</p>}

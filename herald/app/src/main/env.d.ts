@@ -6,3 +6,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/** A file's text, bundled at build time (Vite) */
+declare module '*?raw' {
+  const text: string
+  export default text
+}

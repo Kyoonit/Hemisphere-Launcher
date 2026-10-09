@@ -26,5 +26,10 @@ migrations_dir = "migrations"
 [triggers]
 crons = ["* * * * *"]
 
+# Which version of the server answered (GET /health): a deployment takes a few seconds to reach every Cloudflare
+# location, meanwhile some requests are still answered by the previous version
+[version_metadata]
+binding = "CF_VERSION"
+
 [observability]
 enabled = true

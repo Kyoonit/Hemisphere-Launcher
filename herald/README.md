@@ -44,6 +44,9 @@ npm run herald:e2e -- https://herald-staging.hemisphere-launcher.workers.dev    
 npm run herald:e2e-v2 -- https://herald-staging.hemisphere-launcher.workers.dev 4              # schema 2 + a vault opening in 4 min
 ```
 
+Apply a new migration BEFORE deploying the code that needs it (a failed migration must stop the deploy). `GET /health`
+says which version of the server answers (`version`): test a new route only once it shows the version just deployed.
+
 Server secrets (`npx wrangler secret put <NAME> --config herald/server/wrangler.toml`): `VAULT_MASTER`,
 `PUBLISHER_TOKEN`, `DEV_TOKEN`, `GITHUB_APP_ID`, `GITHUB_APP_KEY`, `GITHUB_INSTALLATION_ID` (values in
 `herald/server/.dev.vars`). **No `SIGNING_KEY` on the server.**
@@ -197,3 +200,19 @@ The pack keeps its format (`src/shared/manifest.ts`); Herald builds the whole ne
   the content repository BEFORE the first Herald pack (previous versions and sequence carry over).
 - `npm run content:publish` still works (fallback), but once Herald publishes the pack, launchers read Herald's.
 - Tests: `tests/herald-pack.test.ts`.
+
+## Traceability and comfort (phase S11)
+
+- **Journal** (Team → Activity): every action kept for good, filtered by person and by area, older pages on demand
+  (`GET /activity`, `herald/server/src/history.ts`); a line about a publication opens it.
+- **Versions**: in a publication's History, click a version to read it and "Bring back this version" (a new version,
+  recorded as such). Backgrounds and Launcher settings have a History button (`GET /settings/history/<key>`): who
+  changed what, and for backgrounds "Load this version" before publishing.
+- **Trash** (Team → Trash): deleted publications and removed Home background periods, each restorable.
+- **Templates**: "Save as template" in a publication (texts and settings, no dates); "+ New" offers them (an event
+  keeps its weekday and time). Kept in `settings` ('templates.publications', every version kept).
+- **Reminders**: Home's "Needs attention" (drafts untouched, drafts due soon, reviews, translations, the mod pack) and
+  a count on the Home tab, seen from every tab.
+- **Online now** (Preview → Online now): what launchers really get, read like a launcher (feed at the pulse's commit,
+  signature checked, vaults whose time has come opened, pictures from GitHub), with the GitHub cache and the mod pack.
+- Tests: `tests/herald-history.test.ts`.

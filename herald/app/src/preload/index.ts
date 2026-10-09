@@ -33,6 +33,7 @@ const bridge: HeraldBridge = {
     checkDiscord: (id) => ipcRenderer.invoke('launcher:checkDiscord', id),
     latest: () => ipcRenderer.invoke('launcher:latest'),
   },
+  online: () => ipcRenderer.invoke('online:state'),
   pack: {
     online: (base) => ipcRenderer.invoke('pack:online', base),
     search: (query, minecraft) => ipcRenderer.invoke('pack:search', query, minecraft),

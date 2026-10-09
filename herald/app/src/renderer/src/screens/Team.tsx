@@ -3,8 +3,8 @@ import type { Profile } from '@herald/api'
 import { effectivePermissions, PERMISSIONS, ROLE_DEFAULTS, ROLE_LABEL, ROLE_RANK, ROLES, NEVER_FOR_LODGE_KEEPERS, type Permission, type Role } from '@shared/heraldRoles'
 import { useStore } from '../store'
 import { Avatar, Modal } from '../components/ui'
-import { describe } from '../activity'
-import { ago, formatDay, formatTime } from '../time'
+import { Journal, Trash } from './Journal'
+import { ago } from '../time'
 
 const GROUPS: { role: Role; title: string; note?: string }[] = [
   { role: 'owner', title: 'Owner' },
@@ -14,10 +14,10 @@ const GROUPS: { role: Role; title: string; note?: string }[] = [
   { role: 'lodgeKeeper', title: 'Lodge keepers', note: 'not staff: articles and events only' },
 ]
 
-export default function Team() {
-  const { sync, can, zone, refresh } = useStore()
+export default function Team({ onOpen }: { onOpen(id: string): void }) {
+  const { sync, can, refresh } = useStore()
   const manage = can('profiles.manage')
-  const [view, setView] = useState<'people' | 'activity'>('people')
+  const [view, setView] = useState<'people' | 'activity' | 'trash'>('people')
   const [all, setAll] = useState<Profile[] | null>(null)
   const [editing, setEditing] = useState<Profile | null>(null)
   const [creating, setCreating] = useState(false)
@@ -52,7 +52,7 @@ export default function Team() {
         )}
       </div>
       <div className="mb-4 flex gap-1 border-b border-gray-700">
-        {(['people', 'activity'] as const).map((v) => (
+        {(['people', 'activity', 'trash'] as const).map((v) => (
           <button key={v} className={`-mb-px border-b-2 px-3.5 py-2 text-sm font-semibold capitalize ${view === v ? 'border-green-400 text-white' : 'border-transparent text-gray-400'}`} onClick={() => setView(v)}>
             {v}
           </button>
@@ -84,21 +84,8 @@ export default function Team() {
           )
         })}
 
-      {view === 'activity' && (
-        <div className="card p-2">
-          {(sync?.activity ?? []).map((a) => (
-            <div key={a.id} className="flex items-center gap-2.5 border-t border-gray-700/50 px-2 py-2 text-sm first:border-0">
-              <Avatar name={a.who ?? '?'} size={24} />
-              <span>
-                <b className="text-white">{a.who ?? 'Someone'}</b> {describe(a)}
-              </span>
-              <span className="ml-auto text-xs text-gray-400">
-                {formatDay(a.at, zone)} {formatTime(a.at, zone)}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      {view === 'activity' && <Journal onOpen={onOpen} />}
+      {view === 'trash' && <Trash onOpen={onOpen} />}
 
       {creating && <NewProfile onClose={() => setCreating(false)} onCreated={(name, c) => (setCreating(false), setCode({ name, code: c }), void done())} />}
       {editing && <EditProfile profile={editing} onClose={() => setEditing(null)} onChanged={() => (setEditing(null), void done())} onCode={(c) => (setEditing(null), setCode({ name: editing.name, code: c }))} />}

@@ -13,6 +13,7 @@ import { getPublic } from './publicSettings'
 import { backgroundItems } from '../../../src/shared/heraldBackgrounds.ts'
 import { sha256Hex, sha512Hex } from './crypto'
 import { openKeys, sealFuture } from './feedV2'
+import { getPublicationTemplates } from './history'
 
 export interface PublicationsEnv {
   DB: D1Database
@@ -97,6 +98,7 @@ export async function listPublications(env: PublicationsEnv, actor: Actor) {
       const pub = await getPublic(env.DB)
       return { backgrounds: b.backgrounds, backgroundsVersion: b.version, publicSettings: pub }
     })()),
+    publicationTemplates: await getPublicationTemplates(env.DB),
     maintenanceTemplates: JSON.parse((await env.DB.prepare("SELECT value FROM settings WHERE key = 'templates.maintenance'").first<{ value: string }>())?.value ?? JSON.stringify(DEFAULT_MAINTENANCE_TEMPLATES)),
     baseVersion: (await env.DB.prepare("SELECT updated_at FROM settings WHERE key = 'feed.base'").first<{ updated_at: number }>())?.updated_at ?? 0,
     jobs,
@@ -163,14 +165,20 @@ export async function createPublication(env: PublicationsEnv, actor: Actor, body
   return load(env, actor, id)
 }
 
-export async function savePublication(env: PublicationsEnv, actor: Actor, id: string, body: { version?: unknown; data?: unknown }) {
+/** body.revertedFrom: the data comes from that older version ("Bring back this version"): recorded as such */
+export async function savePublication(env: PublicationsEnv, actor: Actor, id: string, body: { version?: unknown; data?: unknown; revertedFrom?: unknown }) {
   const p = await load(env, actor, id)
   need(actor, WRITE[p.kind], `edit a ${p.kind}`)
   if (p.deletedAt) throw new HttpError(409, 'This publication is in the trash: restore it first.')
   if (p.status === 'ready') throw new HttpError(423, 'This publication is Ready and locked: reopen it to change it.')
   const parsed = PublicationDataSchema.safeParse(body.data)
   if (!parsed.success) throw new HttpError(400, parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join(' · '))
-  const next = await commit(env, actor, p, body.version, { data: parsed.data }, 'save')
+  const reverted = typeof body.revertedFrom === 'number' && Number.isInteger(body.revertedFrom) && body.revertedFrom > 0 ? body.revertedFrom : null
+  const next = await commit(env, actor, p, body.version, { data: parsed.data }, reverted ? 'revert' : 'save')
+  if (reverted) {
+    await logActivity(env.DB, actor.profile.id, 'publication.revert', id, { kind: p.kind, title: title(next), version: reverted })
+    return next
+  }
   // One journal line per person and publication every 10 minutes (an editing session, not every keystroke)
   const recent = await env.DB.prepare("SELECT 1 FROM activity WHERE profile_id = ?1 AND target = ?2 AND action = 'publication.edit' AND at > ?3").bind(actor.profile.id, id, Date.now() - 600_000).first()
   if (!recent) await logActivity(env.DB, actor.profile.id, 'publication.edit', id, { kind: p.kind, title: title(next) })

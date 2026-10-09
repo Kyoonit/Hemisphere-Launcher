@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react'
 import { usePubs } from '../pubs'
 import { useStore } from '../store'
 import { Modal } from '../components/ui'
+import { SettingHistory } from '../components/SettingHistory'
+import type { PublicSettings } from '@shared/heraldPublic'
 import { formatWhen } from '../time'
 
 /** The first launcher that reads Herald's content (schema 2: scheduling, vaults, banner, events…) */
@@ -31,6 +33,7 @@ export default function LauncherSettings() {
   const [confirm, setConfirm] = useState<null | 'new' | 'builtIn'>(null)
   const [shownCode, setShownCode] = useState<string | null>(null)
   const [latest, setLatest] = useState<string | null | undefined>(undefined)
+  const [history, setHistory] = useState(false)
 
   // The fields follow the published settings (until edited)
   const key = JSON.stringify(pub?.settings ?? null)
@@ -78,10 +81,32 @@ export default function LauncherSettings() {
 
   return (
     <div className="animate-fade max-w-3xl">
-      <div className="mb-4">
-        <div className="eyebrow">Published in every launcher</div>
-        <h1 className="text-[26px] font-extrabold text-white">Launcher settings</h1>
+      <div className="mb-4 flex items-end">
+        <div>
+          <div className="eyebrow">Published in every launcher</div>
+          <h1 className="text-[26px] font-extrabold text-white">Launcher settings</h1>
+        </div>
+        <button className="btn btn-ghost ml-auto" onClick={() => setHistory(true)}>
+          History
+        </button>
       </div>
+      {history && (
+        <SettingHistory<PublicSettings>
+          setting="public"
+          title="Launcher settings: every version"
+          onClose={() => setHistory(false)}
+          describe={(v, prev, action) =>
+            action === 'settings.staffCode'
+              ? v.staffCode
+                ? 'made a new staff code'
+                : 'back to the built-in staff code'
+              : [
+                  ...(!prev || JSON.stringify(prev.support) !== JSON.stringify(v.support) ? [`support: ${v.support?.url ?? 'the Discord invite'}${v.support?.howTo?.en ? ` (“${v.support.howTo.en}”)` : ''}`] : []),
+                  ...(!prev || prev.discordAppId !== v.discordAppId ? [`Discord id: ${v.discordAppId ?? 'none'}`] : []),
+                ].join(' · ') || 'no visible change'
+          }
+        />
+      )}
       {error && <p className="mb-3 rounded-lg border border-red-400/30 bg-red-600/10 px-3 py-2 text-sm text-red-300">{error}</p>}
 
       <div className="card mb-4">

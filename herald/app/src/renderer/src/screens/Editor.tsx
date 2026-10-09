@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PublicationDetail } from '@herald/api'
-import { FIELDS, KIND_LABEL, LIMITS, TEXT_LANGUAGES, WRITE_PERMISSION, languageName, languagesOut, problems, type Publication, type PublicationData } from '@shared/heraldPublications'
+import { FIELDS, KIND_LABEL, LIMITS, TEXT_LANGUAGES, WRITE_PERMISSION, languageName, languagesOut, problems, toTemplateData, type Publication, type PublicationData, type PublicationTemplate } from '@shared/heraldPublications'
 import { usePubs, shown, shownFrom, SHOWN, pendingChanges, titleOf } from '../pubs'
 import { EventWhen, LinkField } from './EventFields'
 import { nextOccurrence, repeatLabel } from '../eventTimes'
@@ -32,6 +32,7 @@ export default function Editor({ id, onClose }: { id: string; onClose(): void })
   const [detail, setDetail] = useState<PublicationDetail | null>(null)
   const [side, setSide] = useState<'preview' | 'comments' | 'history'>('preview')
   const [confirm, setConfirm] = useState<null | 'publish' | 'unpublish' | 'delete'>(null)
+  const [templating, setTemplating] = useState(false)
 
   // Someone else saved (or a status changed): take it, unless we have unsaved changes
   useEffect(() => {
@@ -103,6 +104,18 @@ export default function Editor({ id, onClose }: { id: string; onClose(): void })
     setData(next.data)
     setDirty(false)
   }
+  /** "Bring back this version": its content becomes the current one (a new version, recorded as such) */
+  const bringBack = async (version: number, old: PublicationData) => {
+    setBusy(true)
+    setError(null)
+    const res = await act<Publication>('PATCH', `/publications/${id}`, { version: pub.version, data: old, revertedFrom: version })
+    setBusy(false)
+    if (!res.ok) return setError(res.error)
+    setPub(res.data)
+    setData(res.data.data)
+    setDirty(false)
+    void loadDetail()
+  }
   const reload = async () => {
     const res = await window.herald.api<PublicationDetail>('GET', `/publications/${id}`)
     if (!res.ok) return
@@ -131,7 +144,13 @@ export default function Editor({ id, onClose }: { id: string; onClose(): void })
         {pub.published && state0 !== 'deleted' && pub.status !== 'ready' && <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${SHOWN[pub.status].tone}`}>Changes: {SHOWN[pub.status].label}</span>}
         {pendingChanges(pub) && pub.status === 'ready' && <span className="text-xs text-amber-400">Changes not published yet</span>}
         <span className="ml-auto text-xs text-gray-400">{saving === 'saving' ? 'Saving…' : saving === 'saved' && !dirty ? 'Saved' : dirty ? 'Not saved yet' : ''}</span>
+        {can('templates.write') && !pub.deletedAt && (
+          <button className="btn btn-ghost btn-sm" onClick={() => setTemplating(true)}>
+            Save as template
+          </button>
+        )}
       </div>
+      {templating && <SaveTemplate kind={pub.kind} data={data} onClose={() => setTemplating(false)} />}
 
       {otherEditor && (
         <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">
@@ -201,7 +220,7 @@ export default function Editor({ id, onClose }: { id: string; onClose(): void })
           </div>
           {side === 'preview' && <EditorPreview pub={pub} data={data} />}
           {side === 'comments' && <Comments id={id} detail={detail} onPosted={setDetail} />}
-          {side === 'history' && <History detail={detail} />}
+          {side === 'history' && <History id={id} detail={detail} current={pub.version} editable={editable && !busy} onBring={(v, d) => void bringBack(v, d)} />}
         </div>
       </div>
 
@@ -651,24 +670,85 @@ function Comments({ id, detail, onPosted }: { id: string; detail: PublicationDet
 
 const ACTION: Record<string, string> = { create: 'created', save: 'edited', status: 'changed the status to', publish: 'published', unpublish: 'took it down', delete: 'moved it to the trash', restore: 'restored it' }
 
-function History({ detail }: { detail: PublicationDetail | null }) {
+function History({ id, detail, current, editable, onBring }: { id: string; detail: PublicationDetail | null; current: number; editable: boolean; onBring(version: number, data: PublicationData): void }) {
+  const [open, setOpen] = useState<{ version: number; data: PublicationData } | null>(null)
   // One line per editing session: consecutive saves by the same person are grouped
   const rows = (detail?.versions ?? []).filter((v, i, all) => !(v.action === 'save' && all[i + 1]?.action === 'save' && all[i + 1]?.who === v.who))
+  const look = async (version: number) => {
+    if (open?.version === version) return setOpen(null)
+    const res = await window.herald.api<{ data: PublicationData }>('GET', `/publications/${id}/versions/${version}`)
+    if (res.ok) setOpen({ version, data: res.data.data })
+  }
   return (
     <div className="flex flex-col">
       {rows.map((v) => (
-        <div key={v.version} className="flex items-center gap-2.5 border-t border-gray-700/50 py-2 text-sm first:border-0">
-          <Avatar name={v.who ?? '?'} size={22} />
-          <span>
-            <b className="text-white">{v.who ?? 'Someone'}</b> {ACTION[v.action] ?? v.action}
-            {v.action === 'status' ? ` ${SHOWN[v.status].label}` : ''}
-          </span>
-          <span className="ml-auto text-xs text-gray-400">
-            v{v.version} · {ago(v.at)}
-          </span>
+        <div key={v.version} className="border-t border-gray-700/50 first:border-0">
+          <button className="flex w-full items-center gap-2.5 py-2 text-left text-sm hover:bg-gray-700/30" onClick={() => void look(v.version)}>
+            <Avatar name={v.who ?? '?'} size={22} />
+            <span>
+              <b className="text-white">{v.who ?? 'Someone'}</b> {ACTION[v.action] ?? v.action}
+              {v.action === 'status' ? ` ${SHOWN[v.status].label}` : ''}
+            </span>
+            <span className="ml-auto text-xs text-gray-400">
+              v{v.version} · {ago(v.at)}
+            </span>
+          </button>
+          {open?.version === v.version && (
+            <div className="mb-2 rounded-lg bg-gray-900/60 p-3 text-sm">
+              {Object.entries(open.data.texts).map(([lang, t]) => (
+                <div key={lang} className="mb-2">
+                  <div className="text-[10.5px] font-bold tracking-wider text-gray-500 uppercase">{languageName(lang)}</div>
+                  {Object.entries(t).map(([field, text]) => (
+                    <p key={field} className="whitespace-pre-wrap text-gray-200">
+                      <span className="text-gray-500">{field}: </span>
+                      {text}
+                    </p>
+                  ))}
+                </div>
+              ))}
+              {v.version === current ? (
+                <p className="text-xs text-gray-500">This is the current version.</p>
+              ) : editable ? (
+                <button className="btn btn-sm" onClick={() => (onBring(v.version, open.data), setOpen(null))}>
+                  Bring back this version
+                </button>
+              ) : (
+                <p className="text-xs text-gray-500">To bring it back, the publication must be editable (not Ready, not in the trash).</p>
+              )}
+            </div>
+          )}
         </div>
       ))}
-      <p className="mt-2 text-xs text-gray-500">Every version is kept for good, deleted publications included.</p>
+      <p className="mt-2 text-xs text-gray-500">Every version is kept for good, deleted publications included. Click one to read it or bring it back.</p>
     </div>
+  )
+}
+
+/** "Save as template": texts and settings without dates, reused from + New */
+function SaveTemplate({ kind, data, onClose }: { kind: Publication['kind']; data: PublicationData; onClose(): void }) {
+  const { state, act } = usePubs()
+  const [name, setName] = useState(titleOf(data).slice(0, 40))
+  const [error, setError] = useState<string | null>(null)
+  const save = async () => {
+    const t: PublicationTemplate = { id: `t-${[...crypto.getRandomValues(new Uint8Array(8))].map((b) => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('')}`, name: name.trim(), kind, data: toTemplateData(data) }
+    const res = await act('POST', '/templates/publications', { templates: [...(state?.publicationTemplates ?? []), t], change: `${t.name} added` })
+    if (!res.ok) return setError(res.error)
+    onClose()
+  }
+  return (
+    <Modal title="Save as a template" onClose={onClose}>
+      <p className="mb-3 text-sm text-gray-300">Texts, languages and settings are kept, not the dates. “+ New” then offers it to everyone.</p>
+      <label className="label">Name</label>
+      <input className="field mb-3" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+      {error && <p className="mb-3 text-sm text-red-300">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button className="btn btn-ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button className="btn btn-primary" disabled={!name.trim()} onClick={() => void save()}>
+          Save
+        </button>
+      </div>
+    </Modal>
   )
 }

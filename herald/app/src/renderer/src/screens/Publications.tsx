@@ -1,7 +1,7 @@
 /** News, events, banners and welcome messages: the list (filters, trash) or the calendar, "New", and the editor of the one opened. */
 import { useEffect, useRef, useState } from 'react'
 import type { Publication } from '@herald/api'
-import { KIND_LABEL, PUBLICATION_KINDS, WRITE_PERMISSION, languagesOut, type PublicationKind } from '@shared/heraldPublications'
+import { fromTemplate, KIND_LABEL, PUBLICATION_KINDS, WRITE_PERMISSION, languagesOut, type PublicationKind, type PublicationTemplate } from '@shared/heraldPublications'
 import { usePubs, shown, SHOWN, pendingChanges, titleOf, type Shown } from '../pubs'
 import { useStore } from '../store'
 import { Avatar } from '../components/ui'
@@ -53,9 +53,10 @@ export default function Publications({ open, onOpen }: { open: string | null; on
   const name = (id: string | null) => people.find((p) => p.id === id)?.name ?? '?'
   const rows = state.publications.filter((p) => (kind === 'all' || p.kind === kind) && STATE_FILTERS.find((f) => f.id === filter)!.match(shown(p, now)))
   const creatable = PUBLICATION_KINDS.filter((k) => can(WRITE[k]))
-  const create = async (k: PublicationKind) => {
+  const templates = (state.publicationTemplates ?? []).filter((t) => creatable.includes(t.kind))
+  const create = async (k: PublicationKind, template?: PublicationTemplate) => {
     setMenu(false)
-    const res = await act<Publication>('POST', '/publications', { kind: k, zone })
+    const res = await act<Publication>('POST', '/publications', { kind: k, zone, ...(template ? { data: fromTemplate(template, zone) } : {}) })
     if (res.ok) onOpen(res.data.id)
     else setError(res.error)
   }
@@ -87,6 +88,23 @@ export default function Publications({ open, onOpen }: { open: string | null; on
                       {KIND_LABEL[k]}
                       <span className="block text-xs text-gray-400">{NEW_HINT[k]}</span>
                     </button>
+                  ))}
+                  {templates.length > 0 && <div className="mt-1 border-t border-gray-700 px-3 pt-2 pb-1 text-[10.5px] font-bold tracking-wider text-gray-500 uppercase">From a template</div>}
+                  {templates.map((t) => (
+                    <div key={t.id} className="flex items-center hover:bg-gray-700">
+                      <button className="min-w-0 flex-1 truncate px-3 py-1.5 text-left text-sm text-gray-200" onClick={() => void create(t.kind, t)}>
+                        {t.name} <span className="text-xs text-gray-400">· {KIND_LABEL[t.kind]}</span>
+                      </button>
+                      {can('templates.write') && (
+                        <button
+                          className="px-2 text-xs text-gray-500 hover:text-red-300"
+                          title="Remove this template"
+                          onClick={() => void act('POST', '/templates/publications', { templates: (state.publicationTemplates ?? []).filter((x) => x.id !== t.id), change: `${t.name} removed` })}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}

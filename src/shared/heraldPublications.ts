@@ -332,3 +332,41 @@ export const DEFAULT_MAINTENANCE_TEMPLATES: MessageTemplate[] = [
   { id: 't-update', name: 'Server update', text: 'Server update in progress: back soon with new content!' },
   { id: 't-planned', name: 'Planned maintenance', text: 'Planned maintenance: the server will be closed for a while.' },
 ]
+
+// ------------------------------------------------------------------------------------------------ templates (S11)
+
+/** A ready-made publication ("Build contest", "Weekly build night"…): texts and settings, no dates */
+export const PublicationTemplateSchema = z.object({
+  id: z.string().regex(/^t-[a-z0-9]{8}$/),
+  name: z.string().trim().min(1).max(40),
+  kind: z.enum(PUBLICATION_KINDS),
+  data: PublicationDataSchema,
+})
+export type PublicationTemplate = z.infer<typeof PublicationTemplateSchema>
+export const PublicationTemplatesSchema = z.array(PublicationTemplateSchema).max(50)
+
+/** What a template keeps from a publication: everything but its dates (and finished translations stay finished) */
+export function toTemplateData(data: PublicationData): PublicationData {
+  return { ...data, schedule: { from: null, until: null, zone: data.schedule.zone }, ...(data.event ? { event: { ...data.event, repeat: data.event.repeat ? { ...data.event.repeat, until: null } : null } } : {}) }
+}
+
+/** A new publication from a template: no dates; an event keeps its weekday and time, on its next date at least a day away */
+export function fromTemplate(t: PublicationTemplate, zone: string, now = Date.now()): PublicationData {
+  const data: PublicationData = { ...t.data, schedule: { from: null, until: null, zone: t.data.schedule.zone || zone } }
+  if (data.event) {
+    let start = Date.parse(data.event.start)
+    if (start < now + 86_400_000) start += Math.ceil((now + 86_400_000 - start) / (7 * 86_400_000)) * 7 * 86_400_000
+    data.event = { ...data.event, start: new Date(start).toISOString() }
+  }
+  return data
+}
+
+/** Journal areas (filter of the full journal) → action prefixes */
+export const ACTIVITY_AREAS = {
+  publications: ['publication.'],
+  server: ['maintenance.', 'restart.', 'templates.'],
+  pack: ['pack.'],
+  settings: ['settings.', 'backgrounds.'],
+  team: ['profile.', 'session.'],
+} as const
+export type ActivityArea = keyof typeof ACTIVITY_AREAS

@@ -7,7 +7,7 @@ import Home from './screens/Home'
 import Team from './screens/Team'
 import MySettings from './screens/MySettings'
 import Publications from './screens/Publications'
-import TimeTravel from './screens/TimeTravel'
+import Preview from './screens/Preview'
 import Server from './screens/Server'
 import Backgrounds from './screens/Backgrounds'
 import LauncherSettings from './screens/LauncherSettings'
@@ -55,11 +55,11 @@ function Shell({ staging }: { staging: boolean }) {
       <main className="min-h-0 flex-1 overflow-auto px-7 py-6">
         {shown === 'home' && <Home onOpen={goPub} onPack={() => setTab('pack')} />}
         {shown === 'publications' && <Publications open={openPub} onOpen={setOpenPub} />}
-        {shown === 'preview' && <TimeTravel />}
+        {shown === 'preview' && <Preview />}
         {shown === 'server' && <Server />}
         {shown === 'backgrounds' && <Backgrounds />}
         {shown === 'pack' && <Pack />}
-        {shown === 'team' && <Team />}
+        {shown === 'team' && <Team onOpen={goPub} />}
         {shown === 'settings' && <MySettings />}
         {shown === 'launcher' && <LauncherSettings />}
         {COMING[shown] && (

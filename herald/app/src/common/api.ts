@@ -1,6 +1,8 @@
 /** What the preload script exposes to Herald's interface (window.herald). The session token never leaves main. */
 import type { Permission, Role } from '@shared/heraldRoles'
-import type { FeedBase, ImageRef, MessageTemplate, Publication, PublicationData, Status } from '@shared/heraldPublications'
+import type { FeedBase, ImageRef, MessageTemplate, Publication, PublicationData, PublicationTemplate, Status } from '@shared/heraldPublications'
+import type { FeedV2 } from '@shared/feedV2'
+import type { OpenedItems } from '@shared/schedule'
 import type { Backgrounds } from '@shared/heraldBackgrounds'
 import type { PublicSettings } from '@shared/heraldPublic'
 import type { ClientManifest, ContentIndex } from '@shared/manifest'
@@ -60,6 +62,8 @@ export interface PublicationsState {
   jobs: PublishJob[]
   /** Version of `base`: sent back by the Server tab (a change based on an older one is refused) */
   baseVersion: number
+  /** Ready-made publications ("Build contest"…) */
+  publicationTemplates: PublicationTemplate[]
   /** Ready-made maintenance messages */
   maintenanceTemplates: MessageTemplate[]
   /** Home pictures by period, and their version (a change based on an older one is refused) */
@@ -95,6 +99,32 @@ export interface PackVersion {
   number: string
   type: 'release' | 'beta' | 'alpha'
   date: string | null
+}
+
+/** What launchers really get now (S11): the feed at the commit the pulse gives, checked like a launcher does */
+export interface OnlineState {
+  checkedAt: number
+  pulse: { sequence: number; commit: string | null } | null
+  /** The feed at that commit (null: none, or unreadable: see error) */
+  feed: FeedV2 | null
+  /** Signature checked with the content key of this environment */
+  signed: boolean
+  error: string | null
+  /** Vaults whose time has come, opened like a launcher opens them */
+  opened: OpenedItems
+  /** Vault pictures opened (their SHA-512 → bytes) */
+  pictures: Record<string, Uint8Array>
+  /** Where the feed's files are (pictures in clear) */
+  base: string | null
+  /** What GitHub's plain address still serves (cached up to 5 min): launchers that missed the pulse read this */
+  branchSequence: number | null
+  /** The mod pack online */
+  pack: { clientVersion: string; minecraft: string; sequence: number } | null
+}
+
+export interface ActivityPage {
+  entries: ActivityEntry[]
+  more: boolean
 }
 
 export interface PublicationDetail {
@@ -136,6 +166,8 @@ export interface HeraldBridge {
     /** The launcher version players get today (latest GitHub release) */
     latest(): Promise<string | null>
   }
+  /** What launchers really get now (S11) */
+  online(): Promise<OnlineState>
   /** Mod pack (S10): Modrinth is read from this PC; the server only keeps the proposals */
   pack: {
     online(contentBase: string): Promise<OnlinePack | null>

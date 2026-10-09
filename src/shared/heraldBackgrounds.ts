@@ -83,3 +83,19 @@ export function backgroundItems(b: Backgrounds, now: number): Record<string, unk
   }
   return out.slice(0, 60)
 }
+
+/**
+ * Periods no longer in the backgrounds (S11 trash), each as it last was, from the setting's versions (newest first):
+ * when it was removed and by whom (the version right after its last one).
+ */
+export function removedPeriods(current: Backgrounds, versions: { at: number; who: string | null; value: Backgrounds }[]): { period: BackgroundPeriod; removedAt: number; by: string | null }[] {
+  const out = new Map<string, { period: BackgroundPeriod; removedAt: number; by: string | null }>()
+  for (let i = 0; i < versions.length; i++) {
+    for (const p of versions[i].value.periods) {
+      if (p.id === ALL_YEAR || current.periods.some((c) => c.id === p.id) || out.has(p.id)) continue
+      const removal = versions[i - 1]
+      out.set(p.id, { period: p, removedAt: removal?.at ?? versions[i].at, by: removal?.who ?? null })
+    }
+  }
+  return [...out.values()]
+}

@@ -591,3 +591,27 @@ Retours du propriétaire (S6) :
 | Launcher de test | Pack de test 1.0.3 lu et vérifié (clé de test) dans son propre dossier ; le cache du vrai launcher est resté sur 1.0.2 |
 | Launcher normal | Le dépôt `hemisphere-content` n'existe pas encore (404) : le pack est lu à l'ancienne adresse, sans erreur |
 | Herald | Onglet affiché, éditeur relu sur Modrinth (24 mods, dépendances, avertissement bêta), recherche avec icônes |
+
+## 26. Phase S11 : traçabilité et confort (9 octobre 2026)
+
+Déjà là avant S11 : corbeille des publications, historique de chaque publication, relances sur l'accueil, modèles de
+messages de maintenance. Ajouté :
+
+- **Journal complet** (Team → Activity) : tout, pour toujours, filtrable par personne et par domaine (publications,
+  serveur, pack, réglages et fonds, équipe), pages plus anciennes à la demande ; une ligne sur une publication l'ouvre.
+- **Versions** : dans l'historique d'une publication, cliquer une version pour la lire et « Bring back this version »
+  (nouvelle version, tracée comme telle). Fonds d'écran et réglages du launcher : bouton « History » (qui a changé
+  quoi, et quand), et pour les fonds « Load this version » avant de publier.
+- **Corbeille** (Team → Trash) : publications supprimées et périodes de fonds retirées, chacune restaurable.
+- **Modèles de publications** : « Save as template » (textes et réglages, sans les dates) ; « + New » les propose (un
+  événement garde son jour et son heure, à sa prochaine date).
+- **Relances** : un compteur sur l'onglet Home, visible depuis tous les onglets.
+- **État en ligne** (Preview → Online now) : ce que les launchers reçoivent vraiment, lu comme un launcher (flux au
+  commit du pouls, signature vérifiée, coffres arrivés à leur heure ouverts, images depuis GitHub), plus le cache
+  GitHub et le pack de mods en ligne.
+
+| Test | Résultat |
+|---|---|
+| Tests unitaires (`tests/herald-history.test.ts`) | Modèles sans dates, événement à son prochain jour et heure, périodes de fonds retirées retrouvées avec qui et quand |
+| Staging | Journal : 100 entrées + page plus ancienne, filtre « pack » ; brouillon de test modifié puis version 2 ramenée (historique « revert », journal) ; modèle enregistré puis retiré, historique des modèles ; brouillon de test mis à la corbeille |
+| Herald | État en ligne : flux signé valide, même séquence que Herald, cache GitHub à jour, coffre « Halloween » encore fermé, rendu du vrai launcher avec le fond de test lu sur GitHub ; journal filtré ; corbeille |

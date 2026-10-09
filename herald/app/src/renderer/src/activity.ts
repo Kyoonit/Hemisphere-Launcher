@@ -55,6 +55,8 @@ export function describe(a: ActivityEntry): string {
       const removed = (a.detail?.removed as string[] | undefined) ?? []
       return `changed the Home backgrounds (${[...changed, ...removed.map((n) => `${n} removed`)].join(', ') || 'no change'})`
     }
+    case 'templates.publications':
+      return `changed the publication templates${a.detail?.change ? ` (${a.detail.change})` : ''}`
     case 'templates.update':
       return 'changed the maintenance message templates'
     case 'restart.update':
@@ -80,6 +82,8 @@ export function describe(a: ActivityEntry): string {
       return `took ${what} down`
     case 'publication.delete':
       return `moved ${what} to the trash`
+    case 'publication.revert':
+      return `brought back version ${a.detail?.version ?? '?'} of ${what}`
     case 'publication.restore':
       return `restored ${what}`
     case 'publication.comment':

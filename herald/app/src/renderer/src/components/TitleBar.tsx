@@ -3,6 +3,8 @@ import type { UpdateState } from '@herald/api'
 import { ROLE_LABEL, type Permission } from '@shared/heraldRoles'
 import { useStore } from '../store'
 import { Avatar } from './ui'
+import { usePubs } from '../pubs'
+import { attention } from '../screens/Home'
 
 export type Tab = 'home' | 'publications' | 'preview' | 'server' | 'backgrounds' | 'pack' | 'team' | 'settings' | 'launcher'
 
@@ -18,7 +20,10 @@ export const TABS: { id: Tab; label: string; needs?: Permission[] }[] = [
 ]
 
 export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Tab): void; staging: boolean }) {
-  const { me, sync, can, signOut } = useStore()
+  const { me, sync, can, signOut, zone } = useStore()
+  const { state } = usePubs()
+  // Reminders (Home's "Needs attention"): a count on the Home tab, seen from every tab
+  const reminders = state ? new Set(attention(state.publications, sync?.now ?? Date.now(), zone).map((a) => a.pub.id)).size : 0
   const [menu, setMenu] = useState(false)
   const menuBox = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -49,6 +54,11 @@ export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Ta
           {TABS.filter((t) => !t.needs || t.needs.some(can)).map((t) => (
             <button key={t.id} className={`rounded-lg px-3 py-1.5 text-[13.5px] font-medium whitespace-nowrap ${tab === t.id ? 'bg-green-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => onTab(t.id)}>
               {t.label}
+              {t.id === 'home' && reminders > 0 && (
+                <span className="ml-1.5 rounded-full bg-amber-400 px-1.5 text-[11px] font-bold text-gray-900" title={`${reminders} publication${reminders === 1 ? '' : 's'} need${reminders === 1 ? 's' : ''} attention`}>
+                  {reminders}
+                </span>
+              )}
             </button>
           ))}
         </nav>

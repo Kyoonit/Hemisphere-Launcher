@@ -3,7 +3,7 @@
  * talks to the Herald server for the interface. Local settings (time zones) stay on this PC.
  */
 import { app, BrowserWindow, clipboard, dialog, ipcMain, safeStorage, shell } from 'electron'
-import { createHash, randomBytes, scrypt } from 'node:crypto'
+import { createDecipheriv, createHash, createPublicKey, randomBytes, scrypt, verify } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type { ApiResult, LocalSettings, Profile } from '@herald/api'
@@ -11,6 +11,10 @@ import { installUpdate, startUpdater, updateState } from './updater'
 import { staffCodeFrom } from '@shared/heraldPublic'
 import { STAFF_CODE_SCRYPT } from '@shared/dev'
 import { CONTENT_BASE, ClientManifestSchema, ContentIndexSchema, PACK_BASES } from '@shared/manifest'
+import { FEED_V2_PATH, FeedV2Schema, VaultItemSchemas, type FeedV2 } from '@shared/feedV2'
+import type { OpenedItems } from '@shared/schedule'
+import { CONTENT_PUBLIC_KEY } from '../../../../src/main/core/remote/publicKey'
+import TEST_PUBLIC_KEY from '../../../server/test-public-key.txt?raw'
 import { compatibleVersions, fabricLoadersUrl, MAX_PACK_FILE, modrinthGetter, MOJANG_VERSIONS, newestVersions, packReadiness, resolvePack, searchMods, type DraftMod } from '@shared/heraldPack'
 
 /** Staging until the production server exists (S12); a build can point elsewhere with MAIN_VITE_HERALD_SERVER. */
@@ -26,6 +30,9 @@ const ALLOWED = [
   /^\/publish$/,
   /^\/backgrounds$/,
   /^\/settings\/public$/,
+  /^\/settings\/history\/(backgrounds|public|templates\.publications)$/,
+  /^\/templates\/publications$/,
+  /^\/activity(\?[a-z0-9=&._-]{0,200})?$/,
   /^\/pack(\/proposals)?$/,
   /^\/pack\/proposals\/k-[a-z0-9]{10}\/(approve|reject|withdraw)$/,
   /^\/server\/(templates|maintenances|maintenance-now|back-online|restart|history)$/,
@@ -280,6 +287,62 @@ function registerIpc(): void {
     } catch {
       return { ok: false, status: 0, error: 'The Herald server cannot be reached. Check your internet connection.' }
     }
+  })
+  // What launchers really get now: the feed at the pulse's commit, its signature, the vaults whose time has come
+  ipcMain.handle('online:state', async () => {
+    const staging = SERVER.includes('staging') || SERVER.includes('127.0.0.1')
+    const key = createPublicKey({ key: Buffer.from((staging ? TEST_PUBLIC_KEY : CONTENT_PUBLIC_KEY).trim(), 'base64'), format: 'der', type: 'spki' })
+    const get = (url: string) => fetch(url, { signal: AbortSignal.timeout(15_000), cache: 'no-store' })
+    const out = { checkedAt: Date.now(), pulse: null, feed: null, signed: false, error: null, opened: {}, pictures: {}, base: null, branchSequence: null, pack: null } as {
+      checkedAt: number; pulse: { sequence: number; commit: string | null } | null; feed: FeedV2 | null; signed: boolean; error: string | null; opened: OpenedItems; pictures: Record<string, Uint8Array>; base: string | null; branchSequence: number | null; pack: { clientVersion: string; minecraft: string; sequence: number } | null
+    }
+    try {
+      const pulse = (await (await get(`${SERVER}/pulse`)).json()) as { sequence: number; commit: string | null; repo: string; dir: string }
+      out.pulse = { sequence: pulse.sequence, commit: pulse.commit }
+      const branch = `https://raw.githubusercontent.com/${pulse.repo}/main/${pulse.dir}/`
+      const base = pulse.commit && /^[0-9a-f]{40}$/.test(pulse.commit) ? `https://raw.githubusercontent.com/${pulse.repo}/${pulse.commit}/${pulse.dir}/` : branch
+      out.base = base
+      const [feedRes, sigRes, branchRes, packRes] = await Promise.all([get(base + FEED_V2_PATH), get(`${base}${FEED_V2_PATH}.sig`), get(branch + FEED_V2_PATH), get(branch + 'index.json').then((r) => (r.ok ? r : get(CONTENT_BASE + 'index.json')))])
+      if (branchRes.ok) out.branchSequence = ((await branchRes.json()) as { sequence?: number }).sequence ?? null
+      if (packRes.ok) {
+        const index = ContentIndexSchema.parse(await packRes.json())
+        out.pack = { clientVersion: index.latest.clientVersion, minecraft: index.latest.minecraft, sequence: index.sequence }
+      }
+      if (!feedRes.ok) throw new Error(`no feed at that commit (HTTP ${feedRes.status})`)
+      const bytes = Buffer.from(await feedRes.arrayBuffer())
+      out.signed = sigRes.ok && verify(null, bytes, key, Buffer.from((await sigRes.text()).trim(), 'base64'))
+      if (!out.signed) throw new Error('the signature does not match: launchers refuse this feed')
+      const feed = FeedV2Schema.parse(JSON.parse(bytes.toString('utf8')))
+      out.feed = feed
+      // Vaults whose time has come (by the server clock): opened with their key, like a launcher at that instant
+      for (const v of feed.vaults.filter((x) => Date.parse(x.opensAt) <= Date.now())) {
+        try {
+          const keyB64 = feed.vaultKeys[v.id] ?? ((await (await get(`${SERVER}/vault-key/${v.id}`)).json()) as { key?: string }).key
+          if (!keyB64) continue
+          const open = async (file: { path: string; sha512: string }) => {
+            const enc = Buffer.from(await (await get(base + file.path)).arrayBuffer())
+            if (createHash('sha512').update(enc).digest('hex') !== file.sha512) throw new Error('file does not match the feed')
+            const d = createDecipheriv('aes-256-gcm', Buffer.from(keyB64, 'base64'), enc.subarray(0, 12))
+            d.setAuthTag(enc.subarray(enc.length - 16))
+            return Buffer.concat([d.update(enc.subarray(12, enc.length - 16)), d.final()])
+          }
+          const plain = await open(v.file)
+          if (createHash('sha256').update(plain).digest('hex') !== v.plainSha256) continue
+          const item = VaultItemSchemas[v.kind].parse(JSON.parse(plain.toString('utf8'))) as Record<string, unknown>
+          ;((out.opened as Record<string, unknown[]>)[v.kind] ??= []).push(item)
+          const pic = (item.imageFile ?? item.image) as { sha512: string } | undefined
+          if (v.image && pic) {
+            const bytesPic = await open(v.image)
+            if (createHash('sha512').update(bytesPic).digest('hex') === pic.sha512) out.pictures[pic.sha512] = new Uint8Array(bytesPic)
+          }
+        } catch {
+          // a vault that cannot be opened stays closed, as in a launcher
+        }
+      }
+    } catch (err) {
+      out.error = err instanceof Error ? err.message : String(err)
+    }
+    return out
   })
   ipcMain.handle('update:state', () => updateState())
   ipcMain.on('update:install', () => installUpdate())
