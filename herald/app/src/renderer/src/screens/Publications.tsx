@@ -8,7 +8,6 @@ import { useStore } from '../store'
 import { Avatar } from '../components/ui'
 import { ago, formatWhen } from '../time'
 import Editor from './Editor'
-import { PublishJobs } from './PublishJobs'
 
 const WRITE: Record<PublicationKind, Permission> = { news: 'news.write', banner: 'banner.write', welcome: 'welcome.write' }
 type KindFilter = 'all' | PublicationKind
@@ -60,7 +59,6 @@ export default function Publications({ open, onOpen }: { open: string | null; on
           <h1 className="text-[26px] font-extrabold text-white">Publications</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <PublishJobs />
           {creatable.length > 0 && (
             <div ref={menuBox} className="relative">
               <button className="btn btn-primary" onClick={() => setMenu(!menu)}>

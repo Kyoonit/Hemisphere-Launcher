@@ -1,10 +1,11 @@
 /**
  * Where the last change is, live: Herald server → GitHub Actions (checks and signs) → GitHub → players' launchers.
- * Opens by itself when a new change starts; the button shows the step and the time so far.
+ * A thin bar under the title bar, on every tab: what the last change was, where it is now, and the time so far. Every
+ * change launchers receive (publications, maintenances, restarts…) goes through it. Nothing to open, nothing hidden.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PublishJob } from '@herald/api'
-import { usePubs } from '../pubs'
+import { titleOf, usePubs } from '../pubs'
 import { useStore } from '../store'
 
 /** Launchers ask the Herald server every 2 minutes (the pulse), then read the new content at once */
@@ -12,12 +13,7 @@ const PULSE_MS = 120_000
 
 /** 0 queued on the Herald server · 1 GitHub Actions · 2 on GitHub, launchers on their way · 4 everywhere */
 type Step = 0 | 1 | 2 | 4
-const STAGES = [
-  { title: 'Herald server', what: 'Saved, waiting for GitHub to start' },
-  { title: 'GitHub Actions', what: 'Checking and signing' },
-  { title: 'GitHub', what: 'Published' },
-  { title: 'Launchers', what: 'Every open launcher has it' },
-]
+const STAGES = ['Herald server', 'GitHub Actions', 'GitHub', 'Launchers']
 
 const secs = (ms: number) => {
   const s = Math.max(0, Math.round(ms / 1000))
@@ -32,24 +28,28 @@ function stepOf(j: PublishJob, now: number): Step {
   return 1
 }
 
+/** The last change in words: "Maintenance started", "Published “Season 3”"… */
+function whatOf(reason: string | null, titles: Map<string, string>): string {
+  const r = reason ?? ''
+  const pub = r.match(/^(publish|unpublish|delete) ([nbw]-[a-z0-9]{12})$/)
+  if (pub) return `${{ publish: 'Published', unpublish: 'Taken down', delete: 'Removed' }[pub[1]]} “${titles.get(pub[2]) ?? '…'}”`
+  if (/^maintenance m-[a-z0-9]+ removed$/.test(r)) return 'Planned maintenance removed'
+  if (/^maintenance m-/.test(r)) return 'Maintenance planned'
+  return { 'maintenance now': 'Maintenance started', 'back online': 'Server back online', 'daily restart': 'Daily restart changed', 'publish again': 'Published again' }[r] ?? (r || 'Change')
+}
+
+const ago = (ms: number) => (ms < 60_000 ? 'just now' : ms < 3_600_000 ? `${Math.floor(ms / 60_000)} min ago` : ms < 86_400_000 ? `${Math.floor(ms / 3_600_000)} h ago` : `${Math.floor(ms / 86_400_000)} d ago`)
+
+/** The bar: the last change, the pipeline, then the status pill on the right */
 export function PublishJobs() {
   const { state, act, reload } = usePubs()
   const { can } = useStore()
-  const [open, setOpen] = useState(false)
   const [now, setNow] = useState(Date.now())
-  const box = useRef<HTMLDivElement>(null)
   const last = state?.jobs.find((j) => j.status !== 'superseded') ?? null
   const working = last && (last.status === 'queued' || last.status === 'publishing')
   const step = last ? stepOf(last, now) : 4
 
-  // A new change: open the panel to follow it
-  const seen = useRef<string | null>(null)
-  useEffect(() => {
-    if (!last) return
-    if (seen.current !== null && seen.current !== last.id) setOpen(true)
-    seen.current = last.id
-  }, [last])
-  // While it travels: ask the server every 2 s, tick every second until launchers have it
+  // While it travels: ask the server every 2 s, tick until launchers have it
   useEffect(() => {
     if (!working) return
     const t = window.setInterval(() => void reload(), 2000)
@@ -60,12 +60,11 @@ export function PublishJobs() {
     const t = window.setInterval(() => setNow(Date.now()), 500)
     return () => window.clearInterval(t)
   }, [step, working])
+  // Minutes "ago" stay fresh when idle
   useEffect(() => {
-    if (!open) return
-    const onDown = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false)
-    window.addEventListener('mousedown', onDown)
-    return () => window.removeEventListener('mousedown', onDown)
-  }, [open])
+    const t = window.setInterval(() => setNow(Date.now()), 30_000)
+    return () => window.clearInterval(t)
+  }, [])
   if (!state || !last) return null
 
   const failed = last.status === 'failed'
@@ -75,78 +74,62 @@ export function PublishJobs() {
   // Usual time from Herald to GitHub, from the last finished changes
   const finished = state.jobs.filter((j) => j.status === 'done')
   const toGithub = finished.length ? finished.reduce((n, j) => n + (j.updated_at - j.created_at), 0) / finished.length : 15_000
+  const what = whatOf(last.reason, new Map(state.publications.map((p) => [p.id, titleOf(p.data)])))
+  const about = `Usually about ${secs(toGithub)} from Herald to GitHub, then up to 2 min for the launchers (they check every 2 minutes): a whole change takes ${secs(toGithub + 60_000)} on average, ${secs(toGithub + PULSE_MS)} at most. A closed launcher gets it when it starts.`
 
   return (
-    <div ref={box} className="relative">
-      <button className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold tabular-nums ${tone}`} onClick={() => setOpen(!open)}>
+    <div className="flex h-[46px] shrink-0 items-center gap-5 border-b border-gray-700/70 bg-gray-900/60 px-7" title={about}>
+      <div className="w-[260px] min-w-0 shrink leading-tight">
+        <div className="truncate text-[12.5px] font-semibold text-white">{what}</div>
+        <div className="truncate text-[11px] text-gray-400">
+          {last.who ?? 'Herald'} · {ago(now - last.created_at)}
+        </div>
+      </div>
+      <Pipeline job={last} step={step} now={now} />
+      {failed && can('publications.publish') && (
+        <button className="btn btn-sm btn-primary shrink-0" title={last.error ?? ''} onClick={() => void act('POST', '/publish')}>
+          Publish again
+        </button>
+      )}
+      <span className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold tabular-nums ${tone}`}>
         {step < 4 && !failed && <span className="size-2 animate-pulse rounded-full bg-current" />}
         {label}
-      </button>
-      {open && (
-        <div className="absolute top-full right-0 z-30 mt-1 w-[640px] rounded-xl border border-gray-600 bg-gray-800 p-4 text-sm shadow-2xl">
-          <div className="mb-3 flex items-baseline gap-2">
-            <b className="text-white">Last change</b>
-            <span className="text-gray-400">
-              {last.reason ?? ''} · {last.who ?? 'Herald'}
-            </span>
-            <span className="ml-auto text-xs text-gray-400 tabular-nums">{step < 4 && !failed ? `${secs(now - last.created_at)} so far` : `complete in ${secs((last.status === 'done' ? last.updated_at + PULSE_MS : last.updated_at) - last.created_at)} at most`}</span>
-          </div>
-          <Pipeline job={last} step={step} now={now} />
-          {failed && (
-            <div className="mt-3 rounded-lg border border-red-400/30 bg-red-600/10 px-3 py-2 text-xs text-red-300 select-text">
-              GitHub refused it before signing (nothing reached players): {last.error}
-              {can('publications.publish') && (
-                <button className="btn btn-sm btn-primary ml-2" onClick={() => void act('POST', '/publish')}>
-                  Publish again
-                </button>
-              )}
-            </div>
-          )}
-          <p className="mt-3 text-xs text-gray-400">
-            Usually about {secs(toGithub)} from Herald to GitHub, then up to 2 min for the launchers (they check every 2 minutes; 1 min on average): a whole change takes {secs(toGithub + 60_000)} on average, {secs(toGithub + PULSE_MS)} at most. A closed launcher gets it when it starts.
-          </p>
-        </div>
-      )}
+      </span>
     </div>
   )
 }
 
-/** The four places, the information moving between them */
+/** The four places in one line, the information moving between them */
 function Pipeline({ job, step, now }: { job: PublishJob; step: Step; now: number }) {
   const failed = job.status === 'failed'
   const done = (i: number) => (failed ? i === 0 : step > i || step === 4 || (i === 2 && step === 2))
   const active = (i: number) => !failed && step < 4 && step === i
   const started = job.started_at ?? (job.status === 'done' ? job.updated_at : null)
-  // Time spent in each place
+  // Time spent in each place, or what is there
   const spent = [
-    (started ?? now) - job.created_at,
-    started ? (job.status === 'done' || failed ? job.updated_at : now) - started : null,
-    job.status === 'done' ? Math.min(now, job.updated_at + PULSE_MS) - job.updated_at : null,
-  ]
-  const detail = [
-    'queued',
-    failed ? 'refused' : 'validated with the launcher’s rules, signed',
-    job.commit_sha ? `commit ${job.commit_sha.slice(0, 7)} · sequence ${job.sequence}` : job.sequence ? `sequence ${job.sequence}` : '',
-    step === 2 ? `at the latest in ${secs(job.updated_at + PULSE_MS - now)}` : step === 4 ? 'within 2 min of GitHub' : '',
+    secs((started ?? now) - job.created_at),
+    failed ? 'refused' : started ? secs((job.status === 'done' ? job.updated_at : now) - started) : '',
+    job.commit_sha ? job.commit_sha.slice(0, 7) : '',
+    step === 2 ? `≤ ${secs(job.updated_at + PULSE_MS - now)}` : step === 4 ? 'up to date' : '',
   ]
   return (
-    <div className="flex items-stretch">
-      {STAGES.map((s, i) => (
-        <div key={s.title} className="flex flex-1 items-stretch">
-          <div className={`flex w-[118px] shrink-0 flex-col items-center rounded-lg px-2 py-2.5 text-center ${active(i) ? 'bg-gray-700 ring-1 ring-sky-400/50' : 'bg-gray-900/60'}`}>
-            <span className={`mb-1.5 grid size-8 place-items-center rounded-full text-sm font-bold ${failed && i === 1 ? 'bg-red-600 text-white' : done(i) ? 'bg-green-600 text-white' : active(i) ? 'bg-sky-500 text-white' : 'bg-gray-700 text-gray-400'}`}>
+    <div className="flex min-w-0 flex-1 items-center">
+      {STAGES.map((title, i) => (
+        <div key={title} className={`flex min-w-0 items-center ${i < 3 ? 'flex-1' : ''}`}>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span className={`grid size-5 place-items-center rounded-full text-[10px] font-bold ${failed && i === 1 ? 'bg-red-600 text-white' : done(i) ? 'bg-green-600 text-white' : active(i) ? 'bg-sky-500 text-white ring-2 ring-sky-400/40' : 'bg-gray-700 text-gray-400'}`}>
               {failed && i === 1 ? '✕' : done(i) ? '✓' : i + 1}
             </span>
-            <b className="text-[12.5px] text-white">{s.title}</b>
-            <span className="text-[11px] leading-tight text-gray-400">{s.what}</span>
-            <span className="mt-1 text-[10.5px] leading-tight text-gray-500">{detail[i]}</span>
-            {i < 3 && spent[i] !== null && (done(i) || active(i)) && <span className="mt-1 text-[11px] font-semibold text-gray-300 tabular-nums">{secs(spent[i]!)}</span>}
+            <span className="leading-tight">
+              <span className={`block text-[11.5px] font-semibold whitespace-nowrap ${active(i) ? 'text-white' : 'text-gray-300'}`}>{title}</span>
+              <span className="block text-[10.5px] whitespace-nowrap text-gray-500 tabular-nums">{spent[i] || ' '}</span>
+            </span>
           </div>
           {i < 3 && (
-            <div className="relative mx-1 flex-1 self-center">
-              <div className={`h-1 rounded-full ${done(i + 1) ? 'bg-green-600' : 'bg-gray-700'}`} />
+            <div className="relative mx-2 min-w-4 flex-1">
+              <div className={`h-0.5 rounded-full ${done(i + 1) ? 'bg-green-600' : 'bg-gray-700'}`} />
               {/* the information travelling to the next place */}
-              {(active(i) || (i === 2 && step === 2)) && <span className="travel absolute top-1/2 size-2.5 -translate-y-1/2 rounded-full bg-sky-300 shadow-[0_0_10px_var(--color-sky-300)]" />}
+              {(active(i) || (i === 2 && step === 2)) && <span className="travel absolute top-1/2 size-2 -translate-y-1/2 rounded-full bg-sky-300 shadow-[0_0_8px_var(--color-sky-300)]" />}
             </div>
           )}
         </div>

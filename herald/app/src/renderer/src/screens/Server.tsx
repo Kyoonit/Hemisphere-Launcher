@@ -10,7 +10,6 @@ import { usePubs, shown, titleOf } from '../pubs'
 import { useStore } from '../store'
 import { Modal, ZonePicker } from '../components/ui'
 import { ago, formatDay, formatTime, formatWhen, fromWallInput, toWallInput, zoneLabel } from '../time'
-import { PublishJobs } from './PublishJobs'
 
 type Result = { baseVersion: number; job: string }
 const DAY = 86_400_000
@@ -49,14 +48,9 @@ export default function Server() {
 
   return (
     <div className="animate-fade">
-      <div className="mb-4 flex items-center gap-3">
-        <div>
-          <div className="eyebrow">What launchers say about the server</div>
-          <h1 className="text-[26px] font-extrabold text-white">Server</h1>
-        </div>
-        <div className="ml-auto">
-          <PublishJobs />
-        </div>
+      <div className="mb-4">
+        <div className="eyebrow">What launchers say about the server</div>
+        <h1 className="text-[26px] font-extrabold text-white">Server</h1>
       </div>
       {error && <p className="mb-3 rounded-lg border border-red-400/30 bg-red-600/10 px-3 py-2 text-sm text-red-300">{error}</p>}
 

@@ -10,6 +10,7 @@ import Publications from './screens/Publications'
 import TimeTravel from './screens/TimeTravel'
 import Server from './screens/Server'
 import { PubsProvider } from './pubs'
+import { PublishJobs } from './screens/PublishJobs'
 
 const COMING: Partial<Record<Tab, string>> = {
   backgrounds: 'Home backgrounds by period: phase S8.',
@@ -50,6 +51,7 @@ function Shell({ staging }: { staging: boolean }) {
   return (
     <div className="flex h-full flex-col">
       <TitleBar tab={shown} onTab={(t) => (t === 'publications' && tab === 'publications' && setOpenPub(null), setTab(t))} staging={staging} />
+      <PublishJobs />
       <main className="min-h-0 flex-1 overflow-auto px-7 py-6">
         {shown === 'home' && <Home onOpen={goPub} />}
         {shown === 'publications' && <Publications open={openPub} onOpen={setOpenPub} />}

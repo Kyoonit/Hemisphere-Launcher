@@ -486,10 +486,11 @@ titre « HERALD », fond et couleurs différents).
 Retours du propriétaire (S6) :
 - **Messages de maintenance en anglais seulement**, aucune traduction : les langues ne servent qu'aux publications.
 - **Modèles de messages** comme sur la maquette (« Quick maintenance », « Crash »…), ou « Write my own… ». Le staff les modifie pour tout le monde (`templates.write`, réglage `templates.maintenance`, sans publication).
-- **Le bouton en haut à droite suit chaque changement en direct**, à la place de l'historique :
+- **Une barre sous la barre de titre suit chaque changement en direct**, sur tous les onglets, toujours visible (rien à ouvrir, rien de caché), à la place de l'historique :
+  - ce qu'était le changement (« Maintenance started », « Published “…” », « Daily restart changed »…), qui l'a fait et quand ; tout ce qui part vers les launchers passe par elle ;
   - le trajet : serveur Herald → GitHub Actions (vérifie, signe) → GitHub (commit) → launchers ;
   - le temps passé à chaque étape, et le compte à rebours jusqu'à ce que tous les launchers ouverts l'aient (2 min au plus) ;
   - l'estimation du temps total, à partir des derniers changements ;
-  - le panneau s'ouvre tout seul à chaque nouveau changement ;
+  - un changement fait par un autre membre du staff y apparaît en quelques secondes ;
   - la migration `0007` note l'heure où GitHub Actions prend le travail.
 - **Mesuré sur staging** : 8 s avant que GitHub démarre, 1 s pour vérifier et signer, puis jusqu'à 2 min pour les launchers.
