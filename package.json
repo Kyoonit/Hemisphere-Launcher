@@ -1,7 +1,7 @@
 {
   "name": "hemisphere-launcher",
   "productName": "Hemisphere Launcher",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "The official launcher for Hemisphere SMP",
   "author": "Hemisphere SMP",
   "private": true,

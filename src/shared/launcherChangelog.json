@@ -3,7 +3,7 @@
     "date": "2026-10-10",
     "changes": [
       {
-        "version": "next",
+        "version": "1.3.0",
         "area": "settings",
         "en": "Security: when the staff change their staff code, the Developer tab locks again on every PC that used the old one.",
         "fr": "Sécurité : quand le staff change son code staff, l’onglet Développeur se verrouille à nouveau sur tous les PC qui utilisaient l’ancien."
