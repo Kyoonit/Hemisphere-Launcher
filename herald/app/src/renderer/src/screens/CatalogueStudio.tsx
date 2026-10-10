@@ -1,11 +1,11 @@
 /**
  * The catalogue studio: an item tried on any player (Steve or a player's name), on a background, with an animation,
  * turned with the mouse and placed in the frame with a right-drag. Pictures are made from it at a chosen size: copied
- * to paste in Discord or saved as PNG. "Save" keeps the whole look for the item (player, background, pose, camera,
- * framing, size), shown again next time, and makes its picture the item's picture. The frame has the picture's shape:
+ * to paste in Discord or saved as PNG. The item page's Save keeps the whole look (player, background, pose, camera,
+ * framing, size), shown again next time, and its picture becomes the item's picture (unless one was chosen). The frame has the picture's shape:
  * what is seen is what is made.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import type { SkinViewer } from 'skinview3d'
 import type { StudioPlayer } from '@herald/api'
 import type { CatalogueAdjust, CatalogueItem, CatalogueSlot, CatalogueStudioLook } from '@shared/heraldCatalogue'
@@ -80,7 +80,13 @@ const recentPlayers = (): string[] => {
   }
 }
 
-export function Studio({ item, loaded, adjust, slot, slim, onSave, canWrite }: { item: CatalogueItem; loaded: Loaded; adjust: CatalogueAdjust; slot: CatalogueSlot; slim: boolean; onSave(look: CatalogueStudioLook, image: string): Promise<boolean>; canWrite: boolean }) {
+/** What the item page's Save asks the studio for */
+export interface StudioCapture {
+  look(): CatalogueStudioLook | null
+  picture(): Promise<Uint8Array | null>
+}
+
+export function Studio({ item, loaded, adjust, slot, slim, capture }: { item: CatalogueItem; loaded: Loaded; adjust: CatalogueAdjust; slot: CatalogueSlot; slim: boolean; capture: MutableRefObject<StudioCapture | null> }) {
   // the look saved for this item, if any: everything starts from it
   const look = item.studio
   const [player, setPlayer] = useState<StudioPlayer | null>(null)
@@ -186,32 +192,26 @@ export function Studio({ item, loaded, adjust, slot, slim, onSave, canWrite }: {
     setBusy(false)
     if (bytes && (await window.herald.catalogue.saveImage(bytes, `${item.name} ${format.width}x${format.height}`))) setMessage({ ok: true, text: 'Picture saved.' })
   }
-  /** Saves the look and makes its picture the item's picture */
-  const saveLook = async () => {
-    if (!viewer) return
-    setBusy(true)
-    setMessage(null)
-    // the middle square of the frame, 512 × 512
-    const scale = 512 / Math.min(frame.width, frame.height)
-    const full = await render(Math.round(frame.width * scale), Math.round(frame.height * scale), false, false)
-    let webp: Uint8Array | null = null
-    if (full) {
-      const c = new OffscreenCanvas(512, 512)
-      c.getContext('2d')!.drawImage(full, (512 - full.width) / 2, (512 - full.height) / 2)
-      webp = new Uint8Array(await (await c.convertToBlob({ type: 'image/webp', quality: 0.88 })).arrayBuffer())
+  // what the page's Save keeps: the look, and its picture (the middle square of the frame, 512 × 512, WebP)
+  useEffect(() => {
+    capture.current = {
+      look: () => {
+        if (!viewer) return null
+        const p = viewer.camera.position
+        const t = viewer.controls.target
+        return { player: player?.name ?? 'Steve', background: bg.id, animation, format: format.id, caption, camera: [p.x, p.y, p.z], target: [t.x, t.y, t.z], turn: viewer.playerWrapper.rotation.y, shift: viewFraming(viewer) }
+      },
+      picture: async () => {
+        const scale = 512 / Math.min(frame.width, frame.height)
+        const full = await render(Math.round(frame.width * scale), Math.round(frame.height * scale), false, false)
+        if (!full) return null
+        const c = new OffscreenCanvas(512, 512)
+        c.getContext('2d')!.drawImage(full, (512 - full.width) / 2, (512 - full.height) / 2)
+        return new Uint8Array(await (await c.convertToBlob({ type: 'image/webp', quality: 0.88 })).arrayBuffer())
+      },
     }
-    const res = webp ? await window.herald.images.upload(webp, 512, 512) : null
-    if (!res?.ok) {
-      setBusy(false)
-      return setMessage({ ok: false, text: res && !res.ok ? res.error : 'The picture could not be made.' })
-    }
-    const p = viewer.camera.position
-    const t = viewer.controls.target
-    const saved: CatalogueStudioLook = { player: player?.name ?? 'Steve', background: bg.id, animation, format: format.id, caption, camera: [p.x, p.y, p.z], target: [t.x, t.y, t.z], turn: viewer.playerWrapper.rotation.y, shift: viewFraming(viewer) }
-    const ok = await onSave(saved, res.data.id)
-    setBusy(false)
-    if (ok) setMessage({ ok: true, text: 'Saved: this look comes back next time, and its picture is the item’s picture.' })
-  }
+  })
+
 
   return (
     <div className="card p-3">
@@ -299,11 +299,6 @@ export function Studio({ item, loaded, adjust, slot, slim, onSave, canWrite }: {
                 Save as PNG…
               </button>
             </div>
-            {canWrite && (
-              <button className="btn btn-primary mt-2 w-full" disabled={!viewer || busy} onClick={() => void saveLook()} title="Keeps the player, background, pose, camera, framing and size for this item; its picture becomes the item’s picture">
-                Save
-              </button>
-            )}
           </div>
           {message && <p className={`text-xs ${message.ok ? 'text-green-400' : 'text-red-400'}`}>{message.text}</p>}
           <div className="mt-auto flex items-end justify-between gap-2">

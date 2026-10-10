@@ -52,7 +52,7 @@ function Shell({ staging }: { staging: boolean }) {
   return (
     <div className="flex h-full flex-col">
       <TitleBar tab={shown} onTab={(t) => (t === 'publications' && tab === 'publications' && setOpenPub(null), setTab(t))} staging={staging} />
-      <PublishJobs />
+      <PublishJobs catalogue={shown === 'catalogue'} />
       <main className="min-h-0 flex-1 overflow-auto px-7 py-6">
         {shown === 'home' && <Home onOpen={goPub} onPack={() => setTab('pack')} />}
         {shown === 'publications' && <Publications open={openPub} onOpen={setOpenPub} />}

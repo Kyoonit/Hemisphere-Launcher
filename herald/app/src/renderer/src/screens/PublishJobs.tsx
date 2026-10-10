@@ -43,7 +43,8 @@ function whatOf(reason: string | null, titles: Map<string, string>): string {
 const ago = (ms: number) => (ms < 60_000 ? 'just now' : ms < 3_600_000 ? `${Math.floor(ms / 60_000)} min ago` : ms < 86_400_000 ? `${Math.floor(ms / 3_600_000)} h ago` : `${Math.floor(ms / 86_400_000)} d ago`)
 
 /** The bar: the last change, the pipeline, then the status pill on the right */
-export function PublishJobs() {
+/** `catalogue`: the Catalogue tab is open (its changes skip GitHub: only there the bar shows them) */
+export function PublishJobs({ catalogue = false }: { catalogue?: boolean }) {
   const { state, act, reload } = usePubs()
   const { can } = useStore()
   const [now, setNow] = useState(Date.now())
@@ -76,7 +77,7 @@ export function PublishJobs() {
     const t = window.setInterval(() => setNow(Date.now()), 30_000)
     return () => window.clearInterval(t)
   }, [])
-  if (direct && (!last || direct.at > last.created_at)) return <DirectBar change={direct} now={now} />
+  if (catalogue && direct && (!last || direct.at > last.created_at)) return <DirectBar change={direct} now={now} />
   if (!state || !last) return null
 
   const failed = last.status === 'failed'
@@ -180,7 +181,7 @@ function DirectBar({ change, now }: { change: DirectChange; now: number }) {
       </div>
       <span className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold ${arrived ? 'border-green-400/30 text-green-300' : 'border-sky-400/40 text-sky-300'}`}>
         {!arrived && <span className="size-2 animate-pulse rounded-full bg-current" />}
-        {arrived ? 'In the launchers’ catalogue' : 'Reaching launchers…'}
+        {arrived ? change.done : 'Reaching launchers…'}
       </span>
     </div>
   )

@@ -3,16 +3,16 @@
  * tier…), its files with every version, and a studio to try it on any player, on a background, and make a picture of it
  * for Discord. An item stays on Herald only until it is shown in the launchers (Patreon link needed).
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ApiResult, BlockedPlayer, TraceResult } from '@herald/api'
-import { CATALOGUE_SLOTS, EMPTY_SHEET, sheetProblems, toModelFiles, type CatalogueItem, type CatalogueKind, type CatalogueSheet, type CatalogueStatus, type CatalogueStudioLook } from '@shared/heraldCatalogue'
+import { CATALOGUE_SLOTS, EMPTY_SHEET, sheetProblems, toModelFiles, type CatalogueItem, type CatalogueKind, type CatalogueSheet, type CatalogueStatus } from '@shared/heraldCatalogue'
 import { announceDirect } from '../directChanges'
 import { readModel, type ModelData } from '@shared/models'
 import { withAlpha } from '@launcher/components/skin/modelMesh'
 import { useStore } from '../store'
 import { Modal } from '../components/ui'
 import { usePicture } from '../pictures'
-import { Studio } from './CatalogueStudio'
+import { Studio, type StudioCapture } from './CatalogueStudio'
 
 export const STATUS_LABEL: Record<CatalogueStatus, string> = { draft: 'On Herald only', published: 'In the launchers', hidden: 'Hidden from the launchers' }
 const STATUS_STYLE: Record<CatalogueStatus, string> = { draft: 'bg-gray-700 text-gray-200', published: 'bg-green-600/20 text-green-400', hidden: 'bg-amber-600/20 text-amber-400' }
@@ -240,9 +240,13 @@ function ItemPage({ item, onBack, onChanged, onDeleted }: { item: CatalogueItem;
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  // a picture chosen on this PC for the item's cover, sent with Save
+  const [cover, setCover] = useState<{ bytes: Uint8Array; url: string; width: number; height: number } | null>(null)
+  const current = usePicture(item.thumbnail)
+  const capture = useRef<StudioCapture | null>(null)
   const people = useMemo(() => new Map((sync?.people ?? []).map((p) => [p.id, p.name])), [sync?.people])
   const write = can('catalogue.write')
-  const dirty = JSON.stringify(sheet) !== JSON.stringify(pickSheet(item))
+  const dirty = JSON.stringify(sheet) !== JSON.stringify(pickSheet(item)) || !!cover
 
   useEffect(() => setSheet(pickSheet(item)), [item.updatedAt]) // eslint-disable-line react-hooks/exhaustive-deps
   // the files in use, read for the studio (kept in memory only)
@@ -279,20 +283,57 @@ function ItemPage({ item, onBack, onChanged, onDeleted }: { item: CatalogueItem;
     else setMessage({ ok: false, text: res.error })
     return res.ok
   }
-  // the studio's look is saved by the studio only (the form's copy may be older)
-  const save = (patch: Partial<CatalogueSheet> = {}) => run(() => window.herald.api<CatalogueItem>('PATCH', `/catalogue/${item.id}`, { sheet: { ...sheet, ...patch, studio: undefined } }), 'Saved.')
-  /** The studio's Save: its look, then its picture as the item's picture */
-  const saveLook = async (look: CatalogueStudioLook, image: string): Promise<boolean> => {
-    const a = await window.herald.api<CatalogueItem>('PATCH', `/catalogue/${item.id}`, { sheet: { studio: look } })
-    const b = a.ok ? await window.herald.api<CatalogueItem>('POST', `/catalogue/${item.id}/thumbnail`, { image }) : a
-    if (b.ok) onChanged(b.data)
-    else setMessage({ ok: false, text: b.error })
-    return b.ok
+  /**
+   * The page's one Save: the sheet, the studio's look, and the cover (a picture chosen on this PC, or else the studio's
+   * picture, made again each time, unless a chosen one is kept)
+   */
+  const save = async () => {
+    setBusy(true)
+    setMessage(null)
+    const fail = (text: string) => (setBusy(false), setMessage({ ok: false, text }), false)
+    const look = loaded ? (capture.current?.look() ?? undefined) : undefined
+    let image: string | null = null
+    let customCover = sheet.customCover
+    if (cover) {
+      const up = await window.herald.images.upload(cover.bytes, cover.width, cover.height)
+      if (!up.ok) return fail(up.error)
+      image = up.data.id
+      customCover = true
+    } else if (!customCover && loaded && capture.current) {
+      const bytes = await capture.current.picture()
+      const up = bytes ? await window.herald.images.upload(bytes, 512, 512) : null
+      if (!up?.ok) return fail(up && !up.ok ? up.error : 'The picture could not be made.')
+      image = up.data.id
+    }
+    let res = await window.herald.api<CatalogueItem>('PATCH', `/catalogue/${item.id}`, { sheet: { ...sheet, studio: look, customCover } })
+    if (res.ok && image) res = await window.herald.api<CatalogueItem>('POST', `/catalogue/${item.id}/thumbnail`, { image })
+    if (!res.ok) return fail(res.error)
+    onChanged(res.data)
+    setCover(null)
+    setBusy(false)
+    setMessage({ ok: true, text: 'Saved.' })
+    return true
+  }
+  /** A picture from the PC as the cover: made WebP (1024 pixels at most), shown here until Save */
+  const pickCover = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      const img = await createImageBitmap(file)
+      const k = Math.min(1, 1024 / Math.max(img.width, img.height))
+      const [width, height] = [Math.max(1, Math.round(img.width * k)), Math.max(1, Math.round(img.height * k))]
+      const c = new OffscreenCanvas(width, height)
+      c.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      const blob = await c.convertToBlob({ type: 'image/webp', quality: 0.9 })
+      setCover({ bytes: new Uint8Array(await blob.arrayBuffer()), url: URL.createObjectURL(blob), width, height })
+      setMessage(null)
+    } catch {
+      setMessage({ ok: false, text: 'This picture can’t be read (PNG, JPEG or WebP).' })
+    }
   }
   const status = async (s: CatalogueStatus) => {
     const ok = await run(() => window.herald.api<CatalogueItem>('POST', `/catalogue/${item.id}/status`, { status: s }), s === 'published' ? 'Shown in the launchers.' : 'Hidden from the launchers.')
     // no GitHub on the way: the bar above shows it reaching the launchers at once
-    if (ok && s !== 'draft') announceDirect(`${s === 'published' ? 'In the launchers' : 'Hidden from the launchers'}: “${item.name}”`)
+    if (ok && s !== 'draft') announceDirect(`${s === 'published' ? 'In the launchers' : 'Hidden from the launchers'}: “${item.name}”`, s === 'published' ? 'In the launchers’ catalogue' : 'Out of the launchers’ catalogue')
   }
   const publishProblems = sheetProblems(item, true, item.version > 0)
   const set = (patch: Partial<CatalogueSheet>) => setSheet((s) => ({ ...s, ...patch }))
@@ -308,19 +349,54 @@ function ItemPage({ item, onBack, onChanged, onDeleted }: { item: CatalogueItem;
         <span className="text-xs text-gray-500">
           {item.kind === 'skin' ? 'Skin' : 'Model'} · added by {people.get(item.createdBy ?? '') ?? 'someone'}
         </span>
+        {write && (
+          <div className="ml-auto flex gap-2">
+            {dirty && (
+              <button className="btn btn-ghost" disabled={busy} onClick={() => (setSheet(pickSheet(item)), setCover(null))}>
+                Undo
+              </button>
+            )}
+            <button className="btn btn-primary" disabled={busy} onClick={() => void save()} title="Saves the sheet, the studio’s look and the cover picture">
+              {busy ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        )}
       </div>
       {message && <p className={`mb-3 text-sm ${message.ok ? 'text-green-400' : 'text-red-400'}`}>{message.text}</p>}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
           {loaded ? (
-            <Studio item={item} loaded={loaded} adjust={sheet.adjust} slot={sheet.slot} slim={sheet.slim} onSave={saveLook} canWrite={write} />
+            <Studio item={item} loaded={loaded} adjust={sheet.adjust} slot={sheet.slot} slim={sheet.slim} capture={capture} />
           ) : (
             <div className="card grid h-80 place-items-center text-sm text-gray-400">{loadError ? <span className="text-red-400">The files can’t be shown: {loadError}</span> : item.version ? 'Opening the files…' : 'Add its files to try it on.'}</div>
           )}
         </div>
 
         <div className="flex flex-col gap-4">
+          <div className="card">
+            <div className="eyebrow mb-3">Cover picture</div>
+            <div className="mb-2 grid aspect-square w-full place-items-center overflow-hidden rounded-md bg-gray-900">
+              {cover || current ? <img src={cover?.url ?? current!} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-gray-500">No picture yet</span>}
+            </div>
+            <p className="mb-2 text-xs text-gray-400">
+              {cover ? 'New picture: it is used once you save.' : sheet.customCover ? 'A picture chosen from the PC (kept when you save).' : 'Made from the studio each time you save.'} Players see it in the launcher’s catalogue.
+            </p>
+            {write && (
+              <div className="flex flex-wrap gap-1.5">
+                <label className="btn btn-sm cursor-pointer">
+                  Choose a picture…
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => (void pickCover(e.target.files?.[0]), (e.target.value = ''))} />
+                </label>
+                {(cover || sheet.customCover) && (
+                  <button className="btn btn-sm btn-ghost" onClick={() => (setCover(null), set({ customCover: false }))}>
+                    Use the studio picture
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="card">
             <div className="eyebrow mb-3">Sheet</div>
             <label className="label">Name</label>
@@ -385,18 +461,6 @@ function ItemPage({ item, onBack, onChanged, onDeleted }: { item: CatalogueItem;
                   ))}
                 </div>
               </>
-            )}
-            {write && (
-              <div className="flex gap-2">
-                <button className="btn btn-primary btn-sm" disabled={!dirty || busy} onClick={() => void save()}>
-                  Save the sheet
-                </button>
-                {dirty && (
-                  <button className="btn btn-ghost btn-sm" onClick={() => setSheet(pickSheet(item))}>
-                    Undo
-                  </button>
-                )}
-              </div>
             )}
           </div>
 
@@ -467,7 +531,7 @@ function ItemPage({ item, onBack, onChanged, onDeleted }: { item: CatalogueItem;
                       {p}
                     </p>
                   ))}
-                  {dirty && <p className="mt-1.5 text-xs text-amber-400">Save the sheet first.</p>}
+                  {dirty && <p className="mt-1.5 text-xs text-amber-400">Save first.</p>}
                 </>
               ))}
           </div>

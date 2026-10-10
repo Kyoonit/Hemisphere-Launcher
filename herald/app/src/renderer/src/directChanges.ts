@@ -4,13 +4,15 @@
  */
 export interface DirectChange {
   what: string
+  /** what the launchers show once it arrived ("In the launchers’ catalogue", "Out of the launchers’ catalogue") */
+  done: string
   at: number
 }
 
 const EVENT = 'herald:direct-change'
 
-export function announceDirect(what: string): void {
-  window.dispatchEvent(new CustomEvent<DirectChange>(EVENT, { detail: { what, at: Date.now() } }))
+export function announceDirect(what: string, done: string): void {
+  window.dispatchEvent(new CustomEvent<DirectChange>(EVENT, { detail: { what, done, at: Date.now() } }))
 }
 
 export function onDirectChange(cb: (c: DirectChange) => void): () => void {

@@ -55,8 +55,10 @@ export interface CatalogueSheet {
   adjust: CatalogueAdjust
   /** "New" badge in the launcher until this day (YYYY-MM-DD), or none */
   newUntil: string | null
-  /** the studio's saved look (its picture is the item's picture) */
+  /** the studio's saved look (its picture is the item's picture, unless a picture of its own was chosen) */
   studio: CatalogueStudioLook | null
+  /** the item's picture is one chosen from the PC (kept when the look is saved again) */
+  customCover: boolean
 }
 
 export interface CatalogueFileInfo {
@@ -88,7 +90,7 @@ export interface CatalogueItem extends CatalogueSheet {
   publishedAt: number | null
 }
 
-export const EMPTY_SHEET: CatalogueSheet = { kind: 'model', name: '', description: '', patreonUrl: '', tier: '', category: '', slot: 'head', slim: false, adjust: NO_ADJUST, newUntil: null, studio: null }
+export const EMPTY_SHEET: CatalogueSheet = { kind: 'model', name: '', description: '', patreonUrl: '', tier: '', category: '', slot: 'head', slim: false, adjust: NO_ADJUST, newUntil: null, studio: null, customCover: false }
 
 export const CATALOGUE_PERMISSIONS: Permission[] = ['catalogue.write', 'catalogue.publish', 'catalogue.delete', 'catalogue.export']
 export const seesCatalogue = (permissions: readonly string[]) => CATALOGUE_PERMISSIONS.some((p) => permissions.includes(p))
@@ -140,6 +142,7 @@ export function cleanSheet(v: Record<string, unknown>, base: CatalogueSheet = EM
         : { x: clampNum(a.x, -16, 16, 0), y: clampNum(a.y, -16, 16, 0), z: clampNum(a.z, -16, 16, 0), scale: clampNum(a.scale, 0.25, 4, 1) },
     newUntil: v.newUntil === undefined ? base.newUntil : typeof v.newUntil === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.newUntil) ? v.newUntil : null,
     studio: v.studio === undefined ? (base.studio ?? null) : cleanStudioLook(v.studio),
+    customCover: typeof v.customCover === 'boolean' ? v.customCover : (base.customCover ?? false),
   }
 }
 
