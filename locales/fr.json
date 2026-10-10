@@ -1302,5 +1302,48 @@
       "elytra": "Élytres",
       "none": "Rien"
     }
+  },
+  "wardrobe": {
+    "title": "Garde-robe",
+    "hint": "Les skins gardés sur ce PC et ceux que ce compte a déjà portés. Clique sur un skin pour l’essayer dans le visualiseur, puis « Porter » pour le mettre sur ton compte.",
+    "importFile": "Importer un PNG",
+    "playerPlaceholder": "Le pseudo d’un joueur",
+    "importPlayer": "Copier son skin",
+    "added": "Ajouté à tes skins.",
+    "tabs": {
+      "library_one": "Mes skins ({{count}})",
+      "library_other": "Mes skins ({{count}})",
+      "history_one": "Déjà portés ({{count}})",
+      "history_other": "Déjà portés ({{count}})"
+    },
+    "emptyLibrary": "Pas encore de skin : importe un PNG ou copie le skin d’un joueur.",
+    "emptyHistory": "Les skins que porte ce compte s’affichent ici, pour pouvoir revenir à l’un d’eux.",
+    "wornOn": "Porté le {{date}}",
+    "classic": "Bras classiques",
+    "slim": "Bras fins",
+    "keep": "Garder dans mes skins",
+    "keptName": "Ancien skin",
+    "kept": "Gardé dans tes skins.",
+    "remove": "Supprimer",
+    "confirmRemove": "Supprimer pour de bon ?",
+    "wear": "Porter",
+    "worn": "C’est fait : ton compte porte ce skin.",
+    "cannotChange": "Seul un compte Microsoft connecté peut changer de skin.",
+    "previewing": "Essayage : pas encore porté",
+    "backToMine": "Revenir au mien",
+    "capes": "Tes capes",
+    "noCape": "Sans cape",
+    "noCapes": "Ce compte n’a pas de cape.",
+    "capesUnavailable": "Tes capes ne peuvent pas être chargées pour le moment (pas d’internet, ou les services de Minecraft ne répondent pas).",
+    "capeChanged": "Cape changée.",
+    "errors": {
+      "notSkin": "Ce fichier n’est pas un skin Minecraft (un PNG de 64×64 ou 64×32 pixels).",
+      "noPlayer": "Aucun joueur n’a ce pseudo.",
+      "network": "Pas de réponse des services de Minecraft. Vérifie ta connexion et réessaie.",
+      "signedOut": "Ta session Microsoft a expiré : reconnecte-toi dans cet onglet, puis réessaie.",
+      "tooMany": "Trop de changements en peu de temps : Minecraft demande d’attendre une minute.",
+      "refused": "Les services de Minecraft ont refusé ce changement.",
+      "full": "Ta garde-robe est pleine (200 skins) : supprimes-en d’abord."
+    }
   }
 }

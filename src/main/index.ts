@@ -7,6 +7,7 @@ import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
 import type { FeedView } from '@shared/schedule'
 import { getSkin } from './core/skins/skins'
+import { editSkin, getWardrobe, importFile, importPlayer, keepFromHistory, removeSkin, wearCape, wearSkin } from './core/skins/wardrobe'
 import { getServerStatus, startStatusPolling, refreshStatusNow } from './core/status/serverStatus'
 import { getPlaytime } from './core/playtime/playtimeStore'
 import {
@@ -203,6 +204,24 @@ function registerIpc(): void {
 
   handle(IPC.authState, () => getAccountsState())
   handle(IPC.skinsGet, (_e, id: unknown, refresh: unknown) => getSkin(isId(id) ? id : undefined, refresh === true))
+  handle(IPC.skinsWardrobe, (_e, capes: unknown) => getWardrobe(capes !== false))
+  handle(IPC.skinsImportFile, async () => {
+    const pick = await dialog.showOpenDialog(win!, { properties: ['openFile'], title: 'Skin', filters: [{ name: 'PNG', extensions: ['png'] }] })
+    return pick.canceled || !pick.filePaths[0] ? { ok: false, error: 'cancelled' } : importFile(pick.filePaths[0])
+  })
+  handle(IPC.skinsImportPlayer, (_e, name: unknown) => importPlayer(name))
+  handle(IPC.skinsEdit, (_e, hash: unknown, patch: unknown) => editSkin(hash, typeof patch === 'object' && patch ? (patch as { name?: unknown; slim?: unknown }) : {}))
+  handle(IPC.skinsKeep, (_e, hash: unknown, name: unknown) => keepFromHistory(hash, name))
+  handle(IPC.skinsRemove, (_e, hash: unknown) => removeSkin(hash))
+  // wearing: Home and the viewer reload the account's skin
+  const changed = async <T extends { ok: boolean }>(res: Promise<T>) => {
+    const r = await res
+    const id = getAccountsState().activeId
+    if (r.ok && id) toWindow(IPC.skinsChanged, id)
+    return r
+  }
+  handle(IPC.skinsWear, (_e, hash: unknown, slim: unknown) => changed(wearSkin(hash, slim)))
+  handle(IPC.skinsCape, (_e, id: unknown) => changed(wearCape(id)))
   handle(IPC.authSignIn, async (_e, language: unknown) => {
     const result = await signIn(typeof language === 'string' ? language : 'en')
     if (win) {

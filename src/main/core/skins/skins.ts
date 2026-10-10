@@ -15,7 +15,7 @@ const MAX_BYTES = 256 * 1024
 /** Mojang's default skin (Steve), for offline test accounts and when nothing is known yet */
 const STEVE = '31f477eb1a7beee631c2ca64d06f8f68fa93a3386d04452ab27f43acdf1b60cb'
 
-const dir = () => join(app.getPath('userData'), 'skins')
+export const dir = () => join(app.getPath('userData'), 'skins')
 const memo = new Map<string, { at: number; info: SkinInfo }>()
 
 /** Texture hash of a Mojang texture URL (the session server gives http:// URLs: always fetched over https) */
@@ -36,7 +36,8 @@ export const isCapePng = (b: Buffer) => {
   return !!s && s.width >= 22 && s.width <= 1024 && s.height >= 17 && s.height <= 512 && s.width % 2 === 0
 }
 
-async function texture(hash: string, check: (b: Buffer) => boolean): Promise<Buffer> {
+/** A Mojang texture by hash, kept on disk; refused when `check` fails */
+export async function texture(hash: string, check: (b: Buffer) => boolean): Promise<Buffer> {
   const file = join(dir(), `${hash}.png`)
   if (existsSync(file)) {
     const kept = await readFile(file)
@@ -52,20 +53,27 @@ async function texture(hash: string, check: (b: Buffer) => boolean): Promise<Buf
   return bytes
 }
 
-const dataUrl = (b: Buffer) => `data:image/png;base64,${b.toString('base64')}`
+export const dataUrl = (b: Buffer) => `data:image/png;base64,${b.toString('base64')}`
 
-interface Known {
+export interface Known {
   skin: string
   slim: boolean
   cape: string | null
 }
 
-async function build(id: string, k: Known, fallback: boolean): Promise<SkinInfo> {
+/** Told about each skin an account is seen wearing (the wardrobe's history) */
+let seen: ((id: string, png: Buffer, slim: boolean) => Promise<void>) | null = null
+export const onSkinSeen = (cb: typeof seen) => (seen = cb)
+
+async function build(id: string, k: Known, fallback: boolean, fresh = false): Promise<SkinInfo> {
   const cape = k.cape ? await texture(k.cape, isCapePng).catch(() => null) : null
-  return { id, skin: dataUrl(await texture(k.skin, isSkinPng)), slim: k.slim, cape: cape ? dataUrl(cape) : null, fallback }
+  const skin = await texture(k.skin, isSkinPng)
+  if (fresh) await seen?.(id, skin, k.slim) // what Mojang says now (not the skin kept for offline)
+  return { id, skin: dataUrl(skin), slim: k.slim, cape: cape ? dataUrl(cape) : null, fallback }
 }
 
-async function fromMojang(id: string): Promise<Known> {
+/** Skin, model and cape of any player (public, by UUID), from Mojang's session server */
+export async function fromMojang(id: string): Promise<Known> {
   const res = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${id}`, { signal: AbortSignal.timeout(15_000) })
   if (!res.ok) throw new Error(`profile: HTTP ${res.status}`)
   const profile = (await res.json()) as { properties?: { name?: string; value?: string }[] }
@@ -88,7 +96,7 @@ export async function getSkin(id?: string, refresh = false): Promise<SkinInfo | 
   const knownFile = join(dir(), `${account.id}.json`)
   try {
     const known = await fromMojang(account.id)
-    const info = await build(account.id, known, false)
+    const info = await build(account.id, known, false, true)
     await mkdir(dir(), { recursive: true })
     await writeFile(knownFile, JSON.stringify(known))
     memo.set(account.id, { at: Date.now(), info })

@@ -156,7 +156,10 @@ export function useActiveSkin(): { skin: SkinInfo | null; refresh(): void } {
   const load = (refresh = false) => void window.hemisphere.skins.get(id ?? undefined, refresh).then((s) => setSkin(s && s.id === id ? s : null))
   useEffect(() => {
     setSkin(null)
-    if (id) load()
+    if (!id) return
+    load()
+    // a skin or cape put on from the wardrobe
+    return window.hemisphere.skins.onChange((changed) => changed === id && load())
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
   return { skin, refresh: () => load(true) }
 }

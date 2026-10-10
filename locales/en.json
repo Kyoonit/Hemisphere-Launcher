@@ -1257,5 +1257,48 @@
       "elytra": "Elytra",
       "none": "Nothing"
     }
+  },
+  "wardrobe": {
+    "title": "Wardrobe",
+    "hint": "Skins kept on this PC and the ones this account wore before. Click one to try it on in the viewer, then “Wear” to put it on your account.",
+    "importFile": "Import a PNG",
+    "playerPlaceholder": "A player’s name",
+    "importPlayer": "Copy their skin",
+    "added": "Added to your skins.",
+    "tabs": {
+      "library_one": "My skins ({{count}})",
+      "library_other": "My skins ({{count}})",
+      "history_one": "Worn before ({{count}})",
+      "history_other": "Worn before ({{count}})"
+    },
+    "emptyLibrary": "No skins yet: import a PNG or copy a player’s skin.",
+    "emptyHistory": "The skins this account wears are listed here, so you can go back to one.",
+    "wornOn": "Worn on {{date}}",
+    "classic": "Classic arms",
+    "slim": "Slim arms",
+    "keep": "Keep in my skins",
+    "keptName": "Old skin",
+    "kept": "Kept in your skins.",
+    "remove": "Delete",
+    "confirmRemove": "Delete for good?",
+    "wear": "Wear",
+    "worn": "Done: your account wears this skin now.",
+    "cannotChange": "Only a signed-in Microsoft account can change its skin.",
+    "previewing": "Trying on: not worn yet",
+    "backToMine": "Back to mine",
+    "capes": "Your capes",
+    "noCape": "No cape",
+    "noCapes": "This account has no cape.",
+    "capesUnavailable": "Your capes can’t be loaded right now (no internet, or Minecraft’s services aren’t answering).",
+    "capeChanged": "Cape changed.",
+    "errors": {
+      "notSkin": "This file isn’t a Minecraft skin (a PNG of 64×64 or 64×32 pixels).",
+      "noPlayer": "No player has this name.",
+      "network": "No answer from Minecraft’s services. Check your internet and try again.",
+      "signedOut": "Your Microsoft session has expired: sign in again in this tab, then try again.",
+      "tooMany": "Too many changes in a short time: Minecraft asks to wait a minute.",
+      "refused": "Minecraft’s services refused this change.",
+      "full": "Your wardrobe is full (200 skins): delete some first."
+    }
   }
 }

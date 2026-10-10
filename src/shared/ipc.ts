@@ -1,6 +1,6 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
-import type { SkinInfo } from './skins'
+import type { SkinInfo, Wardrobe, WardrobeResult } from './skins'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport, SessionRecap } from './game'
 import type { PreflightWarning, Settings, SystemInfo } from './settings'
 import type { FeedView } from './schedule'
@@ -37,6 +37,15 @@ export const IPC = {
   authState: 'auth:state',
   authChanged: 'auth:changed',
   skinsGet: 'skins:get',
+  skinsChanged: 'skins:changed',
+  skinsWardrobe: 'skins:wardrobe',
+  skinsImportFile: 'skins:import-file',
+  skinsImportPlayer: 'skins:import-player',
+  skinsEdit: 'skins:edit',
+  skinsKeep: 'skins:keep',
+  skinsRemove: 'skins:remove',
+  skinsWear: 'skins:wear',
+  skinsCape: 'skins:cape',
   authSignIn: 'auth:sign-in',
   authCancel: 'auth:cancel',
   authSwitch: 'auth:switch',
@@ -365,6 +374,22 @@ export interface HemisphereApi {
   /** Skins (1.4): an account's skin and cape for the 3D views (default: the active account) */
   skins: {
     get(id?: string, refresh?: boolean): Promise<SkinInfo | null>
+    /** an account's skin or cape changed (put on from the wardrobe) */
+    onChange(cb: (id: string) => void): () => void
+    /** the active account's wardrobe; `capes` also asks Mojang for the capes it owns */
+    wardrobe(capes?: boolean): Promise<Wardrobe>
+    /** a PNG picked in a file dialog, kept in the library */
+    importFile(): Promise<WardrobeResult>
+    /** the skin a player wears now, by name, kept in the library */
+    importPlayer(name: string): Promise<WardrobeResult>
+    edit(hash: string, patch: { name?: string; slim?: boolean }): Promise<WardrobeResult>
+    /** a skin from the history, kept in the library */
+    keep(hash: string, name: string): Promise<WardrobeResult>
+    remove(hash: string): Promise<WardrobeResult>
+    /** puts a wardrobe skin on the active account (Minecraft's services) */
+    wear(hash: string, slim: boolean): Promise<WardrobeResult>
+    /** shows one of the account's capes, or none */
+    cape(id: string | null): Promise<WardrobeResult>
   }
   game: {
     getState(): Promise<GameState>

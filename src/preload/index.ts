@@ -193,6 +193,19 @@ const api: HemisphereApi = {
   },
   skins: {
     get: (id, refresh) => ipcRenderer.invoke(IPC.skinsGet, id ?? null, !!refresh),
+    onChange: (cb) => {
+      const listener = (_e: unknown, id: string): void => cb(id)
+      ipcRenderer.on(IPC.skinsChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.skinsChanged, listener)
+    },
+    wardrobe: (capes) => ipcRenderer.invoke(IPC.skinsWardrobe, capes !== false),
+    importFile: () => ipcRenderer.invoke(IPC.skinsImportFile),
+    importPlayer: (name) => ipcRenderer.invoke(IPC.skinsImportPlayer, name),
+    edit: (hash, patch) => ipcRenderer.invoke(IPC.skinsEdit, hash, patch),
+    keep: (hash, name) => ipcRenderer.invoke(IPC.skinsKeep, hash, name),
+    remove: (hash) => ipcRenderer.invoke(IPC.skinsRemove, hash),
+    wear: (hash, slim) => ipcRenderer.invoke(IPC.skinsWear, hash, slim),
+    cape: (id) => ipcRenderer.invoke(IPC.skinsCape, id),
   },
   game: {
     getState: () => ipcRenderer.invoke(IPC.gameState),

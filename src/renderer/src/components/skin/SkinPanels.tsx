@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Box, RefreshCw } from 'lucide-react'
 import { SKIN_ANIMATIONS, SkinView, takeSkinViewerRequest, useActiveSkin, type BackItem, type SkinAnimation } from './SkinView'
+import type { SkinInfo, WardrobeSkin } from '@shared/skins'
+import { Wardrobe } from './Wardrobe'
 
 const GAP = 10
 const BUTTON = 30
@@ -96,8 +98,11 @@ const saved = (): { animation: SkinAnimation; outer: boolean; back: BackItem; ro
 /** Settings > Account: the active account's skin in 3D, turned with the mouse, with its animation and layers. */
 export function SkinViewerSection() {
   const { t } = useTranslation()
-  const { skin, refresh } = useActiveSkin()
+  const { skin: own, refresh } = useActiveSkin()
   const [opts, setOpts] = useState(saved)
+  // a wardrobe skin tried on in the viewer (with the account's cape), not worn yet
+  const [preview, setPreview] = useState<WardrobeSkin | null>(null)
+  const skin: SkinInfo | null = own && preview ? { ...own, skin: preview.skin, slim: preview.slim, fallback: false } : own
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     try {
@@ -115,9 +120,17 @@ export function SkinViewerSection() {
   return (
     <div ref={ref} className="mt-8">
       <h3 className="text-[15px] font-bold text-white">{t('skins.title')}</h3>
-      <p className="mt-0.5 text-[13px] text-gray-400">{skin?.fallback ? t('skins.defaultHint') : t('skins.hint')}</p>
+      <p className="mt-0.5 text-[13px] text-gray-400">{own?.fallback ? t('skins.defaultHint') : t('skins.hint')}</p>
       <div className="mt-3 flex items-stretch gap-5">
-        <div className="grid h-[340px] w-[260px] flex-none cursor-grab place-items-center rounded-xl bg-gradient-to-b from-gray-800/70 to-gray-900/70 ring-1 ring-white/5 active:cursor-grabbing">
+        <div className={`relative grid h-[340px] w-[260px] flex-none cursor-grab place-items-center rounded-xl bg-gradient-to-b from-gray-800/70 to-gray-900/70 active:cursor-grabbing ${preview ? 'ring-2 ring-green-600' : 'ring-1 ring-white/5'}`}>
+          {preview && (
+            <div className="absolute inset-x-2 top-2 z-10 flex items-center justify-between gap-2 rounded-lg bg-gray-900/85 px-2.5 py-1.5 text-[12px] backdrop-blur-md">
+              <span className="truncate font-semibold text-green-400">{t('wardrobe.previewing')}</span>
+              <button onClick={() => setPreview(null)} className="flex-none font-semibold text-gray-300 hover:text-white">
+                {t('wardrobe.backToMine')}
+              </button>
+            </div>
+          )}
           {skin ? <SkinView skin={skin} width={260} height={340} interactive animation={opts.animation} outerLayer={opts.outer} back={opts.back} autoRotate={opts.rotate} /> : <div className="skeleton h-[300px] w-[200px] rounded-lg" />}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-4 text-sm">
@@ -165,6 +178,7 @@ export function SkinViewerSection() {
           </button>
         </div>
       </div>
+      <Wardrobe preview={preview} onPreview={setPreview} />
     </div>
   )
 }
