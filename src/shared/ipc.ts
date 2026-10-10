@@ -2,6 +2,7 @@ import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
 import type { SkinInfo, Wardrobe, WardrobeResult } from './skins'
 import type { ModelFile } from './models'
+import type { WebPageKey } from './webPages'
 import type { ShopBundle, ShopItem, ShopResult } from './catalogueShop'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport, SessionRecap } from './game'
 import type { PreflightWarning, Settings, SystemInfo } from './settings'
@@ -50,8 +51,8 @@ export const IPC = {
   skinsCape: 'skins:cape',
   skinsPickModel: 'skins:pick-model',
   skinsPlayer: 'skins:player',
-  mapCheck: 'map:check',
-  mapOpenInBrowser: 'map:open-in-browser',
+  pageCheck: 'page:check',
+  pageOpenInBrowser: 'page:open-in-browser',
   shopList: 'shop:list',
   shopThumbnail: 'shop:thumbnail',
   shopItem: 'shop:item',
@@ -405,12 +406,12 @@ export interface HemisphereApi {
     /** any player's skin, by UUID (the server's player cards); Steve for bots and unknown players */
     player(uuid: string): Promise<SkinInfo | null>
   }
-  /** The server's BlueMap, shown in the Map screen */
-  map: {
-    /** does the map answer (internet, server up)? */
-    check(): Promise<boolean>
-    /** the map in the browser, at the view shown (BlueMap's address after #) */
-    openInBrowser(view?: string): void
+  /** The web pages shown inside the launcher (the server map, the rules: shared/webPages.ts) */
+  pages: {
+    /** does the page answer (internet, server up)? */
+    check(page: WebPageKey): Promise<boolean>
+    /** the page in the browser; the map at the view shown (BlueMap's address after #) */
+    openInBrowser(page: WebPageKey, view?: string): void
   }
   /** The catalogue (Patreon models and skins to try on) */
   shop: {

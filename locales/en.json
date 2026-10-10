@@ -34,21 +34,26 @@
     "map": "Map",
     "rules": "Rules"
   },
+  "webPage": {
+    "back": "Home",
+    "reload": "Reload",
+    "openInBrowser": "Open in browser",
+    "loading": "Loading…",
+    "unreachable": "The page isn’t answering",
+    "unreachableHint": "Check your internet connection. If it works, the server may be restarting: try again in a moment.",
+    "retry": "Try again"
+  },
+  "rulesPage": {
+    "title": "Server rules"
+  },
   "map": {
     "title": "Server map",
-    "back": "Home",
-    "reload": "Reload the map",
-    "openInBrowser": "Open in browser",
     "online": "Online",
     "follow": "Follow {{name}} on the map",
     "showPlayer": "Show on the map",
     "hidden": "This player isn’t on the map (they may have hidden).",
     "notOnMap_one": "+ {{count}} player hidden from the map",
     "notOnMap_other": "+ {{count}} players hidden from the map",
-    "loading": "Loading the map…",
-    "unreachable": "The map isn’t answering",
-    "unreachableHint": "Check your internet connection. If it works, the server may be restarting: try again in a moment.",
-    "retry": "Try again",
     "dimension": {
       "overworld": "Overworld",
       "nether": "Nether",

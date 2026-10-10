@@ -5,6 +5,7 @@ import { basename, join } from 'node:path'
 import { gamePaths } from './core/game/target'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import { BLUEMAP, type ServerStatus } from '@shared/server'
+import { WEB_PAGES, type WebPageKey } from '@shared/webPages'
 import type { FeedView } from '@shared/schedule'
 import { getPlayerSkin, getSkin, pngSize } from './core/skins/skins'
 import { listShop, patreonUrl, shopItem, shopThumbnail } from './core/catalogue/shop'
@@ -207,17 +208,20 @@ function registerIpc(): void {
   handle(IPC.authState, () => getAccountsState())
   handle(IPC.skinsGet, (_e, id: unknown, refresh: unknown) => getSkin(isId(id) ? id : undefined, refresh === true))
   handle(IPC.skinsPlayer, (_e, uuid: unknown) => getPlayerSkin(uuid))
-  handle(IPC.mapCheck, async () => {
+  const isPage = (page: unknown): page is WebPageKey => typeof page === 'string' && Object.hasOwn(WEB_PAGES, page)
+  handle(IPC.pageCheck, async (_e, page: unknown) => {
+    if (!isPage(page)) return false
     try {
-      return (await fetch(`${BLUEMAP.url}/settings.json`, { signal: AbortSignal.timeout(6_000) })).ok
+      return (await fetch(page === 'map' ? `${BLUEMAP.url}/settings.json` : WEB_PAGES[page].url, { signal: AbortSignal.timeout(6_000) })).ok
     } catch {
       return false
     }
   })
-  on(IPC.mapOpenInBrowser, (_e, view: unknown) => {
-    // only BlueMap's own view addresses (map:x:y:z:…), never anything else
-    const hash = typeof view === 'string' && /^#[\w:.,-]{1,200}$/.test(view) ? view : ''
-    shell.openExternal(`${BLUEMAP.url}/${hash}`)
+  on(IPC.pageOpenInBrowser, (_e, page: unknown, view: unknown) => {
+    if (!isPage(page)) return
+    // the map: only BlueMap's own view addresses (map:x:y:z:…), never anything else
+    const hash = page === 'map' && typeof view === 'string' && /^#[\w:.,-]{1,200}$/.test(view) ? view : ''
+    shell.openExternal(WEB_PAGES[page].url + hash)
   })
   handle(IPC.skinsWardrobe, (_e, capes: unknown) => getWardrobe(capes !== false))
   handle(IPC.skinsImportFile, async () => {

@@ -5,8 +5,8 @@
       {
         "version": "next",
         "area": "launcher",
-        "en": "The server map opens in the launcher: the 3D BlueMap, who is online beside it, a click follows a player, and a button to open it in the browser. Click a name in the online list for their card (skin in 3D, dimension, show on the map). The list now shows every player.",
-        "fr": "La carte du serveur s’ouvre dans le launcher : la BlueMap en 3D, les joueurs en ligne à côté, un clic suit un joueur, et un bouton pour l’ouvrir dans le navigateur. Clique sur un nom de la liste des joueurs pour voir sa fiche (skin en 3D, dimension, voir sur la carte). La liste montre maintenant tous les joueurs."
+        "en": "The server map opens in the launcher: the 3D BlueMap, who is online beside it, a click follows a player, and a button to open it in the browser. Click a name in the online list for their card (skin in 3D, dimension, show on the map). The list now shows every player. The server rules open in the launcher too, with their tabs.",
+        "fr": "La carte du serveur s’ouvre dans le launcher : la BlueMap en 3D, les joueurs en ligne à côté, un clic suit un joueur, et un bouton pour l’ouvrir dans le navigateur. Clique sur un nom de la liste des joueurs pour voir sa fiche (skin en 3D, dimension, voir sur la carte). La liste montre maintenant tous les joueurs. Les règles du serveur s’ouvrent aussi dans le launcher, avec leurs onglets."
       },
       {
         "version": "next",

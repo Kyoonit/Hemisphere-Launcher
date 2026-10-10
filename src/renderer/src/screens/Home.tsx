@@ -38,6 +38,7 @@ export default function Home({
   onReport,
   onOpenSkin,
   onOpenMap,
+  onOpenRules,
 }: {
   onOpenNews(): void
   /** News > Launcher: the launcher's whole history */
@@ -51,6 +52,8 @@ export default function Home({
   onOpenSkin(): void
   /** the server map (Map screen), following a player or not */
   onOpenMap(uuid?: string | null): void
+  /** the website's rules (Rules screen) */
+  onOpenRules(): void
 }) {
   const { t } = useTranslation()
   const status = useServerStatus()
@@ -116,8 +119,8 @@ export default function Home({
           {LINK_BUTTONS.map(({ key, icon }) => (
             <button
               key={key}
-              // the map opens in the launcher (its own screen, with a link to the browser)
-              onClick={() => (key === 'map' ? onOpenMap() : window.hemisphere.openLink(key))}
+              // the map and the rules open in the launcher (their own screen, with a link to the browser)
+              onClick={() => (key === 'map' ? onOpenMap() : key === 'rules' ? onOpenRules() : window.hemisphere.openLink(key))}
               className="flex items-center gap-2 rounded-lg bg-gray-800/75 px-4 py-[9px] text-sm font-semibold text-gray-300 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-gray-700 hover:text-white"
             >
               {icon}

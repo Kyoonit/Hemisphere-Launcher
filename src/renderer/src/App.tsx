@@ -35,6 +35,7 @@ const Screenshots = lazy(() => import('./screens/Screenshots'))
 const Report = lazy(() => import('./screens/Report'))
 const Settings = lazy(() => import('./screens/Settings'))
 const MapScreen = lazy(() => import('./screens/Map'))
+const RulesScreen = lazy(() => import('./screens/Rules'))
 import { markNewsSeen, unseenNewsCount } from '@shared/feed'
 
 export default function App() {
@@ -117,6 +118,7 @@ export default function App() {
                   }}
                   onOpenScreenshots={() => setScreen('screenshots')}
                   onOpenMap={openMap}
+                  onOpenRules={() => setScreen('rules')}
                   onOpenLauncherNews={() => {
                     setNewsTab('launcher')
                     setScreen('news')
@@ -135,6 +137,7 @@ export default function App() {
                 />}
               {screen === 'news' && <News tab={newsTab} onTab={setNewsTab} />}
               {screen === 'map' && <MapScreen follow={mapFollow} onBack={() => setScreen('home')} />}
+              {screen === 'rules' && <RulesScreen onBack={() => setScreen('home')} />}
               {screen === 'mods' && (
                 <Content
                   tab={contentTab}

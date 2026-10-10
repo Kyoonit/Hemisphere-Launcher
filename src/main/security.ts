@@ -1,26 +1,19 @@
 import { app, ipcMain, session, type BrowserWindow, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import { pathToFileURL } from 'node:url'
 import { join } from 'node:path'
-import { BLUEMAP } from '@shared/server'
+import { WEB_PAGES, webPageFor } from '@shared/webPages'
 
-/** The server map's own storage (its view settings): nothing shared with the launcher's page */
-export const MAP_PARTITION = 'persist:bluemap'
-const MAP_ORIGIN = new URL(BLUEMAP.url).origin
-const isMapUrl = (url: string) => {
-  try {
-    return new URL(url).origin === MAP_ORIGIN
-  } catch {
-    return false
-  }
-}
+/** The storage of each web page shown in the launcher (nothing shared with the launcher's page); made once the app is ready */
+const pageSessions = new Map<string, Electron.Session>()
+const partitionOf = (contents: Electron.WebContents) => [...pageSessions].find(([, s]) => s === contents.session)?.[0] ?? null
 
 /**
  * Process-wide hardening (Electron security checklist):
  * - no web permissions (camera, notifications, geolocation…), except the microphone for the launcher's own page
  *   (Settings > Game > test your microphone for voice chat): audio only, never video
  * - no new windows, navigation or <webview> in any web contents, not just the main window. One exception: the
- *   launcher's page may show the server's BlueMap in a <webview> (Map screen): that page only, its own storage, no
- *   preload, sandboxed, no permission, and it never leaves the map's address
+ *   launcher's page may show its web pages in a <webview> (the server's BlueMap, the website's rules: shared/webPages.ts):
+ *   those addresses only, each with its own storage, no preload, sandboxed, no permission, never leaving them
  * - IPC is only answered for the launcher's own page in its main window
  */
 export function hardenApp(): void {
@@ -29,26 +22,38 @@ export function hardenApp(): void {
   ses.setPermissionRequestHandler((wc, permission, callback, details) => callback(micOnly(permission, (details as { mediaTypes?: string[] }).mediaTypes, wc.getURL())))
   ses.setPermissionCheckHandler((_wc, permission, origin, details) => micOnly(permission, details.mediaType ? [details.mediaType] : undefined, (details as { requestingUrl?: string }).requestingUrl ?? origin))
 
-  const map = session.fromPartition(MAP_PARTITION)
-  map.setPermissionRequestHandler((_wc, _permission, callback) => callback(false))
-  map.setPermissionCheckHandler(() => false)
+  for (const { partition } of Object.values(WEB_PAGES)) {
+    const s = session.fromPartition(partition)
+    pageSessions.set(partition, s)
+    s.setPermissionRequestHandler((_wc, _permission, callback) => callback(false))
+    s.setPermissionCheckHandler(() => false)
+  }
 
   app.on('web-contents-created', (_e, contents) => {
     contents.on('will-attach-webview', (e, prefs, params) => {
-      if (!(contents === trustedWindow?.webContents && isLauncherUrl(contents.getURL()) && isMapUrl(params.src) && params.partition === MAP_PARTITION)) return e.preventDefault()
+      if (!(contents === trustedWindow?.webContents && isLauncherUrl(contents.getURL()) && webPageFor(params.partition, params.src))) return e.preventDefault()
       delete prefs.preload
       prefs.nodeIntegration = false
       prefs.nodeIntegrationInSubFrames = false
       prefs.contextIsolation = true
       prefs.sandbox = true
       prefs.webSecurity = true
-      prefs.partition = MAP_PARTITION
+      prefs.partition = params.partition
     })
-    const guest = contents.getType() === 'webview'
-    // the map moves inside itself (its address keeps the view); anything else is refused
-    contents.on('will-navigate', (e, url) => !(guest && isMapUrl(url)) && e.preventDefault())
-    contents.on('will-redirect', (e, url) => !(guest && isMapUrl(url)) && e.preventDefault())
-    contents.on('will-frame-navigate', (e) => guest && !isMapUrl(e.url) && e.preventDefault())
+    // a web page moves inside its own addresses only (the map's view, the rules' pages); anything else is refused
+    const allowed = (url: string) => {
+      const partition = contents.getType() === 'webview' ? partitionOf(contents) : null
+      return partition !== null && webPageFor(partition, url) !== null
+    }
+    contents.on('will-navigate', (e, url) => !allowed(url) && e.preventDefault())
+    contents.on('will-redirect', (e, url) => !allowed(url) && e.preventDefault())
+    contents.on('will-frame-navigate', (e) => contents.getType() === 'webview' && !allowed(e.url) && e.preventDefault())
+    // a site's own router changes the address without loading a page: back to the page's start when it leaves it
+    contents.on('did-navigate-in-page', (_e, url, isMainFrame) => {
+      const partition = contents.getType() === 'webview' ? partitionOf(contents) : null
+      const home = partition && Object.values(WEB_PAGES).find((p) => p.partition === partition)
+      if (home && isMainFrame && !allowed(url)) void contents.loadURL(home.url)
+    })
     contents.setWindowOpenHandler(() => ({ action: 'deny' }))
   })
 }

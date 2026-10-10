@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, ExternalLink, LocateFixed, RotateCw, WifiOff } from 'lucide-react'
-import { BLUEMAP } from '@shared/server'
+import { LocateFixed } from 'lucide-react'
 import { useServerStatus } from '../hooks'
-
-const PARTITION = 'persist:bluemap'
+import { WebFrame, WebPageHeader, type WebFramePhase } from '../components/WebFrame'
 
 /** BlueMap wants the dashed form of a player's id */
 const dashed = (uuid: string) => (uuid.length === 32 ? `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}` : uuid)
@@ -40,17 +38,10 @@ const FOLLOW = `async (uuid) => {
 export default function MapScreen({ follow, onBack }: { follow: string | null; onBack(): void }) {
   const { t } = useTranslation()
   const status = useServerStatus()
-  const view = useRef<MapWebview>(null)
-  // checking: does the map answer at all (else no blank page); then the page itself loads
-  const [phase, setPhase] = useState<'checking' | 'offline' | 'loading' | 'ready'>('checking')
+  const view = useRef<PageWebview>(null)
+  const [phase, setPhase] = useState<WebFramePhase>('checking')
   const [following, setFollowing] = useState<string | null>(follow)
   const [missing, setMissing] = useState<string | null>(null)
-
-  const check = useCallback(() => {
-    setPhase('checking')
-    void window.hemisphere.map.check().then((ok) => setPhase(ok ? 'loading' : 'offline'))
-  }, [])
-  useEffect(check, [check])
 
   const followPlayer = useCallback((uuid: string) => {
     setFollowing(uuid)
@@ -61,27 +52,6 @@ export default function MapScreen({ follow, onBack }: { follow: string | null; o
       .catch(() => setMissing(uuid))
   }, [])
 
-  // the page's events: loaded (then the player asked for), or failed (the server went away meanwhile)
-  useEffect(() => {
-    const w = view.current
-    if (!w || phase === 'checking' || phase === 'offline') return
-    const loaded = () => {
-      setPhase('ready')
-      if (following) followPlayer(following)
-    }
-    const failed = (e: Event) => {
-      const { errorCode, isMainFrame } = e as Event & { errorCode: number; isMainFrame: boolean }
-      // -3: a load replaced by another one (not a failure)
-      if (isMainFrame && errorCode !== -3) setPhase('offline')
-    }
-    w.addEventListener('did-finish-load', loaded)
-    w.addEventListener('did-fail-load', failed)
-    return () => {
-      w.removeEventListener('did-finish-load', loaded)
-      w.removeEventListener('did-fail-load', failed)
-    }
-  }, [phase === 'checking' || phase === 'offline']) // eslint-disable-line react-hooks/exhaustive-deps
-
   const openInBrowser = () => {
     let hash = ''
     try {
@@ -89,7 +59,7 @@ export default function MapScreen({ follow, onBack }: { follow: string | null; o
     } catch {
       /* the map's start view */
     }
-    window.hemisphere.map.openInBrowser(hash)
+    window.hemisphere.pages.openInBrowser('map', hash)
   }
 
   const players = status?.online ? status.players : []
@@ -98,22 +68,7 @@ export default function MapScreen({ follow, onBack }: { follow: string | null; o
 
   return (
     <div className="flex h-full flex-col px-8 pt-5 pb-1">
-      <div className="mb-3 flex flex-none items-center gap-3">
-        <button onClick={onBack} className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[13px] text-gray-400 transition-colors hover:bg-gray-700 hover:text-white">
-          <ArrowLeft size={14} /> {t('map.back')}
-        </button>
-        <h1 className="text-[22px] font-bold text-white uppercase">{t('map.title')}</h1>
-        <div className="ml-auto flex gap-2">
-          {phase === 'ready' && (
-            <button onClick={() => view.current?.reload()} title={t('map.reload')} aria-label={t('map.reload')} className="grid size-9 place-items-center rounded-lg bg-gray-800/75 text-gray-300 transition-colors hover:bg-gray-700 hover:text-white">
-              <RotateCw size={16} />
-            </button>
-          )}
-          <button onClick={openInBrowser} className="flex items-center gap-2 rounded-lg bg-gray-800/75 px-3.5 py-2 text-[13px] font-semibold text-gray-200 transition-colors hover:bg-gray-700 hover:text-white">
-            <ExternalLink size={15} /> {t('map.openInBrowser')}
-          </button>
-        </div>
-      </div>
+      <WebPageHeader title={t('map.title')} ready={phase === 'ready'} onBack={onBack} onReload={() => view.current?.reload()} onOpenInBrowser={openInBrowser} />
 
       <div className="flex min-h-0 flex-1 gap-3">
         {/* who is online: a click follows them on the map */}
@@ -145,25 +100,7 @@ export default function MapScreen({ follow, onBack }: { follow: string | null; o
           {missing && <p className="mt-2 text-[12px] text-amber-300">{t('map.hidden')}</p>}
         </aside>
 
-        <div className="relative min-w-0 flex-1 overflow-hidden rounded-xl bg-gray-900/70 ring-1 ring-white/10">
-          {phase === 'offline' ? (
-            <div className="grid h-full place-items-center p-6 text-center">
-              <div className="max-w-[44ch]">
-                <WifiOff size={30} className="mx-auto mb-3 text-gray-500" />
-                <p className="font-semibold text-white">{t('map.unreachable')}</p>
-                <p className="mt-1 text-[13px] text-gray-400">{t('map.unreachableHint')}</p>
-                <button onClick={check} className="mt-4 rounded-lg bg-green-600 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-green-500">
-                  {t('map.retry')}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              {phase !== 'checking' && <webview ref={view} src={`${BLUEMAP.url}/`} partition={PARTITION} className="absolute inset-0 flex" />}
-              {phase !== 'ready' && <div className="absolute inset-0 grid place-items-center bg-gray-900/80 text-[13px] text-gray-400">{t('map.loading')}</div>}
-            </>
-          )}
-        </div>
+        <WebFrame page="map" view={view} onPhase={setPhase} onLoaded={() => following && followPlayer(following)} />
       </div>
     </div>
   )
