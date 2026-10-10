@@ -1,7 +1,8 @@
-// npm run herald:release     publishes a new Herald version to the PRIVATE repository Kyoonit/herald-releases;
-//                            installed Herald apps download it through the Herald server (signed-in staff only).
-// Versions: 1.0, 1.1… (herald/app/package.json holds 1.0.0, 1.1.0…). This script:
-//   1. picks the version: the next minor after the latest release (1.0.0 for the first one, or the pending one if a
+// npm run herald:release         a SMALL update: the next patch version (1.3 -> 1.3.1), to the PRIVATE repository
+//                                Kyoonit/herald-releases; installed Herald apps download it through the Herald server
+// npm run herald:release:minor   a BIG update: the next minor version (1.3.1 -> 1.4)
+// This script:
+//   1. picks the version: the next patch or minor after the latest release (1.0.0 for the first one, or the pending one if a
 //      previous attempt stopped before publishing), sets herald/app/package.json, commits and pushes that;
 //   2. builds the installer (herald/app/dist/Herald-Setup-<version>.exe) and its latest.yml;
 //   3. creates the release and uploads the installer and latest.yml (retried), then checks them online.
@@ -73,7 +74,9 @@ async function main() {
   const last = latestRes.ok ? String((await latestRes.json()).tag_name).replace(/^v/, '') : null
   const pkgPath = `${APP}/package.json`
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
-  let version = last === null ? (cmp(pkg.version, '1.0.0') >= 0 ? pkg.version : '1.0.0') : cmp(pkg.version, last) > 0 ? pkg.version : `${last.split('.')[0]}.${Number(last.split('.')[1]) + 1}.0`
+  const [x, y, z] = (last ?? '0.0.0').split('.').map(Number)
+  const next = process.argv.includes('--minor') ? `${x}.${y + 1}.0` : `${x}.${y}.${(z || 0) + 1}`
+  let version = last === null ? (cmp(pkg.version, '1.0.0') >= 0 ? pkg.version : '1.0.0') : cmp(pkg.version, last) > 0 ? pkg.version : next
   if (version !== pkg.version) {
     pkg.version = version
     writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')

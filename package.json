@@ -19,6 +19,7 @@
     "content:feed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/content/feed.ts",
     "dist": "npm run build && electron-builder --win --publish never",
     "release": "node tools/release.mjs",
+    "release:minor": "node tools/release.mjs --minor",
     "release:fix": "node tools/release.mjs --fix",
     "staff-code": "node tools/staff-code.mjs",
     "herald:test-key": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/test-key.ts",
@@ -40,7 +41,8 @@
     "herald:build": "electron-vite build --config herald/app/electron.vite.config.ts",
     "herald:typecheck": "tsc -p herald/app/tsconfig.node.json && tsc -p herald/app/tsconfig.web.json",
     "herald:dist": "npm run herald:typecheck && npm run herald:build && electron-builder --projectDir herald/app --win --publish never",
-    "herald:release": "node tools/herald/release.mjs"
+    "herald:release": "node tools/herald/release.mjs",
+    "herald:release:minor": "node tools/herald/release.mjs --minor"
   },
   "dependencies": {
     "@xmcl/core": "2.15.1",

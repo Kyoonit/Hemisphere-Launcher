@@ -24,8 +24,9 @@ While it installs, the Setup shows Hemisphere's own window (artwork, logo, green
 
 ## Launcher history and "What's new" (required for every release)
 
-**The version only changes with a release**: 1.0.19 (the first one), then **1.1, 1.2…** (`1.1.0`, `1.2.0` in
-`package.json`). The launcher's history lives in `src/shared/launcherChangelog.json`: **one entry per day**, newest
+**The version only changes with a release**: small updates go 1.3 → **1.3.1, 1.3.2…** (`npm run release`), big ones
+**1.4, 1.5…** (`npm run release:minor`); `package.json` holds the full number (`1.3.1`, `1.4.0`).
+The launcher's history lives in `src/shared/launcherChangelog.json`: **one entry per day**, newest
 first; each change has an area (play, home, content, screenshots, community, settings, performance, launcher), its
 English and French text, and the release that brought it, or **`"next"`** until the next release. Players see it in
 **News > Launcher updates**, and the last 2 days in the **What's new** card on Home (at every start, until closed),
@@ -41,9 +42,10 @@ never the `"next"` changes (development builds show them).
    (GitHub → Settings → Developer settings → Fine-grained tokens).
 2. In PowerShell, in the project folder, with the window kept open until the end:
    ```powershell
-   $env:GH_TOKEN = "<token>"; npm run release
+   $env:GH_TOKEN = "<token>"; npm run release          # a small update: 1.3 -> 1.3.1
+   $env:GH_TOKEN = "<token>"; npm run release:minor    # a big update: 1.3.1 -> 1.4
    ```
-   It picks the version (the next 1.x after the latest release), stamps the `"next"` changes, commits and pushes that,
+   It picks the version (the next patch, or the next minor with release:minor, after the latest release), stamps the `"next"` changes, commits and pushes that,
    builds the installer, creates the GitHub release and uploads the 3 files one by one (retried): the installer, its
    `.blockmap` and `latest.yml`. Then it checks them online: the last line must be **release-check: v… ✓**.
 3. If something stopped half-way (connection, closed window): `npm run release:fix` uploads what's missing to that

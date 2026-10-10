@@ -1,10 +1,11 @@
-// npm run release        publishes a new launcher version on GitHub (players' launchers update themselves)
-// npm run release:fix    completes the current version's release (uploads what's missing, nothing is rebuilt)
+// npm run release          a SMALL update: publishes the next patch version (1.3 -> 1.3.1 -> 1.3.2)
+// npm run release:minor    a BIG update: publishes the next minor version (1.3.2 -> 1.4)
+// npm run release:fix      completes the current version's release (uploads what's missing, nothing is rebuilt)
 //
-// Versions only change here: 1.1, then 1.2… (package.json holds 1.1.0, 1.2.0…). Between releases, every change is
-// recorded in src/shared/launcherChangelog.json with "version": "next"; this script:
-//   1. picks the version: the next minor after the latest GitHub release (or the pending one, if a previous attempt
-//      stopped before publishing), stamps the "next" changes with it, sets package.json, commits and pushes that;
+// Versions only change here (package.json holds 1.3.0, 1.3.1…). Between releases, every change is recorded in
+// src/shared/launcherChangelog.json with "version": "next"; this script:
+//   1. picks the version: the next patch or minor after the latest GitHub release (or the pending one, if a previous
+//      attempt stopped before publishing), stamps the "next" changes with it, sets package.json, commits and pushes that;
 //   2. builds the installer (dist/Hemisphere-Launcher-Setup-<version>.exe, its .blockmap) and writes latest.yml;
 //   3. creates the GitHub release and uploads the 3 files one by one (retried), then checks them online.
 // Needs GH_TOKEN (fine-grained token, Contents: read and write on this repository).
@@ -19,6 +20,7 @@ const UPLOADS = process.env.RELEASE_UPLOADS ?? 'https://uploads.github.com'
 const noGit = process.env.RELEASE_NO_GIT === '1'
 const CHANGELOG = 'src/shared/launcherChangelog.json'
 const fix = process.argv.includes('--fix')
+const minor = process.argv.includes('--minor')
 const token = process.env.GH_TOKEN
 
 class Stop extends Error {}
@@ -106,8 +108,8 @@ async function main() {
     // a version newer than the last release that never got published (an attempt that stopped): finish that one
     const pending = last === null || cmp(pkg.version, last) > 0
     if (!pending) {
-      const [major, minor] = last.split('.').map(Number)
-      version = `${major}.${minor + 1}.0`
+      const [x, y, z] = last.split('.').map(Number)
+      version = minor ? `${x}.${y + 1}.0` : `${x}.${y}.${(z || 0) + 1}`
     }
     const next = log.flatMap((d) => d.changes).filter((c) => c.version === 'next')
     for (const c of next) c.version = version
