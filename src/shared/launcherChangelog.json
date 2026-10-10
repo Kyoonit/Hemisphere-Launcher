@@ -4,6 +4,12 @@
     "changes": [
       {
         "version": "next",
+        "area": "launcher",
+        "en": "Your skin in 3D: shown under PLAY, and in Settings > Account a viewer you can turn, with animations, cape or elytra.",
+        "fr": "Ton skin en 3D : affiché sous PLAY, et dans Paramètres > Compte un visualiseur à faire tourner, avec animations, cape ou élytres."
+      },
+      {
+        "version": "next",
         "area": "settings",
         "en": "“Check for updates” finds a new launcher version right after it’s released, and also brings the latest news, events and mod pack at once.",
         "fr": "« Rechercher des mises à jour » trouve une nouvelle version du launcher dès sa sortie, et récupère aussi tout de suite les dernières news, événements et le pack de mods."

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BookOpen, Clock, Globe, Map, TriangleAlert, Upload, WifiOff, X, HardDrive, MemoryStick, Sparkles, ArrowRight } from 'lucide-react'
 import type { LinkKey } from '@shared/ipc'
 import { nextRestart } from '@shared/restart'
@@ -18,6 +18,7 @@ import { byVersion, displayVersion, LAUNCHER_CHANGELOG, launcherHistory } from '
 import { dayLabel, relativeDay } from '../components/LauncherUpdates'
 import type { Feed } from '@shared/feed'
 import { useAccounts } from '../accounts'
+import { HomeSkin } from '../components/skin/SkinPanels'
 import type { SessionRecap } from '@shared/game'
 
 const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
@@ -34,6 +35,7 @@ export default function Home({
   onImport,
   onOpenMods,
   onReport,
+  onOpenSkin,
 }: {
   onOpenNews(): void
   /** News > Launcher: the launcher's whole history */
@@ -43,6 +45,8 @@ export default function Home({
   onImport(): void
   onOpenMods(): void
   onReport(category: ReportCategory | null): void
+  /** the 3D viewer (Settings > Account) */
+  onOpenSkin(): void
 }) {
   const { t } = useTranslation()
   const status = useServerStatus()
@@ -53,9 +57,11 @@ export default function Home({
   const client = useClient(game?.phase === 'preparing' ? 'busy' : `${game?.phase}-${game?.background}`)
   const crashed = game?.error?.code === 'crashed'
   const left = useRoomAboveFooter<HTMLDivElement>()
+  const page = useRef<HTMLDivElement>(null)
+  const play = useRef<HTMLDivElement>(null)
 
   return (
-    <div className="home-pad relative flex h-full flex-col items-center px-7">
+    <div ref={page} className="home-pad relative flex h-full flex-col items-center px-7">
       {/* left column: one card under the other (never on top of each other), down to the footer */}
       <div ref={left.ref} style={{ maxHeight: left.max }} className="absolute top-11 left-6 flex w-[210px] flex-col gap-3 [&>*]:flex-none">
         <PlaytimeCard />
@@ -69,7 +75,7 @@ export default function Home({
         {feed?.banner && !crashed && <AnnouncementBanner banner={feed.banner} />}
         <WelcomeHeading welcome={feed?.welcome} name={active?.name ?? null} compact={crashed} />
 
-        <div className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-2' : 'home-gap'}`}>
+        <div ref={play} className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-2' : 'home-gap'}`}>
           <PlayZone client={client ?? null} onRepair={onRepair} onOpenMods={onOpenMods} onReport={onReport} />
           <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
             <ServerNotice offline={status?.online === false} feed={feed} />
@@ -103,6 +109,8 @@ export default function Home({
         </div>
         <NewsPeek feed={feed} onOpen={onOpenNews} />
       </footer>
+      {/* the active account's skin, between PLAY and the bottom of the page */}
+      {!crashed && <HomeSkin page={page} below={play} onOpen={onOpenSkin} />}
     </div>
   )
 }

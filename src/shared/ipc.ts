@@ -1,5 +1,6 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
+import type { SkinInfo } from './skins'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport, SessionRecap } from './game'
 import type { PreflightWarning, Settings, SystemInfo } from './settings'
 import type { FeedView } from './schedule'
@@ -35,6 +36,7 @@ export const IPC = {
   playtimeGet: 'playtime:get',
   authState: 'auth:state',
   authChanged: 'auth:changed',
+  skinsGet: 'skins:get',
   authSignIn: 'auth:sign-in',
   authCancel: 'auth:cancel',
   authSwitch: 'auth:switch',
@@ -359,6 +361,10 @@ export interface HemisphereApi {
     switchTo(id: string): Promise<void>
     signOut(id: string): Promise<void>
     addDevOffline(name: string): Promise<AuthResult>
+  }
+  /** Skins (1.4): an account's skin and cape for the 3D views (default: the active account) */
+  skins: {
+    get(id?: string, refresh?: boolean): Promise<SkinInfo | null>
   }
   game: {
     getState(): Promise<GameState>

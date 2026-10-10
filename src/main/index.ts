@@ -6,6 +6,7 @@ import { gamePaths } from './core/game/target'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
 import type { FeedView } from '@shared/schedule'
+import { getSkin } from './core/skins/skins'
 import { getServerStatus, startStatusPolling, refreshStatusNow } from './core/status/serverStatus'
 import { getPlaytime } from './core/playtime/playtimeStore'
 import {
@@ -201,6 +202,7 @@ function registerIpc(): void {
   handle(IPC.playtimeGet, () => getPlaytime(getAccountsState().activeId ?? 'none'))
 
   handle(IPC.authState, () => getAccountsState())
+  handle(IPC.skinsGet, (_e, id: unknown, refresh: unknown) => getSkin(isId(id) ? id : undefined, refresh === true))
   handle(IPC.authSignIn, async (_e, language: unknown) => {
     const result = await signIn(typeof language === 'string' ? language : 'en')
     if (win) {

@@ -13,6 +13,7 @@ import Developer from './Developer'
 import type { DevAccess } from '@shared/dev'
 import type { LowEndInfo } from '@shared/performance'
 import { CLEANUP_CATEGORIES, type CleanupScan } from '@shared/cleanup'
+import { SkinViewerSection } from '../components/skin/SkinPanels'
 
 export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'backups' | 'advanced' | 'developer'
 
@@ -509,6 +510,7 @@ function AccountSettings({ onAddAccount }: { onAddAccount(): void }) {
       <button onClick={onAddAccount} className={`mt-4 ${buttonClass}`}>
         <Plus size={16} /> {t('auth.addAccount')}
       </button>
+      {state.activeId && <SkinViewerSection />}
     </div>
   )
 }

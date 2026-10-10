@@ -1229,5 +1229,33 @@
     "screenshots_one": "{{count}} screenshot",
     "screenshots_other": "{{count}} screenshots",
     "close": "Close"
+  },
+  "skins": {
+    "title": "Your skin",
+    "hint": "The skin of the active account, as other players see it. Drag to turn it, scroll to zoom.",
+    "defaultHint": "This account shows the default skin (offline test account, or Mojang could not be asked yet).",
+    "open": "See your skin in 3D",
+    "view3d": "3D",
+    "animation": "Animation",
+    "back": "On the back",
+    "noCape": "This account has no cape.",
+    "outerLayer": "Second layer (jacket, hat…)",
+    "autoRotate": "Turn by itself",
+    "mouseHint": "Drag with the mouse to turn, scroll to zoom.",
+    "refresh": "Reload from Mojang",
+    "animations": {
+      "idle": "Standing",
+      "walk": "Walk",
+      "run": "Run",
+      "wave": "Wave",
+      "crouch": "Crouch",
+      "fly": "Fly",
+      "none": "Still"
+    },
+    "backs": {
+      "cape": "Cape",
+      "elytra": "Elytra",
+      "none": "Nothing"
+    }
   }
 }

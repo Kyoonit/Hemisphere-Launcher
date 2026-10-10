@@ -191,6 +191,9 @@ const api: HemisphereApi = {
     signOut: (id) => ipcRenderer.invoke(IPC.authSignOut, id),
     addDevOffline: (name) => ipcRenderer.invoke(IPC.authDevOffline, name),
   },
+  skins: {
+    get: (id, refresh) => ipcRenderer.invoke(IPC.skinsGet, id ?? null, !!refresh),
+  },
   game: {
     getState: () => ipcRenderer.invoke(IPC.gameState),
     onState: (cb) => {

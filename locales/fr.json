@@ -1274,5 +1274,33 @@
     "screenshots_one": "{{count}} capture",
     "screenshots_other": "{{count}} captures",
     "close": "Fermer"
+  },
+  "skins": {
+    "title": "Ton skin",
+    "hint": "Le skin du compte actif, tel que les autres joueurs le voient. Fais-le tourner en le faisant glisser, zoome avec la molette.",
+    "defaultHint": "Ce compte affiche le skin par défaut (compte de test hors ligne, ou Mojang n’a pas encore pu être interrogé).",
+    "open": "Voir ton skin en 3D",
+    "view3d": "3D",
+    "animation": "Animation",
+    "back": "Dans le dos",
+    "noCape": "Ce compte n’a pas de cape.",
+    "outerLayer": "Seconde couche (veste, chapeau…)",
+    "autoRotate": "Tourner tout seul",
+    "mouseHint": "Fais glisser avec la souris pour tourner, molette pour zoomer.",
+    "refresh": "Recharger depuis Mojang",
+    "animations": {
+      "idle": "Debout",
+      "walk": "Marche",
+      "run": "Course",
+      "wave": "Salut",
+      "crouch": "Accroupi",
+      "fly": "Vol",
+      "none": "Immobile"
+    },
+    "backs": {
+      "cape": "Cape",
+      "elytra": "Élytres",
+      "none": "Rien"
+    }
   }
 }
