@@ -32,7 +32,7 @@ import { installedJavaPath } from './core/game/install'
 import { getContent } from './core/remote/content'
 import { getEnabledMods, reattachMod, setModEnabled } from './core/sync/sync'
 import { getModIcons } from './core/remote/modIcons'
-import { getFeed, startFeedPolling } from './core/remote/feed'
+import { getFeed, refreshFeedsNow, startFeedPolling } from './core/remote/feed'
 import { contentScheme, refreshFeedV2View, serveContentPictures } from './core/remote/feedV2'
 import { installFileLogger } from './core/logging/logger'
 import { copyDiagnostics, moveGameFolder, openFolder, preflightWarnings, systemInfo, type FolderKind } from './core/system/system'
@@ -803,7 +803,14 @@ function registerIpc(): void {
 
   handle(IPC.appInfo, (): AppInfo => ({ version: app.getVersion(), platform: process.platform, packaged: app.isPackaged }))
   handle(IPC.launcherUpdateGet, () => devUpdate(getUpdateState()))
-  handle(IPC.launcherUpdateCheck, () => checkForUpdates())
+  // a manual check is for everything the launcher gets from outside: its update, the news (both feeds), the mod pack
+  handle(IPC.launcherUpdateCheck, async () => {
+    void refreshFeedsNow()
+    void getContent(true)
+      .then(() => prepareInBackground())
+      .catch(() => {})
+    return checkForUpdates()
+  })
   on(IPC.launcherUpdateInstall, () => {
     // a pretend update (Developer tab) can't be installed: say what would happen
     if (devEnabled() && getDevState().launcherUpdate === 'ready') {

@@ -375,3 +375,6 @@ export async function startFeedV2(onChange: (view: FeedView | null) => void): Pr
 
 /** For a language change: the view may show other news. */
 export const refreshFeedV2View = () => emit()
+
+/** "Check for updates" in Settings: the pulse now, without waiting for the next one. */
+export const pulseNow = () => cycle(true)

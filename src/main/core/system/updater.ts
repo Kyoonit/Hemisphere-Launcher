@@ -7,9 +7,25 @@ import { backgroundDownloadsAllowed } from './network'
  * Launcher updates from GitHub releases: checked at start and every 4 hours, downloaded in the background,
  * installed when the player clicks "Restart to update" or, at the latest, silently when the launcher closes.
  * The game is a separate process, so updating the launcher never interrupts a running game.
+ * The newest release is asked to GitHub's API first: the releases feed electron-updater reads by default is cached by
+ * GitHub for minutes, so a check right after a release said "up to date". Its latest.yml is then read from that release.
  */
 const { autoUpdater } = electronUpdater
 const CHECK_EVERY_MS = 4 * 60 * 60 * 1000
+const REPO = 'Kyoonit/Hemisphere-Launcher'
+
+/** Tag of the newest published release (v1.3.0), straight from GitHub's API; null when it can't be asked (the
+ *  default releases feed is used then). */
+async function latestTag(): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { cache: 'no-store', signal: AbortSignal.timeout(15_000), headers: { accept: 'application/vnd.github+json', 'user-agent': `Hemisphere-Launcher/${app.getVersion()}` } })
+    if (!res.ok) return null
+    const tag = ((await res.json()) as { tag_name?: unknown }).tag_name
+    return typeof tag === 'string' && /^v\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(tag) ? tag : null
+  } catch {
+    return null
+  }
+}
 
 let state: UpdateState = app.isPackaged ? { phase: 'idle', checkedAt: null } : { phase: 'disabled' }
 let listener: (s: UpdateState) => void = () => {}
@@ -60,6 +76,8 @@ export function startUpdater(): void {
 export async function checkForUpdates(): Promise<UpdateState> {
   if (!app.isPackaged || state.phase === 'checking' || state.phase === 'downloading' || state.phase === 'ready') return state
   try {
+    const tag = await latestTag()
+    if (tag) autoUpdater.setFeedURL({ provider: 'generic', url: `https://github.com/${REPO}/releases/download/${tag}/` })
     await autoUpdater.checkForUpdates()
   } catch {
     /* reported through the 'error' event */

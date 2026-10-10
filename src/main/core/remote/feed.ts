@@ -6,7 +6,7 @@ import { CONTENT_BASE } from '@shared/manifest'
 import { FeedSchema, type Feed } from '@shared/feed'
 import { RESTART_SCHEDULE } from '@shared/server'
 import { viewOfV1, type FeedView } from '@shared/schedule'
-import { getFeedV2View, startFeedV2 } from './feedV2'
+import { getFeedV2View, pulseNow, startFeedV2 } from './feedV2'
 import { CONTENT_PUBLIC_KEY } from './publicKey'
 import { conditionalGet, rememberEtag } from './conditional'
 
@@ -93,16 +93,23 @@ async function refresh(): Promise<Feed> {
 
 /** Loads the feeds now, then schema 1 every 10 minutes and schema 2 every 2 (feedV2.ts); `onUpdate` fires whenever
  *  what the launcher shows changes. */
+let tickNow: () => Promise<void> = async () => {}
 export function startFeedPolling(onUpdate: (feed: FeedView) => void): void {
   let lastSequence = -1
   const tick = () =>
-    void refresh().then((feed) => {
+    refresh().then((feed) => {
       if (feed.sequence !== lastSequence) {
         lastSequence = feed.sequence
         if (!getFeedV2View()) onUpdate(getFeed())
       }
     })
-  tick()
-  setInterval(tick, REFRESH_MS)
+  tickNow = tick
+  void tick()
+  setInterval(() => void tick(), REFRESH_MS)
   void startFeedV2(() => onUpdate(getFeed()))
+}
+
+/** "Check for updates" in Settings: both feeds now, without waiting for their next check. */
+export const refreshFeedsNow = async (): Promise<void> => {
+  await Promise.all([tickNow(), pulseNow()])
 }

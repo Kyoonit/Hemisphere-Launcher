@@ -3,6 +3,12 @@
     "date": "2026-10-10",
     "changes": [
       {
+        "version": "next",
+        "area": "settings",
+        "en": "“Check for updates” finds a new launcher version right after it’s released, and also brings the latest news, events and mod pack at once.",
+        "fr": "« Rechercher des mises à jour » trouve une nouvelle version du launcher dès sa sortie, et récupère aussi tout de suite les dernières news, événements et le pack de mods."
+      },
+      {
         "version": "1.3.0",
         "area": "settings",
         "en": "Security: when the staff change their staff code, the Developer tab locks again on every PC that used the old one.",
