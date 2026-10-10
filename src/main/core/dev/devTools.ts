@@ -15,10 +15,17 @@ import { gamePaths } from '../game/target'
 /**
  * The Developer tab's pretend layer: development builds, or the installed launcher once the staff code was entered on
  * this PC. Otherwise every function returns its input untouched. Settings live in userData/dev-tools.json.
+ * The PC remembers which code unlocked it (its fingerprint): when the staff make a new one (a leaked code), every PC
+ * unlocked with the old one is locked again at the next feed update.
  */
 let unlocked = false
+/** fingerprint (hash) of the code this PC was unlocked with */
+let unlockedWith: string | null = null
+/** locked again because the code changed (until the new one is entered) */
+let codeChanged = false
 export const devEnabled = () => !app.isPackaged || unlocked
 export const devUnlocked = () => unlocked
+export const devCodeChanged = () => codeChanged
 
 const file = () => join(app.getPath('userData'), 'dev-tools.json')
 let state: DevState = { ...DEFAULT_DEV }
@@ -29,18 +36,20 @@ let waitUntil = 0
 let lastFailure = 0
 try {
   if (existsSync(file())) {
-    const saved = JSON.parse(readFileSync(file(), 'utf8')) as { state?: Partial<DevState>; sampleShots?: string[]; unlocked?: boolean; tries?: { failures?: number; waitUntil?: number; lastFailure?: number } }
+    const saved = JSON.parse(readFileSync(file(), 'utf8')) as { state?: Partial<DevState>; sampleShots?: string[]; unlocked?: boolean; unlockedWith?: string; codeChanged?: boolean; tries?: { failures?: number; waitUntil?: number; lastFailure?: number } }
     failures = Math.max(0, Number(saved.tries?.failures) || 0)
     waitUntil = Number(saved.tries?.waitUntil) || 0
     lastFailure = Number(saved.tries?.lastFailure) || 0
     unlocked = saved.unlocked === true
+    unlockedWith = typeof saved.unlockedWith === 'string' ? saved.unlockedWith : null
+    codeChanged = saved.codeChanged === true
     state = { ...DEFAULT_DEV, ...saved.state }
     sampleShots = saved.sampleShots ?? []
   }
 } catch {
   /* fresh */
 }
-const save = () => writeFile(file(), JSON.stringify({ state, sampleShots, unlocked, tries: { failures, waitUntil, lastFailure } }, null, 2)).catch(() => {})
+const save = () => writeFile(file(), JSON.stringify({ state, sampleShots, unlocked, unlockedWith, codeChanged, tries: { failures, waitUntil, lastFailure } }, null, 2)).catch(() => {})
 
 export const getDevState = (): DevState => state
 
@@ -60,6 +69,8 @@ export async function unlockDev(code: unknown, feedCode?: { salt: string; hash: 
   )
   if (typed && timingSafeEqual(derived, Buffer.from(target.hash, 'hex'))) {
     unlocked = true
+    unlockedWith = target.hash
+    codeChanged = false
     failures = 0
     waitUntil = 0
     await save()
@@ -79,8 +90,23 @@ export async function unlockDev(code: unknown, feedCode?: { salt: string; hash: 
 /** Locks the tab again on this PC (installed launcher) and switches every pretend situation off. */
 export async function lockDev(): Promise<void> {
   unlocked = false
+  unlockedWith = null
   state = { ...DEFAULT_DEV }
   await save()
+}
+
+/**
+ * Emergency measure: the staff made a new code (the feed's fingerprint changed, or went back to the built-in one), so
+ * a PC unlocked with another code is locked again. A PC unlocked before the launcher remembered the code is locked too
+ * (once). `feedCode` must come from a verified feed. Returns true when it locked.
+ */
+export async function lockIfCodeChanged(feedCode: { salt: string; hash: string } | undefined): Promise<boolean> {
+  if (!unlocked || unlockedWith === (feedCode ?? STAFF_CODE).hash) return false
+  await lockDev()
+  codeChanged = true
+  await save()
+  console.log('[dev] the staff code changed: Developer tab locked again on this PC')
+  return true
 }
 
 /** Changes some switches; times of sample events and restarts start from now. */

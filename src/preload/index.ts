@@ -82,6 +82,11 @@ const api: HemisphereApi = {
     unlockWait: () => ipcRenderer.invoke(IPC.devUnlockWait),
     checkDiscord: (id) => ipcRenderer.invoke(IPC.devCheckDiscord, id),
     lock: () => ipcRenderer.invoke(IPC.devLock),
+    onAccessChanged: (cb) => {
+      const listener = () => cb()
+      ipcRenderer.on(IPC.devAccessChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.devAccessChanged, listener)
+    },
     perf: () => ipcRenderer.invoke(IPC.devPerf),
     set: (patch) => ipcRenderer.invoke(IPC.devSet, patch),
     action: (action) => ipcRenderer.invoke(IPC.devAction, action),

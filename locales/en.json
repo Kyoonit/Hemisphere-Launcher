@@ -1089,6 +1089,7 @@
     "staffAccessHint": "Hemisphere staff: enter the staff code to test the launcher (Developer tab, on this PC only).",
     "staffAccessDev": "Development build: the Developer tab is always available.",
     "staffAccessOn": "Unlocked on this PC.",
+    "codeChanged": "The staff made a new staff code: enter it to unlock this PC again.",
     "codePlaceholder": "Staff code",
     "unlock": "Unlock",
     "open": "Open the Developer tab",

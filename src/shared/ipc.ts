@@ -97,6 +97,7 @@ export const IPC = {
   devUnlockWait: 'dev:unlockWait',
   devCheckDiscord: 'dev:checkDiscord',
   devLock: 'dev:lock',
+  devAccessChanged: 'dev:accessChanged',
   devPerf: 'dev:perf',
   eventsSetReminder: 'events:setReminder',
   reportBuild: 'report:build',
@@ -256,6 +257,8 @@ export interface HemisphereApi {
     /** is it a Discord application id? (its name) */
     checkDiscord(id: string): Promise<{ ok: true; name: string } | { ok: false; reason: 'notApp' | 'network' }>
     lock(): Promise<boolean>
+    /** the access changed by itself (locked again: the staff made a new code) */
+    onAccessChanged(cb: () => void): () => void
     set(patch: Partial<DevState>): Promise<DevState | null>
     action(action: DevAction): Promise<string>
     /** memory, CPU and downloads of the launcher right now */

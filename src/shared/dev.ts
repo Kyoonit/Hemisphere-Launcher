@@ -17,6 +17,8 @@ export interface DevAccess {
   devBuild: boolean
   /** the staff code was entered on this PC */
   unlocked: boolean
+  /** locked again because the staff made a new code: the new one must be entered */
+  codeChanged: boolean
   state: DevState | null
 }
 /** seconds = how long before the next try is allowed (like Windows' sign-in: each wrong code waits longer) */

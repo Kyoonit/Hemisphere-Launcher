@@ -62,4 +62,40 @@ describe('Developer tab in the installed launcher', () => {
     expect(dev.devEnabled()).toBe(false)
     expect(dev.devFeed(feed)).toBe(feed)
   })
+
+  test('a new staff code (a leaked one replaced) locks every PC unlocked with the old one', async () => {
+    vi.useFakeTimers({ now: Date.now() + 2 * 60 * 60_000 })
+    expect(await dev.unlockDev(testCode, feedCode)).toEqual({ ok: true })
+    vi.useRealTimers()
+    // same code in the feed: stays unlocked
+    expect(await dev.lockIfCodeChanged(feedCode)).toBe(false)
+    expect(dev.devUnlocked()).toBe(true)
+    // the staff made a new code: locked, the switches off, and the PC says why
+    await dev.setDevState({ maintenance: true })
+    const other = { salt, hash: scryptSync('HEMI-NEW-CODE-5678', salt, 64, { N: 16384, r: 8, p: 1 }).toString('hex') }
+    expect(await dev.lockIfCodeChanged(other)).toBe(true)
+    expect(dev.devUnlocked()).toBe(false)
+    expect(dev.devCodeChanged()).toBe(true)
+    expect(dev.devFeed(feed)).toBe(feed)
+    expect(await dev.lockIfCodeChanged(other)).toBe(false) // already locked
+    // the old code no longer opens it, the new one does (and clears the message)
+    vi.useFakeTimers({ now: Date.now() + 3 * 60 * 60_000 })
+    expect(await dev.unlockDev(testCode, other)).toMatchObject({ ok: false, reason: 'wrong' })
+    vi.advanceTimersByTime(10_000)
+    expect(await dev.unlockDev('HEMI-NEW-CODE-5678', other)).toEqual({ ok: true })
+    vi.useRealTimers()
+    expect(dev.devCodeChanged()).toBe(false)
+    // back to the built-in code: locked again too
+    expect(await dev.lockIfCodeChanged(undefined)).toBe(true)
+  })
+
+  test('a PC unlocked by an older launcher (code not remembered) is locked once, then needs the code', async () => {
+    const { writeFileSync } = await import('node:fs')
+    writeFileSync(join(root, 'dev-tools.json'), JSON.stringify({ unlocked: true }))
+    vi.resetModules()
+    const fresh = await import('../src/main/core/dev/devTools')
+    expect(fresh.devUnlocked()).toBe(true)
+    expect(await fresh.lockIfCodeChanged(feedCode)).toBe(true)
+    expect(fresh.devUnlocked()).toBe(false)
+  })
 })

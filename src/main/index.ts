@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { gamePaths } from './core/game/target'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
+import type { FeedView } from '@shared/schedule'
 import { getServerStatus, startStatusPolling, refreshStatusNow } from './core/status/serverStatus'
 import { getPlaytime } from './core/playtime/playtimeStore'
 import {
@@ -55,7 +56,7 @@ import { buildReport, lastReportZip, prepareReport } from './core/support/report
 import { devDiscord, devNotify, keepInTrayOnClose, notificationsBlocked, setLauncherReleased, slotWatched, watchForSlot, onCommunitySettings, onGameExited, onGameLaunched, onRestartLive, onRestartMoment, onServerStatus, startCommunity } from './core/community/community'
 import { startRestartWatch } from './core/status/restartWatch'
 import { nextRestart, type LiveRestart } from '@shared/restart'
-import { checkDiscordAppId, devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, runDevAction, setDevState, unlockDev, unlockWait } from './core/dev/devTools'
+import { checkDiscordAppId, devCodeChanged, devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, lockIfCodeChanged, runDevAction, setDevState, unlockDev, unlockWait } from './core/dev/devTools'
 import { DEV_ACTIONS, DEFAULT_DEV, type DevAction, type DevState } from '@shared/dev'
 import { eventIcs } from '@shared/events'
 import { writeFile } from 'node:fs/promises'
@@ -78,6 +79,8 @@ const toWindow = (channel: string, ...args: unknown[]) => {
 let released = false
 let releaseTimer: NodeJS.Timeout | undefined
 let lastStatus: ServerStatus | null = null
+/** set in registerIpc: locks the Developer tab again when the staff code changed (checked at each feed update) */
+let checkStaffCode: (feed: FeedView) => Promise<void> = async () => {}
 /** the daily restart, live (checked on the server itself around the restart) */
 let liveRestart: LiveRestart = null
 /** Sources the player may import from: only ones the launcher found or the player picked in the dialog. */
@@ -649,7 +652,16 @@ function registerIpc(): void {
     toWindow(IPC.launcherUpdateChanged, devUpdate(getUpdateState()))
     if (lastStatus) onServerStatus(devStatus(lastStatus) ?? lastStatus)
   }
-  handle(IPC.devGet, () => ({ devBuild: !app.isPackaged, unlocked: devUnlocked(), state: devEnabled() ? getDevState() : null }))
+  handle(IPC.devGet, () => ({ devBuild: !app.isPackaged, unlocked: devUnlocked(), codeChanged: devCodeChanged(), state: devEnabled() ? getDevState() : null }))
+  checkStaffCode = async (feed) => {
+    // only a feed actually received (signed), never the built-in fallback of a launcher that has nothing yet
+    if (feed.source !== 'v2' && feed.sequence === 0) return
+    if (!(await lockIfCodeChanged(feed.staffCode))) return
+    devRefresh()
+    await onStaffAccessChanged()
+    simulateGameState({ error: null })
+    toWindow(IPC.devAccessChanged)
+  }
   handle(IPC.devPerf, async () => (devEnabled() ? perfSnapshot(!!win && !win.isDestroyed()) : null))
   handle(IPC.devCheckDiscord, async (_e, id: unknown) => (devEnabled() && typeof id === 'string' ? checkDiscordAppId(id) : { ok: false, reason: 'notApp' }))
   handle(IPC.devUnlockWait, () => unlockWait())
@@ -912,7 +924,10 @@ if (!app.requestSingleInstanceLock()) {
       onServerStatus(devStatus(status) ?? status)
     }, () => (!win || !win.isVisible()) && !getSettings().notifyServerBack && !slotWatched()) // "back online" needs every minute
     void refreshAccount() // renew the active session silently in the background
-    startFeedPolling((feed) => toWindow(IPC.feedChanged, devFeed(feed)))
+    startFeedPolling((feed) => {
+      toWindow(IPC.feedChanged, devFeed(feed))
+      void checkStaffCode(feed)
+    })
     onUpdateState((s) => toWindow(IPC.launcherUpdateChanged, devUpdate(s)))
     void detectGpus()
     // Get the next PLAY ready shortly after start (once the window and status are up), then twice an hour.

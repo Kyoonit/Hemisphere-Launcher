@@ -174,7 +174,7 @@ export default function LauncherSettings() {
           ) : (
             'Launchers accept the code built into the launcher.'
           )}{' '}
-          The code itself is kept nowhere: it is shown once when it is made. PCs already unlocked stay unlocked.
+          The code itself is kept nowhere: it is shown once when it is made. A new code is the emergency measure for a leaked one: within 2 minutes, every PC unlocked with another code is locked again (launcher 1.3 and later).
         </p>
         {can('settings.staffCode') ? (
           <div className="mt-3 flex gap-2">
@@ -196,8 +196,8 @@ export default function LauncherSettings() {
         <Modal title={confirm === 'new' ? 'Make a new staff code?' : 'Back to the built-in code?'} onClose={() => setConfirm(null)}>
           <p className="mb-4 text-sm text-gray-300">
             {confirm === 'new'
-              ? 'Within 2 minutes, launchers accept only the new code: the previous one stops working. It is made on this PC and shown to you once: have a safe place ready to keep it.'
-              : 'Within 2 minutes, launchers accept the code built into the launcher again; the code made in Herald stops working.'}
+              ? 'Within 2 minutes, launchers accept only the new code: the previous one stops working, and every PC unlocked with it is locked again (staff enter the new code to get the Developer tab back). It is made on this PC and shown to you once: have a safe place ready to keep it.'
+              : 'Within 2 minutes, launchers accept the code built into the launcher again; the code made in Herald stops working, and every PC unlocked with it is locked again.'}
           </p>
           <div className="flex justify-end gap-2">
             <button className="btn btn-ghost" onClick={() => setConfirm(null)}>

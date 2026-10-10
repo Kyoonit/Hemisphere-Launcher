@@ -49,7 +49,12 @@ export default function Settings({
   const [dev, setDev] = useState<DevAccess | null>(null)
   const loadDev = () => void window.hemisphere.dev.get().then(setDev)
   useEffect(loadDev, [])
+  useEffect(() => window.hemisphere.dev.onAccessChanged(loadDev), [])
   const devVisible = !!dev && (dev.devBuild || dev.unlocked)
+  // locked again while it was open (a new staff code): back to Advanced, where the new code can be entered
+  useEffect(() => {
+    if (dev && !devVisible && section === 'developer') setSection('advanced')
+  }, [dev, devVisible, section])
 
   return (
     <div className="grid h-full grid-cols-[200px_1fr]">
@@ -702,8 +707,8 @@ function StaffAccess({ dev, onChanged, onOpen }: { dev: DevAccess | null; onChan
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  // hidden from players: the code is only typed on the sign-in screen (Ctrl+Shift+S)
-  if (!dev || (!dev.devBuild && !dev.unlocked)) return null
+  // hidden from players: the code is only typed on the sign-in screen (Ctrl+Shift+S), or here once the staff changed it
+  if (!dev || (!dev.devBuild && !dev.unlocked && !dev.codeChanged)) return null
   const unlock = async () => {
     setBusy(true)
     setMsg(null)
@@ -717,7 +722,7 @@ function StaffAccess({ dev, onChanged, onOpen }: { dev: DevAccess | null; onChan
   }
   return (
     <>
-      <Row title={t('dev.staffAccess')} hint={dev.devBuild ? t('dev.staffAccessDev') : dev.unlocked ? t('dev.staffAccessOn') : t('dev.staffAccessHint')}>
+      <Row title={t('dev.staffAccess')} hint={dev.devBuild ? t('dev.staffAccessDev') : dev.unlocked ? t('dev.staffAccessOn') : dev.codeChanged ? t('dev.codeChanged') : t('dev.staffAccessHint')}>
         {dev.devBuild || dev.unlocked ? (
           <button onClick={onOpen} className={buttonClass}>
             <FlaskConical size={16} /> {t('dev.open')}

@@ -1134,6 +1134,7 @@
     "staffAccessHint": "Staff d’Hemisphere : entre le code staff pour tester le launcher (onglet Développeur, sur ce PC seulement).",
     "staffAccessDev": "Version de développement : l’onglet Développeur est toujours disponible.",
     "staffAccessOn": "Déverrouillé sur ce PC.",
+    "codeChanged": "Le staff a créé un nouveau code staff : entre-le pour déverrouiller ce PC à nouveau.",
     "codePlaceholder": "Code staff",
     "unlock": "Déverrouiller",
     "open": "Ouvrir l’onglet Développeur",

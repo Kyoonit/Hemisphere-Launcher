@@ -19,7 +19,10 @@ import TEST_PUBLIC_KEY from '../../../server/test-public-key.txt?raw'
 import { compatibleVersions, fabricLoadersUrl, MAX_PACK_FILE, modrinthGetter, MOJANG_VERSIONS, newestVersions, packReadiness, resolvePack, searchMods, type DraftMod } from '@shared/heraldPack'
 
 /** The production server (releases); a test build points elsewhere with MAIN_VITE_HERALD_SERVER (staging, local). */
-const SERVER = (import.meta.env?.MAIN_VITE_HERALD_SERVER || 'https://herald.hemisphere-launcher.workers.dev').replace(/\/$/, '')
+const PRODUCTION = 'https://herald.hemisphere-launcher.workers.dev'
+const SERVER = (import.meta.env?.MAIN_VITE_HERALD_SERVER || PRODUCTION).replace(/\/$/, '')
+// A test build keeps its own session and settings: a staging token never replaces the production one
+if (SERVER !== PRODUCTION) app.setPath('userData', `${app.getPath('userData')}-test`)
 /** Only these server routes can be called from the interface. */
 const ALLOWED = [
   /^\/me$/,
