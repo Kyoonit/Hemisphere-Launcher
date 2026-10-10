@@ -15,6 +15,7 @@ import Backgrounds from './screens/Backgrounds'
 import LauncherSettings from './screens/LauncherSettings'
 import Pack from './screens/Pack'
 import Catalogue from './screens/Catalogue'
+import Stats from './screens/Stats'
 import { PubsProvider } from './pubs'
 import { PublishJobs } from './screens/PublishJobs'
 
@@ -86,6 +87,7 @@ function Shell({ staging }: { staging: boolean }) {
         {shown === 'publications' && <Publications open={openPub} onOpen={setOpenPub} />}
         {shown === 'preview' && <Preview />}
         {shown === 'server' && <Server />}
+        {shown === 'stats' && <Stats />}
         {shown === 'backgrounds' && <Backgrounds />}
         {shown === 'pack' && <Pack />}
         {shown === 'catalogue' && <Catalogue />}

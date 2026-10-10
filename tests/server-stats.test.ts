@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blueMapPlayers, emptyPresence, isBot, readStatusAnswer, statusRequest, stepPresence, type SeenPlayer } from '../src/shared/serverStats'
+import { blueMapPlayers, buildStatsView, emptyPresence, isBot, localTime, readStatusAnswer, statusRequest, statsZone, stepPresence, type SeenPlayer, type StatsRows } from '../src/shared/serverStats'
 
 const M = 60_000
 const T0 = 1_760_000_000_000 - (1_760_000_000_000 % M)
@@ -111,5 +111,81 @@ describe('sessions', () => {
     expect(s.next.players[alex.uuid]).toBeDefined()
     s = stepPresence(s.next, [{ ...kyo, dimension: null }], false, T0 + 10 * M)
     expect(s.ended.map((e) => e.name)).toEqual(['Alex'])
+  })
+})
+
+describe('statistics view', () => {
+  const NOW = Date.UTC(2026, 9, 14, 12, 0) // Wednesday 14:00 in Paris (summer time)
+  const H = 3_600_000
+  const real = 'a'.repeat(12) + '4' + 'a'.repeat(19)
+  const other = 'b'.repeat(12) + '4' + 'b'.repeat(19)
+  const bot = 'c'.repeat(12) + '3' + 'c'.repeat(19)
+  const rows = (): StatsRows => ({
+    collectingSince: NOW - 3 * 86_400_000,
+    last: { at: NOW - M, online: 1, players: 3, max_players: 420, latency_ms: 20, version: '26.3' },
+    presence: { at: NOW - M, players: { [real]: { name: 'Kyo', since: NOW - 2 * H, seen: NOW - M, minutes: 120, overworld: 100, nether: 20, end: 0 }, [bot]: { name: 'Load_bot', since: NOW - 9 * H, seen: NOW - M, minutes: 540, overworld: 540, nether: 0, end: 0 } } },
+    buckets: [
+      { t: NOW - 2 * H, mx: 2, up: 15, n: 15 },
+      { t: NOW - H, mx: 5, up: 15, n: 15 },
+      { t: NOW - 30 * M, mx: 0, up: 0, n: 15 },
+    ],
+    hours: [{ h: NOW - 7 * 86_400_000, av: 4 }, { h: NOW, av: 2 }, { h: NOW - H, av: null }],
+    sessions: [{ uuid: other, name: 'Alex', started_at: NOW - 5 * H, minutes: 45, overworld: 30, nether: 0, end_minutes: 15 }],
+    newPlayers: 1,
+    allPlayers: 2,
+    allTime: [
+      { uuid: other, name: 'Alex', minutes: 600, sessions: 9 },
+      { uuid: real, name: 'Kyo', minutes: 500, sessions: 4 },
+    ],
+    catalogue: [{ itemId: 'c-aaaaaaaaaa', name: 'Crown', players: 2 }],
+  })
+
+  it('counts the players and their time, without the bots', () => {
+    const v = buildStatsView('day', NOW, rows())
+    expect(v.online.map((p) => p.name)).toEqual(['Kyo'])
+    expect(v.unique).toBe(2)
+    expect(v.top).toEqual([
+      { uuid: real, name: 'Kyo', minutes: 120, sessions: 1 },
+      { uuid: other, name: 'Alex', minutes: 45, sessions: 1 },
+    ])
+    expect(v.sessions).toEqual({ count: 2, minutes: 165, averageMinutes: 83 })
+    expect(v.dimensions).toEqual({ overworld: 130, nether: 20, end: 15 })
+    expect(v.last).toMatchObject({ online: true, players: 3, max: 420 })
+  })
+
+  it('draws every slice of the range, says when the server did not answer, and its best moment', () => {
+    const v = buildStatsView('day', NOW, rows())
+    expect(v.curve).toHaveLength(97)
+    expect(v.curve.filter((p) => p.players !== null)).toHaveLength(3)
+    expect(v.curve.find((p) => p.at === NOW - 30 * M)).toEqual({ at: NOW - 30 * M, players: 0, up: 0 })
+    expect(v.peak).toEqual({ players: 5, at: NOW - H })
+    expect(v.uptime).toBeCloseTo(30 / 45)
+  })
+
+  it('places days and hours in the server time zone', () => {
+    expect(localTime(NOW)).toEqual({ day: '2026-10-14', weekday: 2, hour: 14 })
+    expect(localTime(Date.UTC(2026, 9, 14, 22, 30)).day).toBe('2026-10-15')
+    const v = buildStatsView('week', NOW, rows())
+    expect(v.days.at(-1)).toEqual({ day: '2026-10-14', players: 2, minutes: 165 })
+    expect(v.days).toHaveLength(8)
+    expect(v.heat[2][14]).toBe(3)
+    expect(v.heat[2][13]).toBeNull()
+  })
+
+  it('counts days and hours in the viewer’s time zone', () => {
+    // 14:00 in Paris is 08:00 in New York, 21:00 in Tokyo
+    expect(localTime(NOW, 'America/New_York')).toEqual({ day: '2026-10-14', weekday: 2, hour: 8 })
+    const v = buildStatsView('week', NOW, rows(), 'Asia/Tokyo')
+    expect(v.zone).toBe('Asia/Tokyo')
+    expect(v.heat[2][21]).toBe(3)
+    expect(statsZone('Not/AZone')).toBe('Europe/Paris')
+    expect(statsZone('America/Argentina/Buenos_Aires')).toBe('America/Argentina/Buenos_Aires')
+  })
+
+  it('ranks who played the most ever, with the sessions going on now', () => {
+    expect(buildStatsView('day', NOW, rows()).topAllTime).toEqual([
+      { uuid: real, name: 'Kyo', minutes: 620, sessions: 5 },
+      { uuid: other, name: 'Alex', minutes: 600, sessions: 9 },
+    ])
   })
 })

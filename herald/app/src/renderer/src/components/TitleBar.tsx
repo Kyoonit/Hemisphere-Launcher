@@ -7,7 +7,7 @@ import { usePubs } from '../pubs'
 import { attention } from '../screens/Home'
 import { startTour } from '../tour'
 
-export type Tab = 'home' | 'publications' | 'preview' | 'server' | 'backgrounds' | 'pack' | 'catalogue' | 'team' | 'settings' | 'launcher'
+export type Tab = 'home' | 'publications' | 'preview' | 'server' | 'stats' | 'backgrounds' | 'pack' | 'catalogue' | 'team' | 'settings' | 'launcher'
 
 /** The tabs a profile sees: hidden when none of their permissions uses them (Lodge keepers see four). */
 export const TABS: { id: Tab; label: string; needs?: Permission[] }[] = [
@@ -15,6 +15,7 @@ export const TABS: { id: Tab; label: string; needs?: Permission[] }[] = [
   { id: 'publications', label: 'Publications' },
   { id: 'preview', label: 'Preview' },
   { id: 'server', label: 'Server', needs: ['maintenance.write', 'maintenance.emergency', 'restart.write'] },
+  { id: 'stats', label: 'Statistics', needs: ['stats.view'] },
   { id: 'backgrounds', label: 'Backgrounds', needs: ['backgrounds.write'] },
   { id: 'pack', label: 'Mod pack', needs: ['pack.propose', 'pack.approve'] },
   { id: 'catalogue', label: 'Catalogue', needs: ['catalogue.write', 'catalogue.publish', 'catalogue.delete', 'catalogue.export'] },

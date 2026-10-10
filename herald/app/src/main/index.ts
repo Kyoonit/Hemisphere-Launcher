@@ -45,6 +45,7 @@ const ALLOWED = [
   /^\/pack\/proposals\/k-[a-z0-9]{10}\/(approve|reject|withdraw)$/,
   /^\/server\/(templates|maintenances|maintenance-now|back-online|restart|history)$/,
   /^\/server\/maintenances\/m-[a-z0-9]{10}\/delete$/,
+  /^\/stats\?range=(day|week|month)&zone=[\w%.+-]{1,96}$/,
   /^\/catalogue$/,
   /^\/catalogue\/blocked$/,
   /^\/catalogue\/players\/[0-9a-f]{32}\/block$/,

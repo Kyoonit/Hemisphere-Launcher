@@ -14,6 +14,7 @@
  *   …    /server/…               maintenances (planned, now, back online), daily restart, their history (S6)
  *   …    /pack…                  mod pack: proposals, approval by another member, config files (S10)
  *   GET  /activity               the full shared journal (filters, older pages) (S11)
+ *   GET  /stats?range=           server statistics (players, sessions, playtime; collected every minute: stats.ts)
  *   GET  /settings/history/<key> every version of a setting Herald edits (backgrounds, launcher settings, templates)
  *   POST /templates/publications publication templates (S11)
  *   …    /player/…, /shop…        the catalogue in the launchers: verified players, sealed items marked for each (shop.ts)
@@ -44,7 +45,7 @@ import * as pubs from './publications'
 import * as catalogue from './catalogue'
 import * as shop from './shop'
 import * as server from './serverState'
-import { collectServerStats } from './stats'
+import { collectServerStats, statsView } from './stats'
 
 export interface Env extends GithubEnv {
   DB: D1Database
@@ -154,7 +155,7 @@ async function staffRoute(req: Request, env: Env, path: string): Promise<Respons
   if (req.method === 'POST' && path === '/login') return json(await login(env, await body()))
   const profile = path.match(/^\/profiles\/(p-[a-z0-9-]{1,20})(\/code|\/delete)?$/)
   const update = path.match(/^\/update\/(latest\.yml|Herald-Setup-\d+\.\d+\.\d+\.exe)$/)
-  if (!['/me', '/logout', '/sync', '/profiles', '/activity'].includes(path) && !profile && !update) return null
+  if (!['/me', '/logout', '/sync', '/profiles', '/activity', '/stats'].includes(path) && !profile && !update) return null
   const actor = await authenticate(env, req)
   // Herald's own updates: only for signed-in staff, from the private releases repository
   if (req.method === 'GET' && update) return githubConfigured(env) ? await latestReleaseFile(env, env.HERALD_RELEASES_REPO, update[1]) : json({ error: 'not available' }, 404)
@@ -162,6 +163,7 @@ async function staffRoute(req: Request, env: Env, path: string): Promise<Respons
   if (req.method === 'POST' && path === '/logout') return json(await logout(env, req, actor).then(() => ({ ok: true })))
   if (req.method === 'GET' && path === '/sync') return json(await sync(env, actor))
   if (req.method === 'GET' && path === '/activity') return json(await listActivity(env.DB, new URL(req.url), actor))
+  if (req.method === 'GET' && path === '/stats') return json(await statsView(env.DB, actor, new URL(req.url)))
   if (req.method === 'GET' && path === '/profiles') return json(await listProfiles(env, actor))
   if (req.method === 'POST' && path === '/profiles') return json(await createProfile(env, actor, await body()))
   if (req.method === 'PATCH' && profile && !profile[2]) return json(await updateProfile(env, actor, profile[1], await body()))

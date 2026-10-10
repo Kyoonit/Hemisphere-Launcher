@@ -185,3 +185,184 @@ export function stepPresence(prev: Presence, seen: SeenPlayer[] | null, complete
   }
   return { next: { at: minute, players }, ended, started }
 }
+
+// ------------------------------------------------------------------ what the Herald app shows (GET /stats)
+
+export type StatsRange = 'day' | 'week' | 'month'
+export const STATS_RANGES: StatsRange[] = ['day', 'week', 'month']
+/** each range: how far back, and one point of the curve every… */
+export const RANGE_SPAN: Record<StatsRange, { ms: number; bucket: number }> = {
+  day: { ms: 86_400_000, bucket: 15 * MINUTE },
+  week: { ms: 7 * 86_400_000, bucket: 60 * MINUTE },
+  month: { ms: 30 * 86_400_000, bucket: 6 * 60 * MINUTE },
+}
+/** days and hours are counted in the viewer's time zone; this one when none (or an unknown one) is given */
+export const STATS_TIME_ZONE = 'Europe/Paris'
+
+/** A time zone this runtime knows (else the default) */
+export function statsZone(zone: string | null | undefined): string {
+  if (!zone || zone.length > 64) return STATS_TIME_ZONE
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: zone })
+    return zone
+  } catch {
+    return STATS_TIME_ZONE
+  }
+}
+
+export interface StatsPlayer {
+  uuid: string
+  name: string
+  minutes: number
+  sessions: number
+}
+
+export interface ServerStatsView {
+  range: StatsRange
+  from: number
+  to: number
+  /** the first minute ever collected (null: nothing yet) */
+  collectingSince: number | null
+  /** the last minute collected */
+  last: { at: number; online: boolean; players: number | null; max: number | null; latencyMs: number | null; version: string | null } | null
+  /** who is online now (bots left out), since when */
+  online: { uuid: string; name: string; since: number; minutes: number }[]
+  /** players over the range: the most at once in each slice, and the share of minutes the server answered */
+  curve: { at: number; players: number | null; up: number }[]
+  peak: { players: number; at: number } | null
+  /** share of the collected minutes the server answered (null: none collected) */
+  uptime: number | null
+  /** different players, new ones (first time ever seen), every player ever seen */
+  unique: number
+  newPlayers: number
+  allPlayers: number
+  sessions: { count: number; minutes: number; averageMinutes: number | null }
+  dimensions: Record<Dimension, number>
+  /** the time zone days and hours are counted in */
+  zone: string
+  /** each day of the range: different players and minutes played */
+  days: { day: string; players: number; minutes: number }[]
+  /** average players online by weekday (0 = Monday) and hour, over the last 4 weeks */
+  heat: (number | null)[][]
+  top: StatsPlayer[]
+  /** who played the most since the statistics began */
+  topAllTime: StatsPlayer[]
+  /** catalogue items tried in the range: how many different players */
+  catalogue: { itemId: string; name: string; players: number }[]
+}
+
+const formats = new Map<string, Intl.DateTimeFormat>()
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+/** The day (YYYY-MM-DD), weekday (0 = Monday) and hour of a moment, in a time zone */
+export function localTime(ms: number, zone = STATS_TIME_ZONE): { day: string; weekday: number; hour: number } {
+  let f = formats.get(zone)
+  if (!f) formats.set(zone, (f = new Intl.DateTimeFormat('en-GB', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short', hour: '2-digit', hourCycle: 'h23' })))
+  const p = Object.fromEntries(f.formatToParts(ms).map((x) => [x.type, x.value]))
+  return { day: `${p.year}-${p.month}-${p.day}`, weekday: WEEKDAYS.indexOf(p.weekday), hour: Number(p.hour) % 24 }
+}
+
+/** What the server's database gave (bots already left out of the players' rows) */
+export interface StatsRows {
+  collectingSince: number | null
+  last: { at: number; online: number; players: number | null; max_players: number | null; latency_ms: number | null; version: string | null } | null
+  presence: Presence | null
+  /** samples of the range by slice: most players, minutes answered, minutes collected */
+  buckets: { t: number; mx: number | null; up: number; n: number }[]
+  /** samples of the last 4 weeks by hour (hour start, average players while answering) */
+  hours: { h: number; av: number | null }[]
+  /** the sessions that ended in the range */
+  sessions: { uuid: string; name: string; started_at: number; minutes: number; overworld: number; nether: number; end_minutes: number }[]
+  newPlayers: number
+  allPlayers: number
+  /** totals of the ended sessions of the players who played the most ever */
+  allTime: { uuid: string; name: string; minutes: number; sessions: number }[]
+  catalogue: { itemId: string; name: string; players: number }[]
+}
+
+/** The statistics of a range, from the rows (sessions still going count with what they have so far) */
+export function buildStatsView(range: StatsRange, now: number, rows: StatsRows, zone = STATS_TIME_ZONE): ServerStatsView {
+  const { ms, bucket } = RANGE_SPAN[range]
+  const from = now - ms
+  const live = Object.entries(rows.presence?.players ?? {}).filter(([uuid]) => !isBot(uuid))
+  const all = [
+    ...rows.sessions.map((x) => ({ uuid: x.uuid, name: x.name, start: x.started_at, minutes: x.minutes, overworld: x.overworld, nether: x.nether, end: x.end_minutes })),
+    ...live.map(([uuid, e]) => ({ uuid, name: e.name, start: e.since, minutes: e.minutes, overworld: e.overworld, nether: e.nether, end: e.end })),
+  ]
+
+  // the curve: every slice of the range, empty where nothing was collected
+  const byT = new Map(rows.buckets.map((b) => [b.t, b]))
+  const curve: ServerStatsView['curve'] = []
+  for (let t = Math.floor(from / bucket) * bucket; t <= now; t += bucket) {
+    const b = byT.get(t)
+    curve.push({ at: t, players: b?.mx ?? null, up: b && b.n ? b.up / b.n : 0 })
+  }
+  let peak: ServerStatsView['peak'] = null
+  for (const b of rows.buckets) if (b.mx !== null && (!peak || b.mx >= peak.players)) peak = { players: b.mx, at: b.t }
+  const collected = rows.buckets.reduce((n, b) => n + b.n, 0)
+  const answered = rows.buckets.reduce((n, b) => n + b.up, 0)
+
+  // each day of the range: different players and minutes (a session counts on the day it started)
+  const days = new Map<string, { players: Set<string>; minutes: number }>()
+  for (let t = from; t <= now + 86_400_000; t += 86_400_000) {
+    const d = localTime(Math.min(t, now), zone).day
+    if (!days.has(d)) days.set(d, { players: new Set(), minutes: 0 })
+  }
+  const top = new Map<string, StatsPlayer>()
+  const dimensions: Record<Dimension, number> = { overworld: 0, nether: 0, end: 0 }
+  for (const x of all) {
+    const day = days.get(localTime(Math.max(x.start, from), zone).day)
+    day?.players.add(x.uuid)
+    if (day) day.minutes += x.minutes
+    const p = top.get(x.uuid) ?? { uuid: x.uuid, name: x.name, minutes: 0, sessions: 0 }
+    p.minutes += x.minutes
+    p.sessions += 1
+    p.name = x.name
+    top.set(x.uuid, p)
+    dimensions.overworld += x.overworld
+    dimensions.nether += x.nether
+    dimensions.end += x.end
+  }
+  const minutes = all.reduce((n, x) => n + x.minutes, 0)
+
+  // the week's rhythm: average players by weekday and hour
+  const sum = Array.from({ length: 7 }, () => Array<number>(24).fill(0))
+  const count = Array.from({ length: 7 }, () => Array<number>(24).fill(0))
+  for (const h of rows.hours) {
+    if (h.av === null) continue
+    const { weekday, hour } = localTime(h.h, zone)
+    if (weekday < 0) continue
+    sum[weekday][hour] += h.av
+    count[weekday][hour] += 1
+  }
+
+  return {
+    range,
+    from,
+    to: now,
+    collectingSince: rows.collectingSince,
+    last: rows.last && { at: rows.last.at, online: rows.last.online === 1, players: rows.last.players, max: rows.last.max_players, latencyMs: rows.last.latency_ms, version: rows.last.version },
+    online: live.map(([uuid, e]) => ({ uuid, name: e.name, since: e.since, minutes: e.minutes })).sort((a, b) => a.since - b.since),
+    curve,
+    peak,
+    uptime: collected ? answered / collected : null,
+    unique: top.size,
+    newPlayers: rows.newPlayers,
+    allPlayers: rows.allPlayers,
+    sessions: { count: all.length, minutes, averageMinutes: all.length ? Math.round(minutes / all.length) : null },
+    dimensions,
+    days: [...days].map(([day, d]) => ({ day, players: d.players.size, minutes: d.minutes })),
+    heat: sum.map((row, w) => row.map((v, h) => (count[w][h] ? Math.round((v / count[w][h]) * 10) / 10 : null))),
+    zone,
+    top: [...top.values()].sort((a, b) => b.minutes - a.minutes).slice(0, 10),
+    // ended sessions, plus the ones going on now
+    topAllTime: (() => {
+      const ever = new Map<string, StatsPlayer>(rows.allTime.map((p) => [p.uuid, { ...p }]))
+      for (const [uuid, e] of live) {
+        const p = ever.get(uuid) ?? { uuid, name: e.name, minutes: 0, sessions: 0 }
+        ever.set(uuid, { ...p, name: e.name, minutes: p.minutes + e.minutes, sessions: p.sessions + 1 })
+      }
+      return [...ever.values()].sort((a, b) => b.minutes - a.minutes).slice(0, 10)
+    })(),
+    catalogue: rows.catalogue,
+  }
+}
