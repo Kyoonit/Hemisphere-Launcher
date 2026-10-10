@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy, Minus, Newspaper, Package, Play, RefreshCw, Settings, Square, X, type LucideIcon, Images, Download, TriangleAlert } from 'lucide-react'
+import { Copy, Minus, Newspaper, Package, Play, RefreshCw, Settings, Square, X, type LucideIcon, Images, TriangleAlert } from 'lucide-react'
 import logo from '../assets/logo.png'
 import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
@@ -38,14 +38,14 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
   const isActive = (id: Screen) => screen === id || ((screen === 'repair' || screen === 'import' || screen === 'report') && id === 'settings') || ((screen === 'browse' || screen === 'modHistory') && id === 'mods')
 
   return (
-    // three columns: the name on the left, the tabs in the very middle of the window, the account and window buttons on the right
-    <header data-tour="tabs" className="drag absolute inset-x-0 top-0 z-20 grid h-[52px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-green-500/20 bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 pl-4 shadow-lg backdrop-blur-md">
-      <div className="flex min-w-0 items-center gap-2 text-[17px] font-bold whitespace-nowrap text-white">
+    // the name on the left, the account and window buttons on the right, the tabs centred in the room between them
+    <header data-tour="tabs" className="drag absolute inset-x-0 top-0 z-20 flex h-[52px] items-center gap-3 border-b border-green-500/20 bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 pl-4 shadow-lg backdrop-blur-md">
+      <div className="flex min-w-0 flex-none items-center gap-2 text-[17px] font-bold whitespace-nowrap text-white">
         <img src={logo} alt="" className="h-7 w-7 flex-none" draggable={false} />
         <span className="truncate">{t('app.name')}</span>
       </div>
 
-      <nav className={`no-drag flex items-center gap-1 ${minimal ? 'invisible' : ''}`}>
+      <nav className={`no-drag flex min-w-0 flex-1 items-center justify-center gap-1 ${minimal ? 'invisible' : ''}`}>
         {LEFT.map((tab) => (
           <Tab key={tab.id} tab={tab} active={isActive(tab.id)} badge={tab.id === 'news' ? badge : null} unseen={unseen} onNavigate={onNavigate} />
         ))}
@@ -66,7 +66,7 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
         ))}
       </nav>
 
-      <div className="no-drag flex h-full min-w-0 items-center justify-self-end">
+      <div className="no-drag flex h-full flex-none items-center">
         {!minimal && account}
         <UpdateBadge />
         <WindowButton label={t('window.minimize')} onClick={() => window.hemisphere.window.minimize()}>
@@ -111,54 +111,48 @@ function Tab({ tab, active, badge, unseen, onNavigate }: { tab: TabDef; active: 
 }
 
 /**
- * The launcher's own update, right next to the window buttons: downloading (progress), ready (orange, urgent: restart
- * to install it; it also installs itself when the launcher closes) or failed (click to try again). Shorter labels in a
- * narrow window, so the title bar never changes size.
+ * The launcher's own update, beside the account: a small square button that never pushes the tabs. Downloading: a ring
+ * fills up; ready: a green dot pulses (a click restarts to install it; it also installs itself when the launcher
+ * closes); failed: red (a click tries again). The words are in the tooltip, and beside the icon in very wide windows.
  */
 function UpdateBadge() {
   const { t } = useTranslation()
   const update = useLauncherUpdate()
+  const frame = 'animate-fade relative mx-1 flex h-8 min-w-8 items-center justify-center gap-2 rounded-lg px-2 text-[12.5px] font-semibold ring-1 transition-colors'
   if (update?.phase === 'downloading') {
     const percent = Math.round(update.ratio * 100)
     return (
-      <span
-        title={t('launcherUpdate.downloading', { version: update.version, percent })}
-        className="animate-fade mx-1.5 flex items-center gap-2 rounded-lg bg-gray-800/90 px-2.5 py-[5px] text-[12.5px] font-semibold text-gray-300 tabular-nums"
-      >
-        <Download size={13} className="text-green-400" />
-        <span className="max-[1180px]:hidden">{t('launcherUpdate.badgeDownloading')}</span>
-        <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-700 max-[1060px]:hidden">
-          <i className="block h-full rounded-full bg-green-400 transition-[width] duration-500" style={{ width: `${percent}%` }} />
-        </span>
-        {percent} %
+      <span title={t('launcherUpdate.downloading', { version: update.version, percent })} className={`${frame} bg-white/5 text-gray-300 ring-white/10`}>
+        <svg viewBox="0 0 20 20" className="size-5 -rotate-90" aria-hidden>
+          <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeOpacity="0.2" strokeWidth="2.5" />
+          <circle cx="10" cy="10" r="8" fill="none" stroke="var(--color-green-400)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray={`${(percent / 100) * 50.3} 50.3`} className="transition-[stroke-dasharray] duration-500" />
+        </svg>
+        <span className="hidden tabular-nums min-[1500px]:inline">{percent} %</span>
       </span>
     )
   }
   if (update?.phase === 'error')
     return (
-      <button
-        onClick={() => window.hemisphere.launcherUpdate.check()}
-        title={t('launcherUpdate.errorHint')}
-        className="animate-fade mx-1.5 flex items-center gap-1.5 rounded-lg bg-red-950/70 px-2.5 py-[5px] text-[12.5px] font-semibold text-red-300 ring-1 ring-red-500/50 transition-colors hover:bg-red-900/70"
-      >
-        <TriangleAlert size={13} /> <span className="max-[1060px]:hidden">{t('launcherUpdate.badgeError')}</span>
+      <button onClick={() => window.hemisphere.launcherUpdate.check()} title={t('launcherUpdate.errorHint')} aria-label={t('launcherUpdate.badgeError')} className={`${frame} bg-red-500/10 text-red-300 ring-red-400/30 hover:bg-red-500/20`}>
+        <TriangleAlert size={15} />
+        <span className="hidden min-[1500px]:inline">{t('launcherUpdate.badgeError')}</span>
       </button>
     )
   if (update?.phase !== 'ready') return null
   return (
     <button
       onClick={() => window.hemisphere.launcherUpdate.install()}
-      title={t('launcherUpdate.readyHint', { version: update.version })}
+      title={`${t('launcherUpdate.restart')}: ${t('launcherUpdate.readyHint', { version: update.version })}`}
       aria-label={t('launcherUpdate.restart')}
-      className="animate-fade mx-1.5 flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-amber-400 to-orange-500 px-3 py-[5px] text-[13px] font-bold whitespace-nowrap text-gray-950 shadow-[0_0_14px_rgba(245,158,11,0.45)] ring-1 ring-amber-300/70 transition hover:brightness-110"
+      className={`${frame} bg-green-500/10 text-green-300 ring-green-400/30 hover:bg-green-500/20 hover:text-white`}
     >
-      <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/80" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+      <RefreshCw size={15} strokeWidth={2.25} />
+      <span className="hidden min-[1500px]:inline">{t('launcherUpdate.badgeShort')}</span>
+      {/* something is waiting: a small dot, like an unread badge */}
+      <span className="absolute -top-0.5 -right-0.5 flex size-2.5">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-green-400/70" />
+        <span className="relative inline-flex size-2.5 rounded-full bg-green-400 ring-2 ring-gray-900" />
       </span>
-      <RefreshCw size={14} strokeWidth={2.5} />
-      <span className="max-[1180px]:hidden">{t('launcherUpdate.restart')}</span>
-      <span className="hidden max-[1180px]:inline max-[1060px]:hidden">{t('launcherUpdate.badgeShort')}</span>
     </button>
   )
 }

@@ -1,9 +1,11 @@
-// Catalogue in the launcher (1.4, step 3c): Mojang's check, items kept sealed per account, opened in memory, offline.
+// Catalogue in the launcher (1.4, step 3c): the account's proof, items kept sealed per account, opened in memory, offline.
 import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { generateKeyPairSync, sign } from 'node:crypto'
 import { seal } from '../src/shared/sealed'
+import { certificatePayload, proofProblem } from '../src/shared/playerProof'
 import type { ShopItem } from '../src/shared/catalogueShop'
 
 let root = ''
@@ -37,6 +39,23 @@ async function delivery(id: string, version: number) {
   return { version, sealed: Buffer.from(await seal(new TextEncoder().encode(JSON.stringify(bundle)), key, `${id}-v${version}`)).toString('base64'), key: Buffer.from(key).toString('base64') }
 }
 
+// Minecraft's services, as the launcher sees them: a player certificate signed by a stand-in for Mojang
+const mojang = generateKeyPairSync('rsa', { modulusLength: 2048 })
+const mojangKey = mojang.publicKey.export({ type: 'spki', format: 'der' }).toString('base64')
+function certificate() {
+  const player = generateKeyPairSync('rsa', { modulusLength: 2048 })
+  const spki = player.publicKey.export({ type: 'spki', format: 'der' })
+  // Mojang's own format: microseconds in the date (it signs the milliseconds), "RSA" in headers around PKCS#8 / X.509
+  const at = new Date(Date.now() + 48 * 3_600_000)
+  const expiresAt = `${at.toISOString().slice(0, 19)}.${String(at.getUTCMilliseconds()).padStart(3, '0')}417Z`
+  const pem = (label: string, der: Buffer) => `-----BEGIN ${label}-----\n${der.toString('base64').replace(/.{64}/g, '$&\n')}\n-----END ${label}-----\n`
+  return {
+    keyPair: { privateKey: pem('RSA PRIVATE KEY', player.privateKey.export({ type: 'pkcs8', format: 'der' })), publicKey: pem('RSA PUBLIC KEY', spki) },
+    publicKeySignatureV2: sign('sha1', certificatePayload(MS, at.getTime(), spki), mojang.privateKey).toString('base64'),
+    expiresAt,
+  }
+}
+
 const reply = (body: unknown, status = 200) => new Response(status === 204 ? null : JSON.stringify(body), { status })
 vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
   calls.push({ url, init })
@@ -44,9 +63,14 @@ vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
   const path = new URL(url).pathname
   if (path === '/shop') return reply({ items, ...(blocked && (init?.headers as Record<string, string>)?.authorization === 'Player player-token' ? { blocked: true } : {}) })
   if (path === '/player/challenge') return reply({ serverId: 'f'.repeat(40) })
-  if (path === '/session/minecraft/join') return reply(null, 204)
+  if (path === '/player/certificates') return (init?.headers as Record<string, string>)?.authorization === 'Bearer mc-token' ? reply(certificate()) : reply({}, 401)
   if (blocked && (path === '/player/verify' || path.startsWith('/shop/c-'))) return reply({ error: 'blocked', blocked: true }, 403)
-  if (path === '/player/verify') return reply({ token: 'player-token', expiresAt: Date.now() + 86_400_000 * tokenDays, id: MS, name: 'Kyo' })
+  if (path === '/player/verify') {
+    // the real check, as Herald does it
+    const body = JSON.parse(String(init?.body)) as { serverId: string; proof: Parameters<typeof proofProblem>[0] }
+    const problem = await proofProblem(body.proof, body.serverId, Date.now(), [mojangKey])
+    return problem ? reply({ error: problem }, 403) : reply({ token: 'player-token', expiresAt: Date.now() + 86_400_000 * tokenDays, id: body.proof.id, name: body.proof.name })
+  }
   const m = path.match(/^\/shop\/(c-[a-z0-9]{10})$/)
   if (m) {
     const it = items.find((i) => i.id === m[1])
@@ -72,16 +96,16 @@ describe('catalogue in the launcher', () => {
     accounts.activeId = MS
   })
 
-  test('the account is checked through Mojang (its token goes to Mojang only), the item is kept sealed', async () => {
+  test('the account proves itself with its player certificate (its token goes to Minecraft’s services only), the item is kept sealed', async () => {
     const shop = await load()
     expect((await shop.listShop()).ok).toBe(true)
     const r = await shop.shopItem(CROWN)
     expect(r.ok && r.value.model?.cubes.length).toBe(1)
-    const joined = calls.find((c) => c.url.endsWith('/session/minecraft/join'))!
-    expect(joined.url.startsWith('https://sessionserver.mojang.com/')).toBe(true)
-    expect(JSON.parse(String(joined.init!.body))).toEqual({ accessToken: 'mc-token', selectedProfile: MS, serverId: 'f'.repeat(40) })
+    const certs = calls.find((c) => c.url.endsWith('/player/certificates'))!
+    expect(certs.url).toBe('https://api.minecraftservices.com/player/certificates')
+    expect(calls.find((c) => c.url.endsWith('/player/verify'))).toBeTruthy()
     // the Minecraft token never reaches Herald
-    expect(calls.filter((c) => !c.url.includes('mojang.com')).some((c) => JSON.stringify(c.init ?? {}).includes('mc-token'))).toBe(false)
+    expect(calls.filter((c) => !c.url.includes('minecraftservices.com')).some((c) => JSON.stringify(c.init ?? {}).includes('mc-token'))).toBe(false)
     // on disk: sealed item, protected keys and player token, nothing in clear
     const dir = join(root, 'catalogue')
     const sealed = readFileSync(join(dir, 'items', MS, `${CROWN}-v1.bin`))
@@ -110,7 +134,7 @@ describe('catalogue in the launcher', () => {
     calls.length = 0
     const r2 = await shop.shopItem(CROWN)
     expect(r2.ok && r2.value.version).toBe(2)
-    expect(calls.some((c) => c.url.includes('mojang'))).toBe(false)
+    expect(calls.some((c) => c.url.includes('minecraftservices'))).toBe(false)
     expect(readdirSync(join(root, 'catalogue', 'items', MS))).toEqual([`${CROWN}-v2.bin`])
   })
 

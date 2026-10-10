@@ -7,8 +7,8 @@ interface ImportMetaEnv {
   readonly MAIN_VITE_HERALD_URL?: string
   readonly MAIN_VITE_HERALD_CONTENT_BASE?: string
   readonly MAIN_VITE_HERALD_PUBLIC_KEY?: string
-  /** Dev builds only: a stand-in for Mojang's session server (catalogue tests against a local Herald) */
-  readonly MAIN_VITE_MOJANG_SESSION?: string
+  /** Dev builds only: a stand-in for Minecraft's services (player certificates; catalogue tests against a local Herald) */
+  readonly MAIN_VITE_MINECRAFT_SERVICES?: string
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv

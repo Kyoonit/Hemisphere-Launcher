@@ -1,9 +1,10 @@
 // Catalogue in the launchers (launcher 1.4, step 3c) end-to-end, against a LOCAL server whose profiles table is EMPTY.
-// A stand-in for Mojang's session server runs here (port 8799; the dev server is told about it, local only):
+// Player certificates are signed here by a stand-in for Mojang (MOJANG_TEST_KEY / MOJANG_TEST_PRIVATE in .dev.vars; the
+// local server trusts that key only when HERALD_ENV is local):
 //   npm run herald:server:reset-local && npm run herald:server:migrate && npm run herald:server:dev     then
 //   node tools/herald/e2e-shop.ts
-// Players checked like Minecraft servers do (join / hasJoined), sealed items, a mark per player, tracing a leak.
-import { createServer } from 'node:http'
+// Players prove their account offline (src/shared/playerProof.ts), sealed items, a mark per player, tracing a leak.
+import { createPrivateKey, generateKeyPairSync, sign } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { decodePng, encodePng } from '../../src/shared/png.ts'
@@ -26,37 +27,39 @@ const call = async (method: string, path: string, auth?: string | null, body?: u
   return { status: res.status, body: (await res.json().catch(() => ({}))) as Record<string, any> }
 }
 
-// ------------------------------------------------------------------ Mojang's session server, as the launcher sees it
+// ------------------------------------------------------------------ the launcher's proof, with a stand-in for Mojang
+if (!vars.MOJANG_TEST_PRIVATE) throw new Error('MOJANG_TEST_KEY / MOJANG_TEST_PRIVATE are missing from herald/server/.dev.vars')
+const MOJANG = createPrivateKey({ key: Buffer.from(vars.MOJANG_TEST_PRIVATE, 'base64'), format: 'der', type: 'pkcs8' })
 const ACCOUNTS: Record<string, { id: string; name: string }> = { 'token-kyo': { id: 'a'.repeat(32), name: 'Kyo' }, 'token-alex': { id: 'b'.repeat(32), name: 'Alex' } }
-const joined = new Map<string, { id: string; name: string }>() // serverId|name → profile
-const mojang = createServer((req, res) => {
-  const url = new URL(req.url!, 'http://x')
-  if (req.method === 'POST' && url.pathname === '/session/minecraft/join') {
-    let data = ''
-    req.on('data', (c) => (data += c))
-    req.on('end', () => {
-      const b = JSON.parse(data) as { accessToken: string; selectedProfile: string; serverId: string }
-      const who = ACCOUNTS[b.accessToken]
-      if (!who || who.id !== b.selectedProfile) return res.writeHead(403).end('{"error":"ForbiddenOperationException"}')
-      joined.set(`${b.serverId}|${who.name}`, who)
-      res.writeHead(204).end()
-    })
-    return
-  }
-  if (req.method === 'GET' && url.pathname === '/session/minecraft/hasJoined') {
-    const who = joined.get(`${url.searchParams.get('serverId')}|${url.searchParams.get('username')}`)
-    return who ? res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ id: who.id, name: who.name, properties: [] })) : res.writeHead(204).end()
-  }
-  res.writeHead(404).end()
-})
-await new Promise<void>((r) => mojang.listen(8799, '127.0.0.1', r))
 
-/** What the launcher does: challenge, join at "Mojang" with the player's own token, verify */
-async function verify(accessToken: string, name: string) {
-  const { serverId } = (await call('GET', '/player/challenge')).body
+// written out again here (not imported): the server must check exactly these bytes (src/shared/playerProof.ts)
+const certificatePayload = (id: string, expiresAt: number, key: Buffer) => {
+  const head = Buffer.alloc(24)
+  Buffer.from(id, 'hex').copy(head)
+  head.writeBigUInt64BE(BigInt(expiresAt), 16)
+  return Buffer.concat([head, key])
+}
+const proofMessage = (challenge: string, id: string) => Buffer.from(`hemisphere-herald:${challenge}:${id}`)
+
+/** What the launcher does: a challenge, the account's certificate ("signed by Mojang"), the challenge signed with it */
+async function verify(accessToken: string, { claim, signer = MOJANG, tamper = false }: { claim?: string; signer?: ReturnType<typeof createPrivateKey>; tamper?: boolean } = {}) {
+  const given = (await call('GET', '/player/challenge')).body.serverId as string
+  // tamper: a challenge Herald never gave (its last digit changed)
+  const serverId = tamper ? given.slice(0, 39) + (given.endsWith('0') ? '1' : '0') : given
   const who = ACCOUNTS[accessToken]
-  await fetch('http://127.0.0.1:8799/session/minecraft/join', { method: 'POST', body: JSON.stringify({ accessToken, selectedProfile: who?.id ?? 'x', serverId }) })
-  return call('POST', '/player/verify', null, { name, serverId })
+  const player = generateKeyPairSync('rsa', { modulusLength: 2048 })
+  const spki = player.publicKey.export({ type: 'spki', format: 'der' })
+  const expiresAt = Date.now() + 48 * 3_600_000
+  const id = claim ?? who.id
+  const proof = {
+    id,
+    name: who.name,
+    publicKey: spki.toString('base64'),
+    expiresAt,
+    keySignature: sign('sha1', certificatePayload(who.id, expiresAt, spki), signer).toString('base64'),
+    signature: sign('sha256', proofMessage(serverId, id), player.privateKey).toString('base64'),
+  }
+  return call('POST', '/player/verify', null, { serverId, proof })
 }
 
 console.log(`Herald shop test → ${BASE}`)
@@ -86,12 +89,12 @@ check(list.status === 200 && listed(crown.id) && listed(knight.id) && !listed(dr
 check(list.body.items.every((i: Record<string, unknown>) => !('files' in i) && !('versions' in i) && !('createdBy' in i)), 'the list says nothing about files or staff')
 
 // players
-check((await verify('token-kyo', 'Alex')).status === 403, 'a player cannot verify as another one')
-const { serverId: old } = (await call('GET', '/player/challenge')).body
-check((await call('POST', '/player/verify', null, { name: 'Kyo', serverId: old.slice(0, 39) + (old.endsWith('0') ? '1' : '0') })).status === 403, 'a made-up server id is refused')
-const kyo = await verify('token-kyo', 'Kyo')
-check(kyo.status === 200 && kyo.body.id === 'a'.repeat(32) && typeof kyo.body.token === 'string', 'Kyo is verified through Mojang (the launcher never gave Herald a Minecraft token)')
-const alex = await verify('token-alex', 'Alex')
+check((await verify('token-kyo', { claim: 'b'.repeat(32) })).status === 403, 'a player cannot verify as another one')
+check((await verify('token-kyo', { signer: generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey })).status === 403, 'a certificate not signed by Mojang is refused')
+check((await verify('token-kyo', { tamper: true })).status === 403, 'a made-up challenge is refused')
+const kyo = await verify('token-kyo')
+check(kyo.status === 200 && kyo.body.id === 'a'.repeat(32) && typeof kyo.body.token === 'string', 'Kyo proves the account offline (Herald calls no Mojang API, gets no Minecraft token)')
+const alex = await verify('token-alex')
 
 check((await call('GET', `/shop/${crown.id}`)).status === 401, 'items need a verified player')
 check((await call('GET', `/shop/${crown.id}`, `Player ${kyo.body.token.slice(0, -2)}xx`)).status === 401, 'a changed player token is refused')
@@ -129,7 +132,7 @@ const blockedList = await call('POST', `/catalogue/players/${'b'.repeat(32)}/blo
 check(blockedList.status === 200 && blockedList.body.players.some((p: { name: string }) => p.name === 'Alex'), 'an Admin blocks Alex from the catalogue')
 const refused = await call('GET', `/shop/${knight.id}`, `Player ${alex.body.token}`)
 check(refused.status === 403 && refused.body.blocked === true, 'Alex gets nothing more, even with a token still valid (the launcher is told to forget)')
-check((await verify('token-alex', 'Alex')).body.blocked === true, 'and cannot get a new access')
+check((await verify('token-alex')).body.blocked === true, 'and cannot get a new access')
 check((await call('GET', '/shop', `Player ${alex.body.token}`)).body.blocked === true && !(await call('GET', '/shop', `Player ${kyo.body.token}`)).body.blocked, 'the list tells Alex’s launcher (and only Alex’s) to forget what it kept')
 check((await call('GET', `/shop/${knight.id}`, `Player ${kyo.body.token}`)).status === 200, 'other players are not affected')
 check((await trace(ADMIN, png(alexCrown.bundle.model.textures[0].src))).body.player.blockedAt > 0, 'tracing shows Alex is blocked')
@@ -145,6 +148,5 @@ check((await call('GET', `/shop/thumb/${knight.id}`)).status === 404, 'no pictur
 const journal = (await call('GET', '/activity?area=catalogue', OWNER)).body.entries as { action: string }[]
 check(['catalogue.trace', 'catalogue.block', 'catalogue.unblock'].every((a) => journal.some((e) => e.action === a)), 'tracing and blocking are in the journal')
 
-mojang.close()
 console.log(failures ? `\n${failures} check(s) FAILED` : '\nall shop checks passed')
 process.exit(failures ? 1 : 0)

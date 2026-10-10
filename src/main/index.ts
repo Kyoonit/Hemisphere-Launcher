@@ -893,8 +893,8 @@ function syncLoginItem(): void {
 
 // A development build pointed at Herald's TEST environment keeps its own data folder (settings, accounts, game folder):
 // a test mod pack can never be installed in the real game, and it runs next to the installed launcher. Same for a
-// build tested against a stand-in Mojang (catalogue tests with a local Herald).
-if (!app.isPackaged && ((import.meta.env?.MAIN_VITE_HERALD_PUBLIC_KEY && import.meta.env.MAIN_VITE_HERALD_PUBLIC_KEY !== CONTENT_PUBLIC_KEY) || import.meta.env?.MAIN_VITE_MOJANG_SESSION)) {
+// build tested against a stand-in for Minecraft's services (catalogue tests with a local Herald).
+if (!app.isPackaged && ((import.meta.env?.MAIN_VITE_HERALD_PUBLIC_KEY && import.meta.env.MAIN_VITE_HERALD_PUBLIC_KEY !== CONTENT_PUBLIC_KEY) || import.meta.env?.MAIN_VITE_MINECRAFT_SERVICES)) {
   app.setPath('userData', `${app.getPath('userData')}-herald-test`)
 }
 

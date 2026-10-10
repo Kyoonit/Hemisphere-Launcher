@@ -3,6 +3,12 @@
     "date": "2026-10-10",
     "changes": [
       {
+        "version": "next",
+        "area": "launcher",
+        "en": "Patreon catalogue: every Microsoft account can now try items on (the account is checked differently). A simpler update button in the top bar, and the guided tour’s buttons fit on one line.",
+        "fr": "Catalogue Patreon : tous les comptes Microsoft peuvent maintenant essayer les articles (le compte est vérifié autrement). Un bouton de mise à jour plus discret dans la barre du haut, et les boutons de la visite guidée tiennent sur une ligne."
+      },
+      {
         "version": "1.4.1",
         "area": "launcher",
         "en": "A guided tour of the launcher: every part explained step by step (3 / 17…), offered on Home; skip a part or quit anytime, and take it again from Settings > Launcher.",

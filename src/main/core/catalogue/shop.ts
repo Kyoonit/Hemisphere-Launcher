@@ -7,6 +7,8 @@ import { fromB64, unseal } from '@shared/sealed'
 import type { PlayerSession, ShopBundle, ShopDelivery, ShopError, ShopItem, ShopResult } from '@shared/catalogueShop'
 import { getAccountsState, getLaunchCredentials } from '../auth/accounts'
 import { heraldUrl } from '../remote/feedV2'
+import { createPrivateKey, createPublicKey, sign, type KeyObject } from 'node:crypto'
+import { proofMessage, type PlayerProof } from '@shared/playerProof'
 
 /**
  * The catalogue in the launcher (1.4, step 3c): Patreon models and skins to try on.
@@ -23,12 +25,12 @@ import { heraldUrl } from '../remote/feedV2'
  * kept for that account is removed as soon as Herald says so.
  */
 
-const MOJANG = 'https://sessionserver.mojang.com'
+const SERVICES = 'https://api.minecraftservices.com'
 const TIMEOUT = 15_000
 const dev = () => !app.isPackaged
-const mojang = () => ((dev() && import.meta.env?.MAIN_VITE_MOJANG_SESSION) || MOJANG).replace(/\/$/, '')
-/** dev builds tested against a stand-in Mojang (local Herald): dev offline accounts can be checked too */
-const fakeMojang = () => dev() && !!import.meta.env?.MAIN_VITE_MOJANG_SESSION
+const services = () => ((dev() && import.meta.env?.MAIN_VITE_MINECRAFT_SERVICES) || SERVICES).replace(/\/$/, '')
+/** dev builds tested against a stand-in for Minecraft's services (local Herald): dev offline accounts can be checked too */
+const fakeMojang = () => dev() && !!import.meta.env?.MAIN_VITE_MINECRAFT_SERVICES
 /** a test server gets its own folder: test items never mix with real ones */
 const dir = () => join(app.getPath('userData'), heraldUrl() === HERALD_URL ? 'catalogue' : 'catalogue-test')
 const itemFile = (uuid: string, id: string, version: number) => join(dir(), 'items', uuid, `${id}-v${version}.bin`)
@@ -109,25 +111,10 @@ async function playerToken(accountId: string, fresh = false): Promise<string> {
     throw new Failure('not-verified', `Microsoft session: ${err instanceof Error ? err.message : 'cannot be renewed'}`)
   }
   if (creds.userType !== 'msa' && !fakeMojang()) throw new Failure('needs-microsoft')
+  const id = creds.uuid.replace(/-/g, '').toLowerCase()
   const { serverId } = await herald<{ serverId: string }>('/player/challenge')
-  let joined: Response
-  try {
-    joined = await fetch(`${mojang()}/session/minecraft/join`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ accessToken: creds.accessToken, selectedProfile: creds.uuid, serverId }),
-      signal: AbortSignal.timeout(TIMEOUT),
-    })
-  } catch {
-    throw new Failure('offline')
-  }
-  if (!joined.ok) {
-    // Mojang's reason (never the token): ForbiddenOperationException, InsufficientPrivilegesException (multiplayer off)…
-    const why = ((await joined.json().catch(() => ({}))) as { error?: unknown; errorMessage?: unknown; path?: unknown })
-    const reason = [why.error, why.errorMessage].filter((x) => typeof x === 'string').join(': ').slice(0, 160)
-    throw new Failure(joined.status === 403 || joined.status === 401 ? 'not-verified' : 'offline', `Mojang join ${joined.status}${reason ? ` (${reason})` : ''}`)
-  }
-  const session = await herald<PlayerSession>('/player/verify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: creds.name, serverId }) })
+  const proof = await prove(creds.accessToken, id, creds.name, serverId)
+  const session = await herald<PlayerSession>('/player/verify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ serverId, proof }) })
   if (session.id !== accountId) throw new Failure('not-verified', 'Mojang answered for another account')
   store[accountId] = { token: session.token, expiresAt: session.expiresAt }
   await players.save()
@@ -154,6 +141,58 @@ async function forget(accountId: string): Promise<void> {
   await keys.save()
   delete (await players.get())[accountId]
   await players.save()
+}
+
+/** A PEM's base64 body as bytes */
+const pemDer = (pem: string) => Buffer.from(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''), 'base64')
+/** Mojang's "2026-10-12T08:15:30.123456Z": the milliseconds Mojang signed (extra digits dropped, like Java's Instant) */
+function isoMillis(iso: string): number {
+  const m = iso.match(/^(.+T\d\d:\d\d:\d\d)(?:\.(\d+))?Z$/)
+  if (!m) return NaN
+  return Date.parse(`${m[1]}Z`) + Number((m[2] ?? '').padEnd(3, '0').slice(0, 3))
+}
+/** A key read in the first of these formats that fits (Mojang's PEM headers do not always say which) */
+const keyOf = <T>(make: (type: 'pkcs8' | 'pkcs1' | 'spki') => T, types: ('pkcs8' | 'pkcs1' | 'spki')[]): T => {
+  for (const type of types)
+    try {
+      return make(type)
+    } catch {
+      /* the next format */
+    }
+  throw new Failure('failed', 'unreadable player certificate')
+}
+
+/**
+ * The account's proof for Herald: its player certificate from Minecraft's services (the key pair the game signs chat
+ * with, signed by Mojang), and Herald's challenge signed with it. The Minecraft token only goes to Minecraft's services.
+ */
+async function prove(accessToken: string, id: string, name: string, challenge: string): Promise<PlayerProof> {
+  let res: Response
+  try {
+    res = await fetch(`${services()}/player/certificates`, {
+      method: 'POST',
+      // dev builds against the stand-in: its dev accounts have no real token, so it is told which account
+      headers: { authorization: `Bearer ${accessToken}`, ...(fakeMojang() ? { 'x-test-profile': id } : {}) },
+      signal: AbortSignal.timeout(TIMEOUT),
+    })
+  } catch {
+    throw new Failure('offline')
+  }
+  if (!res.ok) throw new Failure(res.status === 401 || res.status === 403 ? 'not-verified' : 'offline', `Minecraft certificate ${res.status}`)
+  const c = (await res.json()) as { keyPair?: { privateKey?: string; publicKey?: string }; publicKeySignatureV2?: string; expiresAt?: string }
+  if (!c.keyPair?.privateKey || !c.keyPair.publicKey || !c.publicKeySignatureV2 || !c.expiresAt) throw new Failure('failed', 'incomplete player certificate')
+  const privDer = pemDer(c.keyPair.privateKey)
+  const pubDer = pemDer(c.keyPair.publicKey)
+  const privateKey: KeyObject = keyOf((type) => createPrivateKey({ key: privDer, format: 'der', type: type as 'pkcs8' | 'pkcs1' }), ['pkcs8', 'pkcs1'])
+  const publicKey: KeyObject = keyOf((type) => createPublicKey({ key: pubDer, format: 'der', type: type as 'spki' | 'pkcs1' }), ['spki', 'pkcs1'])
+  return {
+    id,
+    name,
+    publicKey: publicKey.export({ type: 'spki', format: 'der' }).toString('base64'),
+    expiresAt: isoMillis(c.expiresAt),
+    keySignature: c.publicKeySignatureV2,
+    signature: sign('sha256', proofMessage(challenge, id), privateKey).toString('base64'),
+  }
 }
 
 // ------------------------------------------------------------------------------------------------ list

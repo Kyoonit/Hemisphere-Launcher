@@ -1,8 +1,9 @@
 /**
  * The catalogue in the launchers (launcher 1.4, step 3c).
- *   GET  /player/challenge   a one-time server id; the launcher "joins" it at Mojang with the player's own token
- *   POST /player/verify      Herald asks Mojang (hasJoined) who joined it → a player token for 30 days. The launcher
- *                            never sends its Microsoft or Minecraft token here: Minecraft servers check players this way.
+ *   GET  /player/challenge   a one-time challenge
+ *   POST /player/verify      the launcher's proof (src/shared/playerProof.ts): the account's player certificate, signed
+ *                            by Mojang, and the challenge signed with it → a player token for 30 days. Checked offline:
+ *                            Herald calls no Mojang API and never sees the player's Microsoft or Minecraft token.
  *   GET  /shop               PUBLIC: the items shown in the launchers
  *   GET  /shop/thumb/<id>    PUBLIC: an item's picture
  *   GET  /shop/<id>          a verified player: the item sealed, its textures marked with that player's tag
@@ -16,6 +17,7 @@ import { readModel, type ModelData } from '../../../src/shared/models.ts'
 import { decodePng, encodePng, PngError, type Pixels } from '../../../src/shared/png.ts'
 import { seal } from '../../../src/shared/sealed.ts'
 import { markPixels, readMark } from '../../../src/shared/watermark.ts'
+import { proofProblem, type PlayerProof } from '../../../src/shared/playerProof.ts'
 import { shopKeyId, type PlayerSession, type ShopBundle, type ShopDelivery, type ShopItem } from '../../../src/shared/catalogueShop.ts'
 import { HttpError, logActivity, type Actor } from './accounts'
 import { fromB64, toB64 } from './crypto'
@@ -25,11 +27,10 @@ export interface ShopEnv {
   DB: D1Database
   HERALD_ENV: string
   VAULT_MASTER: string
-  /** local tests only: a stand-in for Mojang's session server */
-  MOJANG_SESSION?: string
+  /** local tests only: the public key (base64 SPKI) of a stand-in for Mojang's certificate signer */
+  MOJANG_TEST_KEY?: string
 }
 
-const MOJANG = 'https://sessionserver.mojang.com'
 const TOKEN_DAYS = 30
 const CHALLENGE_MS = 2 * 60_000
 const PART = 1_500_000
@@ -56,18 +57,16 @@ export async function challenge(env: ShopEnv) {
 }
 
 export async function verifyPlayer(env: ShopEnv, body: Record<string, unknown>): Promise<PlayerSession> {
-  const name = typeof body.name === 'string' && /^\w{1,16}$/.test(body.name) ? body.name : null
   const serverId = typeof body.serverId === 'string' && /^[0-9a-f]{40}$/.test(body.serverId) ? body.serverId : null
-  if (!name || !serverId) throw new HttpError(400, 'Bad request.')
+  const proof = (body.proof && typeof body.proof === 'object' ? body.proof : null) as PlayerProof | null
+  if (!proof || !serverId) throw new HttpError(400, 'Bad request.')
   const at = serverId.slice(0, 12)
   if (hex(await hmac(env, 'challenge', at)).slice(0, 28) !== serverId.slice(12) || Date.now() - parseInt(at, 16) > CHALLENGE_MS) throw new HttpError(403, 'This check has expired: try again.')
-  const base = env.HERALD_ENV === 'local' && env.MOJANG_SESSION ? env.MOJANG_SESSION : MOJANG
-  const res = await fetch(`${base}/session/minecraft/hasJoined?username=${encodeURIComponent(name)}&serverId=${serverId}`, { signal: AbortSignal.timeout(10_000) })
-  if (res.status === 204 || res.status === 403 || res.status === 404) throw new HttpError(403, 'Mojang does not know this account here: sign in again in the launcher.')
-  if (!res.ok) throw new HttpError(503, 'Mojang cannot be reached: try again later.')
-  const profile = (await res.json()) as { id?: unknown; name?: unknown }
-  const id = typeof profile.id === 'string' && /^[0-9a-f]{32}$/.test(profile.id) ? profile.id : null
-  if (!id || typeof profile.name !== 'string') throw new HttpError(503, 'Mojang gave an unexpected answer.')
+  // checked offline with Mojang's public keys (local tests: their own stand-in key)
+  const problem = await proofProblem(proof, serverId, Date.now(), env.HERALD_ENV === 'local' && env.MOJANG_TEST_KEY ? [env.MOJANG_TEST_KEY] : undefined)
+  if (problem) throw new HttpError(403, `This Minecraft account could not be checked: ${problem}.`)
+  const profile = { id: proof.id, name: proof.name }
+  const id = profile.id
   const now = Date.now()
   const known = await env.DB.prepare('SELECT blocked_at FROM catalogue_players WHERE uuid = ?1').bind(id).first<{ blocked_at: number | null }>()
   if (known?.blocked_at) throw blocked()

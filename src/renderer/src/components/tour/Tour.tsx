@@ -30,7 +30,7 @@ export interface TourLabels {
 
 const PAD = 8
 const GAP = 14
-const WIDTH = 360
+const WIDTH = 380
 
 type Box = { top: number; left: number; width: number; height: number }
 
@@ -161,7 +161,15 @@ export function Tour({ steps, labels, onClose }: { steps: TourStep[]; labels: To
       >
         <div className="mb-2 flex items-center justify-between gap-3">
           <span className="text-[11px] font-bold tracking-[0.08em] text-green-400 uppercase">{step.part}</span>
-          <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[11.5px] font-semibold text-gray-300 tabular-nums">{labels.counter(index + 1, steps.length)}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[11.5px] font-semibold text-gray-300 tabular-nums">{labels.counter(index + 1, steps.length)}</span>
+            {/* quit: always there, out of the way of the step's buttons */}
+            <button onClick={() => onClose(false)} title={labels.quit} aria-label={labels.quit} className="grid size-6 place-items-center rounded-md text-gray-500 transition-colors hover:bg-gray-800 hover:text-white">
+              <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
+            </button>
+          </div>
         </div>
         <h3 className="text-[16px] font-bold text-white">{step.title}</h3>
         <p className="mt-1.5 text-[13px] leading-relaxed whitespace-pre-line text-gray-300">{step.body}</p>
@@ -169,16 +177,13 @@ export function Tour({ steps, labels, onClose }: { steps: TourStep[]; labels: To
         <div className="mt-3 h-1 overflow-hidden rounded-full bg-gray-800">
           <i className="block h-full rounded-full bg-green-500 transition-[width] duration-300" style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <button onClick={() => onClose(false)} className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-gray-400 transition-colors hover:bg-gray-800 hover:text-white">
-            {labels.quit}
-          </button>
+        <div className="mt-3 flex items-center gap-1.5">
           {morePartsAfter && partSteps > 1 && (
-            <button onClick={nextPart} className="rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-gray-400 transition-colors hover:bg-gray-800 hover:text-white">
+            <button onClick={nextPart} className="-ml-1 min-w-0 truncate rounded-lg px-1.5 py-1.5 text-[12.5px] font-semibold text-gray-400 transition-colors hover:text-white hover:underline">
               {labels.skipPart}
             </button>
           )}
-          <div className="ml-auto flex gap-1.5">
+          <div className="ml-auto flex flex-none gap-1.5">
             {index > 0 && (
               <button onClick={() => go(index - 1)} className="rounded-lg bg-gray-800 px-3 py-1.5 text-[13px] font-semibold text-gray-200 transition-colors hover:bg-gray-700">
                 {labels.back}

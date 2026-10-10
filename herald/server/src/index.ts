@@ -59,8 +59,8 @@ export interface Env extends GithubEnv {
   /** One-time secret to create the Owner and Developer profiles (removed afterwards) */
   BOOTSTRAP_TOKEN?: string
   DEV_TOKEN?: string
-  /** local tests only: a stand-in for Mojang's session server */
-  MOJANG_SESSION?: string
+  /** local tests only: the public key of a stand-in for Mojang's certificate signer (.dev.vars) */
+  MOJANG_TEST_KEY?: string
   /** The version of this server that answers (wrangler.toml [version_metadata]) */
   CF_VERSION?: { id: string; tag: string; timestamp: string }
 }
