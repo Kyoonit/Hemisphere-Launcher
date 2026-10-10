@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { CrouchAnimation, FlyingAnimation, IdleAnimation, RunningAnimation, SkinViewer, WalkingAnimation, WaveAnimation, type PlayerAnimation } from 'skinview3d'
+import { Box3, Vector3 } from 'three'
 import type { SkinInfo } from '@shared/skins'
 import type { ModelData } from '@shared/models'
 import { bodyPart, buildModel, disposeModel, type ModelAdjust, type WornSlot } from './modelMesh'
@@ -29,6 +30,10 @@ export type BackItem = 'cape' | 'elytra' | 'none'
 
 const NONE: WornModel[] = []
 
+/** Viewers that can be moved in their frame (right-drag): how to put the player back in the middle */
+const centring = new WeakMap<SkinViewer, () => void>()
+export const centreView = (v: SkinViewer) => centring.get(v)?.()
+
 export function SkinView({
   skin,
   width,
@@ -42,6 +47,7 @@ export function SkinView({
   worn = NONE,
   onViewer,
   zoom = 1,
+  pan = false,
   className = '',
 }: {
   skin: SkinInfo
@@ -61,9 +67,12 @@ export function SkinView({
   onViewer?(viewer: SkinViewer | null): void
   /** camera distance factor (below 1: further away) */
   zoom?: number
+  /** right-drag moves the player in the frame (its middle never leaves it), to frame a picture */
+  pan?: boolean
   className?: string
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
+  const keepInFrame = useRef<(() => void) | null>(null)
   const viewer = useRef<SkinViewer | null>(null)
   const still = !interactive && animation === 'none' && !autoRotate
   const stillRef = useRef(still)
@@ -93,6 +102,76 @@ export function SkinView({
       v.render()
     }
     const up = () => (from = null)
+    // right-drag: the picture's frame moves over the scene (a camera view offset, whatever the rotation), as a
+    // fraction of the frame; the middle of the player (and what it wears) always stays inside the frame
+    const shift = { x: 0, y: 0 }
+    const box = new Box3()
+    const corner = new Vector3()
+    const apply = () => {
+      const w = c.clientWidth || 1
+      const h = c.clientHeight || 1
+      if (!shift.x && !shift.y) v.camera.clearViewOffset()
+      else v.camera.setViewOffset(w, h, -shift.x * w, -shift.y * h, w, h)
+    }
+    const part = new Box3()
+    const clamp = () => {
+      if (!pan) return
+      v.camera.updateMatrixWorld()
+      v.playerObject.updateWorldMatrix(true, true)
+      // what is shown only (a hidden cape does not count)
+      box.makeEmpty()
+      v.playerObject.traverseVisible((o) => {
+        const g = (o as { geometry?: { boundingBox: Box3 | null; computeBoundingBox(): void } }).geometry
+        if (!g) return
+        if (!g.boundingBox) g.computeBoundingBox()
+        box.union(part.copy(g.boundingBox!).applyMatrix4(o.matrixWorld))
+      })
+      if (box.isEmpty()) return apply()
+      let [minX, maxX, minY, maxY] = [Infinity, -Infinity, Infinity, -Infinity]
+      for (let i = 0; i < 8; i++) {
+        corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(v.camera)
+        minX = Math.min(minX, (corner.x + 1) / 2)
+        maxX = Math.max(maxX, (corner.x + 1) / 2)
+        minY = Math.min(minY, (1 - corner.y) / 2)
+        maxY = Math.max(maxY, (1 - corner.y) / 2)
+      }
+      // the player's middle never leaves the frame (at most half of it goes past an edge)
+      const cx = (minX + maxX) / 2 - shift.x
+      const cy = (minY + maxY) / 2 - shift.y
+      shift.x = Math.min(1 - cx, Math.max(-cx, shift.x))
+      shift.y = Math.min(1 - cy, Math.max(-cy, shift.y))
+      apply()
+    }
+    keepInFrame.current = clamp
+    centring.set(v, () => {
+      shift.x = shift.y = 0
+      apply()
+      v.render()
+    })
+    let moving: { x: number; y: number; sx: number; sy: number } | null = null
+    const panDown = (e: PointerEvent) => {
+      if (!pan || e.button !== 2) return
+      c.setPointerCapture(e.pointerId)
+      moving = { x: e.clientX, y: e.clientY, sx: shift.x, sy: shift.y }
+    }
+    const panMove = (e: PointerEvent) => {
+      if (!moving) return
+      shift.x = moving.sx + (e.clientX - moving.x) / (c.clientWidth || 1)
+      shift.y = moving.sy + (e.clientY - moving.y) / (c.clientHeight || 1)
+      apply()
+      clamp()
+      v.render()
+    }
+    const panUp = (e: PointerEvent) => e.button === 2 && (moving = null)
+    const noMenu = (e: MouseEvent) => pan && e.preventDefault()
+    if (pan) {
+      c.addEventListener('pointerdown', panDown)
+      c.addEventListener('pointermove', panMove)
+      c.addEventListener('pointerup', panUp)
+      c.addEventListener('contextmenu', noMenu)
+      // turned or zoomed: its middle still inside the frame
+      v.controls.addEventListener('change', clamp)
+    }
     c.addEventListener('pointerdown', down)
     c.addEventListener('pointermove', move)
     c.addEventListener('pointerup', up)
@@ -119,6 +198,12 @@ export function SkinView({
     }
     watchScale()
     return () => {
+      c.removeEventListener('pointerdown', panDown)
+      c.removeEventListener('pointermove', panMove)
+      c.removeEventListener('pointerup', panUp)
+      c.removeEventListener('contextmenu', noMenu)
+      v.controls.removeEventListener('change', clamp)
+      keepInFrame.current = null
       c.removeEventListener('pointerdown', down)
       c.removeEventListener('pointermove', move)
       c.removeEventListener('pointerup', up)
@@ -131,13 +216,14 @@ export function SkinView({
       viewer.current = null
       onViewer?.(null)
     }
-  }, [interactive, dragTurn]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [interactive, dragTurn, pan]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // a still picture is drawn again at its new size (on the next frame too: resizing clears the canvas)
   useEffect(() => {
     const v = viewer.current
     if (!v) return
     v.setSize(width, height)
+    keepInFrame.current?.() // the frame changed shape: the player's middle stays inside
     v.render()
     const frame = requestAnimationFrame(() => v.render())
     return () => cancelAnimationFrame(frame)
@@ -160,14 +246,14 @@ export function SkinView({
         bodyPart(v, w.model, w.slot).add(g)
       }),
     )
-      .then(() => !cancelled && v.render())
+      .then(() => !cancelled && (keepInFrame.current?.(), v.render())) // what it wears stays in the frame too
       .catch((err) => console.warn('[skin] model:', err))
     return () => {
       cancelled = true
       built.forEach(disposeModel)
       v.render()
     }
-  }, [worn, interactive, dragTurn, zoom]) // a new viewer gets them again
+  }, [worn, interactive, dragTurn, zoom, pan]) // a new viewer gets them again
 
   // skin, cape, layers, animation: a still picture draws again once everything is in place, then stops
   useEffect(() => {
