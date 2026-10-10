@@ -9,6 +9,7 @@ import { KIND_LABEL, languageName, languagesOut } from '@shared/heraldPublicatio
 import type { PackState, Publication } from '@herald/api'
 import { useEffect, useState } from 'react'
 import { newerReleases } from '@shared/heraldPack'
+import { backupAttention, useBackups } from './Backups'
 
 /** What needs someone, for everyone in Herald (no alert outside Herald) */
 export function attention(pubs: Publication[], now: number, zone: string): { pub: Publication; why: string }[] {
@@ -27,9 +28,10 @@ export function attention(pubs: Publication[], now: number, zone: string): { pub
   return out
 }
 
-export default function Home({ onOpen, onPack }: { onOpen(id: string): void; onPack(): void }) {
+export default function Home({ onOpen, onPack, onBackups }: { onOpen(id: string): void; onPack(): void; onBackups(): void }) {
   const { me, sync, zone } = useStore()
   const packLines = usePackAttention()
+  const backupLine = backupAttention(useBackups(), sync?.now ?? Date.now())
   const { state } = usePubs()
   const now = sync?.now ?? Date.now()
   const online = (sync?.people ?? []).filter((p) => p.online)
@@ -50,7 +52,13 @@ export default function Home({ onOpen, onPack }: { onOpen(id: string): void; onP
               <span className="min-w-0 truncate text-gray-200">{why}</span>
             </button>
           ))}
-          {state && !packLines.length && attention(state.publications, now, zone).length === 0 && <p className="text-sm text-gray-400">Nothing waits for anyone.</p>}
+          {backupLine && (
+            <button className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-gray-700" onClick={onBackups}>
+              <span className="w-16 shrink-0 text-[10.5px] font-bold tracking-wider text-amber-400 uppercase">Backups</span>
+              <span className="min-w-0 truncate text-gray-200">{backupLine}</span>
+            </button>
+          )}
+          {state && !packLines.length && !backupLine && attention(state.publications, now, zone).length === 0 && <p className="text-sm text-gray-400">Nothing waits for anyone.</p>}
           {state &&
             attention(state.publications, now, zone).slice(0, 8).map(({ pub, why }) => (
               <button key={pub.id + why} className="flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-gray-700" onClick={() => onOpen(pub.id)}>

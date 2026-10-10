@@ -1,0 +1,52 @@
+# Herald backup — goes in the PRIVATE backups repository as .github/workflows/herald-backup.yml, next to
+# .github/herald/herald-backup.mjs (copied from herald/backup/ in the launcher repository).
+# Every night: exports Herald's database (Cloudflare's own export), encrypts it for the owner's public key, keeps it as
+# a release of this repository (30 days + one a month for a year), and tells Herald how it went.
+# Repository secrets: CLOUDFLARE_API_TOKEN (D1 only), CLOUDFLARE_ACCOUNT_ID, HERALD_BACKUP_TOKEN
+# Repository variables: HERALD_DB (the database name), HERALD_URL, BACKUP_PUBLIC_KEY
+name: Herald backup
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: herald-backup
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Export the database
+        run: npx --yes wrangler@4.139.0 d1 export "$HERALD_DB" --remote --output dump.sql
+        env:
+          HERALD_DB: ${{ vars.HERALD_DB }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Encrypt, keep, tell Herald
+        run: node .github/herald/herald-backup.mjs run dump.sql
+        env:
+          BACKUP_PUBLIC_KEY: ${{ vars.BACKUP_PUBLIC_KEY }}
+          HERALD_URL: ${{ vars.HERALD_URL }}
+          HERALD_BACKUP_TOKEN: ${{ secrets.HERALD_BACKUP_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tell Herald it failed
+        if: failure()
+        run: node .github/herald/herald-backup.mjs failed
+        env:
+          HERALD_URL: ${{ vars.HERALD_URL }}
+          HERALD_BACKUP_TOKEN: ${{ secrets.HERALD_BACKUP_TOKEN }}
+      # the plain export never leaves the runner
+      - name: Clean up
+        if: always()
+        run: rm -f dump.sql

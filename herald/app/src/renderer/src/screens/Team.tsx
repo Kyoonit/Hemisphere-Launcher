@@ -4,6 +4,7 @@ import { effectivePermissions, ORIGINALS, PERMISSIONS, ROLE_DEFAULTS, ROLE_LABEL
 import { useStore } from '../store'
 import { Avatar, Modal } from '../components/ui'
 import { Journal, Trash } from './Journal'
+import Backups from './Backups'
 import { ago } from '../time'
 
 /** The staff, top to bottom; the Developer is apart (technical access, not part of the staff) */
@@ -15,10 +16,10 @@ const GROUPS: { role: Role; title: string; note?: string }[] = [
 ]
 const APART: { role: Role; title: string; note?: string }[] = [{ role: 'developer', title: 'Developers', note: 'technical access to Herald and the launcher, not part of the staff' }]
 
-export default function Team({ onOpen }: { onOpen(id: string): void }) {
+export default function Team({ onOpen, initialView = 'people' }: { onOpen(id: string): void; initialView?: 'people' | 'activity' | 'trash' | 'backups' }) {
   const { sync, can, refresh } = useStore()
   const manage = can('profiles.manage')
-  const [view, setView] = useState<'people' | 'activity' | 'trash'>('people')
+  const [view, setView] = useState<'people' | 'activity' | 'trash' | 'backups'>(initialView)
   const [all, setAll] = useState<Profile[] | null>(null)
   const [editing, setEditing] = useState<Profile | null>(null)
   const [creating, setCreating] = useState(false)
@@ -53,7 +54,7 @@ export default function Team({ onOpen }: { onOpen(id: string): void }) {
         )}
       </div>
       <div className="mb-4 flex gap-1 border-b border-gray-700">
-        {(['people', 'activity', 'trash'] as const).map((v) => (
+        {(['people', 'activity', 'trash', ...(can('backups.view') ? (['backups'] as const) : [])] as const).map((v) => (
           <button key={v} className={`-mb-px border-b-2 px-3.5 py-2 text-sm font-semibold capitalize ${view === v ? 'border-green-400 text-white' : 'border-transparent text-gray-400'}`} onClick={() => setView(v)}>
             {v}
           </button>
@@ -88,6 +89,7 @@ export default function Team({ onOpen }: { onOpen(id: string): void }) {
 
       {view === 'activity' && <Journal onOpen={onOpen} />}
       {view === 'trash' && <Trash onOpen={onOpen} />}
+      {view === 'backups' && <Backups />}
 
       {creating && <NewProfile onClose={() => setCreating(false)} onCreated={(name, c) => (setCreating(false), setCode({ name, code: c }), void done())} />}
       {editing && <EditProfile profile={editing} onClose={() => setEditing(null)} onChanged={() => (setEditing(null), void done())} onCode={(c) => (setEditing(null), setCode({ name: editing.name, code: c }))} />}

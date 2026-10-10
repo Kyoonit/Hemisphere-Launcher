@@ -45,6 +45,8 @@ function Shell({ staging }: { staging: boolean }) {
   const { can, me } = useStore()
   const [tab, setTab] = useState<Tab>('home')
   const [openPub, setOpenPub] = useState<string | null>(null)
+  // Team opens on its people, or on the backups (from Home's warning)
+  const [teamView, setTeamView] = useState<'people' | 'backups'>('people')
   const goPub = (id: string | null) => {
     setOpenPub(id)
     setTab('publications')
@@ -60,7 +62,7 @@ function Shell({ staging }: { staging: boolean }) {
   const endTour = () => (setTouring(false), setOffered(false), markTourDone(me.id))
   return (
     <div className="flex h-full flex-col">
-      <TitleBar tab={shown} onTab={(t) => (t === 'publications' && tab === 'publications' && setOpenPub(null), setTab(t))} staging={staging} />
+      <TitleBar tab={shown} onTab={(t) => (t === 'publications' && tab === 'publications' && setOpenPub(null), t === 'team' && setTeamView('people'), setTab(t))} staging={staging} />
       <PublishJobs catalogue={shown === 'catalogue'} />
       {offered && !touring && (
         <div className="flex shrink-0 items-center gap-3 border-b border-green-500/25 bg-green-600/10 px-7 py-2 text-[13px]">
@@ -83,7 +85,7 @@ function Shell({ staging }: { staging: boolean }) {
       )}
       {touring && <Tour steps={heraldTour(canOpen, setTab)} labels={TOUR_LABELS} onClose={endTour} />}
       <main className="min-h-0 flex-1 overflow-auto px-7 py-6">
-        {shown === 'home' && <Home onOpen={goPub} onPack={() => setTab('pack')} />}
+        {shown === 'home' && <Home onOpen={goPub} onPack={() => setTab('pack')} onBackups={() => (setTeamView('backups'), setTab('team'))} />}
         {shown === 'publications' && <Publications open={openPub} onOpen={setOpenPub} />}
         {shown === 'preview' && <Preview />}
         {shown === 'server' && <Server />}
@@ -91,7 +93,7 @@ function Shell({ staging }: { staging: boolean }) {
         {shown === 'backgrounds' && <Backgrounds />}
         {shown === 'pack' && <Pack />}
         {shown === 'catalogue' && <Catalogue />}
-        {shown === 'team' && <Team onOpen={goPub} />}
+        {shown === 'team' && <Team key={teamView} onOpen={goPub} initialView={teamView} />}
         {shown === 'settings' && <MySettings />}
         {shown === 'launcher' && <LauncherSettings />}
         {COMING[shown] && (

@@ -37,6 +37,7 @@ export const PERMISSIONS = [
   'catalogue.delete', // delete an item for good
   'catalogue.export', // download the original files (Owner; Admins only when the Owner or a Developer gives it)
   'stats.view', // the server statistics (players online, sessions, playtime of each player)
+  'backups.view', // how the automatic backups of Herald's database went
 ] as const
 export type Permission = (typeof PERMISSIONS)[number]
 
@@ -57,7 +58,7 @@ export const ROLE_DEFAULTS: Record<Role, readonly Permission[]> = {
 /** Lodge keepers are not staff: whatever is added to their profile, they never get these. */
 export const NEVER_FOR_LODGE_KEEPERS: readonly Permission[] = [
   'maintenance.write', 'maintenance.emergency', 'restart.write', 'pack.propose', 'pack.approve', 'settings.public', 'settings.staffCode', 'profiles.manage', 'backgrounds.write', 'drafts.restricted',
-  'catalogue.write', 'catalogue.publish', 'catalogue.delete', 'catalogue.export', 'stats.view',
+  'catalogue.write', 'catalogue.publish', 'catalogue.delete', 'catalogue.export', 'stats.view', 'backups.view',
 ]
 
 export function effectivePermissions(role: Role, add: readonly string[] = [], remove: readonly string[] = []): Permission[] {

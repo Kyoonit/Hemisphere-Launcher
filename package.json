@@ -41,6 +41,7 @@
     "herald:build": "electron-vite build --config herald/app/electron.vite.config.ts",
     "herald:typecheck": "tsc -p herald/app/tsconfig.node.json && tsc -p herald/app/tsconfig.web.json",
     "herald:dist": "npm run herald:typecheck && npm run herald:build && electron-builder --projectDir herald/app --win --publish never",
+    "herald:backup": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning tools/herald/backup.ts",
     "herald:release": "node tools/herald/release.mjs",
     "herald:release:minor": "node tools/herald/release.mjs --minor"
   },
