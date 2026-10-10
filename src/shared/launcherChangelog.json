@@ -3,6 +3,12 @@
     "date": "2026-10-10",
     "changes": [
       {
+        "version": "next",
+        "area": "settings",
+        "en": "Security: when the staff change their staff code, the Developer tab locks again on every PC that used the old one.",
+        "fr": "Sécurité : quand le staff change son code staff, l’onglet Développeur se verrouille à nouveau sur tous les PC qui utilisaient l’ancien."
+      },
+      {
         "version": "1.2.0",
         "area": "community",
         "en": "News, events and maintenances from the team reach your launcher within 2 minutes (it was up to 10).",
