@@ -3,7 +3,7 @@
     "date": "2026-10-10",
     "changes": [
       {
-        "version": "next",
+        "version": "1.4.1",
         "area": "launcher",
         "en": "A guided tour of the launcher: every part explained step by step (3 / 17…), offered on Home; skip a part or quit anytime, and take it again from Settings > Launcher.",
         "fr": "Une visite guidée du launcher : chaque partie expliquée étape par étape (3 / 17…), proposée sur l’accueil ; passe une partie ou arrête quand tu veux, et revois-la depuis Paramètres > Launcher."
