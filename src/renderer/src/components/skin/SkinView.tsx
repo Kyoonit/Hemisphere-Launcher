@@ -28,6 +28,7 @@ export function SkinView({
   outerLayer = true,
   back = 'cape',
   autoRotate = false,
+  dragTurn = false,
   className = '',
 }: {
   skin: SkinInfo
@@ -39,6 +40,8 @@ export function SkinView({
   outerLayer?: boolean
   back?: BackItem
   autoRotate?: boolean
+  /** a still picture the player can turn on itself by dragging it sideways */
+  dragTurn?: boolean
   className?: string
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -56,6 +59,24 @@ export function SkinView({
       v.playerWrapper.rotation.y = -0.45
     }
     viewer.current = v
+    // drag sideways: the player turns on its own axis, drawn only while moving
+    const c = canvas.current!
+    let from: { x: number; angle: number } | null = null
+    const down = (e: PointerEvent) => {
+      if (!dragTurn || e.button !== 0) return
+      c.setPointerCapture(e.pointerId)
+      from = { x: e.clientX, angle: v.playerWrapper.rotation.y }
+    }
+    const move = (e: PointerEvent) => {
+      if (!from) return
+      v.playerWrapper.rotation.y = from.angle + (e.clientX - from.x) * 0.012
+      v.render()
+    }
+    const up = () => (from = null)
+    c.addEventListener('pointerdown', down)
+    c.addEventListener('pointermove', move)
+    c.addEventListener('pointerup', up)
+    c.addEventListener('pointercancel', up)
     const visibility = () => (v.renderPaused = document.hidden || stillRef.current)
     document.addEventListener('visibilitychange', visibility)
     // a new screen scale (window moved to another monitor) clears the canvas: a still picture is drawn again
@@ -78,6 +99,10 @@ export function SkinView({
     }
     watchScale()
     return () => {
+      c.removeEventListener('pointerdown', down)
+      c.removeEventListener('pointermove', move)
+      c.removeEventListener('pointerup', up)
+      c.removeEventListener('pointercancel', up)
       unwatch()
       cancelAnimationFrame(frame)
       window.removeEventListener('resize', redraw)
@@ -85,7 +110,7 @@ export function SkinView({
       v.dispose()
       viewer.current = null
     }
-  }, [interactive]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [interactive, dragTurn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // a still picture is drawn again at its new size (on the next frame too: resizing clears the canvas)
   useEffect(() => {
@@ -120,7 +145,7 @@ export function SkinView({
     }
   }, [skin.skin, skin.slim, skin.cape, back, outerLayer, animation, autoRotate, still])
 
-  return <canvas ref={canvas} className={className} style={{ width, height }} />
+  return <canvas ref={canvas} className={`${dragTurn ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${className}`} style={{ width, height }} />
 }
 
 /** The active account's skin (null while loading or without an account); `refresh` asks Mojang again. */

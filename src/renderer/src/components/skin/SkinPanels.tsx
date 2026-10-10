@@ -70,7 +70,7 @@ export function HomeSkin({ page, below, onOpen }: { page: RefObject<HTMLElement 
     <div ref={own} className="pointer-events-none absolute left-1/2 -translate-x-1/2" style={{ top: spot?.top ?? 0 }}>
       {skin && spot && (
         <div className="animate-fade group pointer-events-auto relative flex flex-col items-center">
-          <SkinView skin={skin} width={Math.round(spot.height * WIDE)} height={spot.height} className="drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
+          <SkinView skin={skin} width={Math.round(spot.height * WIDE)} height={spot.height} dragTurn className="drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]" />
           <button
             onClick={onOpen}
             title={t('skins.open')}
