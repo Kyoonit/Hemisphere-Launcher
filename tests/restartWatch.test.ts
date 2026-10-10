@@ -50,15 +50,32 @@ describe('restart, live', () => {
     expect(r.moments.filter((m) => m === 'back')).toHaveLength(1) // each moment once
   })
 
-  test('never seen down (restarted between two checks, or skipped): back to normal after 5 minutes', async () => {
+  test('never seen down (restarted between two checks, or skipped): back to normal after 90 seconds', async () => {
     const r = run()
     r.set('17:00:10', true)
     await r.tracker.step()
     expect(r.tracker.live).toMatchObject({ phase: 'restarting' })
-    r.set('17:05:30', true)
-    await r.tracker.step()
+    r.set('17:01:35', true)
+    // answering normally: nothing shown any more, still checked often
+    expect(await r.tracker.step()).toBe(true)
     expect(r.tracker.live).toBeNull()
     expect(r.moments).not.toContain('back')
+  })
+
+  test('a late restart is still caught after the banner went away', async () => {
+    const r = run()
+    r.set('17:00:10', true)
+    await r.tracker.step()
+    r.set('17:02:00', true)
+    await r.tracker.step()
+    expect(r.tracker.live).toBeNull()
+    r.set('17:03:00', false) // down three minutes late
+    await r.tracker.step()
+    expect(r.tracker.live).toMatchObject({ phase: 'restarting' })
+    r.set('17:03:40', true)
+    await r.tracker.step()
+    expect(r.tracker.live).toMatchObject({ phase: 'back' })
+    expect(r.moments).toEqual(['start', 'back'])
   })
 
   test('down for more than 30 minutes: an outage, not a restart any more', async () => {

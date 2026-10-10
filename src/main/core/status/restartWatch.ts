@@ -1,11 +1,14 @@
 import { connect } from 'node:net'
 import { SERVER } from '@shared/server'
+import { readStatusAnswer, statusRequest } from '@shared/serverStats'
 import { nextRestart, previousRestart, type LiveRestart, type RestartSchedule } from '@shared/restart'
 
 /**
- * The daily restart, live: from 90 s before the scheduled time the server itself is checked every 5 s (a direct
- * connection: the public status service caches its answer for minutes). "Restarting" lasts from the scheduled time
- * until the server is seen down and then answering again — no guessed duration.
+ * The daily restart, live: from 90 s before the scheduled time the server itself is checked every 5 s (the game's own
+ * status ping: the public status service caches its answer for minutes, and a bare connection can be accepted by the
+ * host while the game is down). "Restarting" lasts from the scheduled time until the server is seen down and then
+ * answering again — no guessed duration. Still answering normally 90 s after the time, never seen down: nothing is
+ * shown any more (a restart done between two checks, a late one, or none today); it is still watched for 5 minutes.
  *
  * Moments, each sent once per restart: warn15 (15 min before), warn1 (1 min before), start (server seen down),
  * back (answering again).
@@ -14,23 +17,37 @@ export type RestartMoment = 'warn15' | 'warn1' | 'start' | 'back'
 
 const FAST_MS = 5_000
 const PREWARN_MS = 90_000
+/** answering normally this long after the scheduled time, never seen down: "restarting" is not shown any more */
+const NOT_DOWN_MS = 90_000
 /** never seen down this long after the scheduled time: it restarted between two checks, or not at all */
 const NO_SHOW_MS = 5 * 60_000
 /** down longer than this: not a restart any more, an outage (the normal status says offline) */
 const OUTAGE_MS = 30 * 60_000
 const BACK_SHOWN_MS = 2 * 60_000
 
-/** Is the server accepting connections right now? */
-export function serverAnswers(timeoutMs = 3_000): Promise<boolean> {
+/** Is the game answering right now? (its status ping, like the game's server list: not only an open port) */
+export function serverAnswers(timeoutMs = 4_000): Promise<boolean> {
   return new Promise((resolve) => {
-    const socket = connect({ host: SERVER.host, port: SERVER.port, timeout: timeoutMs })
+    const socket = connect({ host: SERVER.host, port: SERVER.port })
+    let buf = Buffer.alloc(0)
     const done = (ok: boolean) => {
+      clearTimeout(timer)
       socket.destroy()
       resolve(ok)
     }
-    socket.once('connect', () => done(true))
-    socket.once('timeout', () => done(false))
+    const timer = setTimeout(() => done(false), timeoutMs)
+    socket.once('connect', () => socket.write(statusRequest(SERVER.host, SERVER.port)))
+    socket.on('data', (chunk) => {
+      buf = Buffer.concat([buf, chunk])
+      try {
+        if (readStatusAnswer(buf)) done(true)
+        else if (buf.length > 256_000) done(false)
+      } catch {
+        done(false)
+      }
+    })
     socket.once('error', () => done(false))
+    socket.once('close', () => done(false))
   })
 }
 
@@ -107,12 +124,13 @@ export class RestartTracker {
         return this.live !== null
       }
       // scheduled time passed, not seen down yet: restarting soon/now
-      if (since < NO_SHOW_MS) {
+      if (since < NOT_DOWN_MS) {
         this.set({ phase: 'restarting', since: last, checkedAt: t })
         return true
       }
+      // answering normally well after the time: nothing to show, still watched a few minutes (a late restart)
       this.set(null)
-      return false
+      return since < NO_SHOW_MS
     }
     if (this.live?.phase === 'back' && now - this.live.at <= BACK_SHOWN_MS) return false
     this.set(null)
