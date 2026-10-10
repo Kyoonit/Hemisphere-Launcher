@@ -3,13 +3,13 @@
     "date": "2026-10-10",
     "changes": [
       {
-        "version": "next",
+        "version": "1.4.2",
         "area": "launcher",
         "en": "The server map opens in the launcher: the 3D BlueMap, who is online beside it, a click follows a player, and a button to open it in the browser. Click a name in the online list for their card (skin in 3D, dimension, show on the map). The list now shows every player. The server rules open in the launcher too, with their tabs. The guided tour opens by itself until you have seen it, and the try-on buttons are in one place (the catalogue’s bar). The daily restart banner no longer stays up when the server is already answering.",
         "fr": "La carte du serveur s’ouvre dans le launcher : la BlueMap en 3D, les joueurs en ligne à côté, un clic suit un joueur, et un bouton pour l’ouvrir dans le navigateur. Clique sur un nom de la liste des joueurs pour voir sa fiche (skin en 3D, dimension, voir sur la carte). La liste montre maintenant tous les joueurs. Les règles du serveur s’ouvrent aussi dans le launcher, avec leurs onglets. La visite guidée s’ouvre d’elle-même tant que tu ne l’as pas vue, et les boutons de l’essayage sont regroupés au même endroit (la barre du catalogue). Le bandeau du redémarrage quotidien ne reste plus affiché quand le serveur répond déjà."
       },
       {
-        "version": "next",
+        "version": "1.4.2",
         "area": "launcher",
         "en": "Patreon catalogue: every Microsoft account can now try items on (the account is checked differently). A simpler update button in the top bar, and the guided tour’s buttons fit on one line.",
         "fr": "Catalogue Patreon : tous les comptes Microsoft peuvent maintenant essayer les articles (le compte est vérifié autrement). Un bouton de mise à jour plus discret dans la barre du haut, et les boutons de la visite guidée tiennent sur une ligne."
