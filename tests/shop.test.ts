@@ -42,7 +42,7 @@ vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
   calls.push({ url, init })
   if (!online) throw new TypeError('fetch failed')
   const path = new URL(url).pathname
-  if (path === '/shop') return reply({ items })
+  if (path === '/shop') return reply({ items, ...(blocked && (init?.headers as Record<string, string>)?.authorization === 'Player player-token' ? { blocked: true } : {}) })
   if (path === '/player/challenge') return reply({ serverId: 'f'.repeat(40) })
   if (path === '/session/minecraft/join') return reply(null, 204)
   if (blocked && (path === '/player/verify' || path.startsWith('/shop/c-'))) return reply({ error: 'blocked', blocked: true }, 403)
@@ -145,6 +145,17 @@ describe('catalogue in the launcher', () => {
     expect(await shop.shopItem(CROWN)).toMatchObject({ ok: false, error: 'blocked' })
     expect(existsSync(join(root, 'catalogue', 'items', MS))).toBe(false)
     expect(readFileSync(join(root, 'catalogue', 'players.bin')).map((b) => b ^ 0x5a).toString()).not.toContain(MS)
+  })
+
+  test('the list tells a blocked player at once: kept copies go even before an item is opened', async () => {
+    const shop = await load()
+    await shop.listShop()
+    await shop.shopItem(CROWN)
+    blocked = true
+    const list = await shop.listShop()
+    expect(list.ok && list.value.blocked).toBe(true)
+    expect(existsSync(join(root, 'catalogue', 'items', MS))).toBe(false)
+    expect(await shop.shopItem(CROWN)).toMatchObject({ ok: false, error: 'blocked' })
   })
 
   test('kept copies open offline only while the access lasts', async () => {

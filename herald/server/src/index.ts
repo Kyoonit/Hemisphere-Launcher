@@ -338,7 +338,7 @@ async function catalogueRoute(req: Request, env: Env, path: string): Promise<Res
 async function shopRoute(req: Request, env: Env, path: string): Promise<Response | null> {
   if (req.method === 'GET' && path === '/player/challenge') return json(await shop.challenge(env))
   if (req.method === 'POST' && path === '/player/verify') return json(await shop.verifyPlayer(env, (await req.json().catch(() => ({}))) as Record<string, unknown>))
-  if (req.method === 'GET' && path === '/shop') return json(await shop.listShop(env))
+  if (req.method === 'GET' && path === '/shop') return json(await shop.listShop(env, req))
   const thumb = path.match(/^\/shop\/thumb\/(c-[a-z0-9]{10})$/)
   if (req.method === 'GET' && thumb) return await shop.thumbnail(env, thumb[1])
   const item = path.match(/^\/shop\/(c-[a-z0-9]{10})$/)

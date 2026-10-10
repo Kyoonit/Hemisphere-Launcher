@@ -7,7 +7,7 @@ import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
 import type { FeedView } from '@shared/schedule'
 import { getSkin, pngSize } from './core/skins/skins'
-import { listShop, shopItem, shopThumbnail } from './core/catalogue/shop'
+import { listShop, patreonUrl, shopItem, shopThumbnail } from './core/catalogue/shop'
 import { editSkin, getWardrobe, importFile, importPlayer, keepFromHistory, removeSkin, wearCape, wearSkin } from './core/skins/wardrobe'
 import { getServerStatus, startStatusPolling, refreshStatusNow } from './core/status/serverStatus'
 import { getPlaytime } from './core/playtime/playtimeStore'
@@ -227,6 +227,10 @@ function registerIpc(): void {
   handle(IPC.shopList, () => listShop())
   handle(IPC.shopThumbnail, (_e, id: unknown) => shopThumbnail(id))
   handle(IPC.shopItem, (_e, id: unknown) => shopItem(id))
+  on(IPC.shopOpenPatreon, (_e, id: unknown) => {
+    const url = patreonUrl(id)
+    if (url) void shell.openExternal(url)
+  })
   handle(IPC.skinsPickModel, async () => {
     if (!devEnabled() || !getDevState().modelTester) return { ok: false, error: 'notAllowed' }
     const pick = await dialog.showOpenDialog(win!, { properties: ['openFile', 'multiSelections'], title: 'Model', filters: [{ name: 'Blockbench / Minecraft model', extensions: ['bbmodel', 'json', 'png'] }] })
@@ -888,8 +892,9 @@ function syncLoginItem(): void {
 }
 
 // A development build pointed at Herald's TEST environment keeps its own data folder (settings, accounts, game folder):
-// a test mod pack can never be installed in the real game, and it runs next to the installed launcher.
-if (!app.isPackaged && import.meta.env?.MAIN_VITE_HERALD_PUBLIC_KEY && import.meta.env.MAIN_VITE_HERALD_PUBLIC_KEY !== CONTENT_PUBLIC_KEY) {
+// a test mod pack can never be installed in the real game, and it runs next to the installed launcher. Same for a
+// build tested against a stand-in Mojang (catalogue tests with a local Herald).
+if (!app.isPackaged && ((import.meta.env?.MAIN_VITE_HERALD_PUBLIC_KEY && import.meta.env.MAIN_VITE_HERALD_PUBLIC_KEY !== CONTENT_PUBLIC_KEY) || import.meta.env?.MAIN_VITE_MOJANG_SESSION)) {
   app.setPath('userData', `${app.getPath('userData')}-herald-test`)
 }
 

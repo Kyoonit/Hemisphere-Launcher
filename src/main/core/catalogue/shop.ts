@@ -2,6 +2,7 @@ import { app, safeStorage } from 'electron'
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { HERALD_URL } from '@shared/herald'
+import { safeLink } from '@shared/heraldCatalogue'
 import { fromB64, unseal } from '@shared/sealed'
 import type { PlayerSession, ShopBundle, ShopDelivery, ShopError, ShopItem, ShopResult } from '@shared/catalogueShop'
 import { getAccountsState, getLaunchCredentials } from '../auth/accounts'
@@ -26,6 +27,8 @@ const MOJANG = 'https://sessionserver.mojang.com'
 const TIMEOUT = 15_000
 const dev = () => !app.isPackaged
 const mojang = () => ((dev() && import.meta.env?.MAIN_VITE_MOJANG_SESSION) || MOJANG).replace(/\/$/, '')
+/** dev builds tested against a stand-in Mojang (local Herald): dev offline accounts can be checked too */
+const fakeMojang = () => dev() && !!import.meta.env?.MAIN_VITE_MOJANG_SESSION
 /** a test server gets its own folder: test items never mix with real ones */
 const dir = () => join(app.getPath('userData'), heraldUrl() === HERALD_URL ? 'catalogue' : 'catalogue-test')
 const itemFile = (uuid: string, id: string, version: number) => join(dir(), 'items', uuid, `${id}-v${version}.bin`)
@@ -91,7 +94,7 @@ async function herald<T>(path: string, init: RequestInit = {}): Promise<T> {
 function activeAccount(): { id: string; name: string } {
   const s = getAccountsState()
   const a = s.accounts.find((x) => x.id === s.activeId)
-  if (!a || a.kind !== 'microsoft') throw new Failure('needs-microsoft')
+  if (!a || (a.kind !== 'microsoft' && !fakeMojang())) throw new Failure('needs-microsoft')
   return a
 }
 
@@ -106,7 +109,7 @@ async function playerToken(accountId: string, fresh = false): Promise<string> {
   } catch {
     throw new Failure('not-verified', 'the Microsoft session must be renewed: sign in again')
   }
-  if (creds.userType !== 'msa') throw new Failure('needs-microsoft')
+  if (creds.userType !== 'msa' && !fakeMojang()) throw new Failure('needs-microsoft')
   const { serverId } = await herald<{ serverId: string }>('/player/challenge')
   let joined: Response
   try {
@@ -164,16 +167,20 @@ const wrap = async <T>(work: () => Promise<T>): Promise<ShopResult<T>> => {
 }
 
 /** The items shown in the launchers; the last list seen when Herald cannot be reached */
-export function listShop(): Promise<ShopResult<{ items: ShopItem[]; offline: boolean }>> {
+export function listShop(): Promise<ShopResult<{ items: ShopItem[]; offline: boolean; blocked?: boolean }>> {
   return wrap(async () => {
     const file = join(dir(), 'shop.json')
     try {
-      const { items } = await herald<{ items: ShopItem[] }>('/shop')
+      // with the active account's token (if it has one): Herald says if that player was blocked
+      const s = getAccountsState()
+      const kept = s.activeId ? (await players.get())[s.activeId] : undefined
+      const { items, blocked } = await herald<{ items: ShopItem[]; blocked?: boolean }>('/shop', kept ? { headers: { authorization: `Player ${kept.token}` } } : {})
+      if (blocked && s.activeId) await forget(s.activeId)
       listed = items
       await mkdir(dir(), { recursive: true })
       await writeFile(file, JSON.stringify(items))
       await prune(items)
-      return { items, offline: false }
+      return { items, offline: false, ...(blocked ? { blocked } : {}) }
     } catch (err) {
       if (!(err instanceof Failure) || err.code !== 'offline') throw err
       listed ??= JSON.parse(await readFile(file, 'utf8').catch(() => '[]')) as ShopItem[]
@@ -197,6 +204,12 @@ async function prune(items: ShopItem[]): Promise<void> {
     }
   }
   await keys.save()
+}
+
+/** An item's Patreon page, from the list Herald gave (never a link from the page) */
+export function patreonUrl(id: unknown): string | null {
+  const url = (listed ?? []).find((i) => i.id === id)?.patreonUrl
+  return url && safeLink(url) ? url : null
 }
 
 /** An item's picture (data: URL), kept on disk */

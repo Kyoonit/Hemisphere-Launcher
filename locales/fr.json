@@ -1365,5 +1365,27 @@
       "refused": "Les services de Minecraft ont refusé ce changement.",
       "full": "Ta garde-robe est pleine (200 skins) : supprimes-en d’abord."
     }
+  },
+  "shop": {
+    "title": "Catalogue Patreon",
+    "hint": "Les modèles et skins du Patreon d’Hemisphere. Clique sur l’un d’eux pour l’essayer dans le visualiseur ; tu le trouves ensuite sur Patreon.",
+    "offline": "Pas d’internet : le catalogue de ta dernière visite. Les articles déjà essayés restent visibles.",
+    "kinds": {
+      "all": "Tout",
+      "model": "Modèles",
+      "skin": "Skins"
+    },
+    "skin": "Skin",
+    "new": "Nouveau",
+    "takeOff": "L’enlever",
+    "patreon": "Voir sur Patreon",
+    "errors": {
+      "needs-microsoft": "Connecte-toi avec un compte Microsoft pour essayer les articles du catalogue.",
+      "offline": "Herald ou Mojang ne répondent pas : vérifie ta connexion et réessaie.",
+      "not-verified": "Ton compte Minecraft n’a pas pu être vérifié : reconnecte-toi dans le launcher (Paramètres > Compte).",
+      "blocked": "Ce compte ne peut plus utiliser le catalogue. Contacte le staff sur Discord si c’est une erreur.",
+      "unknown-item": "Cet article n’est plus dans le catalogue.",
+      "failed": "Cet article ne peut pas être ouvert pour le moment. Réessaie plus tard."
+    }
   }
 }

@@ -52,6 +52,7 @@ export const IPC = {
   shopList: 'shop:list',
   shopThumbnail: 'shop:thumbnail',
   shopItem: 'shop:item',
+  shopOpenPatreon: 'shop:open-patreon',
   authSignIn: 'auth:sign-in',
   authCancel: 'auth:cancel',
   authSwitch: 'auth:switch',
@@ -402,11 +403,13 @@ export interface HemisphereApi {
   /** The catalogue (Patreon models and skins to try on) */
   shop: {
     /** the items shown in the launchers (the last list seen when offline) */
-    list(): Promise<ShopResult<{ items: ShopItem[]; offline: boolean }>>
+    list(): Promise<ShopResult<{ items: ShopItem[]; offline: boolean; blocked?: boolean }>>
     /** an item's picture (data: URL), or null */
     thumbnail(id: string): Promise<ShopResult<string | null>>
     /** an item for the active account (a verified Microsoft account), opened in memory */
     item(id: string): Promise<ShopResult<ShopBundle>>
+    /** opens the item's Patreon page in the browser */
+    openPatreon(id: string): void
   }
   game: {
     getState(): Promise<GameState>

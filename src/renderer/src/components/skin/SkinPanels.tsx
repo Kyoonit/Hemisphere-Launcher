@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, RefreshCw } from 'lucide-react'
+import { Box, ExternalLink, RefreshCw } from 'lucide-react'
 import { SKIN_ANIMATIONS, SkinView, type BackItem, type SkinAnimation, type WornModel } from './SkinView'
 import { takeSkinViewerRequest, useActiveSkin } from './activeSkin'
 import { ModelTester } from './ModelTester'
 import type { SkinInfo, WardrobeSkin } from '@shared/skins'
 import { Wardrobe } from './Wardrobe'
+import { Catalogue, type TriedItem } from './Catalogue'
 
 const GAP = 10
 const BUTTON = 30
@@ -104,8 +105,23 @@ export function SkinViewerSection() {
   const [opts, setOpts] = useState(saved)
   // a wardrobe skin tried on in the viewer (with the account's cape), not worn yet
   const [preview, setPreview] = useState<WardrobeSkin | null>(null)
-  const [worn, setWorn] = useState<WornModel[]>([])
-  const skin: SkinInfo | null = own && preview ? { ...own, skin: preview.skin, slim: preview.slim, fallback: false } : own
+  const [tested, setTested] = useState<WornModel[]>([])
+  // a catalogue item tried on: a model (with any skin) or a skin (instead of a wardrobe one)
+  const [tried, setTried] = useState<TriedItem | null>(null)
+  const triedSkin = tried?.bundle.skin ? { skin: tried.bundle.skin, slim: tried.bundle.slim } : null
+  const shown = triedSkin ?? preview
+  const skin: SkinInfo | null = own && shown ? { ...own, skin: shown.skin, slim: shown.slim, fallback: false } : own
+  const worn = useMemo(() => (tried?.bundle.model ? [...tested, { model: tried.bundle.model, slot: tried.bundle.slot, adjust: tried.bundle.adjust }] : tested), [tested, tried])
+  const tryItem = (t: TriedItem | null) => {
+    setTried(t)
+    if (t?.bundle.skin) setPreview(null)
+    if (t) ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  const previewSkin = (s: WardrobeSkin | null) => {
+    setPreview(s)
+    if (s && tried?.bundle.skin) setTried(null)
+  }
+  const trying = preview || tried
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     try {
@@ -125,11 +141,17 @@ export function SkinViewerSection() {
       <h3 className="text-[15px] font-bold text-white">{t('skins.title')}</h3>
       <p className="mt-0.5 text-[13px] text-gray-400">{own?.fallback ? t('skins.defaultHint') : t('skins.hint')}</p>
       <div className="mt-3 flex items-stretch gap-5">
-        <div className={`relative grid h-[340px] w-[260px] flex-none cursor-grab place-items-center rounded-xl bg-gradient-to-b from-gray-800/70 to-gray-900/70 active:cursor-grabbing ${preview ? 'ring-2 ring-green-600' : 'ring-1 ring-white/5'}`}>
-          {preview && (
-            <div className="absolute inset-x-2 top-2 z-10 flex items-center justify-between gap-2 rounded-lg bg-gray-900/85 px-2.5 py-1.5 text-[12px] backdrop-blur-md">
-              <span className="truncate font-semibold text-green-400">{t('wardrobe.previewing')}</span>
-              <button onClick={() => setPreview(null)} className="flex-none font-semibold text-gray-300 hover:text-white">
+        <div className={`relative grid h-[340px] w-[260px] flex-none cursor-grab place-items-center rounded-xl bg-gradient-to-b from-gray-800/70 to-gray-900/70 active:cursor-grabbing ${trying ? 'ring-2 ring-green-600' : 'ring-1 ring-white/5'}`}>
+          {trying && (
+            // at the bottom: what is worn on the head stays in sight
+            <div className="absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-2 rounded-lg bg-gray-900/85 px-2.5 py-1.5 text-[12px] backdrop-blur-md">
+              <span className="min-w-0 flex-1 truncate font-semibold text-green-400">{tried ? tried.item.name : t('wardrobe.previewing')}</span>
+              {tried && (
+                <button onClick={() => window.hemisphere.shop.openPatreon(tried.item.id)} title={t('shop.patreon')} className="flex flex-none items-center gap-1 font-semibold text-[#ff6b73] hover:text-[#ff8a90]">
+                  <ExternalLink size={12} /> Patreon
+                </button>
+              )}
+              <button onClick={() => (setPreview(null), setTried(null))} className="flex-none font-semibold text-gray-300 hover:text-white">
                 {t('wardrobe.backToMine')}
               </button>
             </div>
@@ -181,8 +203,9 @@ export function SkinViewerSection() {
           </button>
         </div>
       </div>
-      <ModelTester onWear={setWorn} />
-      <Wardrobe preview={preview} onPreview={setPreview} />
+      <ModelTester onWear={setTested} />
+      <Catalogue tried={tried} onTry={tryItem} />
+      <Wardrobe preview={preview} onPreview={previewSkin} />
     </div>
   )
 }

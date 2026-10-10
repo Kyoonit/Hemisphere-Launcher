@@ -1320,5 +1320,27 @@
       "refused": "Minecraft’s services refused this change.",
       "full": "Your wardrobe is full (200 skins): delete some first."
     }
+  },
+  "shop": {
+    "title": "Patreon catalogue",
+    "hint": "Models and skins from the Hemisphere Patreon. Click one to try it on in the viewer; then find it on Patreon.",
+    "offline": "No internet: the catalogue from your last visit. Items you already tried stay visible.",
+    "kinds": {
+      "all": "Everything",
+      "model": "Models",
+      "skin": "Skins"
+    },
+    "skin": "Skin",
+    "new": "New",
+    "takeOff": "Take it off",
+    "patreon": "See on Patreon",
+    "errors": {
+      "needs-microsoft": "Sign in with a Microsoft account to try on catalogue items.",
+      "offline": "Herald or Mojang is not answering: check your connection and try again.",
+      "not-verified": "Your Minecraft account could not be checked: sign in again in the launcher (Settings > Account).",
+      "blocked": "This account cannot use the catalogue any more. Contact the staff on Discord if this is a mistake.",
+      "unknown-item": "This item is not in the catalogue any more.",
+      "failed": "This item cannot be opened right now. Try again later."
+    }
   }
 }

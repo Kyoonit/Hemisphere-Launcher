@@ -5,6 +5,12 @@
       {
         "version": "next",
         "area": "launcher",
+        "en": "Patreon catalogue in Settings > Account: try on the Patreon’s hats, items and skins in 3D before getting them, then open their Patreon page in one click.",
+        "fr": "Catalogue Patreon dans Paramètres > Compte : essaie en 3D les chapeaux, objets et skins du Patreon avant de les prendre, puis ouvre leur page Patreon en un clic."
+      },
+      {
+        "version": "next",
+        "area": "launcher",
         "en": "Wardrobe in Settings > Account: import PNG skins or copy a player’s skin by name, try them on in 3D, wear them in one click, go back to a skin you wore before, and pick which of your capes to show.",
         "fr": "Garde-robe dans Paramètres > Compte : importe des skins PNG ou copie le skin d’un joueur par son pseudo, essaie-les en 3D, porte-les en un clic, reviens à un skin déjà porté, et choisis laquelle de tes capes afficher."
       },

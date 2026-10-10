@@ -130,6 +130,7 @@ check(blockedList.status === 200 && blockedList.body.players.some((p: { name: st
 const refused = await call('GET', `/shop/${knight.id}`, `Player ${alex.body.token}`)
 check(refused.status === 403 && refused.body.blocked === true, 'Alex gets nothing more, even with a token still valid (the launcher is told to forget)')
 check((await verify('token-alex', 'Alex')).body.blocked === true, 'and cannot get a new access')
+check((await call('GET', '/shop', `Player ${alex.body.token}`)).body.blocked === true && !(await call('GET', '/shop', `Player ${kyo.body.token}`)).body.blocked, 'the list tells Alex’s launcher (and only Alex’s) to forget what it kept')
 check((await call('GET', `/shop/${knight.id}`, `Player ${kyo.body.token}`)).status === 200, 'other players are not affected')
 check((await trace(ADMIN, png(alexCrown.bundle.model.textures[0].src))).body.player.blockedAt > 0, 'tracing shows Alex is blocked')
 await call('POST', `/catalogue/players/${'b'.repeat(32)}/block`, ADMIN, { blocked: false })

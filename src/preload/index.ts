@@ -212,6 +212,7 @@ const api: HemisphereApi = {
     list: () => ipcRenderer.invoke(IPC.shopList),
     thumbnail: (id) => ipcRenderer.invoke(IPC.shopThumbnail, id),
     item: (id) => ipcRenderer.invoke(IPC.shopItem, id),
+    openPatreon: (id) => ipcRenderer.send(IPC.shopOpenPatreon, id),
   },
   game: {
     getState: () => ipcRenderer.invoke(IPC.gameState),

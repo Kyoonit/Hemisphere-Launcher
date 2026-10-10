@@ -111,9 +111,12 @@ const shopItem = (r: Row): ShopItem => {
   return { id: r.id, kind: s.kind, name: s.name, description: s.description, patreonUrl: s.patreonUrl, tier: s.tier, category: s.category, slot: s.slot, slim: s.slim, adjust: s.adjust, newUntil: s.newUntil, version: r.version, thumbnail: !!r.thumbnail, publishedAt: r.published_at }
 }
 
-export async function listShop(env: ShopEnv) {
+/** The list; with a player's token, also whether that player is blocked (the launcher then forgets what it kept) */
+export async function listShop(env: ShopEnv, req: Request) {
   const rows = (await env.DB.prepare("SELECT id, sheet, status, version, thumbnail, published_at FROM catalogue_items WHERE status = 'published' AND version > 0 ORDER BY published_at DESC").all<Row>()).results
-  return { items: rows.map(shopItem) }
+  const who = req.headers.has('authorization') ? await player(env, req).catch(() => null) : null
+  const blocked = who ? !!(await env.DB.prepare('SELECT blocked_at FROM catalogue_players WHERE uuid = ?1').bind(who.id).first<{ blocked_at: number | null }>())?.blocked_at : false
+  return { items: rows.map(shopItem), ...(blocked ? { blocked: true } : {}) }
 }
 
 async function shown(env: ShopEnv, id: string): Promise<Row> {
