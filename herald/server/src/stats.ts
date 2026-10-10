@@ -117,7 +117,7 @@ export async function statsView(db: D1Database, actor: Actor, url: URL) {
     db.prepare('SELECT value FROM stats_presence WHERE id = 1'),
     db.prepare('SELECT (at / ?2) * ?2 AS t, max(players) AS mx, sum(online) AS up, count(*) AS n FROM server_samples WHERE at >= ?1 GROUP BY t ORDER BY t').bind(from, bucket),
     db.prepare('SELECT (at / 3600000) * 3600000 AS h, avg(players) AS av FROM server_samples WHERE at >= ?1 AND online = 1 GROUP BY h').bind(now - FOUR_WEEKS),
-    db.prepare(`SELECT uuid, name, started_at, minutes, overworld, nether, end_minutes FROM player_sessions WHERE ended_at >= ?1 AND ${NOT_BOT} ORDER BY started_at LIMIT 20000`).bind(from),
+    db.prepare(`SELECT uuid, name, started_at, ended_at, minutes, overworld, nether, end_minutes FROM player_sessions WHERE ended_at >= ?1 AND ${NOT_BOT} ORDER BY started_at LIMIT 20000`).bind(now - RANGE_SPAN.month.ms),
     db.prepare(`SELECT count(*) AS everyone, sum(first_seen >= ?1) AS fresh FROM stats_players WHERE ${NOT_BOT}`).bind(from),
     db.prepare('SELECT d.item_id, i.sheet, count(DISTINCT d.uuid) AS players FROM catalogue_deliveries d LEFT JOIN catalogue_items i ON i.id = d.item_id WHERE d.last_at >= ?1 GROUP BY d.item_id ORDER BY players DESC LIMIT 8').bind(from),
     // enough to stay right once the sessions going on now are added

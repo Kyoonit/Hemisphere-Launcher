@@ -130,7 +130,7 @@ describe('statistics view', () => {
       { t: NOW - 30 * M, mx: 0, up: 0, n: 15 },
     ],
     hours: [{ h: NOW - 7 * 86_400_000, av: 4 }, { h: NOW, av: 2 }, { h: NOW - H, av: null }],
-    sessions: [{ uuid: other, name: 'Alex', started_at: NOW - 5 * H, minutes: 45, overworld: 30, nether: 0, end_minutes: 15 }],
+    sessions: [{ uuid: other, name: 'Alex', started_at: NOW - 5 * H, ended_at: NOW - 5 * H + 45 * M, minutes: 45, overworld: 30, nether: 0, end_minutes: 15 }],
     newPlayers: 1,
     allPlayers: 2,
     allTime: [
@@ -144,7 +144,7 @@ describe('statistics view', () => {
     const v = buildStatsView('day', NOW, rows())
     expect(v.online.map((p) => p.name)).toEqual(['Kyo'])
     expect(v.unique).toBe(2)
-    expect(v.top).toEqual([
+    expect(v.tops.day).toEqual([
       { uuid: real, name: 'Kyo', minutes: 120, sessions: 1 },
       { uuid: other, name: 'Alex', minutes: 45, sessions: 1 },
     ])
@@ -180,6 +180,16 @@ describe('statistics view', () => {
     expect(v.heat[2][21]).toBe(3)
     expect(statsZone('Not/AZone')).toBe('Europe/Paris')
     expect(statsZone('America/Argentina/Buenos_Aires')).toBe('America/Argentina/Buenos_Aires')
+  })
+
+  it('ranks who played the most over 24 hours, 7 and 30 days, whatever the range shown', () => {
+    const r = rows()
+    r.sessions.push({ uuid: other, name: 'Alex', started_at: NOW - 3 * 86_400_000, ended_at: NOW - 3 * 86_400_000 + 200 * M, minutes: 200, overworld: 200, nether: 0, end_minutes: 0 })
+    const v = buildStatsView('day', NOW, r)
+    expect(v.tops.day.map((p) => [p.name, p.minutes])).toEqual([['Kyo', 120], ['Alex', 45]])
+    expect(v.tops.week.map((p) => [p.name, p.minutes])).toEqual([['Alex', 245], ['Kyo', 120]])
+    // the range shown keeps only its own sessions
+    expect(v.sessions.count).toBe(2)
   })
 
   it('ranks who played the most ever, with the sessions going on now', () => {

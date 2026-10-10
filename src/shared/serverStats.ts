@@ -244,7 +244,8 @@ export interface ServerStatsView {
   days: { day: string; players: number; minutes: number }[]
   /** average players online by weekday (0 = Monday) and hour, over the last 4 weeks */
   heat: (number | null)[][]
-  top: StatsPlayer[]
+  /** who played the most in the last 24 hours, 7 days and 30 days (whatever the range shown) */
+  tops: Record<StatsRange, StatsPlayer[]>
   /** who played the most since the statistics began */
   topAllTime: StatsPlayer[]
   /** catalogue items tried in the range: how many different players */
@@ -270,13 +271,25 @@ export interface StatsRows {
   buckets: { t: number; mx: number | null; up: number; n: number }[]
   /** samples of the last 4 weeks by hour (hour start, average players while answering) */
   hours: { h: number; av: number | null }[]
-  /** the sessions that ended in the range */
-  sessions: { uuid: string; name: string; started_at: number; minutes: number; overworld: number; nether: number; end_minutes: number }[]
+  /** the sessions that ended in the last 30 days (the longest range) */
+  sessions: { uuid: string; name: string; started_at: number; ended_at: number; minutes: number; overworld: number; nether: number; end_minutes: number }[]
   newPlayers: number
   allPlayers: number
   /** totals of the ended sessions of the players who played the most ever */
   allTime: { uuid: string; name: string; minutes: number; sessions: number }[]
   catalogue: { itemId: string; name: string; players: number }[]
+}
+
+/** The 10 who played the most: totals (or sessions) plus the sessions going on now */
+function rank(done: { uuid: string; name: string; minutes: number; sessions?: number }[], live: [string, PresenceEntry][]): StatsPlayer[] {
+  const by = new Map<string, StatsPlayer>()
+  const add = (uuid: string, name: string, minutes: number, sessions: number) => {
+    const p = by.get(uuid) ?? { uuid, name, minutes: 0, sessions: 0 }
+    by.set(uuid, { uuid, name, minutes: p.minutes + minutes, sessions: p.sessions + sessions })
+  }
+  for (const x of done) add(x.uuid, x.name, x.minutes, x.sessions ?? 1)
+  for (const [uuid, e] of live) add(uuid, e.name, e.minutes, 1)
+  return [...by.values()].sort((a, b) => b.minutes - a.minutes).slice(0, 10)
 }
 
 /** The statistics of a range, from the rows (sessions still going count with what they have so far) */
@@ -285,7 +298,7 @@ export function buildStatsView(range: StatsRange, now: number, rows: StatsRows, 
   const from = now - ms
   const live = Object.entries(rows.presence?.players ?? {}).filter(([uuid]) => !isBot(uuid))
   const all = [
-    ...rows.sessions.map((x) => ({ uuid: x.uuid, name: x.name, start: x.started_at, minutes: x.minutes, overworld: x.overworld, nether: x.nether, end: x.end_minutes })),
+    ...rows.sessions.filter((x) => x.ended_at >= from).map((x) => ({ uuid: x.uuid, name: x.name, start: x.started_at, minutes: x.minutes, overworld: x.overworld, nether: x.nether, end: x.end_minutes })),
     ...live.map(([uuid, e]) => ({ uuid, name: e.name, start: e.since, minutes: e.minutes, overworld: e.overworld, nether: e.nether, end: e.end })),
   ]
 
@@ -307,17 +320,13 @@ export function buildStatsView(range: StatsRange, now: number, rows: StatsRows, 
     const d = localTime(Math.min(t, now), zone).day
     if (!days.has(d)) days.set(d, { players: new Set(), minutes: 0 })
   }
-  const top = new Map<string, StatsPlayer>()
+  const players = new Set<string>()
   const dimensions: Record<Dimension, number> = { overworld: 0, nether: 0, end: 0 }
   for (const x of all) {
     const day = days.get(localTime(Math.max(x.start, from), zone).day)
     day?.players.add(x.uuid)
     if (day) day.minutes += x.minutes
-    const p = top.get(x.uuid) ?? { uuid: x.uuid, name: x.name, minutes: 0, sessions: 0 }
-    p.minutes += x.minutes
-    p.sessions += 1
-    p.name = x.name
-    top.set(x.uuid, p)
+    players.add(x.uuid)
     dimensions.overworld += x.overworld
     dimensions.nether += x.nether
     dimensions.end += x.end
@@ -345,7 +354,7 @@ export function buildStatsView(range: StatsRange, now: number, rows: StatsRows, 
     curve,
     peak,
     uptime: collected ? answered / collected : null,
-    unique: top.size,
+    unique: players.size,
     newPlayers: rows.newPlayers,
     allPlayers: rows.allPlayers,
     sessions: { count: all.length, minutes, averageMinutes: all.length ? Math.round(minutes / all.length) : null },
@@ -353,16 +362,9 @@ export function buildStatsView(range: StatsRange, now: number, rows: StatsRows, 
     days: [...days].map(([day, d]) => ({ day, players: d.players.size, minutes: d.minutes })),
     heat: sum.map((row, w) => row.map((v, h) => (count[w][h] ? Math.round((v / count[w][h]) * 10) / 10 : null))),
     zone,
-    top: [...top.values()].sort((a, b) => b.minutes - a.minutes).slice(0, 10),
+    tops: Object.fromEntries(STATS_RANGES.map((r) => [r, rank(rows.sessions.filter((x) => x.ended_at >= now - RANGE_SPAN[r].ms), live)])) as Record<StatsRange, StatsPlayer[]>,
     // ended sessions, plus the ones going on now
-    topAllTime: (() => {
-      const ever = new Map<string, StatsPlayer>(rows.allTime.map((p) => [p.uuid, { ...p }]))
-      for (const [uuid, e] of live) {
-        const p = ever.get(uuid) ?? { uuid, name: e.name, minutes: 0, sessions: 0 }
-        ever.set(uuid, { ...p, name: e.name, minutes: p.minutes + e.minutes, sessions: p.sessions + 1 })
-      }
-      return [...ever.values()].sort((a, b) => b.minutes - a.minutes).slice(0, 10)
-    })(),
+    topAllTime: rank(rows.allTime, live),
     catalogue: rows.catalogue,
   }
 }

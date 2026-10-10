@@ -76,9 +76,9 @@ export default function Stats() {
 
 function StatsBody({ view, zone }: { view: ServerStatsView; zone: string }) {
   const last = view.last
-  // who played the most: in the range shown, or since the statistics began
-  const [ever, setEver] = useState(false)
-  const top = ever ? view.topAllTime : view.top
+  // who played the most: over 24 hours, 7 days, 30 days (the range shown at first) or since the statistics began
+  const [over, setOver] = useState<StatsRange | 'all'>(view.range)
+  const top = over === 'all' ? view.topAllTime : view.tops[over]
   // the range started before the collection: say so (fewer days than the range)
   const partial = view.collectingSince !== null && view.collectingSince > view.from
   return (
@@ -116,18 +116,15 @@ function StatsBody({ view, zone }: { view: ServerStatsView; zone: string }) {
           <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="font-bold text-white">Who played the most</h2>
             <div className="flex rounded-md bg-gray-900/60 p-0.5 text-xs">
-              {[
-                { on: false, label: RANGES.find((r) => r.id === view.range)!.label },
-                { on: true, label: 'All time' },
-              ].map((o) => (
-                <button key={o.label} onClick={() => setEver(o.on)} className={`rounded px-2 py-1 font-semibold transition-colors ${ever === o.on ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+              {[...RANGES, { id: 'all' as const, label: 'All time' }].map((o) => (
+                <button key={o.id} onClick={() => setOver(o.id)} className={`rounded px-2 py-1 font-semibold whitespace-nowrap transition-colors ${over === o.id ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white'}`}>
                   {o.label}
                 </button>
               ))}
             </div>
           </div>
           {top.length === 0 ? (
-            <p className="text-sm text-gray-400">{ever ? 'Nobody has played yet.' : 'No session in this range yet.'}</p>
+            <p className="text-sm text-gray-400">{over === 'all' ? 'Nobody has played yet.' : 'No session in this time yet.'}</p>
           ) : (
             <ol className="max-h-[260px] space-y-1 overflow-auto pr-1">
               {top.map((p, i) => (
