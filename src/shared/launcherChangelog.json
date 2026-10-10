@@ -3,25 +3,25 @@
     "date": "2026-10-10",
     "changes": [
       {
-        "version": "next",
+        "version": "1.4.0",
         "area": "launcher",
         "en": "Patreon catalogue in Settings > Account: try on the Patreon’s hats, items and skins in 3D before getting them, then open their Patreon page in one click.",
         "fr": "Catalogue Patreon dans Paramètres > Compte : essaie en 3D les chapeaux, objets et skins du Patreon avant de les prendre, puis ouvre leur page Patreon en un clic."
       },
       {
-        "version": "next",
+        "version": "1.4.0",
         "area": "launcher",
         "en": "Wardrobe in Settings > Account: import PNG skins or copy a player’s skin by name, try them on in 3D, wear them in one click, go back to a skin you wore before, and pick which of your capes to show.",
         "fr": "Garde-robe dans Paramètres > Compte : importe des skins PNG ou copie le skin d’un joueur par son pseudo, essaie-les en 3D, porte-les en un clic, reviens à un skin déjà porté, et choisis laquelle de tes capes afficher."
       },
       {
-        "version": "next",
+        "version": "1.4.0",
         "area": "launcher",
         "en": "Your skin in 3D: shown under PLAY, and in Settings > Account a viewer you can turn, with animations, cape or elytra.",
         "fr": "Ton skin en 3D : affiché sous PLAY, et dans Paramètres > Compte un visualiseur à faire tourner, avec animations, cape ou élytres."
       },
       {
-        "version": "next",
+        "version": "1.4.0",
         "area": "settings",
         "en": "“Check for updates” finds a new launcher version right after it’s released, and also brings the latest news, events and mod pack at once.",
         "fr": "« Rechercher des mises à jour » trouve une nouvelle version du launcher dès sa sortie, et récupère aussi tout de suite les dernières news, événements et le pack de mods."
