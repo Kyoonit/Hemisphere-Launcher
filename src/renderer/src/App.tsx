@@ -38,6 +38,9 @@ const MapScreen = lazy(() => import('./screens/Map'))
 const RulesScreen = lazy(() => import('./screens/Rules'))
 import { markNewsSeen, unseenNewsCount } from '@shared/feed'
 
+/** the tour opened by itself once since the launcher started */
+let tourOffered = false
+
 export default function App() {
   const { t } = useTranslation()
   const { state } = useAccounts()
@@ -81,9 +84,17 @@ export default function App() {
     setScreen('settings')
   }
 
-  // the guided tour: started from Home's card or Settings > Launcher; done (or declined) once is remembered
+  // the guided tour: opens by itself at launch until it was done or quit once (its first popup says what it is; ×
+  // or Esc ends it for good), and again from Settings > Launcher
   const [touring, setTouring] = useState(false)
   useEffect(() => onStartTour(() => setTouring(true)), [])
+  useEffect(() => {
+    if (tourOffered || settings?.tour !== 'new' || !state || showLogin || screen !== 'home') return
+    tourOffered = true
+    // after Home's entrance (its parts are what the tour points at)
+    const timer = window.setTimeout(() => setTouring(true), 900)
+    return () => window.clearTimeout(timer)
+  }, [settings?.tour, state, showLogin, screen])
   const tourSteps = launcherTour(t, {
     home: () => setScreen('home'),
     news: () => (setNewsTab('server'), setScreen('news')),

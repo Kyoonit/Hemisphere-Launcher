@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, FileUp, Loader2, Shirt, Trash2, UserPlus } from 'lucide-react'
+import { Check, FileUp, Loader2, Shirt, Trash2, Undo2, UserPlus } from 'lucide-react'
 import type { Wardrobe as WardrobeData, WardrobeResult, WardrobeSkin } from '@shared/skins'
 import { CapeFlat, SkinFlat } from './SkinFlat'
 
@@ -145,6 +145,9 @@ export function Wardrobe({ preview, onPreview }: { preview: WardrobeSkin | null;
             ))}
           </div>
           <div className="ml-auto flex gap-2">
+            <button className={button} onClick={() => onPreview(null)}>
+              <Undo2 size={15} /> {t('wardrobe.backToMine')}
+            </button>
             {tab === 'history' && (
               <button className={button} disabled={!!busy} onClick={() => act('keep', () => window.hemisphere.skins.keep(selected.hash, name || t('wardrobe.keptName')), t('wardrobe.kept'))}>
                 {t('wardrobe.keep')}

@@ -9,13 +9,18 @@ import type { ClientManifest, ContentIndex } from '@shared/manifest'
 import type { DraftMod, MinecraftRelease, ModReadiness, MrHit, PackProposal, Resolved } from '@shared/heraldPack'
 import type { CatalogueItem } from '@shared/heraldCatalogue'
 
-/** Who a texture found elsewhere was given to (POST /catalogue/trace) */
+/** Who a texture found elsewhere was given to (POST /catalogue/trace): a player, or a staff member's download of the originals */
 export type TraceResult =
   | { found: false }
   | {
       found: true
       player: { id: string; name: string; firstAt: number; lastAt: number; blockedAt: number | null }
       received: { itemId: string; name: string; version: number; firstAt: number; lastAt: number; count: number }[]
+    }
+  | {
+      found: true
+      staff: { id: string; name: string; role: string | null; firstAt: number; lastAt: number }
+      downloads: { itemId: string; name: string; version: number; at: number }[]
     }
 
 /** A player blocked from the catalogue (GET /catalogue/blocked) */

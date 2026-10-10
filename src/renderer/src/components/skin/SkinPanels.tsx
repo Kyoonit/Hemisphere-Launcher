@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, ExternalLink, RefreshCw } from 'lucide-react'
+import { Box, RefreshCw } from 'lucide-react'
 import { SKIN_ANIMATIONS, SkinView, type BackItem, type SkinAnimation, type WornModel } from './SkinView'
 import { takeSkinViewerRequest, useActiveSkin } from './activeSkin'
 import { ModelTester } from './ModelTester'
@@ -113,14 +113,15 @@ export function SkinViewerSection() {
   const shown = triedSkin ?? preview
   const skin: SkinInfo | null = own && shown ? { ...own, skin: shown.skin, slim: shown.slim, fallback: false } : own
   const worn = useMemo(() => (tried?.bundle.model ? [...tested, { model: tried.bundle.model, slot: tried.bundle.slot, adjust: tried.bundle.adjust }] : tested), [tested, tried])
+  // one thing tried on at a time: a catalogue item or a wardrobe skin (its own bar, under its list, says what to do)
   const tryItem = (t: TriedItem | null) => {
     setTried(t)
-    if (t?.bundle.skin) setPreview(null)
+    if (t) setPreview(null)
     if (t) ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   const previewSkin = (s: WardrobeSkin | null) => {
     setPreview(s)
-    if (s && tried?.bundle.skin) setTried(null)
+    if (s) setTried(null)
   }
   const trying = preview || tried
   const ref = useRef<HTMLDivElement>(null)
@@ -144,17 +145,10 @@ export function SkinViewerSection() {
       <div className="mt-3 flex items-stretch gap-5">
         <div className={`relative grid h-[340px] w-[260px] flex-none cursor-grab place-items-center rounded-xl bg-gradient-to-b from-gray-800/70 to-gray-900/70 active:cursor-grabbing ${trying ? 'ring-2 ring-green-600' : 'ring-1 ring-white/5'}`}>
           {trying && (
-            // at the bottom: what is worn on the head stays in sight
-            <div className="absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-2 rounded-lg bg-gray-900/85 px-2.5 py-1.5 text-[12px] backdrop-blur-md">
-              <span className="min-w-0 flex-1 truncate font-semibold text-green-400">{tried ? tried.item.name : t('wardrobe.previewing')}</span>
-              {tried && (
-                <button onClick={() => window.hemisphere.shop.openPatreon(tried.item.id)} title={t('shop.patreon')} className="flex flex-none items-center gap-1 font-semibold text-[#ff6b73] hover:text-[#ff8a90]">
-                  <ExternalLink size={12} /> Patreon
-                </button>
-              )}
-              <button onClick={() => (setPreview(null), setTried(null))} className="flex-none font-semibold text-gray-300 hover:text-white">
-                {t('wardrobe.backToMine')}
-              </button>
+            // at the bottom: what is worn on the head stays in sight; the buttons are in the catalogue's or the
+            // wardrobe's bar below (one place for each)
+            <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 truncate rounded-lg bg-gray-900/85 px-2.5 py-1.5 text-center text-[12px] font-semibold text-green-400 backdrop-blur-md">
+              {tried ? tried.item.name : t('wardrobe.previewing')}
             </div>
           )}
           {skin ? <SkinView skin={skin} width={260} height={340} interactive animation={opts.animation} outerLayer={opts.outer} back={opts.back} autoRotate={opts.rotate} worn={worn} /> : <div className="skeleton h-[300px] w-[200px] rounded-lg" />}

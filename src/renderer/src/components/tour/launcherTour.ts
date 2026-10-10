@@ -43,8 +43,6 @@ export function launcherTour(t: TFunction, nav: TourNav): TourStep[] {
   }))
 }
 
-export const LAUNCHER_TOUR_STEPS = STEPS.length
-
 export const tourLabels = (t: TFunction): TourLabels => ({
   next: t('tour.next'),
   back: t('tour.back'),

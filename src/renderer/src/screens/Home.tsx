@@ -11,7 +11,7 @@ import { AnnouncementBanner, MaintenanceNotice, PlannedMaintenance, WelcomeHeadi
 import PlayZone, { useGameState } from '../components/PlayZone'
 import type { ReportCategory } from '@shared/report'
 import { useClient } from './Mods'
-import { useFeed, useNow, usePlaytime, useServerStatus, useLiveRestart, useRoomAboveFooter, useSettings } from '../hooks'
+import { useFeed, useNow, usePlaytime, useServerStatus, useLiveRestart, useRoomAboveFooter } from '../hooks'
 import type { PreflightWarning } from '@shared/settings'
 import type { AppInfo } from '@shared/ipc'
 import { byVersion, displayVersion, LAUNCHER_CHANGELOG, launcherHistory } from '@shared/launcherChangelog'
@@ -19,7 +19,6 @@ import { dayLabel, relativeDay } from '../components/LauncherUpdates'
 import type { Feed } from '@shared/feed'
 import { useAccounts } from '../accounts'
 import { HomeSkin } from '../components/skin/SkinPanels'
-import { LAUNCHER_TOUR_STEPS, startTour } from '../components/tour/launcherTour'
 import type { SessionRecap } from '@shared/game'
 
 const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
@@ -67,16 +66,11 @@ export default function Home({
   const right = useRoomAboveFooter<HTMLDivElement>()
   const page = useRef<HTMLDivElement>(null)
   const play = useRef<HTMLDivElement>(null)
-  // the guided tour's card, while it is offered
-  const [settings] = useSettings()
-  const [later, setLater] = useState(tourLater)
-  const offerTour = settings?.tour === 'new' && !later
 
   return (
     <div ref={page} className="home-pad relative flex h-full flex-col items-center px-7">
       {/* left column: one card under the other (never on top of each other), down to the footer */}
       <div ref={left.ref} style={{ maxHeight: left.max }} className="absolute top-11 left-6 flex w-[210px] flex-col gap-3 [&>*]:flex-none">
-        {offerTour && <TourPrompt onLater={() => ((tourLater = true), setLater(true))} />}
         <div data-tour="playtime">
           <PlaytimeCard />
         </div>
@@ -135,34 +129,6 @@ export default function Home({
       {/* the active account's skin, between PLAY and the bottom of the page */}
       {!crashed && <HomeSkin page={page} below={play} onOpen={onOpenSkin} />}
     </div>
-  )
-}
-
-/** "Later" hides the tour's card until the launcher starts again */
-let tourLater = false
-
-/** The guided tour, offered until it was done or declined (Settings > Launcher shows it again) */
-function TourPrompt({ onLater }: { onLater(): void }) {
-  const { t } = useTranslation()
-  const [, update] = useSettings()
-  return (
-    <aside className="glass animate-rise relative px-4 py-3.5 text-left [animation-delay:300ms]">
-      <p className="flex items-center gap-1.5 text-[13.5px] font-bold text-white">
-        <Sparkles size={15} className="text-green-400" /> {t('tour.prompt.title')}
-      </p>
-      <p className="mt-1 text-[12.5px] leading-snug text-gray-300">{t('tour.prompt.body', { count: LAUNCHER_TOUR_STEPS })}</p>
-      <button onClick={startTour} className="mt-2.5 w-full rounded-lg bg-green-600 px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-green-500">
-        {t('tour.prompt.start')}
-      </button>
-      <div className="mt-1.5 flex justify-between text-[12px]">
-        <button onClick={onLater} className="font-semibold text-gray-400 hover:text-white">
-          {t('tour.prompt.later')}
-        </button>
-        <button onClick={() => void update({ tour: 'done' })} className="font-semibold text-gray-400 hover:text-white">
-          {t('tour.prompt.never')}
-        </button>
-      </div>
-    </aside>
   )
 }
 

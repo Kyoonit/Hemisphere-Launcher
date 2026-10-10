@@ -1358,7 +1358,6 @@
     },
     "skin": "Skin",
     "new": "New",
-    "takeOff": "Take it off",
     "patreon": "See on Patreon",
     "errors": {
       "needs-microsoft": "Sign in with a Microsoft account to try on catalogue items.",
@@ -1381,13 +1380,6 @@
       "tabs": "Navigation",
       "settings": "Settings"
     },
-    "prompt": {
-      "title": "New here?",
-      "body": "A guided tour of the launcher in {{count}} steps, about 2 minutes. Skip a part or stop whenever you like.",
-      "start": "Start the tour",
-      "later": "Later",
-      "never": "No thanks"
-    },
     "again": {
       "title": "Guided tour",
       "hint": "Go through the launcher again, step by step.",
@@ -1396,7 +1388,7 @@
     "steps": {
       "welcome": {
         "title": "Welcome to the Hemisphere launcher",
-        "body": "Here is a quick look at everything you can do here.\nUse “Next” (or the → key), “Skip this part” when a part doesn’t interest you, or “Quit the tour” (Esc) at any time."
+        "body": "Here is a quick look at everything you can do here.\nUse “Next” (or the → key), “Skip this part” when a part doesn’t interest you, or the × (Esc) to stop: it won’t open by itself again, and you can see it again from Settings > Launcher."
       },
       "play": {
         "title": "Play",

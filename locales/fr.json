@@ -1404,7 +1404,6 @@
     },
     "skin": "Skin",
     "new": "Nouveau",
-    "takeOff": "L’enlever",
     "patreon": "Voir sur Patreon",
     "errors": {
       "needs-microsoft": "Connecte-toi avec un compte Microsoft pour essayer les articles du catalogue.",
@@ -1427,13 +1426,6 @@
       "tabs": "Navigation",
       "settings": "Paramètres"
     },
-    "prompt": {
-      "title": "Nouveau ici ?",
-      "body": "Une visite guidée du launcher en {{count}} étapes, environ 2 minutes. Tu peux passer une partie ou t’arrêter quand tu veux.",
-      "start": "Commencer la visite",
-      "later": "Plus tard",
-      "never": "Non merci"
-    },
     "again": {
       "title": "Visite guidée",
       "hint": "Revois le tour du launcher, étape par étape.",
@@ -1442,7 +1434,7 @@
     "steps": {
       "welcome": {
         "title": "Bienvenue sur le launcher Hemisphere",
-        "body": "Voici un tour rapide de tout ce que tu peux faire ici.\nUtilise « Suivant » (ou la flèche →), « Passer cette partie » si une partie ne t’intéresse pas, ou « Quitter la visite » (Échap) à tout moment."
+        "body": "Voici un tour rapide de tout ce que tu peux faire ici.\nUtilise « Suivant » (ou la flèche →), « Passer cette partie » si une partie ne t’intéresse pas, ou la croix × (Échap) pour arrêter : elle ne reviendra plus d’elle-même, et tu pourras la revoir depuis Paramètres > Launcher."
       },
       "play": {
         "title": "Jouer",

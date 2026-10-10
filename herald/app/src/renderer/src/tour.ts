@@ -9,7 +9,7 @@ import type { Tab } from './components/TitleBar'
 type Step = { part: string; id: string; tab?: Tab; target?: string; title: string; body: string }
 
 const STEPS: Step[] = [
-  { part: 'Welcome', id: 'welcome', tab: 'home', title: 'Welcome to Herald', body: 'Herald is where the staff make what players see in the launcher: news, events, maintenances, the mod pack, the Patreon catalogue…\nUse “Next” (or →), “Skip this part”, or “Quit the tour” (Esc) at any time.' },
+  { part: 'Welcome', id: 'welcome', tab: 'home', title: 'Welcome to Herald', body: 'Herald is where the staff make what players see in the launcher: news, events, maintenances, the mod pack, the Patreon catalogue…\nUse “Next” (or →), “Skip this part”, or the × (Esc) to stop: it won’t open by itself again, and “Take the tour” in your profile menu shows it again.' },
   { part: 'Welcome', id: 'tabs', tab: 'home', target: 'tabs', title: 'The tabs', body: 'Each part of the launcher has its tab. You only see the ones your role allows.' },
   { part: 'Welcome', id: 'bar', tab: 'home', target: 'publish-bar', title: 'On its way to the launchers', body: 'The last change and where it is now: Herald server → GitHub Actions (checked and signed) → GitHub → players’ launchers, with the time so far. Catalogue changes skip GitHub: they reach the launchers straight away.' },
   { part: 'Welcome', id: 'home', tab: 'home', target: 'tab-home', title: 'Home', body: 'What needs attention (publications waiting for a review, about to go live…), what is coming up, who is in Herald now and the latest activity.' },

@@ -3,7 +3,7 @@ import type { Profile } from '@herald/api'
 import { StoreProvider, useStore } from './store'
 import { TABS, TitleBar, type Tab } from './components/TitleBar'
 import { Tour } from '@launcher/components/tour/Tour'
-import { heraldTour, markTourDone, onStartTour, startTour, TOUR_LABELS, tourDone } from './tour'
+import { heraldTour, markTourDone, onStartTour, TOUR_LABELS, tourDone } from './tour'
 import SignIn from './screens/SignIn'
 import Home from './screens/Home'
 import Team from './screens/Team'
@@ -54,35 +54,21 @@ function Shell({ staging }: { staging: boolean }) {
   // A permission removed meanwhile: back to Home
   const allowed = tab === 'settings' || (tab === 'launcher' && (can('settings.public') || can('settings.staffCode'))) || TABS.some((t) => t.id === tab && (!t.needs || t.needs.some(can)))
   const shown = allowed ? tab : 'home'
-  // the guided tour: offered once per profile on this PC, shown again from the profile menu
+  // the guided tour: opens by itself when Herald starts, until this profile did it or quit it once on this PC (×
+  // or Esc ends it for good); shown again from the profile menu
   const [touring, setTouring] = useState(false)
-  const [offered, setOffered] = useState(() => !tourDone(me.id))
-  useEffect(() => onStartTour(() => (setOffered(false), setTouring(true))), [])
+  useEffect(() => onStartTour(() => setTouring(true)), [])
+  useEffect(() => {
+    if (tourDone(me.id)) return
+    const timer = window.setTimeout(() => setTouring(true), 700)
+    return () => window.clearTimeout(timer)
+  }, [me.id])
   const canOpen = (t: Tab) => TABS.some((x) => x.id === t && (!x.needs || x.needs.some(can)))
-  const endTour = () => (setTouring(false), setOffered(false), markTourDone(me.id))
+  const endTour = () => (setTouring(false), markTourDone(me.id))
   return (
     <div className="flex h-full flex-col">
       <TitleBar tab={shown} onTab={(t) => (t === 'publications' && tab === 'publications' && setOpenPub(null), t === 'team' && setTeamView('people'), setTab(t))} staging={staging} />
       <PublishJobs catalogue={shown === 'catalogue'} />
-      {offered && !touring && (
-        <div className="flex shrink-0 items-center gap-3 border-b border-green-500/25 bg-green-600/10 px-7 py-2 text-[13px]">
-          <span className="text-green-300">✦</span>
-          <span className="text-gray-200">
-            <b className="text-white">New to Herald?</b> A short guided tour of every tab, about 2 minutes.
-          </span>
-          <div className="ml-auto flex gap-1.5">
-            <button className="btn btn-sm btn-primary" onClick={startTour}>
-              Start the tour
-            </button>
-            <button className="btn btn-sm btn-ghost" onClick={() => setOffered(false)} title="Asked again next time Herald starts">
-              Later
-            </button>
-            <button className="btn btn-sm btn-ghost" onClick={endTour}>
-              No thanks
-            </button>
-          </div>
-        </div>
-      )}
       {touring && <Tour steps={heraldTour(canOpen, setTab)} labels={TOUR_LABELS} onClose={endTour} />}
       <main className="min-h-0 flex-1 overflow-auto px-7 py-6">
         {shown === 'home' && <Home onOpen={goPub} onPack={() => setTab('pack')} onBackups={() => (setTeamView('backups'), setTab('team'))} />}

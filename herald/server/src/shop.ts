@@ -16,7 +16,7 @@ import { cleanSheet, seesCatalogue, toModelFiles, type CatalogueSheet, type Cata
 import { readModel, type ModelData } from '../../../src/shared/models.ts'
 import { decodePng, encodePng, PngError, type Pixels } from '../../../src/shared/png.ts'
 import { seal } from '../../../src/shared/sealed.ts'
-import { markPixels, readMark } from '../../../src/shared/watermark.ts'
+import { markPixels, readMark, TAG_BYTES } from '../../../src/shared/watermark.ts'
 import { proofProblem, type PlayerProof } from '../../../src/shared/playerProof.ts'
 import { shopKeyId, type PlayerSession, type ShopBundle, type ShopDelivery, type ShopItem } from '../../../src/shared/catalogueShop.ts'
 import { HttpError, logActivity, type Actor } from './accounts'
@@ -217,6 +217,56 @@ export async function deliver(env: ShopEnv, req: Request, id: string): Promise<S
   return { version: row.version, sealed: toB64(sealed), key: toB64(key) }
 }
 
+// ------------------------------------------------------------------------------------------------ staff downloads
+
+/** The mark of a staff member's downloads (made the first time), never one a player has */
+async function staffTag(env: ShopEnv, profileId: string): Promise<Uint8Array> {
+  const now = Date.now()
+  const known = await env.DB.prepare('SELECT tag FROM catalogue_staff_marks WHERE profile_id = ?1').bind(profileId).first<{ tag: string }>()
+  if (known) {
+    await env.DB.prepare('UPDATE catalogue_staff_marks SET last_at = ?2 WHERE profile_id = ?1').bind(profileId, now).run()
+    return Uint8Array.from(known.tag.match(/../g)!.map((h) => parseInt(h, 16)))
+  }
+  for (;;) {
+    const tag = crypto.getRandomValues(new Uint8Array(TAG_BYTES))
+    const taken = await env.DB.prepare('SELECT 1 FROM catalogue_players WHERE tag = ?1 UNION SELECT 1 FROM catalogue_staff_marks WHERE tag = ?1').bind(hex(tag)).first()
+    if (taken) continue
+    await env.DB.prepare('INSERT INTO catalogue_staff_marks (profile_id, tag, first_at, last_at) VALUES (?1, ?2, ?3, ?3)').bind(profileId, hex(tag), now).run()
+    return tag
+  }
+}
+
+/**
+ * Original files for a staff member's PC, marked like a player's copy: every PNG, and the pictures inside a Blockbench
+ * project. Anything that cannot be read is given as it is (the original upload was checked; nothing is lost).
+ */
+export async function markForStaff(env: ShopEnv, profileId: string, files: { name: string; bytes: Uint8Array }[]): Promise<{ name: string; bytes: Uint8Array }[]> {
+  const tag = await staffTag(env, profileId)
+  const seed = await hmac(env, 'watermark', 'positions')
+  const mark = async (png: Uint8Array) => {
+    try {
+      const p = await decodePng(png)
+      return markPixels(p.rgba, p.width, p.height, tag, seed) ? encodePng(p) : png
+    } catch {
+      return png
+    }
+  }
+  return Promise.all(
+    files.map(async (f) => {
+      if (/\.png$/i.test(f.name)) return { name: f.name, bytes: await mark(f.bytes) }
+      if (!/\.bbmodel$/i.test(f.name)) return f
+      try {
+        const project = JSON.parse(new TextDecoder().decode(f.bytes)) as { textures?: { source?: unknown }[] }
+        for (const t of project.textures ?? [])
+          if (typeof t.source === 'string' && t.source.startsWith('data:image/png;base64,')) t.source = `data:image/png;base64,${toB64(await mark(dataUrlBytes(t.source)))}`
+        return { name: f.name, bytes: new TextEncoder().encode(JSON.stringify(project)) }
+      } catch {
+        return f
+      }
+    }),
+  )
+}
+
 // ------------------------------------------------------------------------------------------------ trace
 
 /** Who a texture found elsewhere was given to (a PNG, as found: not resized, not re-saved as JPEG) */
@@ -232,7 +282,29 @@ export async function trace(env: ShopEnv, actor: Actor, body: Record<string, unk
   }
   const tag = readMark(p.rgba, p.width, p.height, await hmac(env, 'watermark', 'positions'))
   const found = tag ? await env.DB.prepare('SELECT uuid, name, first_at, last_at, blocked_at FROM catalogue_players WHERE tag = ?1').bind(hex(tag)).first<{ uuid: string; name: string; first_at: number; last_at: number; blocked_at: number | null }>() : null
-  await logActivity(env.DB, actor.profile.id, 'catalogue.trace', null, { found: found?.name ?? null })
+  // not a player's: maybe original files downloaded from Herald by a staff member
+  const staff =
+    tag && !found
+      ? await env.DB.prepare('SELECT m.profile_id, m.first_at, m.last_at, p.name, p.role FROM catalogue_staff_marks m LEFT JOIN profiles p ON p.id = m.profile_id WHERE m.tag = ?1')
+          .bind(hex(tag))
+          .first<{ profile_id: string; first_at: number; last_at: number; name: string | null; role: string | null }>()
+      : null
+  await logActivity(env.DB, actor.profile.id, 'catalogue.trace', null, { found: found?.name ?? (staff ? `staff: ${staff.name ?? staff.profile_id}` : null) })
+  if (staff) {
+    const exports = (
+      await env.DB.prepare("SELECT at, target, detail FROM activity WHERE profile_id = ?1 AND action = 'catalogue.export' ORDER BY at DESC LIMIT 100")
+        .bind(staff.profile_id)
+        .all<{ at: number; target: string | null; detail: string | null }>()
+    ).results
+    return {
+      found: true as const,
+      staff: { id: staff.profile_id, name: staff.name ?? '(deleted profile)', role: staff.role, firstAt: staff.first_at, lastAt: staff.last_at },
+      downloads: exports.map((e) => {
+        const d = (e.detail ? JSON.parse(e.detail) : {}) as { name?: string; version?: number }
+        return { itemId: e.target ?? '', name: d.name ?? '?', version: d.version ?? 0, at: e.at }
+      }),
+    }
+  }
   if (!found) return { found: false as const }
   const items = (
     await env.DB.prepare('SELECT d.item_id, d.version, d.first_at, d.last_at, d.count, i.sheet FROM catalogue_deliveries d LEFT JOIN catalogue_items i ON i.id = d.item_id WHERE d.uuid = ?1 ORDER BY d.last_at DESC LIMIT 200')

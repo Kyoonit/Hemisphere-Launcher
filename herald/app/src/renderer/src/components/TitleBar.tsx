@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { ChartColumn, Eye, House, Image, Newspaper, Package, Server, Sparkles, Users, type LucideIcon } from 'lucide-react'
 import type { UpdateState } from '@herald/api'
 import { ROLE_LABEL, type Permission } from '@shared/heraldRoles'
 import { useStore } from '../store'
@@ -9,17 +10,20 @@ import { startTour } from '../tour'
 
 export type Tab = 'home' | 'publications' | 'preview' | 'server' | 'stats' | 'backgrounds' | 'pack' | 'catalogue' | 'team' | 'settings' | 'launcher'
 
-/** The tabs a profile sees: hidden when none of their permissions uses them (Lodge keepers see four). */
-export const TABS: { id: Tab; label: string; needs?: Permission[] }[] = [
-  { id: 'home', label: 'Home' },
-  { id: 'publications', label: 'Publications' },
-  { id: 'preview', label: 'Preview' },
-  { id: 'server', label: 'Server', needs: ['maintenance.write', 'maintenance.emergency', 'restart.write'] },
-  { id: 'stats', label: 'Statistics', needs: ['stats.view'] },
-  { id: 'backgrounds', label: 'Backgrounds', needs: ['backgrounds.write'] },
-  { id: 'pack', label: 'Mod pack', needs: ['pack.propose', 'pack.approve'] },
-  { id: 'catalogue', label: 'Catalogue', needs: ['catalogue.write', 'catalogue.publish', 'catalogue.delete', 'catalogue.export'] },
-  { id: 'team', label: 'Team' },
+/**
+ * The tabs a profile sees: hidden when none of their permissions uses them (Lodge keepers see four). In groups, apart
+ * from each other: Home · what players read · the server · the launcher's look and content · the staff.
+ */
+export const TABS: { id: Tab; label: string; icon: LucideIcon; group: number; needs?: Permission[] }[] = [
+  { id: 'home', label: 'Home', icon: House, group: 0 },
+  { id: 'publications', label: 'Publications', icon: Newspaper, group: 1 },
+  { id: 'preview', label: 'Preview', icon: Eye, group: 1 },
+  { id: 'server', label: 'Server', icon: Server, group: 2, needs: ['maintenance.write', 'maintenance.emergency', 'restart.write'] },
+  { id: 'stats', label: 'Statistics', icon: ChartColumn, group: 2, needs: ['stats.view'] },
+  { id: 'backgrounds', label: 'Backgrounds', icon: Image, group: 3, needs: ['backgrounds.write'] },
+  { id: 'pack', label: 'Mod pack', icon: Package, group: 3, needs: ['pack.propose', 'pack.approve'] },
+  { id: 'catalogue', label: 'Catalogue', icon: Sparkles, group: 3, needs: ['catalogue.write', 'catalogue.publish', 'catalogue.delete', 'catalogue.export'] },
+  { id: 'team', label: 'Team', icon: Users, group: 4 },
 ]
 
 export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Tab): void; staging: boolean }) {
@@ -49,13 +53,18 @@ export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Ta
     <div className="drag flex h-[52px] shrink-0 items-center gap-3 border-b border-green-400/20 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 pl-4">
       <div className="flex items-center gap-2 text-[17px] font-bold text-white">
         <span className="grid size-7 place-items-center rounded-md bg-gradient-to-br from-green-400 to-green-600 text-[15px] font-extrabold text-gray-950">H</span>
-        Herald
+        {/* narrow windows: the tabs need the room */}
+        <span className="max-[1300px]:hidden">Herald</span>
       </div>
       {staging && <span className="rounded-full border border-amber-400/30 bg-amber-400/15 px-2 text-[10.5px] font-bold tracking-wider text-amber-400">STAGING</span>}
       {tab && (
-        <nav data-tour="tabs" className="no-drag ml-1 flex gap-1">
-          {TABS.filter((t) => !t.needs || t.needs.some(can)).map((t) => (
-            <button key={t.id} data-tour={`tab-${t.id}`} className={`rounded-lg px-3 py-1.5 text-[13.5px] font-medium whitespace-nowrap ${tab === t.id ? 'bg-green-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => onTab(t.id)}>
+        <nav data-tour="tabs" className="no-drag ml-2 flex items-center">
+          {TABS.filter((t) => !t.needs || t.needs.some(can)).map((t, i, shown) => (
+            <Fragment key={t.id}>
+            {/* a thin line between groups */}
+            {i > 0 && shown[i - 1].group !== t.group && <span aria-hidden className="mx-2 h-5 w-px shrink-0 bg-white/10 max-[1300px]:mx-1 min-[1500px]:mx-3" />}
+            <button data-tour={`tab-${t.id}`} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13.5px] font-medium whitespace-nowrap max-[1300px]:px-2 max-[1300px]:text-[13px] min-[1500px]:px-3 ${i > 0 && shown[i - 1].group === t.group ? 'ml-0.5' : ''} ${tab === t.id ? 'bg-green-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => onTab(t.id)}>
+              <t.icon size={15} className="hidden shrink-0 min-[1400px]:block" />
               {t.label}
               {t.id === 'home' && reminders > 0 && (
                 <span className="ml-1.5 rounded-full bg-amber-400 px-1.5 text-[11px] font-bold text-gray-900" title={`${reminders} publication${reminders === 1 ? '' : 's'} need${reminders === 1 ? 's' : ''} attention`}>
@@ -63,6 +72,7 @@ export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Ta
                 </span>
               )}
             </button>
+            </Fragment>
           ))}
         </nav>
       )}

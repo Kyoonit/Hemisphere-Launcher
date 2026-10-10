@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ExternalLink, Loader2, Sparkles, WifiOff, X } from 'lucide-react'
+import { ExternalLink, Loader2, Sparkles, Undo2, WifiOff } from 'lucide-react'
 import type { ShopBundle, ShopItem } from '@shared/catalogueShop'
 
 const chip = (on: boolean) => `rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-colors ${on ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'}`
@@ -88,7 +88,7 @@ export function Catalogue({ tried, onTry }: { tried: TriedItem | null; onTry(t: 
           </div>
           <div className="flex gap-2">
             <button onClick={() => onTry(null)} className="flex items-center gap-1.5 rounded-lg bg-gray-700/85 px-3.5 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-gray-600">
-              <X size={15} /> {t('shop.takeOff')}
+              <Undo2 size={15} /> {t('wardrobe.backToMine')}
             </button>
             <button
               onClick={() => window.hemisphere.shop.openPatreon(selected.id)}

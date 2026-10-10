@@ -122,7 +122,7 @@ function Trace({ onClose }: { onClose(): void }) {
     if (!r.ok) return setError(r.error)
     setError(null)
     setBlocked(r.data.players)
-    setResult((x) => (x?.ok && x.data.found && x.data.player.id === id ? { ...x, data: { ...x.data, player: { ...x.data.player, blockedAt: block ? Date.now() : null } } } : x))
+    setResult((x) => (x?.ok && x.data.found && 'player' in x.data && x.data.player.id === id ? { ...x, data: { ...x.data, player: { ...x.data.player, blockedAt: block ? Date.now() : null } } } : x))
   }
   const pick = async () => {
     setBusy(true)
@@ -134,12 +134,31 @@ function Trace({ onClose }: { onClose(): void }) {
   return (
     <Modal title="Trace a leaked texture" onClose={onClose}>
       <p className="mb-3 text-sm text-gray-300">
-        Every player receives the catalogue’s textures with an invisible mark of their own. Pick a texture found elsewhere (the PNG as found: a resized picture or a
-        JPEG loses the mark) to see who it was given to.
+        Every player receives the catalogue’s textures with an invisible mark of their own, and so does every staff member who downloads the original files. Pick a
+        texture found elsewhere (the PNG as found: a resized picture or a JPEG loses the mark) to see who it was given to.
       </p>
       {result && !result.ok && <p className="mb-3 text-sm text-red-400">{result.error}</p>}
       {result?.ok && !result.data.found && <p className="mb-3 rounded-md bg-gray-800 p-3 text-sm text-gray-300">No mark found: not a texture from the catalogue, or it was changed too much.</p>}
-      {result?.ok && result.data.found && (
+      {result?.ok && result.data.found && 'staff' in result.data && (
+        <div className="mb-3 rounded-md border border-amber-600/40 bg-amber-600/10 p-3 text-sm">
+          <p className="text-white">
+            From the original files downloaded by <b>{result.data.staff.name}</b> {result.data.staff.role && <span className="text-xs text-gray-400">({result.data.staff.role})</span>}
+          </p>
+          <p className="mt-0.5 text-xs text-gray-400">
+            First download {day(result.data.staff.firstAt)}, last {day(result.data.staff.lastAt)}. A staff member is not blocked here: their profile is managed in Team.
+          </p>
+          {result.data.downloads.length > 0 && (
+            <ul className="mt-2 space-y-0.5 text-xs text-gray-300">
+              {result.data.downloads.map((d) => (
+                <li key={`${d.itemId}-${d.version}-${d.at}`}>
+                  {d.name} (version {d.version}) · {day(d.at)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {result?.ok && result.data.found && 'player' in result.data && (
         <div className="mb-3 rounded-md border border-amber-600/40 bg-amber-600/10 p-3 text-sm">
           <p className="text-white">
             Given to <b>{result.data.player.name}</b> <span className="text-xs text-gray-400">({result.data.player.id})</span>
@@ -150,7 +169,7 @@ function Trace({ onClose }: { onClose(): void }) {
           {result.data.player.blockedAt ? (
             <p className="mt-2 text-xs font-semibold text-red-400">Blocked from the catalogue since {day(result.data.player.blockedAt)}</p>
           ) : (
-            <button className="btn btn-sm mt-2 border-red-600/50 text-red-300" onClick={() => result.data.found && void setBlock(result.data.player.id, true)}>
+            <button className="btn btn-sm mt-2 border-red-600/50 text-red-300" onClick={() => result.data.found && 'player' in result.data && void setBlock(result.data.player.id, true)}>
               Block from the catalogue
             </button>
           )}

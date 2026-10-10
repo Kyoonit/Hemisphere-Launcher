@@ -7,6 +7,7 @@
 import { cleanSheet, filesProblem, seesCatalogue, sheetProblems, type CatalogueFileInfo, type CatalogueItem, type CatalogueSheet, type CatalogueStatus, type CatalogueVersion } from '../../../src/shared/heraldCatalogue.ts'
 import { HttpError, logActivity, type Actor } from './accounts'
 import { fromB64, sha256Hex, toB64 } from './crypto'
+import { markForStaff, type ShopEnv } from './shop'
 
 export interface CatalogueEnv {
   DB: D1Database
@@ -170,13 +171,18 @@ export async function previewFiles(env: CatalogueEnv, actor: Actor, id: string, 
   return { version: v, files: await readFiles(env, id, v) }
 }
 
-/** The original files, to save on a PC: the Owner's (Admins given it by the Owner or a Developer), always in the journal */
-export async function originalFiles(env: CatalogueEnv, actor: Actor, id: string, version?: number) {
+/**
+ * The original files, to save on a PC: the Owner's (Admins given it by the Owner or a Developer), always in the journal,
+ * and marked for the one who downloads them (shop.ts markForStaff): a leaked texture says whose download it was
+ */
+export async function originalFiles(env: CatalogueEnv & ShopEnv, actor: Actor, id: string, version?: number) {
   need(actor, 'catalogue.export', 'download original files')
-  const r = await previewFiles(env, actor, id, version)
   const item = await load(env, id)
-  await logActivity(env.DB, actor.profile.id, 'catalogue.export', id, { name: item.name, version: r.version })
-  return r
+  const v = version ?? item.version
+  if (!item.versions.some((x) => x.version === v)) throw new HttpError(404, 'No files yet.')
+  const files = await markForStaff(env, actor.profile.id, await readFileBytes(env, id, v))
+  await logActivity(env.DB, actor.profile.id, 'catalogue.export', id, { name: item.name, version: v })
+  return { version: v, files: files.map((f) => ({ name: f.name, data: toB64(f.bytes) })) }
 }
 
 export async function setStatus(env: CatalogueEnv, actor: Actor, id: string, body: Record<string, unknown>) {

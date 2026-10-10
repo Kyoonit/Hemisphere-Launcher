@@ -145,6 +145,18 @@ check(!(await call('GET', '/shop')).body.items.some((i: { id: string }) => i.id 
 check((await call('GET', `/shop/${crown.id}`, `Player ${kyo.body.token}`)).status === 404, 'and is not given any more')
 check((await call('GET', `/shop/thumb/${knight.id}`)).status === 404, 'no picture yet: none given')
 
+// the original files downloaded from Herald carry the downloader's mark
+check((await call('GET', `/catalogue/${crown.id}/original`, ADMIN)).status === 403, 'an Admin without the permission cannot download the originals')
+const originals = (await call('GET', `/catalogue/${crown.id}/original`, OWNER)).body as { files: { name: string; data: string }[] }
+const ownerPng = Buffer.from(originals.files.find((f) => f.name === 'crown.png')!.data, 'base64')
+const ownerPx = await decodePng(ownerPng)
+check(ownerPx.rgba.every((v, i) => Math.abs(v - original.rgba[i]) <= 1) && !Buffer.from(ownerPx.rgba).equals(Buffer.from(original.rgba)), 'a downloaded original is marked, and looks the same')
+const t3 = await trace(ADMIN, ownerPng)
+check(t3.body.found === true && t3.body.staff?.name === 'Liable' && !t3.body.player && t3.body.downloads.some((d: { name: string }) => d.name === 'Crown'), 'tracing it names the staff member who downloaded it, and what they downloaded')
+const project = (await call('GET', `/catalogue/${draft.id}/original`, OWNER)).body.files[0] as { name: string; data: string }
+const inside = JSON.parse(Buffer.from(project.data, 'base64').toString('utf8')).textures[0].source as string
+check((await trace(ADMIN, Buffer.from(inside.slice(inside.indexOf(',') + 1), 'base64'))).body.staff?.name === 'Liable', 'the pictures inside a Blockbench project are marked too')
+
 const journal = (await call('GET', '/activity?area=catalogue', OWNER)).body.entries as { action: string }[]
 check(['catalogue.trace', 'catalogue.block', 'catalogue.unblock'].every((a) => journal.some((e) => e.action === a)), 'tracing and blocking are in the journal')
 
