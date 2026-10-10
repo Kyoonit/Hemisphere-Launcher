@@ -49,6 +49,7 @@ import * as shop from './shop'
 import * as server from './serverState'
 import { collectServerStats, statsView } from './stats'
 import { listBackups, reportBackup } from './backups'
+import { listRestarts, watchRestart } from './restartWatch'
 
 export interface Env extends GithubEnv {
   DB: D1Database
@@ -133,6 +134,8 @@ export default {
     const now = Date.now()
     // server statistics: alongside the rest, a failure there never stops it
     ctx.waitUntil(collectServerStats(env.DB, now).catch((err) => console.error('[stats]', err)))
+    // the daily restart as it really happens (only near its scheduled time)
+    ctx.waitUntil(watchRestart(env.DB, now).catch((err) => console.error('[restart]', err)))
     const { meta } = await env.DB.prepare('UPDATE vaults SET released_at = ?1 WHERE released_at IS NULL AND opens_at <= ?1').bind(now).run()
     if (meta.changes) {
       console.log(`[cron] ${meta.changes} vault key(s) now public`)
@@ -269,7 +272,7 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
   const maintenance = path.match(/^\/server\/maintenances\/(m-[a-z0-9]{10})\/delete$/)
   const packAction = path.match(/^\/pack\/proposals\/(k-[a-z0-9]{10})\/(approve|reject|withdraw)$/)
   const history = path.match(/^\/settings\/history\/(backgrounds|public|templates\.publications)$/)
-  const serverPaths = ['/templates/publications', '/pack', '/pack/proposals', '/pack/files', '/backgrounds', '/settings/public', '/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history']
+  const serverPaths = ['/templates/publications', '/pack', '/pack/proposals', '/pack/files', '/backgrounds', '/settings/public', '/server/templates', '/server/maintenances', '/server/maintenance-now', '/server/back-online', '/server/restart', '/server/history', '/server/restarts']
   if (path !== '/publications' && path !== '/images' && path !== '/publish' && !one && !image && !maintenance && !packAction && !history && !serverPaths.includes(path)) return null
   const actor = await authenticate(env, req)
   const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
@@ -284,6 +287,7 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
   }
   // Server tab (S6): maintenances, emergencies, daily restart
   if (req.method === 'GET' && path === '/server/history') return json(await server.serverHistory(env))
+  if (req.method === 'GET' && path === '/server/restarts') return json(await listRestarts(env.DB, actor))
   if (req.method === 'POST' && path === '/server/maintenances') return json(await server.saveMaintenance(env, actor, await body(), run))
   if (req.method === 'POST' && maintenance) return json(await server.deleteMaintenance(env, actor, maintenance[1], await body(), run))
   if (req.method === 'POST' && path === '/server/maintenance-now') return json(await server.maintenanceNow(env, actor, await body(), run))

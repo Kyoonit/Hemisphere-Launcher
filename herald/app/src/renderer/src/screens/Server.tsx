@@ -4,6 +4,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import type { Maintenance, RestartException, RestartRule } from '@shared/feedV2'
+import type { RestartObservation } from '@shared/restartObservations'
 import { nextRestart } from '@shared/restart'
 import type { MessageTemplate } from '@shared/heraldPublications'
 import { usePubs } from '../pubs'
@@ -227,6 +228,11 @@ function RestartCard({ rules, exceptions, busy, onSave, onAdd, now }: { rules: R
           ))}
         </div>
       )}
+      <RealRestarts
+        current={inForce ?? null}
+        onUse={edit && inForce ? (time) => onSave([...rules, { from: new Date().toISOString(), time, timeZone: inForce.timeZone, durationMin: inForce.durationMin }], exceptions) : undefined}
+        busy={busy}
+      />
       {edit && (
         <div className="mt-3 flex gap-2">
           <button className="btn btn-sm" onClick={() => onAdd('rule')}>
@@ -396,6 +402,74 @@ function TemplatesEditor({ templates, onClose }: { templates: MessageTemplate[];
         </button>
       </div>
     </Modal>
+  )
+}
+
+/**
+ * The restarts as Herald saw them (checked every 5 s around the scheduled time): when the server went down and came
+ * back. When the last ones keep differing from the daily time, Herald suggests the real one (one click to use it).
+ */
+function RealRestarts({ current, onUse, busy }: { current: RestartRule | null; onUse?: (time: string) => void; busy: boolean }) {
+  const { zone, sync } = useStore()
+  const [seen, setSeen] = useState<{ observations: RestartObservation[]; suggestion: { time: string; offsetMin: number } | null } | null>(null)
+  // read again with the rest (sync refreshes every few seconds; once a minute is plenty here)
+  const minute = Math.floor((sync?.now ?? Date.now()) / 60_000)
+  useEffect(() => void window.herald.api<NonNullable<typeof seen>>('GET', '/server/restarts').then((r) => r.ok && setSeen(r.data)), [minute, current?.time])
+  if (!seen) return null
+  const now = sync?.now ?? Date.now()
+  const secs = (ms: number) => (ms >= 60_000 ? `${Math.floor(ms / 60_000)} min ${Math.round((ms % 60_000) / 1000)} s` : `${Math.round(ms / 1000)} s`)
+  const clock = (at: number) => new Intl.DateTimeFormat('en-GB', { timeZone: zone, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(at)
+  return (
+    <div className="mt-3">
+      <div className="label">Real restarts (seen by Herald)</div>
+      {seen.suggestion && current && (
+        <div className="mb-2 flex flex-wrap items-center gap-3 rounded-md border border-amber-400/40 bg-amber-900/25 px-3 py-2 text-sm">
+          <span className="min-w-0 flex-1 text-amber-100">
+            The server restarted about {Math.abs(seen.suggestion.offsetMin)} min {seen.suggestion.offsetMin > 0 ? 'later' : 'earlier'} than planned the last 3 times: around{' '}
+            <b className="text-white">
+              {seen.suggestion.time} {zoneLabel(current.timeZone)}
+            </b>{' '}
+            instead of {current.time}.
+          </span>
+          {onUse && (
+            <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => onUse(seen.suggestion!.time)}>
+              Use {seen.suggestion.time}
+            </button>
+          )}
+        </div>
+      )}
+      {seen.observations.length === 0 ? (
+        <p className="text-xs text-gray-400">None seen yet: Herald watches from 5 minutes before the daily time to 20 minutes after it.</p>
+      ) : (
+        <ul className="space-y-0.5 text-xs">
+          {seen.observations.slice(0, 7).map((o) => {
+            const watching = o.upAt === null && now < o.scheduledAt + 20 * 60_000
+            return (
+              <li key={o.scheduledAt} className="flex flex-wrap gap-x-2 text-gray-300">
+                <span className="w-28 shrink-0 text-gray-400">{formatDay(o.scheduledAt, zone)}</span>
+                <span className="w-24 shrink-0">planned {formatTime(o.scheduledAt, zone)}</span>
+                {o.downAt === null ? (
+                  <span className={watching ? 'text-sky-300' : 'text-gray-500'}>{watching ? 'watching now…' : 'not seen going down'}</span>
+                ) : (
+                  <span>
+                    down <b className="text-white">{clock(o.downAt)}</b>
+                    {o.upAt !== null ? (
+                      <>
+                        {' '}
+                        → back <b className="text-white">{clock(o.upAt)}</b> <span className="text-gray-500">({secs(o.upAt - o.downAt)} off)</span>
+                      </>
+                    ) : (
+                      <span className="text-amber-300"> · {watching ? 'not back yet…' : 'not seen coming back in the watch time'}</span>
+                    )}
+                    {Math.abs(o.downAt - o.scheduledAt) >= 60_000 && <span className="text-gray-500"> · {Math.round((o.downAt - o.scheduledAt) / 60_000)} min from the plan</span>}
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
   )
 }
 

@@ -14,7 +14,7 @@ const TIMEOUT_MS = 6_000
 const timeout = <T>(ms: number, value: T) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms))
 
 /** The game's status ping (null: the server did not answer) and the connection time */
-async function ping(): Promise<{ answer: PingAnswer; latencyMs: number } | null> {
+export async function ping(): Promise<{ answer: PingAnswer; latencyMs: number } | null> {
   const socket = connect({ hostname: SERVER.host, port: SERVER.port })
   const work = (async () => {
     const start = Date.now()

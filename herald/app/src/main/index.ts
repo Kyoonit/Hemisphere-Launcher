@@ -43,7 +43,7 @@ const ALLOWED = [
   /^\/activity(\?[a-z0-9=&._-]{0,200})?$/,
   /^\/pack(\/proposals)?$/,
   /^\/pack\/proposals\/k-[a-z0-9]{10}\/(approve|reject|withdraw)$/,
-  /^\/server\/(templates|maintenances|maintenance-now|back-online|restart|history)$/,
+  /^\/server\/(templates|maintenances|maintenance-now|back-online|restart|history|restarts)$/,
   /^\/server\/maintenances\/m-[a-z0-9]{10}\/delete$/,
   /^\/backups$/,
   /^\/stats\?range=(day|week|month)&zone=[\w%.+-]{1,96}$/,
