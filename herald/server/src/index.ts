@@ -44,6 +44,7 @@ import * as pubs from './publications'
 import * as catalogue from './catalogue'
 import * as shop from './shop'
 import * as server from './serverState'
+import { collectServerStats } from './stats'
 
 export interface Env extends GithubEnv {
   DB: D1Database
@@ -118,9 +119,12 @@ export default {
   },
 
   /** Every minute: marks the keys that are now public (S3 also publishes them in the feed as the GitHub fallback), and
-   *  starts the publish workflow again if a job waits for more than 90 s (its start failed: GitHub down, CPU limit…). */
-  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+   *  starts the publish workflow again if a job waits for more than 90 s (its start failed: GitHub down, CPU limit…), and
+   *  collects the server statistics (stats.ts). */
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const now = Date.now()
+    // server statistics: alongside the rest, a failure there never stops it
+    ctx.waitUntil(collectServerStats(env.DB, now).catch((err) => console.error('[stats]', err)))
     const { meta } = await env.DB.prepare('UPDATE vaults SET released_at = ?1 WHERE released_at IS NULL AND opens_at <= ?1').bind(now).run()
     if (meta.changes) {
       console.log(`[cron] ${meta.changes} vault key(s) now public`)
