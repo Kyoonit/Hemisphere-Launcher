@@ -14,7 +14,7 @@ import { Avatar } from '../components/ui'
 import { describe } from '../activity'
 import { formatDay, formatTime, formatWhen } from '../time'
 
-const AREA_LABEL: Record<ActivityArea, string> = { publications: 'Publications', server: 'Server', pack: 'Mod pack', settings: 'Launcher settings and backgrounds', team: 'Team and sign-ins' }
+const AREA_LABEL: Record<ActivityArea, string> = { publications: 'Publications', server: 'Server', pack: 'Mod pack', settings: 'Launcher settings and backgrounds', team: 'Team and sign-ins', catalogue: 'Catalogue' }
 const PUBLICATION = /^[nebw]-[a-z0-9]{12}$/
 
 export function Journal({ onOpen }: { onOpen(id: string): void }) {

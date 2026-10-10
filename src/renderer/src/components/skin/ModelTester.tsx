@@ -1,28 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Box, X } from 'lucide-react'
-import { ModelError, readModel, type ModelFile } from '@shared/models'
+import { ModelError, readModel } from '@shared/models'
 import type { WornModel } from './SkinView'
-import type { WornSlot } from './modelMesh'
+import { withAlpha, type WornSlot } from './modelMesh'
 
 const SLOTS: WornSlot[] = ['head', 'righthand', 'lefthand']
-
-/** The alpha of a PNG (flat items get side faces from it) */
-async function withAlpha(f: ModelFile): Promise<ModelFile> {
-  if (!f.content.startsWith('data:image/png')) return f
-  const img = new Image()
-  img.src = f.content
-  await img.decode()
-  const c = document.createElement('canvas')
-  c.width = img.width
-  c.height = img.height
-  const ctx = c.getContext('2d', { willReadFrequently: true })!
-  ctx.drawImage(img, 0, 0)
-  const px = ctx.getImageData(0, 0, img.width, img.height).data
-  const alpha = new Uint8Array(img.width * img.height)
-  for (let i = 0; i < alpha.length; i++) alpha[i] = px[i * 4 + 3]
-  return { ...f, width: img.width, height: img.height, alpha }
-}
 
 /**
  * Staff only (Developer tab > "Test a model"): try a model file on in the viewer before it is in the catalogue: a Blockbench

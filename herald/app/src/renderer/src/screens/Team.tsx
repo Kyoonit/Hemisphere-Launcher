@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Profile } from '@herald/api'
-import { effectivePermissions, PERMISSIONS, ROLE_DEFAULTS, ROLE_LABEL, ROLE_RANK, ROLES, NEVER_FOR_LODGE_KEEPERS, type Permission, type Role } from '@shared/heraldRoles'
+import { effectivePermissions, ORIGINALS, PERMISSIONS, ROLE_DEFAULTS, ROLE_LABEL, ROLE_RANK, ROLES, NEVER_FOR_LODGE_KEEPERS, type Permission, type Role } from '@shared/heraldRoles'
 import { useStore } from '../store'
 import { Avatar, Modal } from '../components/ui'
 import { Journal, Trash } from './Journal'
@@ -124,7 +124,7 @@ function NewProfile({ onClose, onCreated }: { onClose(): void; onCreated(name: s
         ))}
       </select>
       <p className="mt-2 text-xs text-gray-400">
-        {role === 'admin' ? 'Admins have every permission.' : 'Permissions can be adjusted after creation.'} {role === 'developer' && 'Developers have technical access, apart from the staff.'} A code is generated and shown once.
+        {role === 'admin' ? 'Admins have every permission (but downloading original catalogue files, which only the Owner or a Developer can give).' : 'Permissions can be adjusted after creation.'} {role === 'developer' && 'Developers have technical access, apart from the staff.'} A code is generated and shown once.
       </p>
       {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
       <div className="mt-5 flex justify-end gap-2">
@@ -148,7 +148,9 @@ function EditProfile({ profile, onClose, onChanged, onCode }: { profile: Profile
   const self = profile.id === me.id
   const locked = (profile.role === 'owner' && me.role !== 'owner') || ROLE_RANK[profile.role] > ROLE_RANK[me.role]
   const defaults = new Set<string>(ROLE_DEFAULTS[role])
-  const forbidden = (p: Permission) => role === 'lodgeKeeper' && NEVER_FOR_LODGE_KEEPERS.includes(p)
+  const forbidden = (p: Permission) => (role === 'lodgeKeeper' && NEVER_FOR_LODGE_KEEPERS.includes(p)) || (p === ORIGINALS && role !== 'admin' && role !== 'owner')
+  // original catalogue files: the Owner's; only the Owner or a Developer gives them, only to Admins
+  const cannotGive = (p: Permission) => (p === ORIGINALS ? (me.role !== 'owner' && me.role !== 'developer') || role !== 'admin' : !me.permissions.includes(p) && !perms.has(p))
 
   const save = async (patch: Record<string, unknown>) => {
     const res = await window.herald.api<Profile>('PATCH', `/profiles/${profile.id}`, patch)
@@ -196,7 +198,7 @@ function EditProfile({ profile, onClose, onChanged, onCode }: { profile: Profile
           <label key={p} className={`flex items-center gap-1.5 ${forbidden(p) ? 'opacity-40' : ''}`}>
             <input
               type="checkbox"
-              disabled={locked || forbidden(p) || (!me.permissions.includes(p) && !perms.has(p))}
+              disabled={locked || forbidden(p) || cannotGive(p)}
               checked={perms.has(p) && !forbidden(p)}
               onChange={(e) => {
                 const next = new Set(perms)

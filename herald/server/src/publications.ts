@@ -269,7 +269,7 @@ export async function setEditing(env: PublicationsEnv, actor: Actor, id: string,
 
 /** A WebP picture made by the app (≤ 1.5 MB). Same bytes = same id: uploading twice stores it once. */
 export async function uploadImage(env: PublicationsEnv, actor: Actor, req: Request) {
-  if (!PUBLICATION_KINDS.some((k) => actor.permissions.includes(WRITE[k])) && !actor.permissions.includes('backgrounds.write')) throw new HttpError(403, 'You cannot add pictures.')
+  if (!PUBLICATION_KINDS.some((k) => actor.permissions.includes(WRITE[k])) && !actor.permissions.includes('backgrounds.write') && !actor.permissions.includes('catalogue.write')) throw new HttpError(403, 'You cannot add pictures.')
   const bytes = new Uint8Array(await req.arrayBuffer())
   const width = Number(req.headers.get('x-width'))
   const height = Number(req.headers.get('x-height'))

@@ -10,7 +10,7 @@ import type { ReportCategory } from '@shared/report'
 import type { NewsTab } from './screens/News'
 import type { Section } from './screens/Settings'
 import { useAccounts } from './accounts'
-import { requestSkinViewer } from './components/skin/SkinView'
+import { requestSkinViewer } from './components/skin/activeSkin'
 import { useFeed, useLightMode, useSettings } from './hooks'
 
 // Home and sign-in load with the launcher; the other screens load the first time they're opened (faster start, less memory).

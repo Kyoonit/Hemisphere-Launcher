@@ -1,6 +1,23 @@
 import { BufferAttribute, BufferGeometry, FrontSide, Group, Matrix4, Mesh, MeshStandardMaterial, NearestFilter, SRGBColorSpace, Texture } from 'three'
 import type { SkinViewer } from 'skinview3d'
-import { applyPoint, placement, type FaceName, type ModelCube, type ModelData, type Vec3 } from '@shared/models'
+import { applyPoint, placement, type FaceName, type ModelCube, type ModelData, type ModelFile, type Vec3 } from '@shared/models'
+
+/** A model file with its PNG decoded: size and alpha (flat items get side faces from it) */
+export async function withAlpha(f: ModelFile): Promise<ModelFile> {
+  if (!f.content.startsWith('data:image/png')) return f
+  const img = new Image()
+  img.src = f.content
+  await img.decode()
+  const c = document.createElement('canvas')
+  c.width = img.width
+  c.height = img.height
+  const ctx = c.getContext('2d', { willReadFrequently: true })!
+  ctx.drawImage(img, 0, 0)
+  const px = ctx.getImageData(0, 0, img.width, img.height).data
+  const alpha = new Uint8Array(img.width * img.height)
+  for (let i = 0; i < alpha.length; i++) alpha[i] = px[i * 4 + 3]
+  return { ...f, width: img.width, height: img.height, alpha }
+}
 
 /** Worn models (launcher 1.4): a ModelData drawn with three.js and attached to the player of a skinview3d viewer. */
 export type WornSlot = 'head' | 'righthand' | 'lefthand'
@@ -69,7 +86,15 @@ const loadTexture = (src: string): Promise<Texture> =>
   })
 
 /** The model as a three.js group, placed for `slot` in its body part's frame */
-export async function buildModel(model: ModelData, slot: WornSlot): Promise<Group> {
+/** A small correction of where a model sits (catalogue items): pixels of the player and a factor */
+export interface ModelAdjust {
+  x: number
+  y: number
+  z: number
+  scale: number
+}
+
+export async function buildModel(model: ModelData, slot: WornSlot, adjust?: ModelAdjust): Promise<Group> {
   const textures = await Promise.all(model.textures.map((t) => loadTexture(t.src)))
   const group = new Group()
   geometries(model.cubes, textures.length).forEach((geometry, i) => {
@@ -78,7 +103,10 @@ export async function buildModel(model: ModelData, slot: WornSlot): Promise<Grou
     group.add(new Mesh(geometry, material))
   })
   group.matrixAutoUpdate = false
-  group.matrix.copy(new Matrix4().fromArray(placement(model, slot)))
+  const placed = new Matrix4().fromArray(placement(model, slot))
+  // the correction is in the body part's frame: moved, then scaled around where the model sits
+  if (adjust) placed.premultiply(new Matrix4().makeScale(adjust.scale, adjust.scale, adjust.scale)).premultiply(new Matrix4().makeTranslation(adjust.x, adjust.y, adjust.z))
+  group.matrix.copy(placed)
   group.userData.textures = textures
   return group
 }

@@ -368,5 +368,6 @@ export const ACTIVITY_AREAS = {
   pack: ['pack.'],
   settings: ['settings.', 'backgrounds.'],
   team: ['profile.', 'session.'],
+  catalogue: ['catalogue.'],
 } as const
 export type ActivityArea = keyof typeof ACTIVITY_AREAS

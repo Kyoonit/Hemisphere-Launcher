@@ -2,11 +2,13 @@
  * Herald, main process. Holds the session token (encrypted by Windows with safeStorage, never given to the page) and
  * talks to the Herald server for the interface. Local settings (time zones) stay on this PC.
  */
-import { app, BrowserWindow, clipboard, dialog, ipcMain, safeStorage, shell } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, ipcMain, nativeImage, safeStorage, shell } from 'electron'
 import { createDecipheriv, createHash, createPublicKey, randomBytes, scrypt, verify } from 'node:crypto'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type { ApiResult, LocalSettings, Profile } from '@herald/api'
+import { allowedFileName, MAX_FILE_BYTES, MAX_FILES, MAX_FILES_BYTES, type CatalogueItem } from '@shared/heraldCatalogue'
 import { installUpdate, startUpdater, updateState } from './updater'
 import { staffCodeFrom } from '@shared/heraldPublic'
 import { STAFF_CODE_SCRYPT } from '@shared/dev'
@@ -23,6 +25,8 @@ const PRODUCTION = 'https://herald.hemisphere-launcher.workers.dev'
 const SERVER = (import.meta.env?.MAIN_VITE_HERALD_SERVER || PRODUCTION).replace(/\/$/, '')
 // A test build keeps its own session and settings: a staging token never replaces the production one
 if (SERVER !== PRODUCTION) app.setPath('userData', `${app.getPath('userData')}-test`)
+/** Mojang's default skin (Steve), for the catalogue studio */
+const STEVE = '31f477eb1a7beee631c2ca64d06f8f68fa93a3386d04452ab27f43acdf1b60cb'
 /** Only these server routes can be called from the interface. */
 const ALLOWED = [
   /^\/me$/,
@@ -41,6 +45,9 @@ const ALLOWED = [
   /^\/pack\/proposals\/k-[a-z0-9]{10}\/(approve|reject|withdraw)$/,
   /^\/server\/(templates|maintenances|maintenance-now|back-online|restart|history)$/,
   /^\/server\/maintenances\/m-[a-z0-9]{10}\/delete$/,
+  /^\/catalogue$/,
+  // (original files: only through catalogue:saveOriginal, which saves them where the person chooses)
+  /^\/catalogue\/c-[a-z0-9]{10}(\/(files|version|status|thumbnail|delete))?(\?version=\d{1,6})?$/,
 ]
 
 let win: BrowserWindow | null = null
@@ -64,11 +71,11 @@ async function saveToken(next: string | null): Promise<void> {
   await writeFile(sessionFile(), safeStorage.encryptString(next))
 }
 
-async function call<T>(method: string, path: string, body?: unknown): Promise<ApiResult<T>> {
+async function call<T>(method: string, path: string, body?: unknown, timeoutMs = 20_000): Promise<ApiResult<T>> {
   try {
     const res = await fetch(SERVER + path, {
       method,
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: { 'content-type': 'application/json', 'user-agent': `Herald/${app.getVersion()}`, ...(token ? { authorization: `Bearer ${token}` } : {}) },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     })
@@ -317,6 +324,81 @@ function registerIpc(): void {
       return res.ok ? { ok: true, data: { name: basename(pick.filePaths[0]), sha512: data.sha512, size: data.size, url: data.url, seal: data.seal } } : { ok: false, status: res.status, error: data.error ?? `HTTP ${res.status}` }
     } catch {
       return { ok: false, status: 0, error: 'The Herald server cannot be reached. Check your internet connection.' }
+    }
+  })
+  // ---------------------------------------------------------------- catalogue (launcher 1.4)
+  // New files for an item (its next version): picked here, sent to the server, never kept on this PC
+  ipcMain.handle('catalogue:addFiles', async (_e, id: unknown) => {
+    if (typeof id !== 'string' || !/^c-[a-z0-9]{10}$/.test(id)) return { ok: false, status: 400, error: 'Unknown item.' }
+    const pick = await dialog.showOpenDialog(win!, { title: 'Model files (.bbmodel, or .json with its .png) or a skin (.png)', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Blockbench / Minecraft model, skin', extensions: ['bbmodel', 'json', 'png'] }] })
+    if (pick.canceled || !pick.filePaths.length) return null
+    if (pick.filePaths.length > MAX_FILES) return { ok: false, status: 400, error: `${MAX_FILES} files at most.` }
+    const files: { name: string; data: string }[] = []
+    let total = 0
+    for (const path of pick.filePaths) {
+      const size = (await stat(path)).size
+      total += size
+      if (size > MAX_FILE_BYTES || total > MAX_FILES_BYTES) return { ok: false, status: 413, error: 'These files are too big (4 MB each, 8 MB together).' }
+      files.push({ name: basename(path), data: (await readFile(path)).toString('base64') })
+    }
+    return call<CatalogueItem>('POST', `/catalogue/${id}/files`, { files }, 120_000)
+  })
+  // The original files (Owner, or Admins given it): saved in the folder the person chooses, the download is in the journal
+  ipcMain.handle('catalogue:saveOriginal', async (_e, id: unknown, version: unknown) => {
+    if (typeof id !== 'string' || !/^c-[a-z0-9]{10}$/.test(id) || !Number.isInteger(version)) return { ok: false, status: 400, error: 'Unknown item.' }
+    const pick = await dialog.showOpenDialog(win!, { title: 'Save the original files in…', properties: ['openDirectory', 'createDirectory'] })
+    if (pick.canceled || !pick.filePaths[0]) return null
+    const res = await call<{ version: number; files: { name: string; data: string }[] }>('GET', `/catalogue/${id}/original?version=${version}`, undefined, 120_000)
+    if (!res.ok) return res
+    let saved = 0
+    for (const f of res.data.files) {
+      if (!allowedFileName(f.name)) continue
+      let target = join(pick.filePaths[0], f.name)
+      for (let i = 2; existsSync(target); i++) target = join(pick.filePaths[0], f.name.replace(/(\.[a-z]+)$/i, ` (${i})$1`))
+      await writeFile(target, Buffer.from(f.data, 'base64'))
+      saved++
+    }
+    return { ok: true, data: { saved, folder: pick.filePaths[0] } }
+  })
+  // Studio pictures (to share on Discord): saved as PNG, or copied to paste straight into a message
+  ipcMain.handle('catalogue:saveImage', async (_e, bytes: unknown, name: unknown) => {
+    if (!(bytes instanceof Uint8Array) || bytes.length > 32 * 1024 * 1024) return false
+    const safe = (typeof name === 'string' ? name : 'Hemisphere').replace(/[^\w\- ]+/g, '').trim().slice(0, 60) || 'Hemisphere'
+    const pick = await dialog.showSaveDialog(win!, { title: 'Save the picture', defaultPath: `${safe}.png`, filters: [{ name: 'PNG', extensions: ['png'] }] })
+    if (pick.canceled || !pick.filePath) return false
+    await writeFile(pick.filePath, bytes)
+    return true
+  })
+  ipcMain.handle('catalogue:copyImage', async (_e, bytes: unknown) => {
+    if (!(bytes instanceof Uint8Array) || bytes.length > 32 * 1024 * 1024 || nativeImage.createFromBuffer(Buffer.from(bytes)).isEmpty()) return false
+    await clipboard.write([new ClipboardItem({ 'image/png': new Blob([new Uint8Array(bytes)], { type: 'image/png' }) })])
+    return true
+  })
+  // Who wears it in the studio: any player's skin (Mojang, public), textures from Mojang's texture server only
+  ipcMain.handle('catalogue:player', async (_e, name: unknown) => {
+    if (typeof name !== 'string' || !/^[A-Za-z0-9_]{1,16}$/.test(name)) return null
+    try {
+      const get = (url: string) => fetch(url, { signal: AbortSignal.timeout(15_000) })
+      const texture = async (url?: string) => {
+        const hash = url ? /^https?:\/\/textures\.minecraft\.net\/texture\/([0-9a-f]{16,80})$/.exec(url)?.[1] : null
+        if (!hash) return null
+        const res = await get(`https://textures.minecraft.net/texture/${hash}`)
+        const bytes = Buffer.from(await res.arrayBuffer())
+        return res.ok && bytes.length < 512 * 1024 && bytes.subarray(1, 4).toString('ascii') === 'PNG' ? `data:image/png;base64,${bytes.toString('base64')}` : null
+      }
+      // Steve: Mojang's default skin
+      if (name.toLowerCase() === 'steve') return { name: 'Steve', skin: await texture(`https://textures.minecraft.net/texture/${STEVE}`), slim: false, cape: null }
+      const who = await get(`https://api.mojang.com/users/profiles/minecraft/${name}`)
+      if (!who.ok) return null
+      const { id, name: real } = (await who.json()) as { id: string; name: string }
+      if (!/^[0-9a-f]{32}$/.test(id)) return null
+      const profile = (await (await get(`https://sessionserver.mojang.com/session/minecraft/profile/${id}`)).json()) as { properties?: { name: string; value: string }[] }
+      const value = profile.properties?.find((p) => p.name === 'textures')?.value
+      const tex = value ? (JSON.parse(Buffer.from(value, 'base64').toString('utf8')).textures as { SKIN?: { url: string; metadata?: { model?: string } }; CAPE?: { url: string } }) : {}
+      const skin = await texture(tex.SKIN?.url ?? `https://textures.minecraft.net/texture/${STEVE}`)
+      return skin ? { name: real, skin, slim: tex.SKIN?.metadata?.model === 'slim', cape: await texture(tex.CAPE?.url) } : null
+    } catch {
+      return null
     }
   })
   // What launchers really get now: the feed at the pulse's commit, its signature, the vaults whose time has come

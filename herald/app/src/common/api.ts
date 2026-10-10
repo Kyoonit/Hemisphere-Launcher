@@ -7,6 +7,15 @@ import type { Backgrounds } from '@shared/heraldBackgrounds'
 import type { PublicSettings } from '@shared/heraldPublic'
 import type { ClientManifest, ContentIndex } from '@shared/manifest'
 import type { DraftMod, MinecraftRelease, ModReadiness, MrHit, PackProposal, Resolved } from '@shared/heraldPack'
+import type { CatalogueItem } from '@shared/heraldCatalogue'
+
+/** A player wearing things in the catalogue studio */
+export interface StudioPlayer {
+  name: string
+  skin: string
+  slim: boolean
+  cape: string | null
+}
 
 export interface Profile {
   id: string
@@ -183,6 +192,17 @@ export interface HeraldBridge {
     readiness(minecraft: string, mods: { id: string; name: string; category: string; source?: { modrinth: { projectId: string; versionId: string } } }[]): Promise<ApiResult<ModReadiness[]>>
     /** Pick a config file on this PC and send it to the server (≤ 1 MB) */
     addFile(): Promise<ApiResult<{ name: string; sha512: string; size: number; url: string; seal: { key: string; sha512: string; size: number } }> | null>
+  }
+  /** Catalogue (launcher 1.4) */
+  catalogue: {
+    /** pick files on this PC and send them as the item's next version (null = nothing picked) */
+    addFiles(id: string): Promise<ApiResult<CatalogueItem> | null>
+    /** the original files of a version, saved in a folder chosen here (Owner, or Admins given it) */
+    saveOriginal(id: string, version: number): Promise<ApiResult<{ saved: number; folder: string }> | null>
+    saveImage(png: Uint8Array, name: string): Promise<boolean>
+    copyImage(png: Uint8Array): Promise<boolean>
+    /** a player's skin and cape (Mojang), or Steve */
+    player(name: string): Promise<StudioPlayer | null>
   }
 }
 

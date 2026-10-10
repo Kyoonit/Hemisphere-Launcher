@@ -40,6 +40,7 @@ import { contentKey, currentPackKey, KEY_GRACE_MS, newContentKey, publishKeys } 
 import { approvePack, getPack, packForJob, packJobFinished, proposePack, rejectPack, uploadPackFile, withdrawPack } from './pack'
 import { authenticate, bootstrap, createProfile, deleteProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
 import * as pubs from './publications'
+import * as catalogue from './catalogue'
 import * as server from './serverState'
 
 export interface Env extends GithubEnv {
@@ -76,6 +77,8 @@ export default {
       if (staff) return staff
       const content = await publicationRoute(req, env, ctx, path)
       if (content) return content
+      const catalogue = await catalogueRoute(req, env, path)
+      if (catalogue) return catalogue
       const key = path.match(/^\/vault-key\/([a-z0-9-]{1,80})$/)
       if (req.method === 'GET' && key) return await vaultKey(env, key[1])
       const sealKey = path.match(/^\/content-key\/((?:feed|pack)-[0-9a-f]{24})$/)
@@ -292,6 +295,32 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
   if (action === 'restore') return json(await pubs.restorePublication(env, actor, id, await body()))
   if (action === 'comments') return json(await pubs.addComment(env, actor, id, await body()))
   if (action === 'editing') return json(await pubs.setEditing(env, actor, id, await body()))
+  return json({ error: 'not found' }, 404)
+}
+
+/** Catalogue routes (null = not one of them). */
+async function catalogueRoute(req: Request, env: Env, path: string): Promise<Response | null> {
+  const one = path.match(/^\/catalogue\/(c-[a-z0-9]{10})(?:\/(files|original|version|status|thumbnail|delete))?$/)
+  if (path !== '/catalogue' && !one) return null
+  const actor = await authenticate(env, req)
+  const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
+  const v = Number(new URL(req.url).searchParams.get('version'))
+  const version = Number.isInteger(v) && v > 0 ? v : undefined
+  if (path === '/catalogue') {
+    if (req.method === 'GET') return json(await catalogue.listCatalogue(env, actor))
+    if (req.method === 'POST') return json(await catalogue.createItem(env, actor, await body()))
+    return json({ error: 'not found' }, 404)
+  }
+  const [, id, action] = one!
+  if (req.method === 'PATCH' && !action) return json(await catalogue.saveSheet(env, actor, id, await body()))
+  if (req.method === 'GET' && action === 'files') return json(await catalogue.previewFiles(env, actor, id, version))
+  if (req.method === 'GET' && action === 'original') return json(await catalogue.originalFiles(env, actor, id, version))
+  if (req.method !== 'POST') return json({ error: 'not found' }, 404)
+  if (action === 'files') return json(await catalogue.uploadFiles(env, actor, id, await body()))
+  if (action === 'version') return json(await catalogue.useVersion(env, actor, id, await body()))
+  if (action === 'status') return json(await catalogue.setStatus(env, actor, id, await body()))
+  if (action === 'thumbnail') return json(await catalogue.setThumbnail(env, actor, id, await body()))
+  if (action === 'delete') return json(await catalogue.deleteItem(env, actor, id))
   return json({ error: 'not found' }, 404)
 }
 

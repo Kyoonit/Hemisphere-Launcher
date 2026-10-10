@@ -45,6 +45,13 @@ const bridge: HeraldBridge = {
     fabric: (minecraft) => ipcRenderer.invoke('pack:fabric', minecraft),
     readiness: (minecraft, mods) => ipcRenderer.invoke('pack:readiness', minecraft, mods),
   },
+  catalogue: {
+    addFiles: (id) => ipcRenderer.invoke('catalogue:addFiles', id),
+    saveOriginal: (id, version) => ipcRenderer.invoke('catalogue:saveOriginal', id, version),
+    saveImage: (png, name) => ipcRenderer.invoke('catalogue:saveImage', png, name),
+    copyImage: (png) => ipcRenderer.invoke('catalogue:copyImage', png),
+    player: (name) => ipcRenderer.invoke('catalogue:player', name),
+  },
 }
 
 contextBridge.exposeInMainWorld('herald', bridge)

@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { CrouchAnimation, FlyingAnimation, IdleAnimation, RunningAnimation, SkinViewer, WalkingAnimation, WaveAnimation, type PlayerAnimation } from 'skinview3d'
 import type { SkinInfo } from '@shared/skins'
-import { useAccounts } from '../../accounts'
 import type { ModelData } from '@shared/models'
-import { bodyPart, buildModel, disposeModel, type WornSlot } from './modelMesh'
+import { bodyPart, buildModel, disposeModel, type ModelAdjust, type WornSlot } from './modelMesh'
 
 /** A model worn by the player in a view (Patreon try-on) */
 export interface WornModel {
   model: ModelData
   slot: WornSlot
+  adjust?: ModelAdjust
 }
 
 /**
@@ -40,6 +40,8 @@ export function SkinView({
   autoRotate = false,
   dragTurn = false,
   worn = NONE,
+  onViewer,
+  zoom = 1,
   className = '',
 }: {
   skin: SkinInfo
@@ -55,6 +57,10 @@ export function SkinView({
   dragTurn?: boolean
   /** models on the head or in the hands */
   worn?: WornModel[]
+  /** the viewer, once made (captures: it keeps its last picture readable) */
+  onViewer?(viewer: SkinViewer | null): void
+  /** camera distance factor (below 1: further away) */
+  zoom?: number
   className?: string
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -65,7 +71,8 @@ export function SkinView({
 
   // one viewer per canvas, freed with it
   useEffect(() => {
-    const v = new SkinViewer({ canvas: canvas.current!, width, height, pixelRatio: 'match-device', enableControls: interactive, fov: 40, zoom: interactive ? 0.85 : 0.95 })
+    const v = new SkinViewer({ canvas: canvas.current!, width, height, pixelRatio: 'match-device', enableControls: interactive, fov: 40, zoom: interactive ? 0.85 : 0.95, preserveDrawingBuffer: !!onViewer })
+    onViewer?.(v)
     if (interactive) v.controls.enablePan = false
     if (!interactive) {
       // a slight three-quarter view, like a character portrait
@@ -122,6 +129,7 @@ export function SkinView({
       document.removeEventListener('visibilitychange', visibility)
       v.dispose()
       viewer.current = null
+      onViewer?.(null)
     }
   }, [interactive, dragTurn]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -140,13 +148,13 @@ export function SkinView({
     const v = viewer.current
     if (!v) return
     // room for what's above the head or in the hands
-    v.zoom = (interactive ? 0.85 : 0.95) * (worn.length ? 0.78 : 1)
+    v.zoom = (interactive ? 0.85 : 0.95) * (worn.length ? 0.78 : 1) * zoom
     if (!worn.length) return v.render()
     let cancelled = false
     const built: Awaited<ReturnType<typeof buildModel>>[] = []
     void Promise.all(
       worn.map(async (w) => {
-        const g = await buildModel(w.model, w.slot)
+        const g = await buildModel(w.model, w.slot, w.adjust)
         if (cancelled) return disposeModel(g)
         built.push(g)
         bodyPart(v, w.model, w.slot).add(g)
@@ -159,7 +167,7 @@ export function SkinView({
       built.forEach(disposeModel)
       v.render()
     }
-  }, [worn, interactive, dragTurn]) // a new viewer gets them again
+  }, [worn, interactive, dragTurn, zoom]) // a new viewer gets them again
 
   // skin, cape, layers, animation: a still picture draws again once everything is in place, then stops
   useEffect(() => {
@@ -185,29 +193,4 @@ export function SkinView({
   }, [skin.skin, skin.slim, skin.cape, back, outerLayer, animation, autoRotate, still])
 
   return <canvas ref={canvas} className={`${dragTurn ? 'cursor-grab touch-none active:cursor-grabbing' : ''} ${className}`} style={{ width, height }} />
-}
-
-/** The active account's skin (null while loading or without an account); `refresh` asks Mojang again. */
-export function useActiveSkin(): { skin: SkinInfo | null; refresh(): void } {
-  const { state } = useAccounts()
-  const id = state?.activeId ?? null
-  const [skin, setSkin] = useState<SkinInfo | null>(null)
-  const load = (refresh = false) => void window.hemisphere.skins.get(id ?? undefined, refresh).then((s) => setSkin(s && s.id === id ? s : null))
-  useEffect(() => {
-    setSkin(null)
-    if (!id) return
-    load()
-    // a skin or cape put on from the wardrobe
-    return window.hemisphere.skins.onChange((changed) => changed === id && load())
-  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
-  return { skin, refresh: () => load(true) }
-}
-
-/** Home's button opens Settings > Account and brings the viewer into view (once). */
-let focusViewer = false
-export const requestSkinViewer = () => (focusViewer = true)
-export const takeSkinViewerRequest = () => {
-  const asked = focusViewer
-  focusViewer = false
-  return asked
 }

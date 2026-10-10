@@ -55,6 +55,22 @@ export function describe(a: ActivityEntry): string {
       const removed = (a.detail?.removed as string[] | undefined) ?? []
       return `changed the Home backgrounds (${[...changed, ...removed.map((n) => `${n} removed`)].join(', ') || 'no change'})`
     }
+    case 'catalogue.create':
+      return `added “${a.detail?.name ?? ''}” to the catalogue`
+    case 'catalogue.update':
+      return `changed the catalogue sheet of “${a.detail?.name ?? ''}”`
+    case 'catalogue.files':
+      return `uploaded the files of “${a.detail?.name ?? ''}” (version ${a.detail?.version ?? '?'})`
+    case 'catalogue.version':
+      return `went back to version ${a.detail?.version ?? '?'} of “${a.detail?.name ?? ''}”`
+    case 'catalogue.publish':
+      return `showed “${a.detail?.name ?? ''}” in the launchers`
+    case 'catalogue.hide':
+      return `hid “${a.detail?.name ?? ''}” from the launchers`
+    case 'catalogue.export':
+      return `downloaded the original files of “${a.detail?.name ?? ''}” (version ${a.detail?.version ?? '?'})`
+    case 'catalogue.delete':
+      return `deleted “${a.detail?.name ?? ''}” from the catalogue`
     case 'templates.publications':
       return `changed the publication templates${a.detail?.change ? ` (${a.detail.change})` : ''}`
     case 'templates.update':

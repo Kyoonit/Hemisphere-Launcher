@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { canChangeProfile, effectivePermissions, NEVER_FOR_LODGE_KEEPERS, PERMISSIONS } from '../src/shared/heraldRoles'
+import { canChangeProfile, effectivePermissions, NEVER_FOR_LODGE_KEEPERS, ORIGINALS, PERMISSIONS } from '../src/shared/heraldRoles'
 import { hashCode, newCode, normalizeCode } from '../herald/server/src/accounts'
 
 describe('Herald roles', () => {
   it('Owner, Developer and Admins can do everything; Lodge keepers write news and events only', () => {
     expect(effectivePermissions('owner')).toContain('profiles.manage')
     expect(effectivePermissions('developer')).toContain('settings.staffCode')
-    expect(effectivePermissions('admin')).toEqual([...PERMISSIONS])
+    expect(effectivePermissions('admin')).toEqual(PERMISSIONS.filter((p) => p !== ORIGINALS))
+    expect(effectivePermissions('owner')).toEqual([...PERMISSIONS])
     expect(effectivePermissions('lodgeKeeper')).toEqual(['news.write', 'events.write'])
   })
 
@@ -33,6 +34,22 @@ describe('Herald roles', () => {
     // a profile above one's own is never changed (revoked, deleted, new code): an Admin and the Developer's profile
     expect(canChangeProfile(admin, 'developer', { role: 'developer', add: [], remove: [] })).toMatch(/profile above yours/)
     expect(canChangeProfile(admin, 'moderator', { role: 'admin', add: [], remove: [] })).toBeNull()
+  })
+
+  it('original catalogue files: the Owner; Admins only when the Owner or a Developer gives it', () => {
+    const owner = { role: 'owner' as const, permissions: effectivePermissions('owner') }
+    const dev = { role: 'developer' as const, permissions: effectivePermissions('developer') }
+    const admin = { role: 'admin' as const, permissions: effectivePermissions('admin', [ORIGINALS]) }
+    expect(effectivePermissions('developer')).not.toContain(ORIGINALS)
+    expect(effectivePermissions('admin', [ORIGINALS])).toContain(ORIGINALS)
+    expect(effectivePermissions('moderator', [ORIGINALS])).not.toContain(ORIGINALS) // only Admins can hold it
+    expect(canChangeProfile(owner, 'admin', { role: 'admin', add: [ORIGINALS], remove: [] })).toBeNull()
+    expect(canChangeProfile(dev, 'admin', { role: 'admin', add: [ORIGINALS], remove: [] })).toBeNull() // gives it without having it
+    expect(canChangeProfile(admin, 'admin', { role: 'admin', add: [ORIGINALS], remove: [] })).toMatch(/Only the Owner or a Developer/)
+    expect(canChangeProfile(owner, 'moderator', { role: 'moderator', add: [ORIGINALS], remove: [] })).toMatch(/only be given to Admins/)
+    expect(effectivePermissions('lodgeKeeper', ['catalogue.write'])).not.toContain('catalogue.write')
+    expect(effectivePermissions('moderator')).toContain('catalogue.write')
+    expect(effectivePermissions('moderator')).not.toContain('catalogue.publish')
   })
 })
 

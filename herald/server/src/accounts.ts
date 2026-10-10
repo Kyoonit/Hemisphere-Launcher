@@ -171,15 +171,15 @@ export async function logout(env: AccountsEnv, req: Request, actor: Actor) {
 export const WHO = 'coalesce(p.name, f.name) AS who'
 export const WHO_JOIN = 'LEFT JOIN profiles p ON p.id = a.profile_id LEFT JOIN former_profiles f ON f.id = a.profile_id'
 /** Lodge keepers are not staff: the journal never shows them what happens to profiles (revoked, deleted…) */
-export const hiddenFor = (actor: Actor) => (actor.profile.role === 'lodgeKeeper' ? "a.action NOT LIKE 'profile.%'" : null)
+export const hiddenFor = (actor: Actor) => (actor.profile.role === 'lodgeKeeper' ? "a.action NOT LIKE 'profile.%' AND a.action NOT LIKE 'catalogue.%'" : null)
 
 /** Everything the app refreshes every 15 s: who is online, recent activity. */
 export async function sync(env: AccountsEnv, actor: Actor) {
   const now = Date.now()
   const people = (await env.DB.prepare('SELECT * FROM profiles WHERE revoked_at IS NULL ORDER BY name_key').all<ProfileRow>()).results.map((p) => publicProfile(p, now))
   const activity = (await env.DB.prepare(`SELECT a.id, a.at, a.action, a.target, a.detail, ${WHO} FROM activity a ${WHO_JOIN} ${hiddenFor(actor) ? `WHERE ${hiddenFor(actor)}` : ''} ORDER BY a.id DESC LIMIT 50`).all()).results.map((a) => ({ ...a, detail: a.detail ? JSON.parse(a.detail as string) : null }))
-  // Changes when a publication, a publish job, a setting or a change of the mod pack changes: the app reloads only then
-  const stamp = await env.DB.prepare('SELECT (SELECT count(*) || \'-\' || coalesce(max(updated_at), 0) FROM publications) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM publish_jobs) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM settings) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM pack_proposals) AS s').first<{ s: string }>()
+  // Changes when a publication, a publish job, a setting, a change of the mod pack or the catalogue changes: the app reloads only then
+  const stamp = await env.DB.prepare('SELECT (SELECT count(*) || \'-\' || coalesce(max(updated_at), 0) FROM publications) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM publish_jobs) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM settings) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM pack_proposals) || \'-\' || (SELECT count(*) || \'-\' || coalesce(max(updated_at), 0) FROM catalogue_items) AS s').first<{ s: string }>()
   return { now, me: publicProfile(actor.profile, now), people, activity, contentStamp: stamp?.s ?? '' }
 }
 
