@@ -1,14 +1,15 @@
 /**
  * The catalogue studio: an item tried on any player (Steve or a player's name), on a background, with an animation,
  * turned with the mouse and placed in the frame with a right-drag. Pictures are made from it at a chosen size: copied
- * to paste in Discord, saved as PNG, or kept as the item's picture in the catalogue. The frame has the picture's shape:
+ * to paste in Discord or saved as PNG. "Save" keeps the whole look for the item (player, background, pose, camera,
+ * framing, size), shown again next time, and makes its picture the item's picture. The frame has the picture's shape:
  * what is seen is what is made.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SkinViewer } from 'skinview3d'
 import type { StudioPlayer } from '@herald/api'
-import type { CatalogueAdjust, CatalogueItem, CatalogueSlot } from '@shared/heraldCatalogue'
-import { centreView, SKIN_ANIMATIONS, SkinView, type SkinAnimation } from '@launcher/components/skin/SkinView'
+import type { CatalogueAdjust, CatalogueItem, CatalogueSlot, CatalogueStudioLook } from '@shared/heraldCatalogue'
+import { centreView, setViewFraming, SKIN_ANIMATIONS, SkinView, viewFraming, type SkinAnimation } from '@launcher/components/skin/SkinView'
 import { BUILT_IN_BACKGROUNDS } from '@launcher/components/feed/homePictures'
 import en from '@locales/en.json'
 import type { Loaded } from './Catalogue'
@@ -79,14 +80,16 @@ const recentPlayers = (): string[] => {
   }
 }
 
-export function Studio({ item, loaded, adjust, slot, slim, onThumbnail, canWrite }: { item: CatalogueItem; loaded: Loaded; adjust: CatalogueAdjust; slot: CatalogueSlot; slim: boolean; onThumbnail(image: string): void; canWrite: boolean }) {
+export function Studio({ item, loaded, adjust, slot, slim, onSave, canWrite }: { item: CatalogueItem; loaded: Loaded; adjust: CatalogueAdjust; slot: CatalogueSlot; slim: boolean; onSave(look: CatalogueStudioLook, image: string): Promise<boolean>; canWrite: boolean }) {
+  // the look saved for this item, if any: everything starts from it
+  const look = item.studio
   const [player, setPlayer] = useState<StudioPlayer | null>(null)
   const [name, setName] = useState('')
   const [recent, setRecent] = useState(recentPlayers)
-  const [bg, setBg] = useState<Background>(BACKGROUNDS[0])
-  const [animation, setAnimation] = useState<SkinAnimation>('idle')
-  const [caption, setCaption] = useState(true)
-  const [format, setFormat] = useState<Format>(savedFormat)
+  const [bg, setBg] = useState<Background>(() => BACKGROUNDS.find((b) => b.id === look?.background) ?? BACKGROUNDS[0])
+  const [animation, setAnimation] = useState<SkinAnimation>(() => (SKIN_ANIMATIONS.includes(look?.animation as SkinAnimation) ? (look!.animation as SkinAnimation) : 'idle'))
+  const [caption, setCaption] = useState(look?.caption ?? true)
+  const [format, setFormat] = useState<Format>(() => FORMATS.find((x) => x.id === look?.format) ?? savedFormat())
   const frame = frameOf(format)
   const [viewer, setViewer] = useState<SkinViewer | null>(null)
   const [busy, setBusy] = useState(false)
@@ -109,7 +112,22 @@ export function Studio({ item, loaded, adjust, slot, slim, onThumbnail, canWrite
       }
     }
   }
-  useEffect(() => void wear(recentPlayers()[0] ?? 'Steve'), []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => void wear(look?.player ?? recentPlayers()[0] ?? 'Steve'), []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // the saved camera, turn and framing, once the player is in the viewer (after its models: they set the distance)
+  const restored = useRef(false)
+  useEffect(() => {
+    if (!viewer || !player || !look || restored.current) return
+    const t = window.setTimeout(() => {
+      restored.current = true
+      viewer.camera.position.set(...look.camera)
+      viewer.controls.target.set(...look.target)
+      viewer.controls.update()
+      viewer.playerWrapper.rotation.y = look.turn
+      setViewFraming(viewer, look.shift)
+    }, 600)
+    return () => window.clearTimeout(t)
+  }, [viewer, player, look])
 
   // a skin item is worn as the skin (with the player's cape); a model on the player's skin
   const skin = loaded.kind === 'skin' ? { id: 'item', skin: loaded.skin, slim, cape: player?.cape ?? null, fallback: false } : player ? { id: 'player', skin: player.skin, slim: player.slim, cape: player.cape, fallback: false } : null
@@ -168,8 +186,11 @@ export function Studio({ item, loaded, adjust, slot, slim, onThumbnail, canWrite
     setBusy(false)
     if (bytes && (await window.herald.catalogue.saveImage(bytes, `${item.name} ${format.width}x${format.height}`))) setMessage({ ok: true, text: 'Picture saved.' })
   }
-  const thumbnail = async () => {
+  /** Saves the look and makes its picture the item's picture */
+  const saveLook = async () => {
+    if (!viewer) return
     setBusy(true)
+    setMessage(null)
     // the middle square of the frame, 512 × 512
     const scale = 512 / Math.min(frame.width, frame.height)
     const full = await render(Math.round(frame.width * scale), Math.round(frame.height * scale), false, false)
@@ -180,9 +201,16 @@ export function Studio({ item, loaded, adjust, slot, slim, onThumbnail, canWrite
       webp = new Uint8Array(await (await c.convertToBlob({ type: 'image/webp', quality: 0.88 })).arrayBuffer())
     }
     const res = webp ? await window.herald.images.upload(webp, 512, 512) : null
+    if (!res?.ok) {
+      setBusy(false)
+      return setMessage({ ok: false, text: res && !res.ok ? res.error : 'The picture could not be made.' })
+    }
+    const p = viewer.camera.position
+    const t = viewer.controls.target
+    const saved: CatalogueStudioLook = { player: player?.name ?? 'Steve', background: bg.id, animation, format: format.id, caption, camera: [p.x, p.y, p.z], target: [t.x, t.y, t.z], turn: viewer.playerWrapper.rotation.y, shift: viewFraming(viewer) }
+    const ok = await onSave(saved, res.data.id)
     setBusy(false)
-    if (res?.ok) onThumbnail(res.data.id)
-    else setMessage({ ok: false, text: res && !res.ok ? res.error : 'The picture could not be made.' })
+    if (ok) setMessage({ ok: true, text: 'Saved: this look comes back next time, and its picture is the item’s picture.' })
   }
 
   return (
@@ -264,18 +292,18 @@ export function Studio({ item, loaded, adjust, slot, slim, onThumbnail, canWrite
               <input type="checkbox" checked={caption} onChange={(e) => setCaption(e.target.checked)} /> Name and tier on the picture
             </label>
             <div className="flex flex-wrap gap-1.5">
-              <button className="btn btn-sm btn-primary" disabled={!viewer || busy} onClick={() => void copy()}>
+              <button className="btn btn-sm" disabled={!viewer || busy} onClick={() => void copy()}>
                 Copy the picture
               </button>
               <button className="btn btn-sm" disabled={!viewer || busy} onClick={() => void save()}>
                 Save as PNG…
               </button>
-              {canWrite && (
-                <button className="btn btn-sm btn-ghost" disabled={!viewer || busy} onClick={() => void thumbnail()}>
-                  Use as the item’s picture
-                </button>
-              )}
             </div>
+            {canWrite && (
+              <button className="btn btn-primary mt-2 w-full" disabled={!viewer || busy} onClick={() => void saveLook()} title="Keeps the player, background, pose, camera, framing and size for this item; its picture becomes the item’s picture">
+                Save
+              </button>
+            )}
           </div>
           {message && <p className={`text-xs ${message.ok ? 'text-green-400' : 'text-red-400'}`}>{message.text}</p>}
           <div className="mt-auto flex items-end justify-between gap-2">

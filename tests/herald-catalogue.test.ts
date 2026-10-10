@@ -66,3 +66,24 @@ describe('catalogue files', () => {
     expect(filesProblem('model', [{ name: 'big.bbmodel', bytes: new Uint8Array(5 * 1024 * 1024) }])).toMatch(/too big/)
   })
 })
+
+describe('studio look', () => {
+  const look = { player: 'Notch', background: 'sunset', animation: 'none', format: 'fullhd', caption: false, camera: [10, 5, 80], target: [0, 1, 0], turn: 0.6, shift: { x: 0.2, y: -0.1 } }
+
+  it('is kept with the sheet, and a sheet saved without it keeps the one there', () => {
+    const saved = cleanSheet({ name: 'Crown', studio: look })
+    expect(saved.studio).toEqual(look)
+    expect(cleanSheet({ name: 'Crown 2' }, saved).studio).toEqual(look)
+    expect(cleanSheet({ studio: null }, saved).studio).toBeNull()
+  })
+
+  it('odd values are replaced, never kept', () => {
+    const s = cleanSheet({ studio: { player: '<script>', background: 'a/b', camera: [1e9, 'x', 2], shift: { x: 50 }, turn: 'no' } }).studio!
+    expect(s.player).toBe('Steve')
+    expect(s.background).toBe('night')
+    expect(s.camera).toEqual([1000, 0, 2])
+    expect(s.shift).toEqual({ x: 2, y: 0 })
+    expect(s.turn).toBe(0)
+    expect(EMPTY_SHEET.studio).toBeNull()
+  })
+})

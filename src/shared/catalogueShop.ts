@@ -22,8 +22,8 @@ export interface ShopItem {
   newUntil: string | null
   /** version of its files: a new one replaces the copy kept by the launcher */
   version: number
-  /** its picture (GET /shop/thumb/<id>), or none */
-  thumbnail: boolean
+  /** its picture (GET /shop/thumb/<id>): an id that changes with the picture, or none */
+  thumbnail: string | null
   publishedAt: number | null
 }
 

@@ -108,7 +108,7 @@ interface Row {
 
 const shopItem = (r: Row): ShopItem => {
   const s: CatalogueSheet = cleanSheet(JSON.parse(r.sheet) as Record<string, unknown>)
-  return { id: r.id, kind: s.kind, name: s.name, description: s.description, patreonUrl: s.patreonUrl, tier: s.tier, category: s.category, slot: s.slot, slim: s.slim, adjust: s.adjust, newUntil: s.newUntil, version: r.version, thumbnail: !!r.thumbnail, publishedAt: r.published_at }
+  return { id: r.id, kind: s.kind, name: s.name, description: s.description, patreonUrl: s.patreonUrl, tier: s.tier, category: s.category, slot: s.slot, slim: s.slim, adjust: s.adjust, newUntil: s.newUntil, version: r.version, thumbnail: r.thumbnail, publishedAt: r.published_at }
 }
 
 /** The list; with a player's token, also whether that player is blocked (the launcher then forgets what it kept) */

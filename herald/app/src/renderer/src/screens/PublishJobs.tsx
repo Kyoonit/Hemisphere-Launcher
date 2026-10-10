@@ -2,11 +2,13 @@
  * Where the last change is, live: Herald server → GitHub Actions (checks and signs) → GitHub → players' launchers.
  * A thin bar under the title bar, on every tab: what the last change was, where it is now, and the time so far. Every
  * change launchers receive (publications, maintenances, restarts…) goes through it. Nothing to open, nothing hidden.
+ * Catalogue changes skip GitHub: they go straight from the Herald server to the launchers (a shorter line).
  */
 import { useEffect, useState } from 'react'
 import type { PublishJob } from '@herald/api'
 import { titleOf, usePubs } from '../pubs'
 import { useStore } from '../store'
+import { onDirectChange, type DirectChange } from '../directChanges'
 
 /** Launchers ask the Herald server every 2 minutes (the pulse), then read the new content at once */
 const PULSE_MS = 120_000
@@ -60,11 +62,21 @@ export function PublishJobs() {
     const t = window.setInterval(() => setNow(Date.now()), 500)
     return () => window.clearInterval(t)
   }, [step, working])
+  // a catalogue change: shown travelling for a moment
+  const [direct, setDirect] = useState<DirectChange | null>(null)
+  useEffect(() => onDirectChange((c) => (setDirect(c), setNow(Date.now()))), [])
+  const travelling = !!direct && now - direct.at < DIRECT_MS
+  useEffect(() => {
+    if (!travelling) return
+    const t = window.setInterval(() => setNow(Date.now()), 200)
+    return () => window.clearInterval(t)
+  }, [travelling])
   // Minutes "ago" stay fresh when idle
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 30_000)
     return () => window.clearInterval(t)
   }, [])
+  if (direct && (!last || direct.at > last.created_at)) return <DirectBar change={direct} now={now} />
   if (!state || !last) return null
 
   const failed = last.status === 'failed'
@@ -134,6 +146,42 @@ function Pipeline({ job, step, now }: { job: PublishJob; step: Step; now: number
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+/** How long a catalogue change is shown travelling (it is in the launchers' list at once) */
+const DIRECT_MS = 1600
+
+/** A catalogue change: Herald server → launchers, no GitHub on the way */
+function DirectBar({ change, now }: { change: DirectChange; now: number }) {
+  const arrived = now - change.at >= DIRECT_MS
+  return (
+    <div className="flex h-[46px] shrink-0 items-center gap-5 border-b border-gray-700/70 bg-gray-900/60 px-7" title="Catalogue changes go straight from the Herald server to the launchers (no GitHub): players see them the next time they open the catalogue.">
+      <div className="w-[260px] min-w-0 shrink leading-tight">
+        <div className="truncate text-[12.5px] font-semibold text-white">{change.what}</div>
+        <div className="truncate text-[11px] text-gray-400">Catalogue · {ago(now - change.at)}</div>
+      </div>
+      <div className="flex min-w-0 flex-1 items-center">
+        {['Herald server', 'Launchers'].map((title, i) => (
+          <div key={title} className={`flex min-w-0 items-center ${i === 0 ? 'flex-1' : ''}`}>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <span className={`grid size-5 place-items-center rounded-full text-[10px] font-bold ${i === 0 || arrived ? 'bg-green-600 text-white' : 'bg-sky-500 text-white ring-2 ring-sky-400/40'}`}>{i === 0 || arrived ? '✓' : i + 1}</span>
+              <span className="text-[11.5px] font-semibold whitespace-nowrap text-gray-300">{title}</span>
+            </div>
+            {i === 0 && (
+              <div className="relative mx-2 min-w-4 flex-1">
+                <div className={`h-0.5 rounded-full ${arrived ? 'bg-green-600' : 'bg-gray-700'}`} />
+                {!arrived && <span className="travel absolute top-1/2 size-2 -translate-y-1/2 rounded-full bg-sky-300 shadow-[0_0_8px_var(--color-sky-300)]" />}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <span className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold ${arrived ? 'border-green-400/30 text-green-300' : 'border-sky-400/40 text-sky-300'}`}>
+        {!arrived && <span className="size-2 animate-pulse rounded-full bg-current" />}
+        {arrived ? 'In the launchers’ catalogue' : 'Reaching launchers…'}
+      </span>
     </div>
   )
 }

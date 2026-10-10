@@ -83,8 +83,7 @@ async function herald<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   const body = (await res.json().catch(() => ({}))) as T & { error?: string; blocked?: boolean }
   if (res.status === 403 && body.blocked) throw new Failure('blocked', body.error)
-  if (res.status === 401) throw new Failure('not-verified', body.error)
-  if (res.status === 403) throw new Failure('not-verified', body.error)
+  if (res.status === 401 || res.status === 403) throw new Failure('not-verified', `Herald ${res.status}: ${body.error ?? 'refused'}`)
   if (res.status === 404) throw new Failure('unknown-item', body.error)
   if (!res.ok) throw new Failure(res.status >= 500 ? 'offline' : 'failed', body.error)
   return body
@@ -106,8 +105,8 @@ async function playerToken(accountId: string, fresh = false): Promise<string> {
   let creds
   try {
     creds = await getLaunchCredentials(accountId)
-  } catch {
-    throw new Failure('not-verified', 'the Microsoft session must be renewed: sign in again')
+  } catch (err) {
+    throw new Failure('not-verified', `Microsoft session: ${err instanceof Error ? err.message : 'cannot be renewed'}`)
   }
   if (creds.userType !== 'msa' && !fakeMojang()) throw new Failure('needs-microsoft')
   const { serverId } = await herald<{ serverId: string }>('/player/challenge')
@@ -122,7 +121,12 @@ async function playerToken(accountId: string, fresh = false): Promise<string> {
   } catch {
     throw new Failure('offline')
   }
-  if (!joined.ok) throw new Failure(joined.status === 403 ? 'not-verified' : 'offline', `Mojang said ${joined.status}`)
+  if (!joined.ok) {
+    // Mojang's reason (never the token): ForbiddenOperationException, InsufficientPrivilegesException (multiplayer off)…
+    const why = ((await joined.json().catch(() => ({}))) as { error?: unknown; errorMessage?: unknown; path?: unknown })
+    const reason = [why.error, why.errorMessage].filter((x) => typeof x === 'string').join(': ').slice(0, 160)
+    throw new Failure(joined.status === 403 || joined.status === 401 ? 'not-verified' : 'offline', `Mojang join ${joined.status}${reason ? ` (${reason})` : ''}`)
+  }
   const session = await herald<PlayerSession>('/player/verify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: creds.name, serverId }) })
   if (session.id !== accountId) throw new Failure('not-verified', 'Mojang answered for another account')
   store[accountId] = { token: session.token, expiresAt: session.expiresAt }
@@ -160,7 +164,11 @@ const wrap = async <T>(work: () => Promise<T>): Promise<ShopResult<T>> => {
   try {
     return { ok: true, value: await work() }
   } catch (err) {
-    if (err instanceof Failure) return { ok: false, error: err.code, message: err.message }
+    if (err instanceof Failure) {
+      // what failed, for the launcher log and the message under it (no token is ever in it)
+      if (err.code !== 'offline' || err.message !== 'offline') console.warn(`[shop] ${err.code}: ${err.message}`)
+      return { ok: false, error: err.code, message: err.message }
+    }
     console.warn('[shop]', err)
     return { ok: false, error: 'failed' }
   }
@@ -217,7 +225,8 @@ export function shopThumbnail(id: unknown): Promise<ShopResult<string | null>> {
   return wrap(async () => {
     const item = (listed ?? []).find((i) => i.id === id)
     if (!item?.thumbnail) return null
-    const file = join(dir(), 'thumbs', `${item.id}-v${item.version}-${item.publishedAt ?? 0}.webp`)
+    // named after the picture itself: a new picture is fetched, never an old one shown
+    const file = join(dir(), 'thumbs', `${item.id}-${item.thumbnail.replace(/[^0-9a-f]/g, '').slice(0, 16)}.webp`)
     let bytes = await readFile(file).catch(() => null)
     if (!bytes) {
       let res: Response

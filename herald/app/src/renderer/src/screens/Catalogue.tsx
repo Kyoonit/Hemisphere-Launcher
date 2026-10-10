@@ -5,7 +5,8 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import type { ApiResult, BlockedPlayer, TraceResult } from '@herald/api'
-import { CATALOGUE_SLOTS, EMPTY_SHEET, sheetProblems, toModelFiles, type CatalogueItem, type CatalogueKind, type CatalogueSheet, type CatalogueStatus } from '@shared/heraldCatalogue'
+import { CATALOGUE_SLOTS, EMPTY_SHEET, sheetProblems, toModelFiles, type CatalogueItem, type CatalogueKind, type CatalogueSheet, type CatalogueStatus, type CatalogueStudioLook } from '@shared/heraldCatalogue'
+import { announceDirect } from '../directChanges'
 import { readModel, type ModelData } from '@shared/models'
 import { withAlpha } from '@launcher/components/skin/modelMesh'
 import { useStore } from '../store'
@@ -273,12 +274,26 @@ function ItemPage({ item, onBack, onChanged, onDeleted }: { item: CatalogueItem;
     setMessage(null)
     const res = await what()
     setBusy(false)
-    if (!res) return
+    if (!res) return false
     if (res.ok) (onChanged(res.data), done && setMessage({ ok: true, text: done }))
     else setMessage({ ok: false, text: res.error })
+    return res.ok
   }
-  const save = (patch: Partial<CatalogueSheet> = {}) => run(() => window.herald.api<CatalogueItem>('PATCH', `/catalogue/${item.id}`, { sheet: { ...sheet, ...patch } }), 'Saved.')
-  const status = (s: CatalogueStatus) => run(() => window.herald.api<CatalogueItem>('POST', `/catalogue/${item.id}/status`, { status: s }), s === 'published' ? 'Shown in the launchers.' : 'Hidden from the launchers.')
+  // the studio's look is saved by the studio only (the form's copy may be older)
+  const save = (patch: Partial<CatalogueSheet> = {}) => run(() => window.herald.api<CatalogueItem>('PATCH', `/catalogue/${item.id}`, { sheet: { ...sheet, ...patch, studio: undefined } }), 'Saved.')
+  /** The studio's Save: its look, then its picture as the item's picture */
+  const saveLook = async (look: CatalogueStudioLook, image: string): Promise<boolean> => {
+    const a = await window.herald.api<CatalogueItem>('PATCH', `/catalogue/${item.id}`, { sheet: { studio: look } })
+    const b = a.ok ? await window.herald.api<CatalogueItem>('POST', `/catalogue/${item.id}/thumbnail`, { image }) : a
+    if (b.ok) onChanged(b.data)
+    else setMessage({ ok: false, text: b.error })
+    return b.ok
+  }
+  const status = async (s: CatalogueStatus) => {
+    const ok = await run(() => window.herald.api<CatalogueItem>('POST', `/catalogue/${item.id}/status`, { status: s }), s === 'published' ? 'Shown in the launchers.' : 'Hidden from the launchers.')
+    // no GitHub on the way: the bar above shows it reaching the launchers at once
+    if (ok && s !== 'draft') announceDirect(`${s === 'published' ? 'In the launchers' : 'Hidden from the launchers'}: “${item.name}”`)
+  }
   const publishProblems = sheetProblems(item, true, item.version > 0)
   const set = (patch: Partial<CatalogueSheet>) => setSheet((s) => ({ ...s, ...patch }))
 
@@ -299,7 +314,7 @@ function ItemPage({ item, onBack, onChanged, onDeleted }: { item: CatalogueItem;
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
           {loaded ? (
-            <Studio item={item} loaded={loaded} adjust={sheet.adjust} slot={sheet.slot} slim={sheet.slim} onThumbnail={(image) => run(() => window.herald.api<CatalogueItem>('POST', `/catalogue/${item.id}/thumbnail`, { image }), 'Picture of the item changed.')} canWrite={write} />
+            <Studio item={item} loaded={loaded} adjust={sheet.adjust} slot={sheet.slot} slim={sheet.slim} onSave={saveLook} canWrite={write} />
           ) : (
             <div className="card grid h-80 place-items-center text-sm text-gray-400">{loadError ? <span className="text-red-400">The files can’t be shown: {loadError}</span> : item.version ? 'Opening the files…' : 'Add its files to try it on.'}</div>
           )}

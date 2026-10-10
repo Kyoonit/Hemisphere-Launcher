@@ -39,7 +39,8 @@ export function Catalogue({ tried, onTry }: { tried: TriedItem | null; onTry(t: 
     const r = await window.hemisphere.shop.item(item.id)
     setLoading(null)
     if (r.ok) onTry({ item, bundle: r.value })
-    else setMessage(t(`shop.errors.${r.error}`))
+    // the reason too (which step, what Mojang or Herald said), to help the staff when a player reports it
+    else setMessage(`${t(`shop.errors.${r.error}`)}${r.message && r.message !== r.error ? ` (${r.message})` : ''}`)
   }
 
   // nothing in the catalogue (or never reached): no section at all

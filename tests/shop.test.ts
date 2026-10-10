@@ -23,7 +23,7 @@ vi.mock('../src/main/core/auth/accounts', () => ({
   getLaunchCredentials: async () => ({ name: 'Kyo', uuid: MS, accessToken: 'mc-token', userType: 'msa' }),
 }))
 
-const item = (id: string, version = 1): ShopItem => ({ id, kind: 'model', name: 'Crown', description: '', patreonUrl: 'https://patreon.com/x', tier: '', category: '', slot: 'head', slim: false, adjust: { x: 0, y: 0, z: 0, scale: 1 }, newUntil: null, version, thumbnail: false, publishedAt: 1 })
+const item = (id: string, version = 1): ShopItem => ({ id, kind: 'model', name: 'Crown', description: '', patreonUrl: 'https://patreon.com/x', tier: '', category: '', slot: 'head', slim: false, adjust: { x: 0, y: 0, z: 0, scale: 1 }, newUntil: null, version, thumbnail: null, publishedAt: 1 })
 const CROWN = 'c-crown00001'
 let items: ShopItem[] = []
 let online = true

@@ -25,6 +25,20 @@ export interface CatalogueAdjust {
 }
 export const NO_ADJUST: CatalogueAdjust = { x: 0, y: 0, z: 0, scale: 1 }
 
+/** The studio's saved look for an item: who wears it, background, pose, camera, framing, picture size */
+export interface CatalogueStudioLook {
+  player: string
+  background: string
+  animation: string
+  format: string
+  caption: boolean
+  /** camera position and the point it looks at (orbit), the player's own turn, the framing (fraction of the frame) */
+  camera: [number, number, number]
+  target: [number, number, number]
+  turn: number
+  shift: { x: number; y: number }
+}
+
 /** What staff write about an item */
 export interface CatalogueSheet {
   kind: CatalogueKind
@@ -41,6 +55,8 @@ export interface CatalogueSheet {
   adjust: CatalogueAdjust
   /** "New" badge in the launcher until this day (YYYY-MM-DD), or none */
   newUntil: string | null
+  /** the studio's saved look (its picture is the item's picture) */
+  studio: CatalogueStudioLook | null
 }
 
 export interface CatalogueFileInfo {
@@ -72,7 +88,7 @@ export interface CatalogueItem extends CatalogueSheet {
   publishedAt: number | null
 }
 
-export const EMPTY_SHEET: CatalogueSheet = { kind: 'model', name: '', description: '', patreonUrl: '', tier: '', category: '', slot: 'head', slim: false, adjust: NO_ADJUST, newUntil: null }
+export const EMPTY_SHEET: CatalogueSheet = { kind: 'model', name: '', description: '', patreonUrl: '', tier: '', category: '', slot: 'head', slim: false, adjust: NO_ADJUST, newUntil: null, studio: null }
 
 export const CATALOGUE_PERMISSIONS: Permission[] = ['catalogue.write', 'catalogue.publish', 'catalogue.delete', 'catalogue.export']
 export const seesCatalogue = (permissions: readonly string[]) => CATALOGUE_PERMISSIONS.some((p) => permissions.includes(p))
@@ -83,6 +99,27 @@ export const MAX_FILES = 32
 
 const clampNum = (v: unknown, min: number, max: number, d: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : d)
 const text = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
+
+const word = (v: unknown) => (typeof v === 'string' && /^[\w .-]{1,40}$/.test(v) ? v : '')
+const vec = (v: unknown): [number, number, number] => (Array.isArray(v) && v.length === 3 ? [clampNum(v[0], -1000, 1000, 0), clampNum(v[1], -1000, 1000, 0), clampNum(v[2], -1000, 1000, 0)] : [0, 0, 0])
+
+/** A saved studio look from what the app sends, or null */
+export function cleanStudioLook(v: unknown): CatalogueStudioLook | null {
+  if (!v || typeof v !== 'object') return null
+  const o = v as Record<string, unknown>
+  const shift = (o.shift && typeof o.shift === 'object' ? o.shift : {}) as Record<string, unknown>
+  return {
+    player: typeof o.player === 'string' && /^\w{1,16}$/.test(o.player) ? o.player : 'Steve',
+    background: word(o.background) || 'night',
+    animation: word(o.animation) || 'idle',
+    format: word(o.format) || 'square',
+    caption: o.caption !== false,
+    camera: vec(o.camera),
+    target: vec(o.target),
+    turn: clampNum(o.turn, -100, 100, 0),
+    shift: { x: clampNum(shift.x, -2, 2, 0), y: clampNum(shift.y, -2, 2, 0) },
+  }
+}
 
 /** A sheet from what the app sends, cleaned (unknown values replaced, texts cut) */
 export function cleanSheet(v: Record<string, unknown>, base: CatalogueSheet = EMPTY_SHEET): CatalogueSheet {
@@ -102,6 +139,7 @@ export function cleanSheet(v: Record<string, unknown>, base: CatalogueSheet = EM
         ? base.adjust
         : { x: clampNum(a.x, -16, 16, 0), y: clampNum(a.y, -16, 16, 0), z: clampNum(a.z, -16, 16, 0), scale: clampNum(a.scale, 0.25, 4, 1) },
     newUntil: v.newUntil === undefined ? base.newUntil : typeof v.newUntil === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.newUntil) ? v.newUntil : null,
+    studio: v.studio === undefined ? (base.studio ?? null) : cleanStudioLook(v.studio),
   }
 }
 

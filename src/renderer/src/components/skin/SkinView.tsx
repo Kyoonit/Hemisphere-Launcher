@@ -33,6 +33,10 @@ const NONE: WornModel[] = []
 /** Viewers that can be moved in their frame (right-drag): how to put the player back in the middle */
 const centring = new WeakMap<SkinViewer, () => void>()
 export const centreView = (v: SkinViewer) => centring.get(v)?.()
+/** Where the player is moved in its frame (a fraction of the frame), to keep a framing and put it back */
+const framing = new WeakMap<SkinViewer, { get(): { x: number; y: number }; set(s: { x: number; y: number }): void }>()
+export const viewFraming = (v: SkinViewer) => framing.get(v)?.get() ?? { x: 0, y: 0 }
+export const setViewFraming = (v: SkinViewer, s: { x: number; y: number }) => framing.get(v)?.set(s)
 
 export function SkinView({
   skin,
@@ -147,6 +151,16 @@ export function SkinView({
       shift.x = shift.y = 0
       apply()
       v.render()
+    })
+    framing.set(v, {
+      get: () => ({ x: shift.x, y: shift.y }),
+      set: (s) => {
+        shift.x = s.x
+        shift.y = s.y
+        apply()
+        clamp()
+        v.render()
+      },
     })
     let moving: { x: number; y: number; sx: number; sy: number } | null = null
     const panDown = (e: PointerEvent) => {
