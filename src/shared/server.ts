@@ -14,7 +14,7 @@ export const BLUEMAP = {
 
 /** Daily restart. Will move to the remote launcher config in Phase 12. */
 export const RESTART_SCHEDULE = {
-  time: '17:00',
+  time: '17:05',
   timeZone: 'Europe/Paris',
   durationMin: 5,
 } as const

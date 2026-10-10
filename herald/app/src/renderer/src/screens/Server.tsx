@@ -140,6 +140,7 @@ export default function Server() {
       )}
       {modal?.kind === 'rule' && (
         <RuleForm
+          current={(base.restart?.rules ?? []).filter((r) => Date.parse(r.from) <= now).sort((a, b) => Date.parse(b.from) - Date.parse(a.from))[0] ?? null}
           onClose={() => setModal(null)}
           busy={busy}
           onSave={(rule) => void send('/server/restart', { restart: { rules: [...(base.restart?.rules ?? []).filter((r) => r.from !== rule.from), rule], exceptions: base.restart?.exceptions ?? [] } })}
@@ -229,7 +230,7 @@ function RestartCard({ rules, exceptions, busy, onSave, onAdd, now }: { rules: R
       {edit && (
         <div className="mt-3 flex gap-2">
           <button className="btn btn-sm" onClick={() => onAdd('rule')}>
-            Change the time from a date…
+            Change the daily time…
           </button>
           <button className="btn btn-sm" onClick={() => onAdd('exception')}>
             Skip a day / extra restart…
@@ -398,16 +399,21 @@ function TemplatesEditor({ templates, onClose }: { templates: MessageTemplate[];
   )
 }
 
-function RuleForm({ busy, onClose, onSave }: { busy: boolean; onClose(): void; onSave(r: RestartRule): void }) {
+/** The daily restart's time: from now (the usual case), or from a date (the host changes it later, daylight saving) */
+function RuleForm({ current, busy, onClose, onSave }: { current: RestartRule | null; busy: boolean; onClose(): void; onSave(r: RestartRule): void }) {
   const { zone: myZone } = useStore()
-  const [zone, setZone] = useState('Europe/Paris')
-  const [time, setTime] = useState('17:00')
-  const [duration, setDuration] = useState(5)
+  const [zone, setZone] = useState(current?.timeZone ?? 'Europe/Paris')
+  const [time, setTime] = useState(current?.time ?? '17:00')
+  const [duration, setDuration] = useState(current?.durationMin ?? 5)
+  const [later, setLater] = useState(false)
   const [from, setFrom] = useState<number | null>(Math.ceil((Date.now() + DAY) / DAY) * DAY)
   return (
-    <Modal title="Change the restart time from a date" onClose={onClose}>
+    <Modal title="Change the daily restart time" onClose={onClose}>
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-gray-400">The current time stays until then. Useful when the host changes the time, or for daylight saving.</p>
+        <p className="text-sm text-gray-400">
+          {current ? `Now: ${current.time} ${zoneLabel(current.timeZone)}, ${current.durationMin} min. ` : ''}Launchers count down to the new time as soon as it is published. An exception for one day only
+          (no restart, or an extra one) is the other button.
+        </p>
         <div className="flex items-end gap-3">
           <div>
             <label className="label">Time</label>
@@ -422,12 +428,20 @@ function RuleForm({ busy, onClose, onSave }: { busy: boolean; onClose(): void; o
           <label className="label">Time zone of this time</label>
           <ZonePicker value={zone} onPick={setZone} />
         </div>
-        <WhenInput label={`From (${zoneLabel(myZone)})`} value={from} zone={myZone} onChange={setFrom} />
+        <div className="flex gap-1.5">
+          <button className={`btn btn-sm ${!later ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setLater(false)}>
+            From now
+          </button>
+          <button className={`btn btn-sm ${later ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setLater(true)}>
+            From a date…
+          </button>
+        </div>
+        {later && <WhenInput label={`From (${zoneLabel(myZone)})`} value={from} zone={myZone} onChange={setFrom} />}
         <div className="flex justify-end gap-2">
           <button className="btn btn-ghost" onClick={onClose}>
             Cancel
           </button>
-          <button className="btn btn-primary" disabled={busy || from === null || !/^\d{2}:\d{2}$/.test(time)} onClick={() => onSave({ from: new Date(from!).toISOString(), time, timeZone: zone, durationMin: duration })}>
+          <button className="btn btn-primary" disabled={busy || (later && from === null) || !/^\d{2}:\d{2}$/.test(time)} onClick={() => onSave({ from: new Date(later ? from! : Date.now()).toISOString(), time, timeZone: zone, durationMin: duration })}>
             Save and publish
           </button>
         </div>
