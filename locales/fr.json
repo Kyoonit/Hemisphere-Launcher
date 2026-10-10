@@ -34,6 +34,27 @@
     "map": "Carte",
     "rules": "Règles"
   },
+  "map": {
+    "title": "Carte du serveur",
+    "back": "Accueil",
+    "reload": "Recharger la carte",
+    "openInBrowser": "Ouvrir dans le navigateur",
+    "online": "En ligne",
+    "follow": "Suivre {{name}} sur la carte",
+    "showPlayer": "Voir sur la carte",
+    "hidden": "Ce joueur n’apparaît pas sur la carte (il s’est peut-être caché).",
+    "notOnMap_one": "+ {{count}} joueur caché de la carte",
+    "notOnMap_other": "+ {{count}} joueurs cachés de la carte",
+    "loading": "Chargement de la carte…",
+    "unreachable": "La carte ne répond pas",
+    "unreachableHint": "Vérifie ta connexion internet. Si elle marche, le serveur redémarre peut-être : réessaie dans un instant.",
+    "retry": "Réessayer",
+    "dimension": {
+      "overworld": "Overworld",
+      "nether": "Nether",
+      "end": "End"
+    }
+  },
   "backgrounds": {
     "kingdom": "Le Royaume",
     "hempshire": "Hempshire",
@@ -183,7 +204,8 @@
     "extraAt": "Restart exceptionnel à {{time}} (ton heure)",
     "onlineNow": "En ligne",
     "nobody": "Personne en ligne — sois le premier !",
-    "more": "+ {{count}} autres",
+    "more_one": "+ {{count}} autre",
+    "more_other": "+ {{count}} autres",
     "maintenance": "Maintenance",
     "maintenanceShort": "Serveur fermé pour maintenance",
     "restartingLive": "Le serveur est vérifié en direct (il y a {{s}} s)",

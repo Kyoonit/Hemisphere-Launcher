@@ -1,4 +1,5 @@
 /** Hemisphere server facts and the shared server-status / playtime types. */
+import type { Dimension } from './serverStats'
 
 export const SERVER = {
   host: 'play.hemispheresurvival.club',
@@ -21,6 +22,8 @@ export const RESTART_SCHEDULE = {
 export interface OnlinePlayer {
   name: string
   uuid: string
+  /** where they are (BlueMap's list only) */
+  dimension?: Dimension | null
 }
 
 export interface ServerStatus {
@@ -29,7 +32,8 @@ export interface ServerStatus {
   playersOnline: number | null
   playersMax: number | null
   version: string | null
-  /** Sample sent by the server (max ~12), may be shorter than playersOnline */
+  /** Everyone BlueMap shows (bots left out), else the sample sent by the server (max ~12): may be shorter than
+   *  playersOnline (players hidden from the map, or not in the sample) */
   players: OnlinePlayer[]
   /** Round-trip from this PC to the server, null if unreachable */
   latencyMs: number | null

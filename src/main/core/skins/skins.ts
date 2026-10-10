@@ -112,3 +112,24 @@ export async function getSkin(id?: string, refresh = false): Promise<SkinInfo | 
     return build(account.id, { skin: STEVE, slim: false, cape: null }, true).catch(() => null)
   }
 }
+
+const players = new Map<string, { at: number; info: SkinInfo }>()
+
+/**
+ * The skin of any player (the server's player cards), by UUID: asked to Mojang at most every 10 minutes per player.
+ * Bots and unknown players wear Steve. Never told to the wardrobe (not the user's accounts).
+ */
+export async function getPlayerSkin(uuid: unknown): Promise<SkinInfo | null> {
+  const id = typeof uuid === 'string' ? uuid.replace(/-/g, '').toLowerCase() : ''
+  if (!/^[0-9a-f]{32}$/.test(id)) return null
+  const m = players.get(id)
+  if (m && Date.now() - m.at < FRESH_MS) return m.info
+  // offline-mode ids (version 3) are not Mojang accounts
+  const known = id[12] === '4' ? await fromMojang(id).catch(() => null) : null
+  const info = await build(id, known ?? { skin: STEVE, slim: false, cape: null }, !known).catch(() => null)
+  if (info) {
+    if (players.size > 200) players.clear()
+    players.set(id, { at: Date.now(), info })
+  }
+  return info
+}

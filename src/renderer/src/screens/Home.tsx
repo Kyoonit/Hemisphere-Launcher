@@ -37,6 +37,7 @@ export default function Home({
   onOpenMods,
   onReport,
   onOpenSkin,
+  onOpenMap,
 }: {
   onOpenNews(): void
   /** News > Launcher: the launcher's whole history */
@@ -48,6 +49,8 @@ export default function Home({
   onReport(category: ReportCategory | null): void
   /** the 3D viewer (Settings > Account) */
   onOpenSkin(): void
+  /** the server map (Map screen), following a player or not */
+  onOpenMap(uuid?: string | null): void
 }) {
   const { t } = useTranslation()
   const status = useServerStatus()
@@ -78,7 +81,7 @@ export default function Home({
       </div>
       {/* right column: the server, then "coming from another launcher?" (the left one has the tour and what's new) */}
       <div ref={right.ref} style={{ maxHeight: right.max }} className="absolute top-5 right-6 flex w-[268px] flex-col gap-3">
-        <ServerPanel status={status} feed={feed} onOpenNews={onOpenNews} />
+        <ServerPanel status={status} feed={feed} onOpenNews={onOpenNews} onOpenMap={onOpenMap} />
         <div className="flex-none empty:hidden">
           <ImportPrompt onImport={onImport} />
         </div>
@@ -113,7 +116,8 @@ export default function Home({
           {LINK_BUTTONS.map(({ key, icon }) => (
             <button
               key={key}
-              onClick={() => window.hemisphere.openLink(key)}
+              // the map opens in the launcher (its own screen, with a link to the browser)
+              onClick={() => (key === 'map' ? onOpenMap() : window.hemisphere.openLink(key))}
               className="flex items-center gap-2 rounded-lg bg-gray-800/75 px-4 py-[9px] text-sm font-semibold text-gray-300 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-gray-700 hover:text-white"
             >
               {icon}

@@ -1,7 +1,8 @@
 import { connect } from 'node:net'
 import { app } from 'electron'
 import { z } from 'zod'
-import { SERVER, type ServerStatus } from '@shared/server'
+import { SERVER, type OnlinePlayer, type ServerStatus } from '@shared/server'
+import { blueMapPlayers, blueMapPlayersUrl, DIMENSIONS, isBot, plainUuid } from '@shared/serverStats'
 
 const REFRESH_MS = 60_000
 const TIMEOUT_MS = 8_000
@@ -33,6 +34,21 @@ async function fetchMcsrvstat(): Promise<z.infer<typeof McsrvstatSchema> | null>
   }
 }
 
+/** Everyone online and their dimension, from the server's BlueMap (null: the map did not answer) */
+async function fetchBlueMap(): Promise<OnlinePlayer[] | null> {
+  const lists = await Promise.all(
+    DIMENSIONS.map(async (d) => {
+      try {
+        const res = await fetch(blueMapPlayersUrl(d), { headers: { 'User-Agent': `HemisphereLauncher/${app.getVersion()}` }, signal: AbortSignal.timeout(TIMEOUT_MS) })
+        return [d, res.ok ? await res.json() : null] as const
+      } catch {
+        return [d, null] as const
+      }
+    }),
+  )
+  return blueMapPlayers(Object.fromEntries(lists))?.filter((p) => !isBot(p.uuid)) ?? null
+}
+
 /** TCP connect time from this PC to the server: a cheap, honest latency figure. */
 function measureLatency(): Promise<number | null> {
   return new Promise((resolve) => {
@@ -49,14 +65,15 @@ function measureLatency(): Promise<number | null> {
 }
 
 export async function getServerStatus(): Promise<ServerStatus> {
-  const [api, latencyMs] = await Promise.all([fetchMcsrvstat(), measureLatency()])
+  const [api, latencyMs, mapped] = await Promise.all([fetchMcsrvstat(), measureLatency(), fetchBlueMap()])
   return {
     // The status service decides; if it's down, a successful TCP connection still means "online".
     online: api ? api.online : latencyMs !== null ? true : null,
     playersOnline: api?.players?.online ?? null,
     playersMax: api?.players?.max ?? null,
     version: api?.version ?? null,
-    players: api?.players?.list ?? [],
+    // BlueMap lists everyone (not only the server's sample of names); bots (offline-mode ids) are left out
+    players: mapped ?? (api?.players?.list ?? []).filter((p) => !isBot(plainUuid(p.uuid) ?? '')),
     latencyMs,
     fetchedAt: Date.now(),
   }

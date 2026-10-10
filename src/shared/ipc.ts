@@ -49,6 +49,9 @@ export const IPC = {
   skinsWear: 'skins:wear',
   skinsCape: 'skins:cape',
   skinsPickModel: 'skins:pick-model',
+  skinsPlayer: 'skins:player',
+  mapCheck: 'map:check',
+  mapOpenInBrowser: 'map:open-in-browser',
   shopList: 'shop:list',
   shopThumbnail: 'shop:thumbnail',
   shopItem: 'shop:item',
@@ -399,6 +402,15 @@ export interface HemisphereApi {
     cape(id: string | null): Promise<WardrobeResult>
     /** staff: model files picked in a file dialog (.bbmodel, or .json with its PNGs), to try on in the viewer */
     pickModel(): Promise<{ ok: true; files: ModelFile[] } | { ok: false; error: 'cancelled' | 'notAllowed' | 'tooBig' | 'notPng' }>
+    /** any player's skin, by UUID (the server's player cards); Steve for bots and unknown players */
+    player(uuid: string): Promise<SkinInfo | null>
+  }
+  /** The server's BlueMap, shown in the Map screen */
+  map: {
+    /** does the map answer (internet, server up)? */
+    check(): Promise<boolean>
+    /** the map in the browser, at the view shown (BlueMap's address after #) */
+    openInBrowser(view?: string): void
   }
   /** The catalogue (Patreon models and skins to try on) */
   shop: {

@@ -1,12 +1,26 @@
 import { app, ipcMain, session, type BrowserWindow, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import { pathToFileURL } from 'node:url'
 import { join } from 'node:path'
+import { BLUEMAP } from '@shared/server'
+
+/** The server map's own storage (its view settings): nothing shared with the launcher's page */
+export const MAP_PARTITION = 'persist:bluemap'
+const MAP_ORIGIN = new URL(BLUEMAP.url).origin
+const isMapUrl = (url: string) => {
+  try {
+    return new URL(url).origin === MAP_ORIGIN
+  } catch {
+    return false
+  }
+}
 
 /**
  * Process-wide hardening (Electron security checklist):
  * - no web permissions (camera, notifications, geolocation…), except the microphone for the launcher's own page
  *   (Settings > Game > test your microphone for voice chat): audio only, never video
- * - no new windows, navigation or <webview> in any web contents, not just the main window
+ * - no new windows, navigation or <webview> in any web contents, not just the main window. One exception: the
+ *   launcher's page may show the server's BlueMap in a <webview> (Map screen): that page only, its own storage, no
+ *   preload, sandboxed, no permission, and it never leaves the map's address
  * - IPC is only answered for the launcher's own page in its main window
  */
 export function hardenApp(): void {
@@ -15,10 +29,26 @@ export function hardenApp(): void {
   ses.setPermissionRequestHandler((wc, permission, callback, details) => callback(micOnly(permission, (details as { mediaTypes?: string[] }).mediaTypes, wc.getURL())))
   ses.setPermissionCheckHandler((_wc, permission, origin, details) => micOnly(permission, details.mediaType ? [details.mediaType] : undefined, (details as { requestingUrl?: string }).requestingUrl ?? origin))
 
+  const map = session.fromPartition(MAP_PARTITION)
+  map.setPermissionRequestHandler((_wc, _permission, callback) => callback(false))
+  map.setPermissionCheckHandler(() => false)
+
   app.on('web-contents-created', (_e, contents) => {
-    contents.on('will-attach-webview', (e) => e.preventDefault())
-    contents.on('will-navigate', (e) => e.preventDefault())
-    contents.on('will-redirect', (e) => e.preventDefault())
+    contents.on('will-attach-webview', (e, prefs, params) => {
+      if (!(contents === trustedWindow?.webContents && isLauncherUrl(contents.getURL()) && isMapUrl(params.src) && params.partition === MAP_PARTITION)) return e.preventDefault()
+      delete prefs.preload
+      prefs.nodeIntegration = false
+      prefs.nodeIntegrationInSubFrames = false
+      prefs.contextIsolation = true
+      prefs.sandbox = true
+      prefs.webSecurity = true
+      prefs.partition = MAP_PARTITION
+    })
+    const guest = contents.getType() === 'webview'
+    // the map moves inside itself (its address keeps the view); anything else is refused
+    contents.on('will-navigate', (e, url) => !(guest && isMapUrl(url)) && e.preventDefault())
+    contents.on('will-redirect', (e, url) => !(guest && isMapUrl(url)) && e.preventDefault())
+    contents.on('will-frame-navigate', (e) => guest && !isMapUrl(e.url) && e.preventDefault())
     contents.setWindowOpenHandler(() => ({ action: 'deny' }))
   })
 }

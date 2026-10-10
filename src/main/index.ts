@@ -4,9 +4,9 @@ import { existsSync, readdirSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { gamePaths } from './core/game/target'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
-import type { ServerStatus } from '@shared/server'
+import { BLUEMAP, type ServerStatus } from '@shared/server'
 import type { FeedView } from '@shared/schedule'
-import { getSkin, pngSize } from './core/skins/skins'
+import { getPlayerSkin, getSkin, pngSize } from './core/skins/skins'
 import { listShop, patreonUrl, shopItem, shopThumbnail } from './core/catalogue/shop'
 import { editSkin, getWardrobe, importFile, importPlayer, keepFromHistory, removeSkin, wearCape, wearSkin } from './core/skins/wardrobe'
 import { getServerStatus, startStatusPolling, refreshStatusNow } from './core/status/serverStatus'
@@ -149,7 +149,8 @@ function createWindow(startHidden = false): void {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      webviewTag: false,
+      // the Map screen's BlueMap only (security.ts checks every <webview>)
+      webviewTag: true,
       spellcheck: false,
     },
   })
@@ -205,6 +206,19 @@ function registerIpc(): void {
 
   handle(IPC.authState, () => getAccountsState())
   handle(IPC.skinsGet, (_e, id: unknown, refresh: unknown) => getSkin(isId(id) ? id : undefined, refresh === true))
+  handle(IPC.skinsPlayer, (_e, uuid: unknown) => getPlayerSkin(uuid))
+  handle(IPC.mapCheck, async () => {
+    try {
+      return (await fetch(`${BLUEMAP.url}/settings.json`, { signal: AbortSignal.timeout(6_000) })).ok
+    } catch {
+      return false
+    }
+  })
+  on(IPC.mapOpenInBrowser, (_e, view: unknown) => {
+    // only BlueMap's own view addresses (map:x:y:z:…), never anything else
+    const hash = typeof view === 'string' && /^#[\w:.,-]{1,200}$/.test(view) ? view : ''
+    shell.openExternal(`${BLUEMAP.url}/${hash}`)
+  })
   handle(IPC.skinsWardrobe, (_e, capes: unknown) => getWardrobe(capes !== false))
   handle(IPC.skinsImportFile, async () => {
     const pick = await dialog.showOpenDialog(win!, { properties: ['openFile'], title: 'Skin', filters: [{ name: 'PNG', extensions: ['png'] }] })

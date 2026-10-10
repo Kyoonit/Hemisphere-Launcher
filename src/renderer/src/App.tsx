@@ -34,6 +34,7 @@ const ModHistory = lazy(() => import('./screens/ModHistory'))
 const Screenshots = lazy(() => import('./screens/Screenshots'))
 const Report = lazy(() => import('./screens/Report'))
 const Settings = lazy(() => import('./screens/Settings'))
+const MapScreen = lazy(() => import('./screens/Map'))
 import { markNewsSeen, unseenNewsCount } from '@shared/feed'
 
 export default function App() {
@@ -46,6 +47,12 @@ export default function App() {
   const [contentTab, setContentTab] = useState<ContentTab>('mods')
   const [newsTab, setNewsTab] = useState<NewsTab>('server')
   const [browseKind, setBrowseKind] = useState<BrowseKind>('mod')
+  // the server map, and the player it follows when opened from a player card
+  const [mapFollow, setMapFollow] = useState<string | null>(null)
+  const openMap = (uuid: string | null = null) => {
+    setMapFollow(uuid)
+    setScreen('map')
+  }
   // Report a problem: what it's about, and where Back goes
   const [report, setReport] = useState<{ category: ReportCategory | null; from: Screen } | null>(null)
   const openReport = (category: ReportCategory | null) => {
@@ -109,6 +116,7 @@ export default function App() {
                     setScreen('news')
                   }}
                   onOpenScreenshots={() => setScreen('screenshots')}
+                  onOpenMap={openMap}
                   onOpenLauncherNews={() => {
                     setNewsTab('launcher')
                     setScreen('news')
@@ -126,6 +134,7 @@ export default function App() {
                   }}
                 />}
               {screen === 'news' && <News tab={newsTab} onTab={setNewsTab} />}
+              {screen === 'map' && <MapScreen follow={mapFollow} onBack={() => setScreen('home')} />}
               {screen === 'mods' && (
                 <Content
                   tab={contentTab}

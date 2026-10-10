@@ -5,6 +5,12 @@
       {
         "version": "next",
         "area": "launcher",
+        "en": "The server map opens in the launcher: the 3D BlueMap, who is online beside it, a click follows a player, and a button to open it in the browser. Click a name in the online list for their card (skin in 3D, dimension, show on the map). The list now shows every player.",
+        "fr": "La carte du serveur s’ouvre dans le launcher : la BlueMap en 3D, les joueurs en ligne à côté, un clic suit un joueur, et un bouton pour l’ouvrir dans le navigateur. Clique sur un nom de la liste des joueurs pour voir sa fiche (skin en 3D, dimension, voir sur la carte). La liste montre maintenant tous les joueurs."
+      },
+      {
+        "version": "next",
+        "area": "launcher",
         "en": "Patreon catalogue: every Microsoft account can now try items on (the account is checked differently). A simpler update button in the top bar, and the guided tour’s buttons fit on one line.",
         "fr": "Catalogue Patreon : tous les comptes Microsoft peuvent maintenant essayer les articles (le compte est vérifié autrement). Un bouton de mise à jour plus discret dans la barre du haut, et les boutons de la visite guidée tiennent sur une ligne."
       },

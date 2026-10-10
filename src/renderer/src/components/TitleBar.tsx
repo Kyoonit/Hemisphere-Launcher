@@ -6,7 +6,7 @@ import { useLauncherUpdate } from '../launcherUpdate'
 import { useFeed, useSettings } from '../hooks'
 import { newsBadgeLabel, unseenNewsCount } from '@shared/feed'
 
-export type Screen = 'home' | 'news' | 'mods' | 'screenshots' | 'settings' | 'repair' | 'import' | 'browse' | 'modHistory' | 'report'
+export type Screen = 'home' | 'news' | 'mods' | 'screenshots' | 'settings' | 'repair' | 'import' | 'browse' | 'modHistory' | 'report' | 'map'
 
 type TabDef = { id: Screen; icon: LucideIcon; label: string }
 /** PLAY in the middle; what's new and the content before it, the player's own things after it */

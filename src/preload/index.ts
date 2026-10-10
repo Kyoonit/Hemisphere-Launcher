@@ -207,6 +207,11 @@ const api: HemisphereApi = {
     wear: (hash, slim) => ipcRenderer.invoke(IPC.skinsWear, hash, slim),
     cape: (id) => ipcRenderer.invoke(IPC.skinsCape, id),
     pickModel: () => ipcRenderer.invoke(IPC.skinsPickModel),
+    player: (uuid) => ipcRenderer.invoke(IPC.skinsPlayer, uuid),
+  },
+  map: {
+    check: () => ipcRenderer.invoke(IPC.mapCheck),
+    openInBrowser: (view) => ipcRenderer.send(IPC.mapOpenInBrowser, view ?? ''),
   },
   shop: {
     list: () => ipcRenderer.invoke(IPC.shopList),
