@@ -43,6 +43,9 @@ if (cmd === 'key') {
   const file = args[1] ?? fail('which backup? npm run herald:backup -- decrypt <file> --key <private key>')
   const keyFile = flag('--key') ?? fail('--key <private key file> is needed')
   const out = resolve(flag('--out') ?? file.replace(/\.gz\.enc$|\.enc$/, '') + (file.endsWith('.enc') ? '' : '.sql'))
+  // a path that is not there (e.g. %USERPROFILE% typed in PowerShell, which only knows $env:USERPROFILE)
+  for (const [what, path] of [['backup', file], ['private key', keyFile]] as const)
+    if (!existsSync(path)) fail(`the ${what} file is not there: ${resolve(path)}${path.includes('%') ? ' (in PowerShell, write $env:USERPROFILE instead of %USERPROFILE%)' : ''}`)
   let sql: Buffer
   try {
     sql = decryptBackup(readFileSync(file), createPrivateKey(readFileSync(keyFile)))

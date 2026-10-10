@@ -41,7 +41,7 @@ npx wrangler d1 time-travel restore herald --timestamp=<when> --config herald/se
 **From a backup file:**
 
 1. Download it from the release on GitHub.
-2. `npm run herald:backup -- decrypt herald-2026-10-11-0317.sql.gz.enc --key Documents/herald-backup-private.pem`
+2. `npm run herald:backup -- decrypt herald-2026-10-11-0317.sql.gz.enc --key "$env:USERPROFILE\Documents\herald-backup-private.pem"` (PowerShell)
 3. Restore it into a **new** database first and check it there:
    `npx wrangler d1 create herald-restore` then
    `npx wrangler d1 execute herald-restore --remote --file herald-2026-10-11-0317.sql`
