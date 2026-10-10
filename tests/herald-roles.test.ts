@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { canChangeProfile, effectivePermissions, NEVER_FOR_LODGE_KEEPERS } from '../src/shared/heraldRoles'
+import { canChangeProfile, effectivePermissions, NEVER_FOR_LODGE_KEEPERS, PERMISSIONS } from '../src/shared/heraldRoles'
 import { hashCode, newCode, normalizeCode } from '../herald/server/src/accounts'
 
 describe('Herald roles', () => {
-  it('Owner and Developer can do everything; Lodge keepers write news and events only', () => {
+  it('Owner, Developer and Admins can do everything; Lodge keepers write news and events only', () => {
     expect(effectivePermissions('owner')).toContain('profiles.manage')
     expect(effectivePermissions('developer')).toContain('settings.staffCode')
+    expect(effectivePermissions('admin')).toEqual([...PERMISSIONS])
     expect(effectivePermissions('lodgeKeeper')).toEqual(['news.write', 'events.write'])
   })
 
@@ -21,13 +22,17 @@ describe('Herald roles', () => {
   it('fixed guards on profile changes', () => {
     const owner = { role: 'owner' as const, permissions: effectivePermissions('owner') }
     const dev = { role: 'developer' as const, permissions: effectivePermissions('developer') }
-    const admin = { role: 'admin' as const, permissions: effectivePermissions('admin', ['profiles.manage']) }
+    const admin = { role: 'admin' as const, permissions: effectivePermissions('admin') }
     expect(canChangeProfile(owner, null, { role: 'admin', add: [], remove: [] })).toBeNull()
     expect(canChangeProfile(dev, null, { role: 'owner', add: [], remove: [] })).toMatch(/only one Owner/)
     expect(canChangeProfile(dev, 'owner', { role: 'owner', add: [], remove: [] })).toMatch(/Only the Owner/)
     expect(canChangeProfile(admin, null, { role: 'developer', add: [], remove: [] })).toMatch(/above yours/)
-    expect(canChangeProfile(admin, null, { role: 'moderator', add: ['pack.approve'], remove: [] })).toMatch(/do not have/)
-    expect(canChangeProfile({ role: 'admin', permissions: effectivePermissions('admin') }, null, { role: 'moderator', add: [], remove: [] })).toMatch(/cannot manage/)
+    expect(canChangeProfile(admin, null, { role: 'moderator', add: ['pack.approve'], remove: [] })).toBeNull()
+    expect(canChangeProfile({ role: 'admin', permissions: effectivePermissions('admin', [], ['pack.approve']) }, null, { role: 'moderator', add: ['pack.approve'], remove: [] })).toMatch(/do not have/)
+    expect(canChangeProfile({ role: 'moderator', permissions: effectivePermissions('moderator') }, null, { role: 'moderator', add: [], remove: [] })).toMatch(/cannot manage/)
+    // a profile above one's own is never changed (revoked, deleted, new code): an Admin and the Developer's profile
+    expect(canChangeProfile(admin, 'developer', { role: 'developer', add: [], remove: [] })).toMatch(/profile above yours/)
+    expect(canChangeProfile(admin, 'moderator', { role: 'admin', add: [], remove: [] })).toBeNull()
   })
 })
 

@@ -6,13 +6,14 @@ import { Avatar, Modal } from '../components/ui'
 import { Journal, Trash } from './Journal'
 import { ago } from '../time'
 
+/** The staff, top to bottom; the Developer is apart (technical access, not part of the staff) */
 const GROUPS: { role: Role; title: string; note?: string }[] = [
   { role: 'owner', title: 'Owner' },
-  { role: 'developer', title: 'Developer' },
   { role: 'admin', title: 'Admins' },
   { role: 'moderator', title: 'Moderators' },
   { role: 'lodgeKeeper', title: 'Lodge keepers', note: 'not staff: articles and events only' },
 ]
+const APART: { role: Role; title: string; note?: string }[] = [{ role: 'developer', title: 'Developers', note: 'technical access to Herald and the launcher, not part of the staff' }]
 
 export default function Team({ onOpen }: { onOpen(id: string): void }) {
   const { sync, can, refresh } = useStore()
@@ -60,11 +61,12 @@ export default function Team({ onOpen }: { onOpen(id: string): void }) {
       </div>
 
       {view === 'people' &&
-        [...GROUPS, ...(manage ? [{ role: null, title: 'Revoked', note: 'cannot sign in; can be restored' }] : [])].map((g) => {
-          const list = people.filter((p) => (g.role === null ? p.revoked : p.role === g.role && !p.revoked))
+        [...GROUPS, ...APART, ...(manage ? [{ role: null, title: 'Revoked', note: 'cannot sign in; can be restored, or deleted for good' }] : [])].map((g) => {
+          // revoked profiles: only for profile managers (never Lodge keepers)
+          const list = people.filter((p) => (g.role === null ? p.revoked && manage : p.role === g.role && !p.revoked))
           if (!list.length) return null
           return (
-            <section key={g.title} className="mb-5">
+            <section key={g.title} className={`mb-5 ${APART.some((a) => a.title === g.title) ? 'mt-8 border-t border-gray-700 pt-5' : ''}`}>
               <h3 className="mb-2 text-xs font-bold tracking-widest text-gray-400 uppercase">
                 {g.title} {list.length > 1 && `· ${list.length}`} {g.note && <span className="font-normal tracking-normal normal-case">· {g.note}</span>}
               </h3>
@@ -96,7 +98,7 @@ export default function Team({ onOpen }: { onOpen(id: string): void }) {
 
 /** Roles this profile may give (never above its own; the Owner role is never given). */
 function givableRoles(actor: Role): Role[] {
-  return ROLES.filter((r) => r !== 'owner' && ROLE_RANK[r] <= ROLE_RANK[actor])
+  return (['admin', 'moderator', 'lodgeKeeper', 'developer'] as Role[]).filter((r) => ROLES.includes(r) && ROLE_RANK[r] <= ROLE_RANK[actor])
 }
 
 function NewProfile({ onClose, onCreated }: { onClose(): void; onCreated(name: string, code: string): void }) {
@@ -121,7 +123,9 @@ function NewProfile({ onClose, onCreated }: { onClose(): void; onCreated(name: s
           </option>
         ))}
       </select>
-      <p className="mt-2 text-xs text-gray-400">Permissions can be adjusted after creation. A code is generated and shown once.</p>
+      <p className="mt-2 text-xs text-gray-400">
+        {role === 'admin' ? 'Admins have every permission.' : 'Permissions can be adjusted after creation.'} {role === 'developer' && 'Developers have technical access, apart from the staff.'} A code is generated and shown once.
+      </p>
       {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
       <div className="mt-5 flex justify-end gap-2">
         <button className="btn btn-ghost" onClick={onClose}>
@@ -140,8 +144,9 @@ function EditProfile({ profile, onClose, onChanged, onCode }: { profile: Profile
   const [role, setRole] = useState<Role>(profile.role)
   const [perms, setPerms] = useState<Set<Permission>>(new Set(profile.permissions))
   const [error, setError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const self = profile.id === me.id
-  const locked = profile.role === 'owner' && me.role !== 'owner'
+  const locked = (profile.role === 'owner' && me.role !== 'owner') || ROLE_RANK[profile.role] > ROLE_RANK[me.role]
   const defaults = new Set<string>(ROLE_DEFAULTS[role])
   const forbidden = (p: Permission) => role === 'lodgeKeeper' && NEVER_FOR_LODGE_KEEPERS.includes(p)
 
@@ -154,6 +159,11 @@ function EditProfile({ profile, onClose, onChanged, onCode }: { profile: Profile
     const add = [...perms].filter((p) => !defaults.has(p))
     const remove = [...defaults].filter((p) => !perms.has(p as Permission))
     void save({ role, add, remove })
+  }
+  const remove = async () => {
+    const res = await window.herald.api('POST', `/profiles/${profile.id}/delete`)
+    if (res.ok) onChanged()
+    else (setDeleting(false), setError(res.error))
   }
   const newCode = async () => {
     const res = await window.herald.api<{ code: string }>('POST', `/profiles/${profile.id}/code`)
@@ -202,9 +212,14 @@ function EditProfile({ profile, onClose, onChanged, onCode }: { profile: Profile
       {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
       <div className="flex flex-wrap items-center gap-2">
         {!self && !locked && (profile.revoked ? (
-          <button className="btn btn-sm" onClick={() => void save({ revoked: false })}>
-            Restore
-          </button>
+          <>
+            <button className="btn btn-sm" onClick={() => void save({ revoked: false })}>
+              Restore
+            </button>
+            <button className="btn btn-sm btn-danger" onClick={() => setDeleting(true)}>
+              Delete for good
+            </button>
+          </>
         ) : (
           <button className="btn btn-sm btn-danger" onClick={() => void save({ revoked: true })}>
             Revoke
@@ -223,6 +238,22 @@ function EditProfile({ profile, onClose, onChanged, onCode }: { profile: Profile
           Save
         </button>
       </div>
+      {deleting && (
+        <Modal title={`Delete ${profile.name} for good?`} onClose={() => setDeleting(false)}>
+          <p className="mb-4 text-sm text-gray-300">
+            The profile is deleted for good: it cannot be restored, and the name {profile.name} can be given to a new profile. What {profile.name} did stays in the journal
+            under this name.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button className="btn btn-ghost" onClick={() => setDeleting(false)}>
+              Cancel
+            </button>
+            <button className="btn btn-danger" onClick={() => void remove()}>
+              Delete {profile.name}
+            </button>
+          </div>
+        </Modal>
+      )}
     </Modal>
   )
 }

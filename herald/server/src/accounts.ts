@@ -167,11 +167,17 @@ export async function logout(env: AccountsEnv, req: Request, actor: Actor) {
   await logActivity(env.DB, actor.profile.id, 'session.signout')
 }
 
+/** The journal's "who": the profile's name, or the name it had when it was deleted for good */
+export const WHO = 'coalesce(p.name, f.name) AS who'
+export const WHO_JOIN = 'LEFT JOIN profiles p ON p.id = a.profile_id LEFT JOIN former_profiles f ON f.id = a.profile_id'
+/** Lodge keepers are not staff: the journal never shows them what happens to profiles (revoked, deleted…) */
+export const hiddenFor = (actor: Actor) => (actor.profile.role === 'lodgeKeeper' ? "a.action NOT LIKE 'profile.%'" : null)
+
 /** Everything the app refreshes every 15 s: who is online, recent activity. */
 export async function sync(env: AccountsEnv, actor: Actor) {
   const now = Date.now()
   const people = (await env.DB.prepare('SELECT * FROM profiles WHERE revoked_at IS NULL ORDER BY name_key').all<ProfileRow>()).results.map((p) => publicProfile(p, now))
-  const activity = (await env.DB.prepare('SELECT a.id, a.at, a.action, a.target, a.detail, p.name AS who FROM activity a LEFT JOIN profiles p ON p.id = a.profile_id ORDER BY a.id DESC LIMIT 50').all()).results.map((a) => ({ ...a, detail: a.detail ? JSON.parse(a.detail as string) : null }))
+  const activity = (await env.DB.prepare(`SELECT a.id, a.at, a.action, a.target, a.detail, ${WHO} FROM activity a ${WHO_JOIN} ${hiddenFor(actor) ? `WHERE ${hiddenFor(actor)}` : ''} ORDER BY a.id DESC LIMIT 50`).all()).results.map((a) => ({ ...a, detail: a.detail ? JSON.parse(a.detail as string) : null }))
   // Changes when a publication, a publish job, a setting or a change of the mod pack changes: the app reloads only then
   const stamp = await env.DB.prepare('SELECT (SELECT count(*) || \'-\' || coalesce(max(updated_at), 0) FROM publications) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM publish_jobs) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM settings) || \'-\' || (SELECT coalesce(max(updated_at), 0) FROM pack_proposals) AS s').first<{ s: string }>()
   return { now, me: publicProfile(actor.profile, now), people, activity, contentStamp: stamp?.s ?? '' }
@@ -215,6 +221,22 @@ export async function updateProfile(env: AccountsEnv, actor: Actor, id: string, 
   if (revoked !== null) await env.DB.prepare('DELETE FROM sessions WHERE profile_id = ?1').bind(id).run()
   await logActivity(env.DB, actor.profile.id, body.revoked === true ? 'profile.revoke' : body.revoked === false ? 'profile.restore' : 'profile.update', id, { name: p.name, role, add: change.add, remove: change.remove })
   return publicProfile({ ...p, role, perms_add: JSON.stringify(change.add), perms_remove: JSON.stringify(change.remove), revoked_at: revoked })
+}
+
+/** Deletes a REVOKED profile for good: its sessions and the profile go, its name stays for the journal. */
+export async function deleteProfile(env: AccountsEnv, actor: Actor, id: string) {
+  const p = await target(env, id)
+  const refused = canChangeProfile({ role: actor.profile.role, permissions: actor.permissions }, p.role, { role: p.role, add: [], remove: [] })
+  if (refused) throw new HttpError(403, refused)
+  if (p.revoked_at === null) throw new HttpError(409, 'Revoke the profile first: only revoked profiles can be deleted.')
+  if (p.id === actor.profile.id) throw new HttpError(403, 'You cannot delete yourself.')
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM sessions WHERE profile_id = ?1').bind(id),
+    env.DB.prepare('INSERT OR REPLACE INTO former_profiles (id, name, deleted_at) VALUES (?1, ?2, ?3)').bind(id, p.name, Date.now()),
+    env.DB.prepare('DELETE FROM profiles WHERE id = ?1').bind(id),
+  ])
+  await logActivity(env.DB, actor.profile.id, 'profile.delete', id, { name: p.name, role: p.role })
+  return { ok: true }
 }
 
 export async function newProfileCode(env: AccountsEnv, actor: Actor, id: string) {

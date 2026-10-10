@@ -38,7 +38,7 @@ import { savePublic } from './publicSettings'
 import { listActivity, savePublicationTemplates, settingsHistory } from './history'
 import { contentKey, currentPackKey, KEY_GRACE_MS, newContentKey, publishKeys } from './sealing'
 import { approvePack, getPack, packForJob, packJobFinished, proposePack, rejectPack, uploadPackFile, withdrawPack } from './pack'
-import { authenticate, bootstrap, createProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
+import { authenticate, bootstrap, createProfile, deleteProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
 import * as pubs from './publications'
 import * as server from './serverState'
 
@@ -139,7 +139,7 @@ async function staffRoute(req: Request, env: Env, path: string): Promise<Respons
   const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
   if (req.method === 'POST' && path === '/bootstrap') return json(await bootstrap(env, await body()))
   if (req.method === 'POST' && path === '/login') return json(await login(env, await body()))
-  const profile = path.match(/^\/profiles\/(p-[a-z0-9-]{1,20})(\/code)?$/)
+  const profile = path.match(/^\/profiles\/(p-[a-z0-9-]{1,20})(\/code|\/delete)?$/)
   const update = path.match(/^\/update\/(latest\.yml|Herald-Setup-\d+\.\d+\.\d+\.exe)$/)
   if (!['/me', '/logout', '/sync', '/profiles', '/activity'].includes(path) && !profile && !update) return null
   const actor = await authenticate(env, req)
@@ -148,11 +148,12 @@ async function staffRoute(req: Request, env: Env, path: string): Promise<Respons
   if (req.method === 'GET' && path === '/me') return json((await sync(env, actor)).me)
   if (req.method === 'POST' && path === '/logout') return json(await logout(env, req, actor).then(() => ({ ok: true })))
   if (req.method === 'GET' && path === '/sync') return json(await sync(env, actor))
-  if (req.method === 'GET' && path === '/activity') return json(await listActivity(env.DB, new URL(req.url)))
+  if (req.method === 'GET' && path === '/activity') return json(await listActivity(env.DB, new URL(req.url), actor))
   if (req.method === 'GET' && path === '/profiles') return json(await listProfiles(env, actor))
   if (req.method === 'POST' && path === '/profiles') return json(await createProfile(env, actor, await body()))
   if (req.method === 'PATCH' && profile && !profile[2]) return json(await updateProfile(env, actor, profile[1], await body()))
-  if (req.method === 'POST' && profile?.[2]) return json(await newProfileCode(env, actor, profile[1]))
+  if (req.method === 'POST' && profile?.[2] === '/code') return json(await newProfileCode(env, actor, profile[1]))
+  if (req.method === 'POST' && profile?.[2] === '/delete') return json(await deleteProfile(env, actor, profile[1]))
   return json({ error: 'not found' }, 404)
 }
 

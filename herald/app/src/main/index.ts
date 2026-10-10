@@ -28,7 +28,7 @@ const ALLOWED = [
   /^\/me$/,
   /^\/sync$/,
   /^\/profiles$/,
-  /^\/profiles\/p-[a-z0-9-]{1,20}(\/code)?$/,
+  /^\/profiles\/p-[a-z0-9-]{1,20}(\/code|\/delete)?$/,
   /^\/publications$/,
   /^\/publications\/[nebw]-[a-z0-9]{12}(\/(status|publish|unpublish|delete|restore|comments|editing|versions\/\d{1,6}))?$/,
   /^\/publish$/,

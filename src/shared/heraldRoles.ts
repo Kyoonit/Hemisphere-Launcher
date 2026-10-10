@@ -1,7 +1,8 @@
 /**
  * Herald roles and permissions, shared by the server (which enforces them) and the app (which hides what a profile
  * cannot use). Effective permissions = the role's defaults + the profile's additions − its removals, then the fixed
- * guards. The per-role split below is a FIRST PROPOSAL (the owner decides it later, DECISIONS.md § 19).
+ * guards. Owner, Developer and Admins have every permission from the start (owner's decision, S12); the Developer is
+ * technical access, not part of the staff hierarchy (Team shows it apart), its rank only protects it from changes.
  */
 
 export const ROLES = ['owner', 'developer', 'admin', 'moderator', 'lodgeKeeper'] as const
@@ -38,7 +39,7 @@ const STAFF_CONTENT: Permission[] = ['news.write', 'events.write', 'publications
 export const ROLE_DEFAULTS: Record<Role, readonly Permission[]> = {
   owner: ALL,
   developer: ALL,
-  admin: [...STAFF_CONTENT, 'drafts.restricted', 'backgrounds.write', 'maintenance.write', 'maintenance.emergency', 'restart.write', 'pack.propose', 'settings.public'],
+  admin: ALL,
   moderator: [...STAFF_CONTENT, 'maintenance.emergency'],
   lodgeKeeper: ['news.write', 'events.write'],
 }
@@ -66,12 +67,13 @@ export interface ProfileChange {
 /**
  * Can `actor` (role + effective permissions) give `target` (current role, or null for a new profile) this change?
  * Fixed guards: only profile managers; only the Owner touches the Owner role; nobody creates a second Owner; nobody
- * gives a role above their own or a permission they do not have themselves.
+ * changes a profile above their own, gives a role above their own or a permission they do not have themselves.
  */
 export function canChangeProfile(actor: { role: Role; permissions: readonly Permission[] }, target: Role | null, next: ProfileChange): string | null {
   if (!actor.permissions.includes('profiles.manage')) return 'You cannot manage profiles.'
   if (target === 'owner' && actor.role !== 'owner') return 'Only the Owner can change the Owner profile.'
   if (next.role === 'owner' && target !== 'owner') return 'There is only one Owner.'
+  if (target && ROLE_RANK[target] > ROLE_RANK[actor.role]) return 'You cannot change a profile above yours.'
   if (ROLE_RANK[next.role] > ROLE_RANK[actor.role]) return 'You cannot give a role above yours.'
   for (const p of next.add) if (!actor.permissions.includes(p as Permission)) return `You cannot give a permission you do not have (${p}).`
   return null

@@ -5,12 +5,14 @@
  */
 import { ACTIVITY_AREAS, PublicationTemplatesSchema, type ActivityArea } from '../../../src/shared/heraldPublications.ts'
 import type { Permission } from '../../../src/shared/heraldRoles.ts'
-import { HttpError, logActivity, type Actor } from './accounts'
+import { hiddenFor, HttpError, logActivity, WHO, WHO_JOIN, type Actor } from './accounts'
 
 /** GET /activity?before=<id>&who=<profile>&area=<area>: 100 entries, newest first (every staff member reads it) */
-export async function listActivity(db: D1Database, url: URL) {
+export async function listActivity(db: D1Database, url: URL, actor: Actor) {
   const where: string[] = []
   const binds: unknown[] = []
+  const hidden = hiddenFor(actor)
+  if (hidden) where.push(hidden)
   const before = Number(url.searchParams.get('before'))
   if (before > 0) where.push(`a.id < ?${binds.push(before)}`)
   const who = url.searchParams.get('who')
@@ -21,7 +23,7 @@ export async function listActivity(db: D1Database, url: URL) {
   if (target && /^[a-z]-[a-z0-9]{8,12}$/.test(target)) where.push(`a.target = ?${binds.push(target)}`)
   const rows = (
     await db
-      .prepare(`SELECT a.id, a.at, a.action, a.target, a.detail, p.name AS who FROM activity a LEFT JOIN profiles p ON p.id = a.profile_id ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY a.id DESC LIMIT 101`)
+      .prepare(`SELECT a.id, a.at, a.action, a.target, a.detail, ${WHO} FROM activity a ${WHO_JOIN} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY a.id DESC LIMIT 101`)
       .bind(...binds)
       .all<{ id: number; at: number; action: string; target: string | null; detail: string | null; who: string | null }>()
   ).results
