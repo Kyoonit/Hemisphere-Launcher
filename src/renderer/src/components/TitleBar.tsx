@@ -8,10 +8,13 @@ import { newsBadgeLabel, unseenNewsCount } from '@shared/feed'
 
 export type Screen = 'home' | 'news' | 'mods' | 'screenshots' | 'settings' | 'repair' | 'import' | 'browse' | 'modHistory' | 'report'
 
-const TABS: { id: Screen; icon: LucideIcon; label: string }[] = [
-  { id: 'home', icon: Play, label: 'nav.play' },
+type TabDef = { id: Screen; icon: LucideIcon; label: string }
+/** PLAY in the middle; what's new and the content before it, the player's own things after it */
+const LEFT: TabDef[] = [
   { id: 'news', icon: Newspaper, label: 'nav.news' },
   { id: 'mods', icon: Package, label: 'nav.mods' },
+]
+const RIGHT: TabDef[] = [
   { id: 'screenshots', icon: Images, label: 'nav.screenshots' },
   { id: 'settings', icon: Settings, label: 'nav.settings' },
 ]
@@ -32,45 +35,38 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
   const unseen = feed && settings && screen !== 'news' ? unseenNewsCount(feed.news, settings.seenNews) : 0
   const badge = newsBadgeLabel(unseen)
   useEffect(() => window.hemisphere.window.onMaximizedChange(setMaximized), [])
+  const isActive = (id: Screen) => screen === id || ((screen === 'repair' || screen === 'import' || screen === 'report') && id === 'settings') || ((screen === 'browse' || screen === 'modHistory') && id === 'mods')
 
   return (
-    <header className="drag absolute inset-x-0 top-0 z-20 flex h-[52px] items-center gap-4 border-b border-green-500/20 bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 pl-4 shadow-lg backdrop-blur-md">
-      <div className="flex items-center gap-2 text-[17px] font-bold whitespace-nowrap text-white">
-        <img src={logo} alt="" className="h-7 w-7" draggable={false} />
-        {t('app.name')}
+    // three columns: the name on the left, the tabs in the very middle of the window, the account and window buttons on the right
+    <header data-tour="tabs" className="drag absolute inset-x-0 top-0 z-20 grid h-[52px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-green-500/20 bg-gradient-to-r from-gray-900/95 via-gray-800/95 to-gray-900/95 pl-4 shadow-lg backdrop-blur-md">
+      <div className="flex min-w-0 items-center gap-2 text-[17px] font-bold whitespace-nowrap text-white">
+        <img src={logo} alt="" className="h-7 w-7 flex-none" draggable={false} />
+        <span className="truncate">{t('app.name')}</span>
       </div>
 
-      <nav className={`no-drag ml-3 flex min-w-0 gap-1 ${minimal ? 'invisible' : ''}`}>
-        {TABS.map(({ id, icon: Icon, label }) => {
-          const active = screen === id || ((screen === 'repair' || screen === 'import' || screen === 'report') && id === 'settings') || ((screen === 'browse' || screen === 'modHistory') && id === 'mods')
-          return (
-            <button
-              key={id}
-              onClick={() => onNavigate(id)}
-              aria-current={screen === id ? 'page' : undefined}
-              aria-label={id === 'news' && badge ? `${t(label)} (${t('news.unseen', { count: unseen })})` : t(label)}
-              title={t(label)}
-              className={`relative flex items-center gap-2 rounded-lg px-3.5 py-[7px] text-sm font-medium transition-all duration-300 ${
-                active ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 max-[1060px]:px-2.5 hover:text-white'
-              }`}
-            >
-              <Icon size={16} strokeWidth={2} />
-              {/* narrow window: inactive tabs keep only their icon (name in the tooltip) so the title bar never overflows */}
-              <span className={active ? '' : 'max-[1060px]:sr-only'}>{t(label)}</span>
-              {id === 'news' && badge && (
-                <span
-                  aria-hidden
-                  className="animate-pop absolute -top-1.5 -right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-red-600 px-1 text-[11px] leading-none font-bold text-white shadow-md ring-2 ring-gray-900"
-                >
-                  {badge}
-                </span>
-              )}
-            </button>
-          )
-        })}
+      <nav className={`no-drag flex items-center gap-1 ${minimal ? 'invisible' : ''}`}>
+        {LEFT.map((tab) => (
+          <Tab key={tab.id} tab={tab} active={isActive(tab.id)} badge={tab.id === 'news' ? badge : null} unseen={unseen} onNavigate={onNavigate} />
+        ))}
+        {/* PLAY, a little bigger, in the middle (Home) */}
+        <button
+          data-tour="tab-home"
+          onClick={() => onNavigate('home')}
+          aria-current={screen === 'home' ? 'page' : undefined}
+          className={`mx-1.5 flex items-center gap-2 rounded-xl px-5 py-[7px] text-[15px] font-bold tracking-wide whitespace-nowrap uppercase transition-all duration-300 ${
+            screen === 'home' ? 'bg-gradient-to-b from-green-500 to-green-600 text-white shadow-[0_0_18px_rgba(34,197,94,0.45)]' : 'bg-green-600/15 text-green-300 ring-1 ring-green-500/40 hover:bg-green-600/30 hover:text-white'
+          }`}
+        >
+          <Play size={17} strokeWidth={2.5} fill="currentColor" />
+          {t('nav.play')}
+        </button>
+        {RIGHT.map((tab) => (
+          <Tab key={tab.id} tab={tab} active={isActive(tab.id)} badge={null} unseen={0} onNavigate={onNavigate} />
+        ))}
       </nav>
 
-      <div className="no-drag ml-auto flex h-full flex-none items-center">
+      <div className="no-drag flex h-full min-w-0 items-center justify-self-end">
         {!minimal && account}
         <UpdateBadge />
         <WindowButton label={t('window.minimize')} onClick={() => window.hemisphere.window.minimize()}>
@@ -84,6 +80,33 @@ export default function TitleBar({ screen, onNavigate, minimal, account }: Props
         </WindowButton>
       </div>
     </header>
+  )
+}
+
+/** A tab beside PLAY; only in a narrow window do the ones not open keep just their icon (name in the tooltip) */
+function Tab({ tab, active, badge, unseen, onNavigate }: { tab: TabDef; active: boolean; badge: string | null; unseen: number; onNavigate(screen: Screen): void }) {
+  const { t } = useTranslation()
+  const { id, icon: Icon, label } = tab
+  return (
+    <button
+      data-tour={`tab-${id}`}
+      onClick={() => onNavigate(id)}
+      aria-current={active ? 'page' : undefined}
+      aria-label={badge ? `${t(label)} (${t('news.unseen', { count: unseen })})` : t(label)}
+      title={t(label)}
+      className={`relative flex items-center gap-2 rounded-lg px-3 py-[7px] text-sm font-medium whitespace-nowrap transition-all duration-300 ${active ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 max-[1100px]:px-2.5 hover:text-white'}`}
+    >
+      <Icon size={16} strokeWidth={2} />
+      <span className={active ? '' : 'max-[1100px]:sr-only'}>{t(label)}</span>
+      {badge && (
+        <span
+          aria-hidden
+          className="animate-pop absolute -top-1.5 -right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-red-600 px-1 text-[11px] leading-none font-bold text-white shadow-md ring-2 ring-gray-900"
+        >
+          {badge}
+        </span>
+      )}
+    </button>
   )
 }
 

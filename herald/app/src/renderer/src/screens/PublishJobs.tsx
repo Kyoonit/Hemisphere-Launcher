@@ -91,7 +91,7 @@ export function PublishJobs({ catalogue = false }: { catalogue?: boolean }) {
   const about = `Usually about ${secs(toGithub)} from Herald to GitHub, then up to 2 min for the launchers (they check every 2 minutes): a whole change takes ${secs(toGithub + 60_000)} on average, ${secs(toGithub + PULSE_MS)} at most. A closed launcher gets it when it starts.`
 
   return (
-    <div className="flex h-[46px] shrink-0 items-center gap-5 border-b border-gray-700/70 bg-gray-900/60 px-7" title={about}>
+    <div data-tour="publish-bar" className="flex h-[46px] shrink-0 items-center gap-5 border-b border-gray-700/70 bg-gray-900/60 px-7" title={about}>
       <div className="w-[260px] min-w-0 shrink leading-tight">
         <div className="truncate text-[12.5px] font-semibold text-white">{what}</div>
         <div className="truncate text-[11px] text-gray-400">
@@ -158,7 +158,7 @@ const DIRECT_MS = 1600
 function DirectBar({ change, now }: { change: DirectChange; now: number }) {
   const arrived = now - change.at >= DIRECT_MS
   return (
-    <div className="flex h-[46px] shrink-0 items-center gap-5 border-b border-gray-700/70 bg-gray-900/60 px-7" title="Catalogue changes go straight from the Herald server to the launchers (no GitHub): players see them the next time they open the catalogue.">
+    <div data-tour="publish-bar" className="flex h-[46px] shrink-0 items-center gap-5 border-b border-gray-700/70 bg-gray-900/60 px-7" title="Catalogue changes go straight from the Herald server to the launchers (no GitHub): players see them the next time they open the catalogue.">
       <div className="w-[260px] min-w-0 shrink leading-tight">
         <div className="truncate text-[12.5px] font-semibold text-white">{change.what}</div>
         <div className="truncate text-[11px] text-gray-400">Catalogue · {ago(now - change.at)}</div>

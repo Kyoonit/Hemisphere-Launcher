@@ -1342,5 +1342,100 @@
       "unknown-item": "This item is not in the catalogue any more.",
       "failed": "This item cannot be opened right now. Try again later."
     }
+  },
+  "tour": {
+    "next": "Next",
+    "back": "Back",
+    "finish": "Finish",
+    "skipPart": "Skip this part",
+    "quit": "Quit the tour",
+    "counter": "{{n}} / {{total}}",
+    "parts": {
+      "home": "Home",
+      "tabs": "Navigation",
+      "settings": "Settings"
+    },
+    "prompt": {
+      "title": "New here?",
+      "body": "A guided tour of the launcher in {{count}} steps, about 2 minutes. Skip a part or stop whenever you like.",
+      "start": "Start the tour",
+      "later": "Later",
+      "never": "No thanks"
+    },
+    "again": {
+      "title": "Guided tour",
+      "hint": "Go through the launcher again, step by step.",
+      "button": "Take the tour again"
+    },
+    "steps": {
+      "welcome": {
+        "title": "Welcome to the Hemisphere launcher",
+        "body": "Here is a quick look at everything you can do here.\nUse “Next” (or the → key), “Skip this part” when a part doesn’t interest you, or “Quit the tour” (Esc) at any time."
+      },
+      "play": {
+        "title": "Play",
+        "body": "One click on PLAY and the launcher gets everything ready: Minecraft, Java, the server’s mods and updates. Right below, you see whether all is ready and the important messages (maintenance, restart…)."
+      },
+      "sets": {
+        "title": "Presets",
+        "body": "Switch mod sets in one click: each preset keeps its own mods, resource packs and settings. Handy for a light version and a full one."
+      },
+      "server": {
+        "title": "The server, live",
+        "body": "Hemisphere’s status: online or not, the ping, the next restart and who is playing. Upcoming events show here too."
+      },
+      "playtime": {
+        "title": "Your playtime",
+        "body": "Your time on Hemisphere, counted by itself each time you play from the launcher."
+      },
+      "skin": {
+        "title": "Your skin in 3D",
+        "body": "Your account’s skin. Drag it to turn it; the 3D button opens the viewer, the wardrobe and the Patreon catalogue."
+      },
+      "links": {
+        "title": "Useful links",
+        "body": "The community Discord, the website, the world map and the server rules, one click away."
+      },
+      "newsPeek": {
+        "title": "Latest news",
+        "body": "The server’s newest post. Click it to read all the news."
+      },
+      "tabs": {
+        "title": "The tabs",
+        "body": "In the middle, PLAY always brings you back here. On the left, News and Content; on the right, your Screenshots and Settings. The red badge on News counts the posts you haven’t read yet."
+      },
+      "news": {
+        "title": "News",
+        "body": "The server’s announcements and events, and the launcher’s update history."
+      },
+      "content": {
+        "title": "Content",
+        "body": "Add your own mods, resource packs and shaders. The launcher checks they work with the server and keeps a history to go back."
+      },
+      "screenshots": {
+        "title": "Screenshots",
+        "body": "All your Minecraft screenshots, by date, to open, copy or share."
+      },
+      "account": {
+        "title": "Your account",
+        "body": "Switch Microsoft accounts, add another one or manage them from this menu."
+      },
+      "game": {
+        "title": "Game settings",
+        "body": "The memory given to Minecraft, the window size, joining the server straight away and what the launcher does once the game starts."
+      },
+      "skins": {
+        "title": "Account, skin and catalogue",
+        "body": "Your skin in 3D with its animations, the wardrobe to change skin and cape, and the Patreon catalogue to try models on before getting them."
+      },
+      "installation": {
+        "title": "Installation and help",
+        "body": "Repair the installation when something doesn’t work, bring your settings from another launcher, or report a problem to the staff in a few clicks."
+      },
+      "finish": {
+        "title": "All set!",
+        "body": "You know the essentials. Take this tour again anytime from Settings > Launcher. Have fun on Hemisphere!"
+      }
+    }
   }
 }

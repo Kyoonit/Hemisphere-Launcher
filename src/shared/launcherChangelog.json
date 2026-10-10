@@ -3,6 +3,12 @@
     "date": "2026-10-10",
     "changes": [
       {
+        "version": "next",
+        "area": "launcher",
+        "en": "A guided tour of the launcher: every part explained step by step (3 / 17…), offered on Home; skip a part or quit anytime, and take it again from Settings > Launcher.",
+        "fr": "Une visite guidée du launcher : chaque partie expliquée étape par étape (3 / 17…), proposée sur l’accueil ; passe une partie ou arrête quand tu veux, et revois-la depuis Paramètres > Launcher."
+      },
+      {
         "version": "1.4.0",
         "area": "launcher",
         "en": "Patreon catalogue in Settings > Account: try on the Patreon’s hats, items and skins in 3D before getting them, then open their Patreon page in one click.",

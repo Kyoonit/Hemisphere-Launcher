@@ -6,7 +6,7 @@ import type { Feed } from '@shared/feed'
 import { nextRestart, type RestartSchedule } from '@shared/restart'
 import { RestartBox } from './feed/RestartBox'
 import { NextEvent } from './feed/EventCards'
-import { useLiveRestart, useNow, useRoomAboveFooter } from '../hooks'
+import { useLiveRestart, useNow } from '../hooks'
 
 export default function ServerPanel({ status, feed, onOpenNews }: { status: ServerStatus | null; feed: Feed | null; onOpenNews?: () => void }) {
   const { t, i18n } = useTranslation()
@@ -18,10 +18,10 @@ export default function ServerPanel({ status, feed, onOpenNews }: { status: Serv
   const restarting = live?.phase === 'restarting'
   const maintenance = feed?.maintenance.active === true
   const online = status?.online === true && !restarting && !maintenance
-  const room = useRoomAboveFooter()
 
+  // in Home's right column, which keeps it above the footer: it gives up height first (its player list scrolls)
   return (
-    <aside ref={room.ref} style={{ maxHeight: room.max }} className="glass animate-rise absolute top-5 right-6 flex w-[268px] flex-col p-4 [animation-delay:300ms] [&>*]:flex-none">
+    <aside data-tour="server" className="glass animate-rise flex min-h-0 w-full flex-col p-4 [animation-delay:300ms] [&>*]:flex-none">
       <p className="text-xs font-bold tracking-[0.08em] text-gray-400 uppercase">{t('server.name')}</p>
 
       <div className="mt-2 flex items-center justify-between">

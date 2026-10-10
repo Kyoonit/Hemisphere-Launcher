@@ -3,6 +3,7 @@
 @import '../../../../../src/renderer/src/styles/look.css';
 @source '../../../../../src/renderer/src/components/feed';
 @source '../../../../../src/renderer/src/components/NewsImage.tsx';
+@source '../../../../../src/renderer/src/components/tour';
 
 /* Same palette as the launcher and the website (Tailwind v3 hex values) */
 @theme {

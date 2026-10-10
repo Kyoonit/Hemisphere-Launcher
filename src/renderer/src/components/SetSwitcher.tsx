@@ -75,6 +75,7 @@ export default function SetSwitcher({ onManage }: { onManage(): void }) {
     <>
       <button
         ref={button}
+        data-tour="sets"
         onClick={() => {
           setError(null)
           setOpen((o) => !o)

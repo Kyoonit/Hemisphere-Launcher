@@ -11,7 +11,7 @@ import { AnnouncementBanner, MaintenanceNotice, PlannedMaintenance, WelcomeHeadi
 import PlayZone, { useGameState } from '../components/PlayZone'
 import type { ReportCategory } from '@shared/report'
 import { useClient } from './Mods'
-import { useFeed, useNow, usePlaytime, useServerStatus, useLiveRestart, useRoomAboveFooter } from '../hooks'
+import { useFeed, useNow, usePlaytime, useServerStatus, useLiveRestart, useRoomAboveFooter, useSettings } from '../hooks'
 import type { PreflightWarning } from '@shared/settings'
 import type { AppInfo } from '@shared/ipc'
 import { byVersion, displayVersion, LAUNCHER_CHANGELOG, launcherHistory } from '@shared/launcherChangelog'
@@ -19,6 +19,7 @@ import { dayLabel, relativeDay } from '../components/LauncherUpdates'
 import type { Feed } from '@shared/feed'
 import { useAccounts } from '../accounts'
 import { HomeSkin } from '../components/skin/SkinPanels'
+import { LAUNCHER_TOUR_STEPS, startTour } from '../components/tour/launcherTour'
 import type { SessionRecap } from '@shared/game'
 
 const LINK_BUTTONS: { key: LinkKey; icon: React.ReactNode }[] = [
@@ -57,25 +58,38 @@ export default function Home({
   const client = useClient(game?.phase === 'preparing' ? 'busy' : `${game?.phase}-${game?.background}`)
   const crashed = game?.error?.code === 'crashed'
   const left = useRoomAboveFooter<HTMLDivElement>()
+  const right = useRoomAboveFooter<HTMLDivElement>()
   const page = useRef<HTMLDivElement>(null)
   const play = useRef<HTMLDivElement>(null)
+  // the guided tour's card, while it is offered
+  const [settings] = useSettings()
+  const [later, setLater] = useState(tourLater)
+  const offerTour = settings?.tour === 'new' && !later
 
   return (
     <div ref={page} className="home-pad relative flex h-full flex-col items-center px-7">
       {/* left column: one card under the other (never on top of each other), down to the footer */}
       <div ref={left.ref} style={{ maxHeight: left.max }} className="absolute top-11 left-6 flex w-[210px] flex-col gap-3 [&>*]:flex-none">
-        <PlaytimeCard />
-        <ImportPrompt onImport={onImport} />
+        {offerTour && <TourPrompt onLater={() => ((tourLater = true), setLater(true))} />}
+        <div data-tour="playtime">
+          <PlaytimeCard />
+        </div>
         <WhatsNew onSeeMore={onOpenLauncherNews} />
       </div>
-      <ServerPanel status={status} feed={feed} onOpenNews={onOpenNews} />
+      {/* right column: the server, then "coming from another launcher?" (the left one has the tour and what's new) */}
+      <div ref={right.ref} style={{ maxHeight: right.max }} className="absolute top-5 right-6 flex w-[268px] flex-col gap-3">
+        <ServerPanel status={status} feed={feed} onOpenNews={onOpenNews} />
+        <div className="flex-none empty:hidden">
+          <ImportPrompt onImport={onImport} />
+        </div>
+      </div>
 
       <section className="flex min-h-0 flex-1 flex-col items-center justify-center-safe text-center">
         {active?.status === 'expired' && <ExpiredBanner />}
         {feed?.banner && !crashed && <AnnouncementBanner banner={feed.banner} />}
         <WelcomeHeading welcome={feed?.welcome} name={active?.name ?? null} compact={crashed} />
 
-        <div ref={play} className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-2' : 'home-gap'}`}>
+        <div ref={play} data-tour="play" className={`animate-rise flex flex-col items-center [animation-delay:250ms] ${crashed ? 'mt-2' : 'home-gap'}`}>
           <PlayZone client={client ?? null} onRepair={onRepair} onOpenMods={onOpenMods} onReport={onReport} />
           <div className={`mt-1 flex min-h-6 flex-col items-center gap-1 text-[13px] text-gray-400 ${crashed ? 'empty:hidden' : ''}`}>
             <ServerNotice offline={status?.online === false} feed={feed} />
@@ -88,7 +102,7 @@ export default function Home({
       </section>
 
       <footer className="animate-rise relative z-10 flex w-full flex-none items-end justify-between gap-4 pt-4 [animation-delay:400ms]">
-        <div className="flex gap-2">
+        <div data-tour="links" className="flex gap-2">
           <button
             onClick={() => window.hemisphere.openLink('discord')}
             className="flex items-center gap-2 rounded-lg bg-discord px-4 py-[9px] text-sm font-semibold text-white shadow-md transition-all duration-300 hover:scale-[1.04] hover:bg-discord-hover"
@@ -107,11 +121,41 @@ export default function Home({
             </button>
           ))}
         </div>
-        <NewsPeek feed={feed} onOpen={onOpenNews} />
+        <div data-tour="news-peek">
+          <NewsPeek feed={feed} onOpen={onOpenNews} />
+        </div>
       </footer>
       {/* the active account's skin, between PLAY and the bottom of the page */}
       {!crashed && <HomeSkin page={page} below={play} onOpen={onOpenSkin} />}
     </div>
+  )
+}
+
+/** "Later" hides the tour's card until the launcher starts again */
+let tourLater = false
+
+/** The guided tour, offered until it was done or declined (Settings > Launcher shows it again) */
+function TourPrompt({ onLater }: { onLater(): void }) {
+  const { t } = useTranslation()
+  const [, update] = useSettings()
+  return (
+    <aside className="glass animate-rise relative px-4 py-3.5 text-left [animation-delay:300ms]">
+      <p className="flex items-center gap-1.5 text-[13.5px] font-bold text-white">
+        <Sparkles size={15} className="text-green-400" /> {t('tour.prompt.title')}
+      </p>
+      <p className="mt-1 text-[12.5px] leading-snug text-gray-300">{t('tour.prompt.body', { count: LAUNCHER_TOUR_STEPS })}</p>
+      <button onClick={startTour} className="mt-2.5 w-full rounded-lg bg-green-600 px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-green-500">
+        {t('tour.prompt.start')}
+      </button>
+      <div className="mt-1.5 flex justify-between text-[12px]">
+        <button onClick={onLater} className="font-semibold text-gray-400 hover:text-white">
+          {t('tour.prompt.later')}
+        </button>
+        <button onClick={() => void update({ tour: 'done' })} className="font-semibold text-gray-400 hover:text-white">
+          {t('tour.prompt.never')}
+        </button>
+      </div>
+    </aside>
   )
 }
 

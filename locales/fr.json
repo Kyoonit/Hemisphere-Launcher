@@ -1387,5 +1387,100 @@
       "unknown-item": "Cet article n’est plus dans le catalogue.",
       "failed": "Cet article ne peut pas être ouvert pour le moment. Réessaie plus tard."
     }
+  },
+  "tour": {
+    "next": "Suivant",
+    "back": "Retour",
+    "finish": "Terminer",
+    "skipPart": "Passer cette partie",
+    "quit": "Quitter la visite",
+    "counter": "{{n}} / {{total}}",
+    "parts": {
+      "home": "Accueil",
+      "tabs": "Navigation",
+      "settings": "Paramètres"
+    },
+    "prompt": {
+      "title": "Nouveau ici ?",
+      "body": "Une visite guidée du launcher en {{count}} étapes, environ 2 minutes. Tu peux passer une partie ou t’arrêter quand tu veux.",
+      "start": "Commencer la visite",
+      "later": "Plus tard",
+      "never": "Non merci"
+    },
+    "again": {
+      "title": "Visite guidée",
+      "hint": "Revois le tour du launcher, étape par étape.",
+      "button": "Revoir la visite"
+    },
+    "steps": {
+      "welcome": {
+        "title": "Bienvenue sur le launcher Hemisphere",
+        "body": "Voici un tour rapide de tout ce que tu peux faire ici.\nUtilise « Suivant » (ou la flèche →), « Passer cette partie » si une partie ne t’intéresse pas, ou « Quitter la visite » (Échap) à tout moment."
+      },
+      "play": {
+        "title": "Jouer",
+        "body": "Un clic sur PLAY et le launcher prépare tout : Minecraft, Java, les mods du serveur et les mises à jour. Juste en dessous, tu vois si tout est prêt et les messages importants (maintenance, redémarrage…)."
+      },
+      "sets": {
+        "title": "Préréglages",
+        "body": "Change d’ensemble de mods en un clic : chaque préréglage garde ses propres mods, packs de ressources et réglages. Pratique pour avoir une version légère et une version complète."
+      },
+      "server": {
+        "title": "Le serveur en direct",
+        "body": "L’état du serveur Hemisphere : en ligne ou non, le ping, le prochain redémarrage et les joueurs connectés. Les événements à venir s’affichent aussi ici."
+      },
+      "playtime": {
+        "title": "Ton temps de jeu",
+        "body": "Le temps passé sur Hemisphere, compté automatiquement à chaque partie lancée depuis le launcher."
+      },
+      "skin": {
+        "title": "Ton skin en 3D",
+        "body": "Le skin de ton compte. Fais-le glisser pour le faire tourner, et le bouton 3D ouvre le visualiseur, la garde-robe et le catalogue Patreon."
+      },
+      "links": {
+        "title": "Liens utiles",
+        "body": "Le Discord de la communauté, le site, la carte du monde et les règles du serveur, à un clic."
+      },
+      "newsPeek": {
+        "title": "La dernière actu",
+        "body": "La news la plus récente du serveur. Clique dessus pour lire toutes les actus."
+      },
+      "tabs": {
+        "title": "Les onglets",
+        "body": "Au centre, JOUER te ramène toujours ici. À gauche, les Actus et le Contenu ; à droite, tes Captures et les Paramètres. Le badge rouge sur Actus compte les news que tu n’as pas encore lues."
+      },
+      "news": {
+        "title": "Actus",
+        "body": "Les annonces et événements du serveur, et l’historique des mises à jour du launcher."
+      },
+      "content": {
+        "title": "Contenu",
+        "body": "Ajoute tes propres mods, packs de ressources et shaders. Le launcher vérifie qu’ils sont compatibles avec le serveur et garde un historique pour revenir en arrière."
+      },
+      "screenshots": {
+        "title": "Captures",
+        "body": "Toutes tes captures d’écran Minecraft, rangées par date, à ouvrir, copier ou partager."
+      },
+      "account": {
+        "title": "Ton compte",
+        "body": "Change de compte Microsoft, ajoutes-en un autre ou gère-les depuis ce menu."
+      },
+      "game": {
+        "title": "Paramètres du jeu",
+        "body": "La mémoire donnée à Minecraft, la taille de la fenêtre, la connexion directe au serveur et ce que fait le launcher quand le jeu démarre."
+      },
+      "skins": {
+        "title": "Compte, skin et catalogue",
+        "body": "Ton skin en 3D avec ses animations, la garde-robe pour changer de skin et de cape, et le catalogue Patreon pour essayer les modèles avant de les prendre."
+      },
+      "installation": {
+        "title": "Installation et aide",
+        "body": "Répare l’installation si quelque chose ne marche pas, importe tes réglages depuis un autre launcher, ou signale un problème au staff en quelques clics."
+      },
+      "finish": {
+        "title": "C’est tout bon !",
+        "body": "Tu connais l’essentiel. Tu peux revoir cette visite quand tu veux dans Paramètres > Launcher. Bon jeu sur Hemisphere !"
+      }
+    }
   }
 }

@@ -30,14 +30,14 @@ export default function AccountMenu({ onAddAccount, onManage }: Props) {
   if (!state || !active) return null
 
   return (
-    <div ref={ref} className="no-drag relative mr-2">
+    <div ref={ref} data-tour="account" className="no-drag relative mr-2">
       <button
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         className="flex items-center gap-2 rounded-lg py-[5px] pr-2.5 pl-[5px] transition-colors duration-150 hover:bg-gray-700"
       >
         <img src={headUrl(active.id, 52)} alt="" className="h-[26px] w-[26px] rounded [image-rendering:pixelated]" draggable={false} />
-        <b className="text-[13px] font-semibold text-white">{active.name}</b>
+        <b className="max-w-[130px] truncate text-[13px] font-semibold text-white max-[1100px]:max-w-[90px]">{active.name}</b>
         {active.status === 'expired' && <TriangleAlert size={14} className="text-amber-400" />}
         <ChevronDown size={14} className={`text-gray-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>

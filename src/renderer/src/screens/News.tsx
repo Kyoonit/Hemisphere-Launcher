@@ -70,7 +70,7 @@ export default function News({ tab, onTab }: { tab: NewsTab; onTab(tab: NewsTab)
         )}
       </div>
 
-      <div role="tablist" className="mb-5 flex gap-1 border-b border-gray-700/70">
+      <div role="tablist" data-tour="news-tabs" className="mb-5 flex gap-1 border-b border-gray-700/70">
         {(['server', 'launcher'] as const).map((k) => (
           <button
             key={k}

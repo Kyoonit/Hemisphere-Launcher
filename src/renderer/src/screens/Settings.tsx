@@ -14,6 +14,7 @@ import type { DevAccess } from '@shared/dev'
 import type { LowEndInfo } from '@shared/performance'
 import { CLEANUP_CATEGORIES, type CleanupScan } from '@shared/cleanup'
 import { SkinViewerSection } from '../components/skin/SkinPanels'
+import { startTour } from '../components/tour/launcherTour'
 
 export type Section = 'game' | 'launcher' | 'account' | 'installation' | 'backups' | 'advanced' | 'developer'
 
@@ -59,10 +60,11 @@ export default function Settings({
 
   return (
     <div className="grid h-full grid-cols-[200px_1fr]">
-      <nav className="flex flex-col gap-0.5 border-r border-white/5 bg-gray-900/50 px-3 py-6">
+      <nav data-tour="settings-nav" className="flex flex-col gap-0.5 border-r border-white/5 bg-gray-900/50 px-3 py-6">
         {SECTIONS.filter((s) => s.id !== 'developer' || devVisible).map(({ id, icon: Icon }) => (
           <button
             key={id}
+            data-tour={`settings-${id}`}
             onClick={() => setSection(id)}
             className={`flex items-center gap-2.5 rounded-lg px-3 py-[9px] text-left text-sm font-medium transition-colors duration-150 ${
               section === id ? 'bg-gray-700 text-white shadow-[inset_3px_0_0_var(--color-green-500)]' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -388,6 +390,11 @@ function LauncherSettings() {
             </option>
           ))}
         </select>
+      </Row>
+      <Row title={t('tour.again.title')} hint={t('tour.again.hint')}>
+        <button onClick={startTour} className={buttonClass}>
+          {t('tour.again.button')}
+        </button>
       </Row>
       <Row title={t('settings.startWithWindows')} hint={info.packaged ? t('settings.startWithWindowsHint') : t('settings.startWithWindowsDev')}>
         <Toggle on={settings.startWithWindows} onChange={(startWithWindows) => update({ startWithWindows })} label={t('settings.startWithWindows')} />

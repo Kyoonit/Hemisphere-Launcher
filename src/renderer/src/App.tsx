@@ -12,6 +12,8 @@ import type { Section } from './screens/Settings'
 import { useAccounts } from './accounts'
 import { requestSkinViewer } from './components/skin/activeSkin'
 import { useFeed, useLightMode, useSettings } from './hooks'
+import { Tour } from './components/tour/Tour'
+import { launcherTour, onStartTour, tourLabels } from './components/tour/launcherTour'
 
 // Home and sign-in load with the launcher; the other screens load the first time they're opened (faster start, less memory).
 // If a screen's file can't be loaded (the launcher was rebuilt or updated underneath), reload instead of a blank page.
@@ -70,6 +72,17 @@ export default function App() {
     setSettingsSection(section)
     setScreen('settings')
   }
+
+  // the guided tour: started from Home's card or Settings > Launcher; done (or declined) once is remembered
+  const [touring, setTouring] = useState(false)
+  useEffect(() => onStartTour(() => setTouring(true)), [])
+  const tourSteps = launcherTour(t, {
+    home: () => setScreen('home'),
+    news: () => (setNewsTab('server'), setScreen('news')),
+    content: () => (setContentTab('mods'), setScreen('mods')),
+    screenshots: () => setScreen('screenshots'),
+    settings: openSettings,
+  })
 
   return (
     <div className="relative h-full overflow-clip">
@@ -137,6 +150,16 @@ export default function App() {
             </Suspense>
           )}
         </main>
+      )}
+      {touring && !showLogin && (
+        <Tour
+          steps={tourSteps}
+          labels={tourLabels(t)}
+          onClose={() => {
+            setTouring(false)
+            void updateSettings({ tour: 'done' })
+          }}
+        />
       )}
       {/* Required by Minecraft's usage guidelines for anything built around the game. */}
       <p className="pointer-events-none absolute inset-x-0 bottom-0 h-5 truncate px-4 text-center text-[11px] leading-5 text-gray-500">

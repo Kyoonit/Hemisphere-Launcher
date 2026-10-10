@@ -5,6 +5,7 @@ import { useStore } from '../store'
 import { Avatar } from './ui'
 import { usePubs } from '../pubs'
 import { attention } from '../screens/Home'
+import { startTour } from '../tour'
 
 export type Tab = 'home' | 'publications' | 'preview' | 'server' | 'backgrounds' | 'pack' | 'catalogue' | 'team' | 'settings' | 'launcher'
 
@@ -51,9 +52,9 @@ export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Ta
       </div>
       {staging && <span className="rounded-full border border-amber-400/30 bg-amber-400/15 px-2 text-[10.5px] font-bold tracking-wider text-amber-400">STAGING</span>}
       {tab && (
-        <nav className="no-drag ml-1 flex gap-1">
+        <nav data-tour="tabs" className="no-drag ml-1 flex gap-1">
           {TABS.filter((t) => !t.needs || t.needs.some(can)).map((t) => (
-            <button key={t.id} className={`rounded-lg px-3 py-1.5 text-[13.5px] font-medium whitespace-nowrap ${tab === t.id ? 'bg-green-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => onTab(t.id)}>
+            <button key={t.id} data-tour={`tab-${t.id}`} className={`rounded-lg px-3 py-1.5 text-[13.5px] font-medium whitespace-nowrap ${tab === t.id ? 'bg-green-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`} onClick={() => onTab(t.id)}>
               {t.label}
               {t.id === 'home' && reminders > 0 && (
                 <span className="ml-1.5 rounded-full bg-amber-400 px-1.5 text-[11px] font-bold text-gray-900" title={`${reminders} publication${reminders === 1 ? '' : 's'} need${reminders === 1 ? 's' : ''} attention`}>
@@ -80,7 +81,7 @@ export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Ta
               </button>
             )}
             <div ref={menuBox} className="no-drag relative mr-1">
-              <button className="flex items-center gap-2 rounded-lg py-1 pr-2.5 pl-1.5 text-[13px] hover:bg-gray-700" onClick={() => setMenu(!menu)}>
+              <button data-tour="profile" className="flex items-center gap-2 rounded-lg py-1 pr-2.5 pl-1.5 text-[13px] hover:bg-gray-700" onClick={() => setMenu(!menu)}>
                 <Avatar name={me.name} size={26} />
                 <span className="font-semibold text-white">{me.name}</span>
                 <span className="text-gray-400">▾</span>
@@ -99,6 +100,9 @@ export function TitleBar({ tab, onTab, staging }: { tab: Tab | null; onTab(t: Ta
                       Launcher settings…
                     </button>
                   )}
+                  <button className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onClick={() => (startTour(), setMenu(false))}>
+                    Take the tour
+                  </button>
                   <hr className="my-1 border-gray-700" />
                   <button className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white" onClick={() => void signOut()}>
                     Sign out

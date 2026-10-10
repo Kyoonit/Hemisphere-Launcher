@@ -25,6 +25,8 @@ export interface Settings {
   startWithWindows: boolean
   /** The "coming from another launcher?" card on Home was dismissed */
   importPromptDismissed: boolean
+  /** The guided tour: offered on Home until it was done or declined (it can be seen again from Settings > Launcher) */
+  tour: 'new' | 'done'
   /** News ids the player has already seen (opening the News page marks them) */
   seenNews: string[]
   /** Client version whose "What's new" was shown or dismissed */
@@ -71,6 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   jvmArgs: '',
   startWithWindows: false,
   importPromptDismissed: false,
+  tour: 'new',
   seenNews: [],
   seenChangelog: null,
   seenLauncherVersion: null,

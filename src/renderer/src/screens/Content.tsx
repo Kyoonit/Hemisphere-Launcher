@@ -43,7 +43,7 @@ export default function Content({
         {client ? t('mods.subtitle', { version: client.clientVersion, minecraft: client.minecraft }) : ' '}
       </p>
       <div className="mt-1.5 flex items-center justify-between gap-3">
-        <div role="tablist" aria-label={t('nav.mods')} className="flex flex-none gap-1 rounded-xl bg-gray-800/70 p-1">
+        <div role="tablist" data-tour="content-tabs" aria-label={t('nav.mods')} className="flex flex-none gap-1 rounded-xl bg-gray-800/70 p-1">
           {TABS.map(({ id, icon: Icon }) => (
             <button
               key={id}
