@@ -1,6 +1,7 @@
 import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
 import type { SkinInfo, Wardrobe, WardrobeResult } from './skins'
+import type { ModelFile } from './models'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport, SessionRecap } from './game'
 import type { PreflightWarning, Settings, SystemInfo } from './settings'
 import type { FeedView } from './schedule'
@@ -46,6 +47,7 @@ export const IPC = {
   skinsRemove: 'skins:remove',
   skinsWear: 'skins:wear',
   skinsCape: 'skins:cape',
+  skinsPickModel: 'skins:pick-model',
   authSignIn: 'auth:sign-in',
   authCancel: 'auth:cancel',
   authSwitch: 'auth:switch',
@@ -390,6 +392,8 @@ export interface HemisphereApi {
     wear(hash: string, slim: boolean): Promise<WardrobeResult>
     /** shows one of the account's capes, or none */
     cape(id: string | null): Promise<WardrobeResult>
+    /** staff: model files picked in a file dialog (.bbmodel, or .json with its PNGs), to try on in the viewer */
+    pickModel(): Promise<{ ok: true; files: ModelFile[] } | { ok: false; error: 'cancelled' | 'notAllowed' | 'tooBig' | 'notPng' }>
   }
   game: {
     getState(): Promise<GameState>

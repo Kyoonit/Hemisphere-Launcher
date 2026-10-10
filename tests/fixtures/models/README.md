@@ -1,0 +1,1 @@
+Test models for tests/models.test.ts, drawn by a script for the launcher (no third-party content): a Blockbench top hat, a Minecraft JSON crown (tilted cubes, parent block/block) and a flat sword (parent item/handheld).

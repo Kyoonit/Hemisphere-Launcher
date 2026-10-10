@@ -41,6 +41,8 @@ export interface DevState {
   preflight: boolean
   /** your own Discord application id, to try the Discord status before staff publish theirs */
   discordAppId: string
+  /** Settings > Account: open a model file (.bbmodel, .json + PNG) and try it on in the viewer */
+  modelTester: boolean
   /** when the sample events / restart were switched on (their times are relative to it) */
   base: number
 }
@@ -54,6 +56,7 @@ export const DEFAULT_DEV: DevState = {
   launcherUpdate: 'real',
   preflight: false,
   discordAppId: '',
+  modelTester: false,
   base: 0,
 }
 

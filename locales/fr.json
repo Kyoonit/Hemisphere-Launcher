@@ -1209,6 +1209,8 @@
     },
     "preflight": "Alertes disque et mémoire faibles",
     "preflightHint": "Les alertes affichées avant Jouer.",
+    "modelTester": "Tester un modèle",
+    "modelTesterHint": "Paramètres > Compte : ouvrir un modèle Blockbench ou JSON Minecraft et l’essayer dans le visualiseur 3D.",
     "shotsAdd": "Ajouter 6 captures d’exemple",
     "shotsRemove": "Retirer les captures d’exemple",
     "openData": "Ouvrir le dossier de données du launcher",
@@ -1276,6 +1278,24 @@
     "close": "Fermer"
   },
   "skins": {
+    "models": {
+      "title": "Staff : tester un modèle",
+      "hint": "Un projet Blockbench (.bbmodel), ou un modèle JSON Minecraft avec ses textures PNG (sélectionne-les ensemble). Affiché ici seulement, gardé nulle part.",
+      "pick": "Ouvrir des fichiers de modèle…",
+      "remove": "L’enlever",
+      "entity": "Modèle d’entité : placé sur tout le corps",
+      "slots": {
+        "head": "Sur la tête",
+        "righthand": "Main droite",
+        "lefthand": "Main gauche"
+      },
+      "errors": {
+        "notAllowed": "Active d’abord « Tester un modèle » dans l’onglet Développeur.",
+        "tooBig": "Ces fichiers sont trop lourds (16 Mo au maximum).",
+        "notPng": "Une des textures n’est pas un PNG.",
+        "unreadable": "Ce modèle ne peut pas être lu : {{detail}}"
+      }
+    },
     "title": "Ton skin",
     "hint": "Le skin du compte actif, tel que les autres joueurs le voient. Fais-le tourner en le faisant glisser, zoome avec la molette.",
     "defaultHint": "Ce compte affiche le skin par défaut (compte de test hors ligne, ou Mojang n’a pas encore pu être interrogé).",

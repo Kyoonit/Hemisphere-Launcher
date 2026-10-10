@@ -1164,6 +1164,8 @@
     },
     "preflight": "Low disk and low RAM warnings",
     "preflightHint": "The warnings shown before PLAY.",
+    "modelTester": "Test a model",
+    "modelTesterHint": "Settings > Account: open a Blockbench or Minecraft JSON model and try it on in the 3D viewer.",
     "shotsAdd": "Add 6 sample screenshots",
     "shotsRemove": "Remove the sample screenshots",
     "openData": "Open the launcher’s data folder",
@@ -1231,6 +1233,24 @@
     "close": "Close"
   },
   "skins": {
+    "models": {
+      "title": "Staff: test a model",
+      "hint": "A Blockbench project (.bbmodel), or a Minecraft JSON model with its PNG textures (select them together). Shown here only, kept nowhere.",
+      "pick": "Open model files…",
+      "remove": "Take it off",
+      "entity": "Entity model: placed on the whole body",
+      "slots": {
+        "head": "On the head",
+        "righthand": "Right hand",
+        "lefthand": "Left hand"
+      },
+      "errors": {
+        "notAllowed": "Switch on “Test a model” in the Developer tab first.",
+        "tooBig": "These files are too big (16 MB at most).",
+        "notPng": "One of the textures isn’t a PNG.",
+        "unreadable": "This model can’t be read: {{detail}}"
+      }
+    },
     "title": "Your skin",
     "hint": "The skin of the active account, as other players see it. Drag to turn it, scroll to zoom.",
     "defaultHint": "This account shows the default skin (offline test account, or Mojang could not be asked yet).",

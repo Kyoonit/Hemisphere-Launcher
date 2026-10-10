@@ -206,6 +206,7 @@ const api: HemisphereApi = {
     remove: (hash) => ipcRenderer.invoke(IPC.skinsRemove, hash),
     wear: (hash, slim) => ipcRenderer.invoke(IPC.skinsWear, hash, slim),
     cape: (id) => ipcRenderer.invoke(IPC.skinsCape, id),
+    pickModel: () => ipcRenderer.invoke(IPC.skinsPickModel),
   },
   game: {
     getState: () => ipcRenderer.invoke(IPC.gameState),

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Box, RefreshCw } from 'lucide-react'
-import { SKIN_ANIMATIONS, SkinView, takeSkinViewerRequest, useActiveSkin, type BackItem, type SkinAnimation } from './SkinView'
+import { SKIN_ANIMATIONS, SkinView, takeSkinViewerRequest, useActiveSkin, type BackItem, type SkinAnimation, type WornModel } from './SkinView'
+import { ModelTester } from './ModelTester'
 import type { SkinInfo, WardrobeSkin } from '@shared/skins'
 import { Wardrobe } from './Wardrobe'
 
@@ -102,6 +103,7 @@ export function SkinViewerSection() {
   const [opts, setOpts] = useState(saved)
   // a wardrobe skin tried on in the viewer (with the account's cape), not worn yet
   const [preview, setPreview] = useState<WardrobeSkin | null>(null)
+  const [worn, setWorn] = useState<WornModel[]>([])
   const skin: SkinInfo | null = own && preview ? { ...own, skin: preview.skin, slim: preview.slim, fallback: false } : own
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -131,7 +133,7 @@ export function SkinViewerSection() {
               </button>
             </div>
           )}
-          {skin ? <SkinView skin={skin} width={260} height={340} interactive animation={opts.animation} outerLayer={opts.outer} back={opts.back} autoRotate={opts.rotate} /> : <div className="skeleton h-[300px] w-[200px] rounded-lg" />}
+          {skin ? <SkinView skin={skin} width={260} height={340} interactive animation={opts.animation} outerLayer={opts.outer} back={opts.back} autoRotate={opts.rotate} worn={worn} /> : <div className="skeleton h-[300px] w-[200px] rounded-lg" />}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-4 text-sm">
           <div>
@@ -178,6 +180,7 @@ export function SkinViewerSection() {
           </button>
         </div>
       </div>
+      <ModelTester onWear={setWorn} />
       <Wardrobe preview={preview} onPreview={setPreview} />
     </div>
   )

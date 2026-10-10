@@ -1,12 +1,12 @@
 
 import { app, BrowserWindow, clipboard, dialog, Menu, nativeImage, screen, shell } from 'electron'
 import { existsSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { gamePaths } from './core/game/target'
 import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
 import type { FeedView } from '@shared/schedule'
-import { getSkin } from './core/skins/skins'
+import { getSkin, pngSize } from './core/skins/skins'
 import { editSkin, getWardrobe, importFile, importPlayer, keepFromHistory, removeSkin, wearCape, wearSkin } from './core/skins/wardrobe'
 import { getServerStatus, startStatusPolling, refreshStatusNow } from './core/status/serverStatus'
 import { getPlaytime } from './core/playtime/playtimeStore'
@@ -61,7 +61,7 @@ import { nextRestart, type LiveRestart } from '@shared/restart'
 import { checkDiscordAppId, devCodeChanged, devEnabled, devFeed, devPreflight, devStatus, devUnlocked, devUpdate, getDevState, lockDev, lockIfCodeChanged, runDevAction, setDevState, unlockDev, unlockWait } from './core/dev/devTools'
 import { DEV_ACTIONS, DEFAULT_DEV, type DevAction, type DevState } from '@shared/dev'
 import { eventIcs } from '@shared/events'
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { REPORT_CATEGORIES, REPORT_FREQUENCY, REPORT_PARTS, REPORT_WHEN, type ReportDraft } from '@shared/report'
 import { deleteSet, duplicateSet, importSetCode, isSetId, keepImportInPreset, listSets, presetForImport, renameSet, saveSet, shareSet, switchSet } from './core/backup/modSets'
 import { exportSetup, importSetup, readSetup, rememberSetup, SETUP_EXTENSION, summarize, takeSetup } from './core/backup/setup'
@@ -222,6 +222,27 @@ function registerIpc(): void {
   }
   handle(IPC.skinsWear, (_e, hash: unknown, slim: unknown) => changed(wearSkin(hash, slim)))
   handle(IPC.skinsCape, (_e, id: unknown) => changed(wearCape(id)))
+  // staff only: try a model file on before it is in the catalogue (read here, shown in the viewer, kept nowhere)
+  handle(IPC.skinsPickModel, async () => {
+    if (!devEnabled() || !getDevState().modelTester) return { ok: false, error: 'notAllowed' }
+    const pick = await dialog.showOpenDialog(win!, { properties: ['openFile', 'multiSelections'], title: 'Model', filters: [{ name: 'Blockbench / Minecraft model', extensions: ['bbmodel', 'json', 'png'] }] })
+    if (pick.canceled || !pick.filePaths.length) return { ok: false, error: 'cancelled' }
+    const files: { name: string; content: string; width?: number; height?: number }[] = []
+    let total = 0
+    for (const path of pick.filePaths.slice(0, 64)) {
+      const b = await readFile(path)
+      total += b.length
+      if (total > 16 * 1024 * 1024) return { ok: false, error: 'tooBig' }
+      const name = basename(path)
+      if (!/.png$/i.test(name)) files.push({ name, content: b.toString('utf8') })
+      else {
+        const size = pngSize(b)
+        if (!size) return { ok: false, error: 'notPng' }
+        files.push({ name, content: `data:image/png;base64,${b.toString('base64')}`, ...size })
+      }
+    }
+    return { ok: true, files }
+  })
   handle(IPC.authSignIn, async (_e, language: unknown) => {
     const result = await signIn(typeof language === 'string' ? language : 'en')
     if (win) {

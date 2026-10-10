@@ -182,6 +182,9 @@ export default function Developer({ access, onLocked }: { access: DevAccess; onL
         <Line label={t('dev.preflight')} hint={t('dev.preflightHint')}>
           <Toggle on={state.preflight} label={t('dev.preflight')} onChange={(preflight) => set({ preflight })} />
         </Line>
+        <Line label={t('dev.modelTester')} hint={t('dev.modelTesterHint')}>
+          <Toggle on={state.modelTester} label={t('dev.modelTester')} onChange={(modelTester) => set({ modelTester })} />
+        </Line>
       </Group>
 
       <Group icon={Image} title={t('dev.groups.files')}>

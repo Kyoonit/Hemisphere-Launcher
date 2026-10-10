@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { CrouchAnimation, FlyingAnimation, IdleAnimation, RunningAnimation, SkinViewer, WalkingAnimation, WaveAnimation, type PlayerAnimation } from 'skinview3d'
 import type { SkinInfo } from '@shared/skins'
 import { useAccounts } from '../../accounts'
+import type { ModelData } from '@shared/models'
+import { bodyPart, buildModel, disposeModel, type WornSlot } from './modelMesh'
+
+/** A model worn by the player in a view (Patreon try-on) */
+export interface WornModel {
+  model: ModelData
+  slot: WornSlot
+}
 
 /**
  * A Minecraft skin in 3D (skinview3d, on three.js). Still pictures (Home) draw one frame and stop; the viewer (Settings >
@@ -19,6 +27,8 @@ const ANIMATION: Record<Exclude<SkinAnimation, 'none'>, () => PlayerAnimation> =
 }
 export type BackItem = 'cape' | 'elytra' | 'none'
 
+const NONE: WornModel[] = []
+
 export function SkinView({
   skin,
   width,
@@ -29,6 +39,7 @@ export function SkinView({
   back = 'cape',
   autoRotate = false,
   dragTurn = false,
+  worn = NONE,
   className = '',
 }: {
   skin: SkinInfo
@@ -42,6 +53,8 @@ export function SkinView({
   autoRotate?: boolean
   /** a still picture the player can turn on itself by dragging it sideways */
   dragTurn?: boolean
+  /** models on the head or in the hands */
+  worn?: WornModel[]
   className?: string
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -121,6 +134,32 @@ export function SkinView({
     const frame = requestAnimationFrame(() => v.render())
     return () => cancelAnimationFrame(frame)
   }, [width, height])
+
+  // worn models: built, attached to their body part (they follow its animation), freed when they change
+  useEffect(() => {
+    const v = viewer.current
+    if (!v) return
+    // room for what's above the head or in the hands
+    v.zoom = (interactive ? 0.85 : 0.95) * (worn.length ? 0.78 : 1)
+    if (!worn.length) return v.render()
+    let cancelled = false
+    const built: Awaited<ReturnType<typeof buildModel>>[] = []
+    void Promise.all(
+      worn.map(async (w) => {
+        const g = await buildModel(w.model, w.slot)
+        if (cancelled) return disposeModel(g)
+        built.push(g)
+        bodyPart(v, w.model, w.slot).add(g)
+      }),
+    )
+      .then(() => !cancelled && v.render())
+      .catch((err) => console.warn('[skin] model:', err))
+    return () => {
+      cancelled = true
+      built.forEach(disposeModel)
+      v.render()
+    }
+  }, [worn, interactive, dragTurn]) // a new viewer gets them again
 
   // skin, cape, layers, animation: a still picture draws again once everything is in place, then stops
   useEffect(() => {
