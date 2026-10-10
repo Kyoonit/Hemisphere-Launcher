@@ -7,6 +7,7 @@ import { IPC, LINKS, type AppInfo, type LinkKey } from '@shared/ipc'
 import type { ServerStatus } from '@shared/server'
 import type { FeedView } from '@shared/schedule'
 import { getSkin, pngSize } from './core/skins/skins'
+import { listShop, shopItem, shopThumbnail } from './core/catalogue/shop'
 import { editSkin, getWardrobe, importFile, importPlayer, keepFromHistory, removeSkin, wearCape, wearSkin } from './core/skins/wardrobe'
 import { getServerStatus, startStatusPolling, refreshStatusNow } from './core/status/serverStatus'
 import { getPlaytime } from './core/playtime/playtimeStore'
@@ -223,6 +224,9 @@ function registerIpc(): void {
   handle(IPC.skinsWear, (_e, hash: unknown, slim: unknown) => changed(wearSkin(hash, slim)))
   handle(IPC.skinsCape, (_e, id: unknown) => changed(wearCape(id)))
   // staff only: try a model file on before it is in the catalogue (read here, shown in the viewer, kept nowhere)
+  handle(IPC.shopList, () => listShop())
+  handle(IPC.shopThumbnail, (_e, id: unknown) => shopThumbnail(id))
+  handle(IPC.shopItem, (_e, id: unknown) => shopItem(id))
   handle(IPC.skinsPickModel, async () => {
     if (!devEnabled() || !getDevState().modelTester) return { ok: false, error: 'notAllowed' }
     const pick = await dialog.showOpenDialog(win!, { properties: ['openFile', 'multiSelections'], title: 'Model', filters: [{ name: 'Blockbench / Minecraft model', extensions: ['bbmodel', 'json', 'png'] }] })

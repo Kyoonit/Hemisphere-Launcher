@@ -5,6 +5,7 @@
  */
 import type { Permission } from './heraldRoles'
 import { ModelError, readModel, type ModelFile } from './models'
+import { pngProblem } from './png'
 
 export const CATALOGUE_KINDS = ['model', 'skin'] as const
 export type CatalogueKind = (typeof CATALOGUE_KINDS)[number]
@@ -172,6 +173,9 @@ export function filesProblem(kind: CatalogueKind, files: { name: string; bytes: 
     if (/\.png$/i.test(f.name)) {
       const s = pngHeaderSize(f.bytes)
       if (!s || s.width > 4096 || s.height > 4096) return `“${f.name}” is not a PNG picture.`
+      // the launchers get textures marked for each player: Herald must be able to read their pixels
+      const problem = pngProblem(f.bytes)
+      if (problem) return `“${f.name}” is ${problem}.`
     }
   }
   if (total > MAX_FILES_BYTES) return 'These files are too big together (8 MB at most).'
@@ -180,7 +184,11 @@ export function filesProblem(kind: CatalogueKind, files: { name: string; bytes: 
     return s && s.width === 64 && (s.height === 64 || s.height === 32) ? null : 'A skin is one PNG of 64×64 (or 64×32) pixels.'
   }
   try {
-    readModel(toModelFiles(files))
+    // textures inside a Blockbench project too
+    for (const t of readModel(toModelFiles(files)).textures) {
+      const problem = pngProblem(Uint8Array.from(atob(t.src.slice(t.src.indexOf(',') + 1)), (c) => c.charCodeAt(0)))
+      if (problem) return `The texture “${t.name}” is ${problem}.`
+    }
     return null
   } catch (err) {
     return err instanceof ModelError ? `The model can’t be read: ${err.message}.` : 'The model can’t be read.'

@@ -4,7 +4,7 @@
  * for Discord. An item stays on Herald only until it is shown in the launchers (Patreon link needed).
  */
 import { useEffect, useMemo, useState } from 'react'
-import type { ApiResult } from '@herald/api'
+import type { ApiResult, BlockedPlayer, TraceResult } from '@herald/api'
 import { CATALOGUE_SLOTS, EMPTY_SHEET, sheetProblems, toModelFiles, type CatalogueItem, type CatalogueKind, type CatalogueSheet, type CatalogueStatus } from '@shared/heraldCatalogue'
 import { readModel, type ModelData } from '@shared/models'
 import { withAlpha } from '@launcher/components/skin/modelMesh'
@@ -28,6 +28,7 @@ export default function Catalogue() {
   const [open, setOpen] = useState<string | null>(null)
   const [filter, setFilter] = useState<CatalogueStatus | 'all'>('all')
   const [adding, setAdding] = useState(false)
+  const [tracing, setTracing] = useState(false)
 
   const load = async () => {
     const res = await window.herald.api<{ items: CatalogueItem[] }>('GET', '/catalogue')
@@ -52,11 +53,18 @@ export default function Catalogue() {
           <h1 className="mt-1 text-2xl font-bold text-white">Catalogue</h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-400">Models and skins from the Patreon. Keep them here to try them on and make pictures for Discord; show them in the launchers when they are on Patreon, with their link.</p>
         </div>
-        {can('catalogue.write') && (
-          <button className="btn btn-primary" onClick={() => setAdding(true)}>
-            + New item
-          </button>
-        )}
+        <div className="flex gap-2">
+          {can('catalogue.publish') && (
+            <button className="btn" onClick={() => setTracing(true)} title="Every player gets the textures with an invisible mark of their own">
+              Trace a leaked texture
+            </button>
+          )}
+          {can('catalogue.write') && (
+            <button className="btn btn-primary" onClick={() => setAdding(true)}>
+              + New item
+            </button>
+          )}
+        </div>
       </div>
       <div className="mb-4 flex flex-wrap gap-1.5">
         {(['all', 'draft', 'published', 'hidden'] as const).map((f) => (
@@ -74,6 +82,7 @@ export default function Catalogue() {
           ))}
         </div>
       )}
+      {tracing && <Trace onClose={() => setTracing(false)} />}
       {adding && <NewItem onClose={() => setAdding(false)} onCreated={(i) => (replace(i), setAdding(false), setOpen(i.id))} />}
     </div>
   )
@@ -95,6 +104,95 @@ function ItemCard({ item, onOpen }: { item: CatalogueItem; onOpen(): void }) {
       </div>
       <span className={`w-fit rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_STYLE[item.status]}`}>{STATUS_LABEL[item.status]}</span>
     </button>
+  )
+}
+
+/** A texture found elsewhere: who it was given to, from the mark hidden in it */
+function Trace({ onClose }: { onClose(): void }) {
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<ApiResult<TraceResult> | null>(null)
+  const [blocked, setBlocked] = useState<BlockedPlayer[]>([])
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    void window.herald.api<{ players: BlockedPlayer[] }>('GET', '/catalogue/blocked').then((r) => r.ok && setBlocked(r.data.players))
+  }, [])
+  const setBlock = async (id: string, block: boolean) => {
+    const r = await window.herald.api<{ players: BlockedPlayer[] }>('POST', `/catalogue/players/${id}/block`, { blocked: block })
+    if (!r.ok) return setError(r.error)
+    setError(null)
+    setBlocked(r.data.players)
+    setResult((x) => (x?.ok && x.data.found && x.data.player.id === id ? { ...x, data: { ...x.data, player: { ...x.data.player, blockedAt: block ? Date.now() : null } } } : x))
+  }
+  const pick = async () => {
+    setBusy(true)
+    const r = await window.herald.catalogue.trace()
+    setBusy(false)
+    if (r) setResult(r)
+  }
+  const day = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  return (
+    <Modal title="Trace a leaked texture" onClose={onClose}>
+      <p className="mb-3 text-sm text-gray-300">
+        Every player receives the catalogue’s textures with an invisible mark of their own. Pick a texture found elsewhere (the PNG as found: a resized picture or a
+        JPEG loses the mark) to see who it was given to.
+      </p>
+      {result && !result.ok && <p className="mb-3 text-sm text-red-400">{result.error}</p>}
+      {result?.ok && !result.data.found && <p className="mb-3 rounded-md bg-gray-800 p-3 text-sm text-gray-300">No mark found: not a texture from the catalogue, or it was changed too much.</p>}
+      {result?.ok && result.data.found && (
+        <div className="mb-3 rounded-md border border-amber-600/40 bg-amber-600/10 p-3 text-sm">
+          <p className="text-white">
+            Given to <b>{result.data.player.name}</b> <span className="text-xs text-gray-400">({result.data.player.id})</span>
+          </p>
+          <p className="mt-0.5 text-xs text-gray-400">
+            First seen {day(result.data.player.firstAt)}, last {day(result.data.player.lastAt)}
+          </p>
+          {result.data.player.blockedAt ? (
+            <p className="mt-2 text-xs font-semibold text-red-400">Blocked from the catalogue since {day(result.data.player.blockedAt)}</p>
+          ) : (
+            <button className="btn btn-sm mt-2 border-red-600/50 text-red-300" onClick={() => result.data.found && void setBlock(result.data.player.id, true)}>
+              Block from the catalogue
+            </button>
+          )}
+          {result.data.received.length > 0 && (
+            <ul className="mt-2 space-y-0.5 text-xs text-gray-300">
+              {result.data.received.map((r) => (
+                <li key={`${r.itemId}-${r.version}`}>
+                  {r.name} (version {r.version}) · {day(r.firstAt)}
+                  {r.count > 1 && ` · ${r.count} times`}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {error && <p className="mb-3 text-sm text-red-400">{error}</p>}
+      {blocked.length > 0 && (
+        <div className="mb-3">
+          <label className="label">Blocked players</label>
+          <p className="mb-1.5 text-xs text-gray-400">They get nothing more from the catalogue; what their launcher kept stops opening within 30 days.</p>
+          <ul className="space-y-1">
+            {blocked.map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-2 rounded-md bg-gray-800 px-2.5 py-1.5 text-sm">
+                <span>
+                  <b className="text-white">{p.name}</b> <span className="text-xs text-gray-400">since {day(p.blockedAt)}</span>
+                </span>
+                <button className="btn btn-sm btn-ghost" onClick={() => void setBlock(p.id, false)}>
+                  Unblock
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="flex justify-end gap-2">
+        <button className="btn btn-ghost" onClick={onClose}>
+          Close
+        </button>
+        <button className="btn btn-primary" disabled={busy} onClick={() => void pick()}>
+          {busy ? 'Reading…' : result ? 'Another picture…' : 'Pick the picture…'}
+        </button>
+      </div>
+    </Modal>
   )
 }
 

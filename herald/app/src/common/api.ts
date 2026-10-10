@@ -9,6 +9,23 @@ import type { ClientManifest, ContentIndex } from '@shared/manifest'
 import type { DraftMod, MinecraftRelease, ModReadiness, MrHit, PackProposal, Resolved } from '@shared/heraldPack'
 import type { CatalogueItem } from '@shared/heraldCatalogue'
 
+/** Who a texture found elsewhere was given to (POST /catalogue/trace) */
+export type TraceResult =
+  | { found: false }
+  | {
+      found: true
+      player: { id: string; name: string; firstAt: number; lastAt: number; blockedAt: number | null }
+      received: { itemId: string; name: string; version: number; firstAt: number; lastAt: number; count: number }[]
+    }
+
+/** A player blocked from the catalogue (GET /catalogue/blocked) */
+export interface BlockedPlayer {
+  id: string
+  name: string
+  blockedAt: number
+  blockedBy: string | null
+}
+
 /** A player wearing things in the catalogue studio */
 export interface StudioPlayer {
   name: string
@@ -203,6 +220,8 @@ export interface HeraldBridge {
     copyImage(png: Uint8Array): Promise<boolean>
     /** a player's skin and cape (Mojang), or Steve */
     player(name: string): Promise<StudioPlayer | null>
+    /** pick a texture found elsewhere: who it was given to (null = nothing picked) */
+    trace(): Promise<ApiResult<TraceResult> | null>
   }
 }
 

@@ -12,6 +12,7 @@ const png = (w: number, h: number) => {
   b.set([...'IHDR'].map((c) => c.charCodeAt(0)), 12)
   new DataView(b.buffer).setUint32(16, w)
   new DataView(b.buffer).setUint32(20, h)
+  b.set([8, 6], 24) // 8-bit RGBA
   return b
 }
 

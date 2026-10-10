@@ -34,7 +34,7 @@ const MAX_PICTURE = 2 * 1024 * 1024
 
 const MAX_FEED = 512 * 1024
 const dev = () => !app.isPackaged
-const heraldUrl = () => ((dev() && import.meta.env?.MAIN_VITE_HERALD_URL) || HERALD_URL).replace(/\/$/, '')
+export const heraldUrl = () => ((dev() && import.meta.env?.MAIN_VITE_HERALD_URL) || HERALD_URL).replace(/\/$/, '')
 const keyB64 = () => (dev() && import.meta.env?.MAIN_VITE_HERALD_PUBLIC_KEY) || CONTENT_PUBLIC_KEY
 /** A test key gets its own cache: test content can never stay behind in the real one (sequence protection). */
 const cacheDir = () => join(app.getPath('userData'), 'content-cache', keyB64() === CONTENT_PUBLIC_KEY ? 'v2' : 'v2-test')

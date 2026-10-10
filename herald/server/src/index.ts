@@ -16,6 +16,7 @@
  *   GET  /activity               the full shared journal (filters, older pages) (S11)
  *   GET  /settings/history/<key> every version of a setting Herald edits (backgrounds, launcher settings, templates)
  *   POST /templates/publications publication templates (S11)
+ *   …    /player/…, /shop…        the catalogue in the launchers: verified players, sealed items marked for each (shop.ts)
  *   GET  /update/<file>          Herald app updates (signed-in staff only), from the private releases repository
  *   GET  /pulse                  PUBLIC: last sequence + commit; launchers read the feed at that exact commit (raw
  *                                 by commit is never cached, plain raw is cached up to 5 min): emergencies in minutes
@@ -41,6 +42,7 @@ import { approvePack, getPack, packForJob, packJobFinished, proposePack, rejectP
 import { authenticate, bootstrap, createProfile, deleteProfile, HttpError, listProfiles, login, logout, newProfileCode, sync, testProfile, updateProfile, type Actor } from './accounts'
 import * as pubs from './publications'
 import * as catalogue from './catalogue'
+import * as shop from './shop'
 import * as server from './serverState'
 
 export interface Env extends GithubEnv {
@@ -57,6 +59,8 @@ export interface Env extends GithubEnv {
   /** One-time secret to create the Owner and Developer profiles (removed afterwards) */
   BOOTSTRAP_TOKEN?: string
   DEV_TOKEN?: string
+  /** local tests only: a stand-in for Mojang's session server */
+  MOJANG_SESSION?: string
   /** The version of this server that answers (wrangler.toml [version_metadata]) */
   CF_VERSION?: { id: string; tag: string; timestamp: string }
 }
@@ -79,6 +83,8 @@ export default {
       if (content) return content
       const catalogue = await catalogueRoute(req, env, path)
       if (catalogue) return catalogue
+      const shopAnswer = await shopRoute(req, env, path)
+      if (shopAnswer) return shopAnswer
       const key = path.match(/^\/vault-key\/([a-z0-9-]{1,80})$/)
       if (req.method === 'GET' && key) return await vaultKey(env, key[1])
       const sealKey = path.match(/^\/content-key\/((?:feed|pack)-[0-9a-f]{24})$/)
@@ -105,7 +111,7 @@ export default {
       }
       return json({ error: 'not found' }, 404)
     } catch (err) {
-      if (err instanceof HttpError) return json({ error: err.message }, err.status)
+      if (err instanceof HttpError) return json({ error: err.message, ...(shop.isBlocked(err) ? { blocked: true } : {}) }, err.status)
       console.error(err)
       return json({ error: err instanceof Error ? err.message : String(err) }, 400)
     }
@@ -301,9 +307,13 @@ async function publicationRoute(req: Request, env: Env, ctx: ExecutionContext, p
 /** Catalogue routes (null = not one of them). */
 async function catalogueRoute(req: Request, env: Env, path: string): Promise<Response | null> {
   const one = path.match(/^\/catalogue\/(c-[a-z0-9]{10})(?:\/(files|original|version|status|thumbnail|delete))?$/)
-  if (path !== '/catalogue' && !one) return null
+  const blockOne = path.match(/^\/catalogue\/players\/([0-9a-f]{32})\/block$/)
+  if (path !== '/catalogue' && path !== '/catalogue/trace' && path !== '/catalogue/blocked' && !blockOne && !one) return null
   const actor = await authenticate(env, req)
   const body = async () => (await req.json().catch(() => ({}))) as Record<string, unknown>
+  if (path === '/catalogue/trace') return req.method === 'POST' ? json(await shop.trace(env, actor, await body())) : json({ error: 'not found' }, 404)
+  if (path === '/catalogue/blocked') return req.method === 'GET' ? json(await shop.blockedPlayers(env, actor)) : json({ error: 'not found' }, 404)
+  if (blockOne) return req.method === 'POST' ? json(await shop.blockPlayer(env, actor, blockOne[1], await body())) : json({ error: 'not found' }, 404)
   const v = Number(new URL(req.url).searchParams.get('version'))
   const version = Number.isInteger(v) && v > 0 ? v : undefined
   if (path === '/catalogue') {
@@ -322,6 +332,18 @@ async function catalogueRoute(req: Request, env: Env, path: string): Promise<Res
   if (action === 'thumbnail') return json(await catalogue.setThumbnail(env, actor, id, await body()))
   if (action === 'delete') return json(await catalogue.deleteItem(env, actor, id))
   return json({ error: 'not found' }, 404)
+}
+
+/** The catalogue in the launchers (null = not one of these routes) */
+async function shopRoute(req: Request, env: Env, path: string): Promise<Response | null> {
+  if (req.method === 'GET' && path === '/player/challenge') return json(await shop.challenge(env))
+  if (req.method === 'POST' && path === '/player/verify') return json(await shop.verifyPlayer(env, (await req.json().catch(() => ({}))) as Record<string, unknown>))
+  if (req.method === 'GET' && path === '/shop') return json(await shop.listShop(env))
+  const thumb = path.match(/^\/shop\/thumb\/(c-[a-z0-9]{10})$/)
+  if (req.method === 'GET' && thumb) return await shop.thumbnail(env, thumb[1])
+  const item = path.match(/^\/shop\/(c-[a-z0-9]{10})$/)
+  if (req.method === 'GET' && item) return json(await shop.deliver(env, req, item[1]))
+  return null
 }
 
 /** A file of a publish job, for the publisher (it checks it against the signed feed before writing it). */

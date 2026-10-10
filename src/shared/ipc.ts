@@ -2,6 +2,7 @@ import type { PlaytimeSummary, ServerStatus } from './server'
 import type { AccountsState, AuthResult } from './auth'
 import type { SkinInfo, Wardrobe, WardrobeResult } from './skins'
 import type { ModelFile } from './models'
+import type { ShopBundle, ShopItem, ShopResult } from './catalogueShop'
 import type { GameState, JavaRuntimeInfo, PlayOptions, RepairMode, RepairReport, SessionRecap } from './game'
 import type { PreflightWarning, Settings, SystemInfo } from './settings'
 import type { FeedView } from './schedule'
@@ -48,6 +49,9 @@ export const IPC = {
   skinsWear: 'skins:wear',
   skinsCape: 'skins:cape',
   skinsPickModel: 'skins:pick-model',
+  shopList: 'shop:list',
+  shopThumbnail: 'shop:thumbnail',
+  shopItem: 'shop:item',
   authSignIn: 'auth:sign-in',
   authCancel: 'auth:cancel',
   authSwitch: 'auth:switch',
@@ -394,6 +398,15 @@ export interface HemisphereApi {
     cape(id: string | null): Promise<WardrobeResult>
     /** staff: model files picked in a file dialog (.bbmodel, or .json with its PNGs), to try on in the viewer */
     pickModel(): Promise<{ ok: true; files: ModelFile[] } | { ok: false; error: 'cancelled' | 'notAllowed' | 'tooBig' | 'notPng' }>
+  }
+  /** The catalogue (Patreon models and skins to try on) */
+  shop: {
+    /** the items shown in the launchers (the last list seen when offline) */
+    list(): Promise<ShopResult<{ items: ShopItem[]; offline: boolean }>>
+    /** an item's picture (data: URL), or null */
+    thumbnail(id: string): Promise<ShopResult<string | null>>
+    /** an item for the active account (a verified Microsoft account), opened in memory */
+    item(id: string): Promise<ShopResult<ShopBundle>>
   }
   game: {
     getState(): Promise<GameState>

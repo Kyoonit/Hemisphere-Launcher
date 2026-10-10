@@ -208,6 +208,11 @@ const api: HemisphereApi = {
     cape: (id) => ipcRenderer.invoke(IPC.skinsCape, id),
     pickModel: () => ipcRenderer.invoke(IPC.skinsPickModel),
   },
+  shop: {
+    list: () => ipcRenderer.invoke(IPC.shopList),
+    thumbnail: (id) => ipcRenderer.invoke(IPC.shopThumbnail, id),
+    item: (id) => ipcRenderer.invoke(IPC.shopItem, id),
+  },
   game: {
     getState: () => ipcRenderer.invoke(IPC.gameState),
     onState: (cb) => {

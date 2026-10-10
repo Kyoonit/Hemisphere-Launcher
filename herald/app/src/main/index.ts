@@ -7,7 +7,7 @@ import { createDecipheriv, createHash, createPublicKey, randomBytes, scrypt, ver
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
-import type { ApiResult, LocalSettings, Profile } from '@herald/api'
+import type { ApiResult, LocalSettings, Profile, TraceResult } from '@herald/api'
 import { allowedFileName, MAX_FILE_BYTES, MAX_FILES, MAX_FILES_BYTES, type CatalogueItem } from '@shared/heraldCatalogue'
 import { installUpdate, startUpdater, updateState } from './updater'
 import { staffCodeFrom } from '@shared/heraldPublic'
@@ -46,6 +46,8 @@ const ALLOWED = [
   /^\/server\/(templates|maintenances|maintenance-now|back-online|restart|history)$/,
   /^\/server\/maintenances\/m-[a-z0-9]{10}\/delete$/,
   /^\/catalogue$/,
+  /^\/catalogue\/blocked$/,
+  /^\/catalogue\/players\/[0-9a-f]{32}\/block$/,
   // (original files: only through catalogue:saveOriginal, which saves them where the person chooses)
   /^\/catalogue\/c-[a-z0-9]{10}(\/(files|version|status|thumbnail|delete))?(\?version=\d{1,6})?$/,
 ]
@@ -359,6 +361,13 @@ function registerIpc(): void {
       saved++
     }
     return { ok: true, data: { saved, folder: pick.filePaths[0] } }
+  })
+  // A texture found elsewhere (a leak): who it was given to, from the mark hidden in it. Picked here, sent, not kept.
+  ipcMain.handle('catalogue:trace', async () => {
+    const pick = await dialog.showOpenDialog(win!, { title: 'A texture found elsewhere (PNG, as found)', properties: ['openFile'], filters: [{ name: 'PNG picture', extensions: ['png'] }] })
+    if (pick.canceled || !pick.filePaths[0]) return null
+    if ((await stat(pick.filePaths[0])).size > MAX_FILE_BYTES) return { ok: false, status: 413, error: 'This picture is too big (4 MB at most).' }
+    return call<TraceResult>('POST', '/catalogue/trace', { data: (await readFile(pick.filePaths[0])).toString('base64') }, 60_000)
   })
   // Studio pictures (to share on Discord): saved as PNG, or copied to paste straight into a message
   ipcMain.handle('catalogue:saveImage', async (_e, bytes: unknown, name: unknown) => {

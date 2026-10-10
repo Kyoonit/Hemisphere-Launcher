@@ -69,6 +69,12 @@ export function describe(a: ActivityEntry): string {
       return `hid “${a.detail?.name ?? ''}” from the launchers`
     case 'catalogue.export':
       return `downloaded the original files of “${a.detail?.name ?? ''}” (version ${a.detail?.version ?? '?'})`
+    case 'catalogue.trace':
+      return a.detail?.found ? `traced a leaked texture: given to ${a.detail.found}` : 'traced a texture (no mark found)'
+    case 'catalogue.block':
+      return `blocked ${a.detail?.name ?? 'a player'} from the catalogue`
+    case 'catalogue.unblock':
+      return `let ${a.detail?.name ?? 'a player'} use the catalogue again`
     case 'catalogue.delete':
       return `deleted “${a.detail?.name ?? ''}” from the catalogue`
     case 'templates.publications':

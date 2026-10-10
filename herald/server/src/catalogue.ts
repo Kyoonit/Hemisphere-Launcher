@@ -2,7 +2,7 @@
  * Catalogue (launcher 1.4, Patreon try-on): the owner's models and skins, kept here with every version of their
  * files. Staff with catalogue permissions see it; files are given to the app for its previews; the original files can
  * only be downloaded with `catalogue.export` (the Owner's, see heraldRoles). Delivery to the launchers (sealed
- * copies, keys for verified accounts) is step 3c.
+ * copies marked for each verified player) is in shop.ts.
  */
 import { cleanSheet, filesProblem, seesCatalogue, sheetProblems, type CatalogueFileInfo, type CatalogueItem, type CatalogueSheet, type CatalogueStatus, type CatalogueVersion } from '../../../src/shared/heraldCatalogue.ts'
 import { HttpError, logActivity, type Actor } from './accounts'
@@ -146,7 +146,8 @@ export async function useVersion(env: CatalogueEnv, actor: Actor, id: string, bo
   return load(env, id)
 }
 
-async function readFiles(env: CatalogueEnv, id: string, version: number) {
+/** The files of a version, whole (big files are kept in parts) */
+export async function readFileBytes(env: CatalogueEnv, id: string, version: number): Promise<{ name: string; bytes: Uint8Array }[]> {
   const parts = (await env.DB.prepare('SELECT name, part, bytes FROM catalogue_files WHERE item_id = ?1 AND version = ?2 ORDER BY name, part').bind(id, version).all<{ name: string; part: number; bytes: ArrayBuffer }>()).results
   const byName = new Map<string, Uint8Array[]>()
   for (const p of parts) byName.set(p.name, [...(byName.get(p.name) ?? []), new Uint8Array(p.bytes)])
@@ -154,9 +155,11 @@ async function readFiles(env: CatalogueEnv, id: string, version: number) {
     const all = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0))
     let at = 0
     for (const c of chunks) (all.set(c, at), (at += c.length))
-    return { name, data: toB64(all) }
+    return { name, bytes: all }
   })
 }
+
+const readFiles = async (env: CatalogueEnv, id: string, version: number) => (await readFileBytes(env, id, version)).map((f) => ({ name: f.name, data: toB64(f.bytes) }))
 
 /** The files of a version, for the app's previews (kept in memory there) */
 export async function previewFiles(env: CatalogueEnv, actor: Actor, id: string, version?: number) {
@@ -205,7 +208,11 @@ export async function setThumbnail(env: CatalogueEnv, actor: Actor, id: string, 
 export async function deleteItem(env: CatalogueEnv, actor: Actor, id: string) {
   need(actor, 'catalogue.delete', 'delete catalogue items')
   const item = await load(env, id)
-  await env.DB.batch([env.DB.prepare('DELETE FROM catalogue_files WHERE item_id = ?1').bind(id), env.DB.prepare('DELETE FROM catalogue_items WHERE id = ?1').bind(id)])
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM catalogue_files WHERE item_id = ?1').bind(id),
+    env.DB.prepare('DELETE FROM catalogue_bundles WHERE item_id = ?1').bind(id),
+    env.DB.prepare('DELETE FROM catalogue_items WHERE id = ?1').bind(id),
+  ])
   await logActivity(env.DB, actor.profile.id, 'catalogue.delete', id, { name: item.name, versions: item.versions.length })
   return { ok: true }
 }

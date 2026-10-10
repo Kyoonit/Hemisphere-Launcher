@@ -51,6 +51,7 @@ const bridge: HeraldBridge = {
     saveImage: (png, name) => ipcRenderer.invoke('catalogue:saveImage', png, name),
     copyImage: (png) => ipcRenderer.invoke('catalogue:copyImage', png),
     player: (name) => ipcRenderer.invoke('catalogue:player', name),
+    trace: () => ipcRenderer.invoke('catalogue:trace'),
   },
 }
 
