@@ -438,8 +438,23 @@ function ItemPage({ item, onBack, onChanged, onDeleted }: { item: CatalogueItem;
             )}
             <label className="label">Description</label>
             <textarea className="field mb-3 h-20 resize-y" value={sheet.description} disabled={!write} maxLength={1000} onChange={(e) => set({ description: e.target.value })} />
-            <label className="label">“New” badge in the launcher until</label>
-            <input type="date" className="field mb-3" value={sheet.newUntil ?? ''} disabled={!write} onChange={(e) => set({ newUntil: e.target.value || null })} />
+            <label className="mb-1.5 flex cursor-pointer items-center gap-2 text-sm text-gray-200">
+              <input
+                type="checkbox"
+                checked={!!sheet.newUntil}
+                disabled={!write}
+                // on: two weeks from today, to change below; off: no badge
+                onChange={(e) => set({ newUntil: e.target.checked ? new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10) : null })}
+              />
+              “New” badge in the launcher
+            </label>
+            {sheet.newUntil && (
+              <>
+                <label className="label">Until</label>
+                <input type="date" className="field mb-3" value={sheet.newUntil} min={new Date().toISOString().slice(0, 10)} disabled={!write} onChange={(e) => e.target.value && set({ newUntil: e.target.value })} />
+              </>
+            )}
+            {!sheet.newUntil && <div className="mb-3" />}
             {item.kind === 'model' && (
               <>
                 <label className="label">Position correction (saved with the sheet)</label>
