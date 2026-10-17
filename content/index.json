@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "sequence": 4,
+  "updatedAt": "2026-10-17T11:16:42.629Z",
+  "latest": {
+    "clientVersion": "1.0.2",
+    "minecraft": "26.3",
+    "manifest": "clients/1.0.2/manifest.json",
+    "sha512": "00fb71ee1ddb4a42ac9e2e08f9019809a4c0d0395e309893cb1bf2aa3d107dce7e05de2d7c94439c305296838b6b3ce36418ae96c0d14c3d098e452045c5307c",
+    "size": 20026
+  },
+  "previous": {
+    "clientVersion": "1.0.1",
+    "minecraft": "26.3",
+    "manifest": "clients/1.0.1/manifest.json",
+    "sha512": "301127f38982f36583a9bbfdd7e21496c968f8cf88362425ff5d5a4ff8bdfec9b761ad225bf7e02c94e8463a415a304f01a7242361ef75f960c9a53865c330c8",
+    "size": 19739
+  },
+  "previousCanJoin": true
+}
